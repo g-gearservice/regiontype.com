@@ -1,12 +1,96 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>regiontype</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 지역을 타이핑으로 알리자</title>
+<meta name="description" content="지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구부터.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- 타이틀 -->
+<section id="title" class="screen on">
+  <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
+  <p class="tagline">지역을 타이핑으로 알리자</p>
+  <nav class="menu">
+    <button data-go="courses">시작하기</button>
+    <button data-go="options">설정</button>
+  </nav>
+</section>
+
+<!-- 코스 목록 -->
+<section id="courses" class="screen">
+  <button class="back" data-go="title" aria-label="뒤로">←</button>
+  <h2 class="head">코스</h2>
+  <ul class="course-list" id="courseList"></ul>
+</section>
+
+<!-- 설정 -->
+<section id="options" class="screen">
+  <button class="back" data-go="title" aria-label="뒤로">←</button>
+  <h2 class="head">설정</h2>
+  <dl class="opts">
+    <dt>제한 시간</dt>
+    <dd><button class="step" data-opt="time" data-dir="-1">◀</button><span id="optTime"></span><button class="step" data-opt="time" data-dir="1">▶</button></dd>
+    <dt>정식 명칭 강제</dt>
+    <dd><button class="toggle" data-opt="strict"></button></dd>
+    <dt>야간 모드</dt>
+    <dd><button class="toggle" data-opt="night"></button></dd>
+    <dt>효과음</dt>
+    <dd><button class="toggle" data-opt="sound"></button></dd>
+    <dt>애니메이션</dt>
+    <dd><button class="toggle" data-opt="motion"></button></dd>
+  </dl>
+  <p class="ver">regiontype v0.1 · 서울 자치구 경계 2013 기준</p>
+</section>
+
+<!-- 플레이 -->
+<section id="play" class="screen">
+  <button class="back" data-go="courses" aria-label="그만두기">←</button>
+  <div class="hud">
+    <div class="gauge"><i id="gaugeFill"></i></div>
+    <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
+    <div class="stat combo" id="statCombo"></div>
+  </div>
+  <div class="stage">
+    <svg id="map" role="img" aria-label="서울 자치구 지도"></svg>
+    <div class="fact" id="fact" aria-live="polite"></div>
+  </div>
+  <div class="typebar">
+    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="지역 이름 입력">
+  </div>
+  <div class="countdown" id="countdown"></div>
+</section>
+
+<!-- 결과 -->
+<section id="result" class="screen">
+  <h2 class="head">결과</h2>
+  <div class="result-wrap">
+    <canvas id="card" width="1600" height="900"></canvas>
+    <div class="scores">
+      <p><b id="rScore">0</b><span>점</span></p>
+      <p><b id="rCount">0</b><span>곳 점령</span></p>
+      <p><b id="rAcc">0%</b><span>정확도</span></p>
+      <p class="best" id="rBest"></p>
+      <div class="menu">
+        <button id="again">다시 하기</button>
+        <button id="save">이미지 저장</button>
+        <button data-go="courses">코스 목록</button>
+      </div>
+    </div>
+  </div>
+  <h3 class="missed-head">놓친 곳 <span id="missCount"></span></h3>
+  <ul class="missed" id="missed"></ul>
+</section>
+
+<div id="mobile">
+  <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
+  <p>타이핑 게임이라 물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>
+</div>
+
+<script src="app.js"></script>
+</body>
 </html>

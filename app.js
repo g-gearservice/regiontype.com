@@ -1,0 +1,273 @@
+/* regiontype — 서울 자치구 자유형. 코스 데이터는 data/*.json 에서 읽는다. */
+'use strict';
+
+const $ = s => document.querySelector(s);
+const COURSES = ['seoul-gu'];
+
+/* ── 설정 ───────────────────────────────────────────── */
+const TIMES = [60, 90, 120, 180, 300];
+const opt = Object.assign(
+  { time: 120, strict: false, night: false, sound: true, motion: true },
+  JSON.parse(localStorage.getItem('rt.opt') || '{}')
+);
+const saveOpt = () => {
+  localStorage.setItem('rt.opt', JSON.stringify(opt));
+  document.documentElement.toggleAttribute('data-night', opt.night);
+  document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
+  $('#optTime').textContent = opt.time + '초';
+  document.querySelectorAll('.toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+};
+
+/* ── 정답 판정 ───────────────────────────────────────
+   조합 중 문자열까지 매 입력마다 검사한다. 약칭("강남")은
+   그 약칭으로 이어질 수 있는 미점령 항목이 자기 자신뿐일 때만
+   인정한다. 그래서 "중"은 중구/중랑구 사이에서 확정되지 않고,
+   "강남"은 즉시 확정된다. 앞에 붙은 오타는 접미 검사로 흘려보낸다. */
+function stripSuffix(name) {
+  const m = /^(.+?)(특별시|광역시|자치구|자치시|[시군구동읍면로가])$/.exec(name);
+  return m && m[1].length > 1 ? m[1] : null;
+}
+function matchInput(raw, items, strict) {
+  const buf = raw.replace(/\s/g, '');
+  for (let i = 0; i < buf.length; i++) {
+    const sub = buf.slice(i);
+    const open = items.filter(it => !it.claimed);
+    const exact = open.find(it => it.name === sub || it.aliases.includes(sub));
+    if (exact && (exact.name === sub || !strict)) {
+      const rivals = open.filter(it => it.name.startsWith(sub));
+      if (exact.name === sub || rivals.every(it => it === exact)) return exact;
+    }
+  }
+  return null;
+}
+
+/* ── 사운드 (WebAudio 삑 소리, 소재 확보 전 임시) ────── */
+let ac;
+function beep(freq, dur = .07, type = 'sine') {
+  if (!opt.sound) return;
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(.09, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + dur);
+  o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + dur);
+}
+
+/* ── 화면 ───────────────────────────────────────────── */
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  if (id !== 'play') stop();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
+  const t = e.target.closest('.toggle');
+  if (t) { opt[t.dataset.opt] = !opt[t.dataset.opt]; saveOpt(); }
+  const s = e.target.closest('.step');
+  if (s) {
+    const i = TIMES.indexOf(opt.time) + Number(s.dataset.dir);
+    opt.time = TIMES[Math.min(TIMES.length - 1, Math.max(0, i))]; saveOpt();
+  }
+});
+
+/* ── 코스 로드 ──────────────────────────────────────── */
+const load = slug => Promise.all([
+  fetch(`data/${slug}.course.json`).then(r => r.json()),
+  fetch(`data/${slug}.geom.json`).then(r => r.json())
+]);
+
+(async () => {
+  saveOpt();
+  const list = $('#courseList');
+  for (const slug of COURSES) {
+    const [c] = await load(slug);
+    const li = document.createElement('li');
+    li.innerHTML = `<h3></h3><p></p><span class="n"></span><button>플레이</button>`;
+    li.querySelector('h3').textContent = c.title;
+    li.querySelector('p').textContent = c.description;
+    li.querySelector('.n').textContent = `${c.items.length}개 항목 · 자유형`;
+    li.querySelector('button').onclick = () => start(slug);
+    list.append(li);
+  }
+})();
+
+/* ── 게임 ───────────────────────────────────────────── */
+let G = null, tick = null;
+
+async function start(slug) {
+  const [course, geom] = await load(slug);
+  const items = course.items.map(it => {
+    const a = stripSuffix(it.name);
+    return { ...it, aliases: [...(it.aliases || []), ...(a ? [a] : [])], claimed: false };
+  });
+  G = { slug, course, items, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
+
+  const svg = $('#map');
+  svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
+  svg.innerHTML = geom.items.map((g, i) =>
+    `<path id="p${i}" d="${g.d}"></path>`).join('') +
+    geom.items.map((g, i) =>
+      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('');
+  geom.items.forEach((g, i) => {
+    const it = items.find(x => x.name === g.name);
+    it.el = svg.querySelector('#p' + i);
+    it.label = svg.querySelector('#t' + i);
+    it.label.textContent = g.name;
+  });
+
+  $('#statTotal').textContent = '/' + items.length;
+  $('#statCount').textContent = '0';
+  $('#statCombo').textContent = '';
+  $('#fact').classList.remove('on');
+  $('#typein').value = '';
+  $('#gaugeFill').style.width = '100%';
+  $('.gauge').classList.remove('warn');
+  go('play');
+  countdown(3, run);
+}
+
+function countdown(n, done) {
+  const el = $('#countdown'); el.classList.add('on');
+  const step = () => {
+    el.textContent = n > 0 ? n : '';
+    if (n-- <= 0) { el.classList.remove('on'); return done(); }
+    beep(440 + n * 110, .09, 'triangle');
+    setTimeout(step, 700);
+  };
+  step();
+}
+
+function run() {
+  $('#typein').focus();
+  tick = setInterval(() => {
+    G.left--;
+    $('#gaugeFill').style.width = (G.left / opt.time * 100) + '%';
+    $('.gauge').classList.toggle('warn', G.left <= 10);
+    if (G.left <= 0) finish();
+  }, 1000);
+}
+function stop() { clearInterval(tick); tick = null; }
+
+$('#typein').addEventListener('input', e => {
+  if (!G || !tick) return;
+  const hit = matchInput(e.target.value, G.items, opt.strict);
+  if (!hit) return;
+  e.target.value = '';
+  claim(hit);
+});
+// 조합이 끝났는데 아무것도 못 맞혔으면 오답 — 스페이스/엔터로 확정한다
+$('#typein').addEventListener('keydown', e => {
+  if (!G || !tick || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  if (!e.target.value.trim()) return;
+  e.target.value = '';
+  G.tries++; G.combo = 0;
+  $('#statCombo').textContent = '';
+  const bar = $('.typebar'); bar.classList.add('bad');
+  setTimeout(() => bar.classList.remove('bad'), 240);
+  beep(160, .12, 'square');
+});
+
+function claim(it) {
+  it.claimed = true;
+  it.el.classList.add('got');
+  it.label.classList.add('on');
+  G.hits++; G.tries++; G.combo++;
+  G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
+  $('#statCount').textContent = G.hits;
+  $('#statCombo').textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
+  const f = $('#fact');
+  f.innerHTML = '<b></b><span></span>';
+  f.querySelector('b').textContent = it.name;
+  f.querySelector('span').textContent = it.meta.description;
+  f.classList.add('on');
+  beep(520 + G.combo * 40, .08, 'triangle');
+  if (G.hits === G.items.length) finish();
+}
+
+function finish() {
+  stop();
+  beep(300, .3, 'triangle');
+  G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
+  setTimeout(() => {
+    const key = 'rt.best.' + G.slug;
+    const prev = Number(localStorage.getItem(key) || 0);
+    $('#rScore').textContent = G.score;
+    $('#rCount').textContent = G.hits;
+    $('#rAcc').textContent = (G.tries ? Math.round(G.hits / G.tries * 100) : 0) + '%';
+    $('#rBest').textContent = G.score > prev ? '최고 기록 경신!' : prev ? `최고 기록 ${prev}점` : '';
+    if (G.score > prev) localStorage.setItem(key, G.score);
+
+    const miss = G.items.filter(i => !i.claimed);
+    $('#missCount').textContent = miss.length + '곳';
+    $('#missed').innerHTML = '';
+    miss.forEach(i => {
+      const li = document.createElement('li');
+      li.innerHTML = '<b></b><span></span>';
+      li.querySelector('b').textContent = i.name;
+      li.querySelector('span').textContent = i.meta.description;
+      $('#missed').append(li);
+    });
+    drawCard();
+    go('result');
+  }, 1200);
+}
+
+/* 결과 카드 — SVG를 그대로 이미지로 굽는다 (16:9) */
+function drawCard() {
+  const cv = $('#card'), ctx = cv.getContext('2d');
+  const css = getComputedStyle(document.body);
+  const bg = css.backgroundColor, ink = css.color;
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
+
+  const svg = $('#map').cloneNode(true);
+  svg.querySelectorAll('.miss').forEach(p => p.remove());
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
+  svg.insertAdjacentHTML('afterbegin',
+    `<style>path{fill:${land};stroke:${bg};stroke-width:2.5}path.got{fill:${acc}}text{display:none}</style>`);
+  const img = new Image();
+  img.onload = () => {
+    const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
+    const h = cv.height - 220, w = h * vb[2] / vb[3];
+    ctx.drawImage(img, (cv.width - w) / 2, 140, w, h);
+    ctx.fillStyle = ink;
+    ctx.font = '800 54px system-ui,sans-serif';
+    ctx.fillText('regiontype', 70, 100);
+    ctx.font = '500 38px system-ui,sans-serif';
+    ctx.fillText(`${G.course.title} · ${G.score}점`, 70, cv.height - 118);
+    ctx.font = '800 76px system-ui,sans-serif';
+    ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
+    ctx.textAlign = 'right';
+    ctx.font = '500 34px system-ui,sans-serif';
+    ctx.fillText('regiontype.com', cv.width - 70, 96);
+    ctx.textAlign = 'left';
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+}
+
+$('#save').onclick = () => {
+  const a = document.createElement('a');
+  a.download = `regiontype-${G.slug}.png`;
+  a.href = $('#card').toDataURL('image/png');
+  a.click();
+};
+$('#again').onclick = () => start(G.slug);
+
+/* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
+if (location.search.includes('rt=1')) {
+  const mk = names => names.map(n => ({ name: n, aliases: [stripSuffix(n)].filter(Boolean), claimed: false }));
+  const m = (s, items, st) => { const r = matchInput(s, items, st); return r && r.name; };
+  const gu = mk(['중구', '중랑구', '강남구', '강서구', '성북구', '성동구']);
+  console.assert(m('중', gu) === null, '중: 중구/중랑구 미확정이어야');
+  console.assert(m('중구', gu) === '중구', '중구 정확일치');
+  console.assert(m('강남', gu) === '강남구', '약칭 즉시 확정');
+  console.assert(m('ㅋㅋ강남', gu) === '강남구', '앞 오타는 접미 검사로 흘려보냄');
+  console.assert(m('강남', gu, true) === null, '정식 명칭 강제 시 약칭 불가');
+  console.assert(m('강남구', gu, true) === '강남구', '정식 명칭 강제 시 정식은 통과');
+  console.assert(m('없는곳', gu) === null, '미등록');
+  const one = mk(['중구', '중랑구']); one[1].claimed = true;
+  console.assert(m('중', one) === null, '한 글자 어간(중)은 약칭으로 인정하지 않는다');
+  const two = mk(['강서구', '강남구']); two[0].claimed = true;
+  console.assert(m('강서', two) === null, '이미 점령한 곳은 다시 맞지 않는다');
+  console.log('self-check done');
+}
