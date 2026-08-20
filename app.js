@@ -32,13 +32,23 @@ function matchInput(raw, items, strict) {
   for (let i = 0; i < buf.length; i++) {
     const sub = buf.slice(i);
     const open = items.filter(it => !it.claimed);
-    const exact = open.find(it => it.name === sub || it.aliases.includes(sub));
-    if (exact && (exact.name === sub || !strict)) {
-      const rivals = open.filter(it => it.name.startsWith(sub));
-      if (exact.name === sub || rivals.every(it => it === exact)) return exact;
-    }
+    const exact = open.find(it => it.name === sub);
+    if (exact) return exact;                       // 정식 명칭은 무조건 통과
+    if (strict) continue;
+    const alias = open.find(it => it.aliases.includes(sub));
+    if (alias && open.every(it => it === alias || !it.name.startsWith(sub))) return alias;
   }
   return null;
+}
+/* 이 입력이 아직 무언가로 이어질 수 있는가. 어느 접미도 미점령 항목의
+   앞부분이 아니면 오타로 확정한다. */
+function canContinue(raw, items) {
+  const buf = raw.replace(/\s/g, '');
+  if (!buf) return true;
+  const open = items.filter(it => !it.claimed);
+  for (let i = 0; i < buf.length; i++)
+    if (open.some(it => it.name.startsWith(buf.slice(i)))) return true;
+  return false;
 }
 
 /* ── 사운드 (WebAudio 삑 소리, 소재 확보 전 임시) ────── */
@@ -91,7 +101,7 @@ const load = slug => Promise.all([
 })();
 
 /* ── 게임 ───────────────────────────────────────────── */
-let G = null, tick = null;
+let G = null, tick = null, pending = null;
 
 async function start(slug) {
   const [course, geom] = await load(slug);
@@ -99,7 +109,7 @@ async function start(slug) {
     const a = stripSuffix(it.name);
     return { ...it, aliases: [...(it.aliases || []), ...(a ? [a] : [])], claimed: false };
   });
-  G = { slug, course, items, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
+  G = { slug, course, items, total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
@@ -120,8 +130,12 @@ async function start(slug) {
   $('#fact').classList.remove('on');
   $('#typein').value = '';
   $('#gaugeFill').style.width = '100%';
+  $('#statTime').firstElementChild.textContent =
+    Math.floor(opt.time / 60) + ':' + String(opt.time % 60).padStart(2, '0');
   $('.gauge').classList.remove('warn');
+  $('#statTime').classList.remove('warn');
   go('play');
+  stop();
   countdown(3, run);
 }
 
@@ -131,7 +145,7 @@ function countdown(n, done) {
     el.textContent = n > 0 ? n : '';
     if (n-- <= 0) { el.classList.remove('on'); return done(); }
     beep(440 + n * 110, .09, 'triangle');
-    setTimeout(step, 700);
+    pending = setTimeout(step, 700);
   };
   step();
 }
@@ -140,12 +154,15 @@ function run() {
   $('#typein').focus();
   tick = setInterval(() => {
     G.left--;
-    $('#gaugeFill').style.width = (G.left / opt.time * 100) + '%';
+    $('#gaugeFill').style.width = (G.left / G.total * 100) + '%';
+    $('#statTime').firstElementChild.textContent =
+      Math.floor(G.left / 60) + ':' + String(G.left % 60).padStart(2, '0');
     $('.gauge').classList.toggle('warn', G.left <= 10);
+    $('#statTime').classList.toggle('warn', G.left <= 10);
     if (G.left <= 0) finish();
   }, 1000);
 }
-function stop() { clearInterval(tick); tick = null; }
+function stop() { clearInterval(tick); clearTimeout(pending); tick = pending = null; }
 
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
@@ -154,18 +171,21 @@ $('#typein').addEventListener('input', e => {
   e.target.value = '';
   claim(hit);
 });
-// 조합이 끝났는데 아무것도 못 맞혔으면 오답 — 스페이스/엔터로 확정한다
-$('#typein').addEventListener('keydown', e => {
-  if (!G || !tick || (e.key !== 'Enter' && e.key !== ' ')) return;
-  e.preventDefault();
-  if (!e.target.value.trim()) return;
-  e.target.value = '';
+// 조합이 끝난 시점에 어디로도 이어질 수 없으면 그때 오답이다.
+// keydown 으로 스페이스를 가로채면 IME 조합 확정 자체가 깨진다.
+$('#typein').addEventListener('compositionend', e => {
+  if (!G || !tick || canContinue(e.target.value, G.items)) return;
+  miss();
+});
+
+function miss() {
+  $('#typein').value = '';
   G.tries++; G.combo = 0;
   $('#statCombo').textContent = '';
   const bar = $('.typebar'); bar.classList.add('bad');
   setTimeout(() => bar.classList.remove('bad'), 240);
   beep(160, .12, 'square');
-});
+}
 
 function claim(it) {
   it.claimed = true;
@@ -188,7 +208,7 @@ function finish() {
   stop();
   beep(300, .3, 'triangle');
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
-  setTimeout(() => {
+  pending = setTimeout(() => {
     const key = 'rt.best.' + G.slug;
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = G.score;
@@ -213,14 +233,16 @@ function finish() {
 }
 
 /* 결과 카드 — SVG를 그대로 이미지로 굽는다 (16:9) */
+let cardReady = Promise.resolve();
 function drawCard() {
+  let done;
+  cardReady = new Promise(r => done = r);
   const cv = $('#card'), ctx = cv.getContext('2d');
   const css = getComputedStyle(document.body);
   const bg = css.backgroundColor, ink = css.color;
   ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
 
   const svg = $('#map').cloneNode(true);
-  svg.querySelectorAll('.miss').forEach(p => p.remove());
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
   svg.insertAdjacentHTML('afterbegin',
@@ -241,11 +263,13 @@ function drawCard() {
     ctx.font = '500 34px system-ui,sans-serif';
     ctx.fillText('regiontype.com', cv.width - 70, 96);
     ctx.textAlign = 'left';
+    done();
   };
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
 }
 
-$('#save').onclick = () => {
+$('#save').onclick = async () => {
+  await cardReady;
   const a = document.createElement('a');
   a.download = `regiontype-${G.slug}.png`;
   a.href = $('#card').toDataURL('image/png');
@@ -269,5 +293,18 @@ if (location.search.includes('rt=1')) {
   console.assert(m('중', one) === null, '한 글자 어간(중)은 약칭으로 인정하지 않는다');
   const two = mk(['강서구', '강남구']); two[0].claimed = true;
   console.assert(m('강서', two) === null, '이미 점령한 곳은 다시 맞지 않는다');
+
+  // 법정동 별칭이 다른 항목의 정식 명칭과 겹치는 경우 (PRD 6.3)
+  const dong = [{ name: '역삼1동', aliases: ['역삼동', '역삼1'], claimed: false },
+                { name: '역삼동', aliases: [], claimed: false }];
+  console.assert(m('역삼동', dong) === '역삼동', '정식 명칭 일치가 남의 별칭에 가려지면 안 된다');
+  console.assert(m('역삼동', dong, true) === '역삼동', '정식 명칭 강제 모드에서도 마찬가지');
+  console.assert(m('역삼1', dong) === '역삼1동', '별칭은 후보가 자기 자신뿐일 때 확정');
+
+  // 오타 확정 판정
+  console.assert(canContinue('강', gu) === true, '강: 강남구로 이어질 수 있다');
+  console.assert(canContinue('강난', gu) === false, '강난: 어디로도 이어지지 않는다');
+  console.assert(canContinue('', gu) === true, '빈 입력은 오답이 아니다');
+  console.assert(canContinue('가나강', gu) === true, '접미가 살아 있으면 이어진다');
   console.log('self-check done');
 }

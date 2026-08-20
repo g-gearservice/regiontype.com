@@ -34,15 +34,15 @@
   <h2 class="head">설정</h2>
   <dl class="opts">
     <dt>제한 시간</dt>
-    <dd><button class="step" data-opt="time" data-dir="-1">◀</button><span id="optTime"></span><button class="step" data-opt="time" data-dir="1">▶</button></dd>
+    <dd><button class="step" data-opt="time" data-dir="-1" aria-label="제한 시간 줄이기">◀</button><span id="optTime" aria-live="polite"></span><button class="step" data-opt="time" data-dir="1" aria-label="제한 시간 늘리기">▶</button></dd>
     <dt>정식 명칭 강제</dt>
-    <dd><button class="toggle" data-opt="strict"></button></dd>
+    <dd><button class="toggle" data-opt="strict" aria-label="정식 명칭 강제"></button></dd>
     <dt>야간 모드</dt>
-    <dd><button class="toggle" data-opt="night"></button></dd>
+    <dd><button class="toggle" data-opt="night" aria-label="야간 모드"></button></dd>
     <dt>효과음</dt>
-    <dd><button class="toggle" data-opt="sound"></button></dd>
+    <dd><button class="toggle" data-opt="sound" aria-label="효과음"></button></dd>
     <dt>애니메이션</dt>
-    <dd><button class="toggle" data-opt="motion"></button></dd>
+    <dd><button class="toggle" data-opt="motion" aria-label="애니메이션"></button></dd>
   </dl>
   <p class="ver">regiontype v0.1 · 서울 자치구 경계 2013 기준</p>
 </section>
@@ -52,6 +52,7 @@
   <button class="back" data-go="courses" aria-label="그만두기">←</button>
   <div class="hud">
     <div class="gauge"><i id="gaugeFill"></i></div>
+    <div class="stat time" id="statTime"><b>0:00</b></div>
     <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
     <div class="stat combo" id="statCombo"></div>
   </div>
@@ -60,9 +61,9 @@
     <div class="fact" id="fact" aria-live="polite"></div>
   </div>
   <div class="typebar">
-    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="지역 이름 입력">
+    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="지역 이름 입력" placeholder="지역 이름">
   </div>
-  <div class="countdown" id="countdown"></div>
+  <div class="countdown" id="countdown" aria-live="assertive"></div>
 </section>
 
 <!-- 결과 -->
