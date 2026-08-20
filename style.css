@@ -1,0 +1,156 @@
+:root{
+  --bg:#e8edf0; --grid:#dae2e7; --ink:#3c464a; --ink-soft:#5b676e;
+  --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
+  --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
+  --land:#d3dde3; --land-line:#e8edf0; --card:#fff;
+  --fast:.16s; --slow:.2s;
+}
+:root[data-night]{
+  --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
+  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --land:#334047; --land-line:#232c31; --card:#2b353b;
+}
+@media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s } }
+:root[data-motion="off"]{ --fast:0s; --slow:0s }
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); overflow:hidden;
+  font:500 16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.grid-bg{
+  position:fixed; inset:-2px; z-index:-1; pointer-events:none;
+  background:
+    linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 152px,
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/152px 100%;
+}
+
+/* ── 화면 전환 ─────────────────────────── */
+.screen{
+  position:fixed; inset:0; display:none; flex-direction:column;
+  padding:56px 64px; overflow:auto;
+}
+.screen.on{display:flex}
+
+.logo{font-size:clamp(38px,5vw,64px);font-weight:800;letter-spacing:-.03em;line-height:1}
+.logo span{font-weight:400}
+.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);vertical-align:.9em;margin-left:.1em}
+.tagline{color:var(--ink-soft);margin-top:14px;font-size:18px}
+.head{font-size:34px;font-weight:800;letter-spacing:-.02em;margin-bottom:28px}
+
+/* ── 블록 버튼 (레퍼런스 메뉴) ───────────── */
+.menu{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-top:44px}
+.menu button, .course-list button, #save, #again{
+  font:inherit;font-weight:700;font-size:26px;color:#fff;cursor:pointer;
+  background:var(--block); border:0; padding:6px 18px 8px;
+  transition:background var(--fast), transform var(--fast);
+}
+.menu button:hover, .course-list button:hover{background:var(--block-hi);transform:translateX(4px)}
+.menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.back{
+  position:absolute;top:40px;left:48px;z-index:3;
+  font-size:38px;line-height:1;background:none;border:0;color:var(--ink);cursor:pointer;
+}
+
+/* ── 코스 목록 ─────────────────────────── */
+.course-list{list-style:none;display:flex;flex-wrap:wrap;gap:20px;max-width:1100px}
+.course-list li{
+  background:var(--card);padding:26px 28px;width:340px;
+  box-shadow:0 10px 22px -14px rgba(40,60,70,.5);
+}
+.course-list h3{font-size:22px;font-weight:800;margin-bottom:8px}
+.course-list p{color:var(--ink-soft);font-size:15px;min-height:66px}
+.course-list .n{color:var(--accent-text);font-weight:700;font-size:14px;display:block;margin-bottom:16px}
+.course-list button{font-size:20px;padding:4px 14px 6px}
+
+/* ── 설정 ─────────────────────────────── */
+.opts{display:grid;grid-template-columns:auto auto;gap:18px 40px;align-items:center;font-size:24px;font-weight:700}
+.opts dd{display:flex;align-items:center;gap:16px;justify-self:end}
+.toggle,.step{
+  width:42px;height:42px;border-radius:50%;border:3px solid var(--ink);background:none;
+  color:var(--ink);font-size:19px;cursor:pointer;line-height:1;
+}
+.step{border:0;font-size:24px;width:auto}
+.toggle::after{content:"✕"}
+.toggle[aria-pressed="true"]::after{content:"✓"}
+.toggle[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+#optTime{min-width:96px;text-align:center;display:inline-block}
+.ver{margin-top:auto;color:var(--ink-soft);font-size:14px}
+
+/* ── 플레이 ───────────────────────────── */
+#play{padding:24px 40px 32px}
+.hud{display:flex;align-items:center;gap:24px;padding-left:56px;margin-bottom:8px}
+.gauge{flex:1;height:10px;background:var(--land);overflow:hidden}
+.gauge i{display:block;height:100%;width:100%;background:var(--block);transition:width 1s linear,background var(--slow)}
+.gauge.warn i{background:var(--accent-deep)}
+.stat b{font-size:28px;font-weight:800}
+.stat.time b{font-variant-numeric:tabular-nums;min-width:64px;display:inline-block;text-align:right}
+.stat.time.warn b{color:var(--accent-text)}
+.stat span{color:var(--ink-soft)}
+.combo{color:var(--accent-text);font-weight:800;font-size:24px;min-width:80px}
+
+.stage{flex:1;position:relative;display:flex;justify-content:center;min-height:0}
+#map{width:100%;height:100%}
+#map path{fill:var(--land);stroke:var(--land-line);stroke-width:2.5;transition:fill var(--slow)}
+#map path.got{fill:var(--accent);stroke:var(--accent-text);stroke-width:3}
+#map path.miss{fill:none;stroke:var(--accent-deep);stroke-width:4;stroke-dasharray:8 6}
+#map text{font:700 15px system-ui,sans-serif;fill:#2d3538;text-anchor:middle;pointer-events:none;opacity:0;transition:opacity var(--slow)}
+#map text.on{opacity:1}
+
+.fact{
+  position:absolute;left:0;right:0;bottom:0;text-align:center;pointer-events:none;
+  opacity:0;transition:opacity var(--slow);
+}
+.fact.on{opacity:1}
+.fact b{display:block;font-size:26px;font-weight:800}
+.fact span{color:var(--ink-soft);font-size:17px}
+
+.typebar{display:flex;justify-content:center;margin-top:18px}
+#typein{
+  font:800 34px/1.2 inherit;color:var(--ink);text-align:center;
+  background:var(--card);border:0;border-bottom:4px solid var(--block);
+  padding:6px 24px;width:420px;outline:0;
+}
+.typebar.bad #typein{border-color:var(--accent-deep);animation:shake .22s}
+@keyframes shake{25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
+
+.countdown{
+  position:fixed;inset:0;display:none;place-items:center;
+  font-size:180px;font-weight:800;color:var(--accent);background:rgba(232,237,240,.85);
+}
+:root[data-night] .countdown{background:rgba(35,44,49,.85)}
+.countdown.on{display:grid}
+
+/* ── 결과 ─────────────────────────────── */
+.result-wrap{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap}
+#card{width:min(620px,50vw);height:auto;box-shadow:0 12px 28px -18px rgba(40,60,70,.6)}
+.scores p{display:flex;align-items:baseline;gap:10px}
+.scores b{font-size:44px;font-weight:800;letter-spacing:-.02em}
+.scores span{color:var(--ink-soft)}
+.scores .best{color:var(--accent-text);font-weight:700;min-height:24px;display:block}
+.scores .menu{margin-top:24px;gap:3px}
+.scores .menu button{font-size:20px;padding:4px 14px 6px}
+.missed-head{margin:34px 0 14px;font-size:20px;font-weight:800}
+.missed-head span{color:var(--ink-soft);font-weight:500}
+.missed{list-style:none;display:flex;flex-wrap:wrap;gap:12px}
+.missed li{background:var(--card);padding:12px 16px;max-width:330px;font-size:14px;color:var(--ink-soft)}
+.missed b{display:block;font-size:17px;color:var(--ink);margin-bottom:4px}
+
+/* ── 모바일 안내 ───────────────────────── */
+#mobile{display:none;position:fixed;inset:0;place-content:center;text-align:center;padding:32px;gap:20px}
+#mobile p{color:var(--ink-soft);line-height:1.7}
+@media (pointer:coarse),(max-width:640px){
+  .screen{display:none!important}
+  #mobile{display:grid}
+}
+
+#title{justify-content:center;padding-left:min(14vw,220px)}
+
+/* 뒤로 버튼과 제목이 겹치지 않게 */
+#courses .head,#options .head{margin-left:56px}
+/* 정보 줄이 지도를 가리지 않도록 바닥에 깔아준다 */
+.fact{padding:40px 0 10px;background:linear-gradient(transparent,var(--bg) 45%)}
+#play{padding-bottom:20px}
+.stage{margin-bottom:4px}
+.opts{max-width:620px;margin-left:56px}
