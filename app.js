@@ -79,6 +79,21 @@ document.addEventListener('click', e => {
   }
 });
 
+/* ── 타이틀 픽셀맵 ──────────────────────────────────
+   대한민국을 격자로 찍고 서울만 다른 색으로 둔다. v1 이 서울에서
+   시작해 전국으로 넓어진다는 로드맵이 그림 하나로 보이게. */
+fetch('data/korea-pixels.json').then(r => r.json()).then(g => {
+  const svg = $('#pixelmap');
+  // 우측 여백은 부산·울산까지로 잰다 (g.anchor). 더 동쪽으로 튀어나온 해안은
+  // viewBox 밖으로 흘려보내되 지워지지는 않는다.
+  svg.setAttribute('viewBox', `0 0 ${g.anchor + 1} ${g.h}`);
+  // 기준선 밖(울릉도·독도)이 차지하는 폭을 높이 대비 비율로 넘겨 잘림을 막는다
+  svg.style.setProperty('--pm-over', (g.w - g.anchor - 1) / g.h);
+  svg.innerHTML = g.rows.flatMap((row, y) => [...row].map((ch, x) => ch === '.' ? '' :
+    `<circle cx="${x + .5}" cy="${y + .5}" r=".36"${ch === 'S' ? ' class="seoul"' : ''}/>`
+  )).join('');
+});
+
 /* ── 코스 로드 ──────────────────────────────────────── */
 const load = slug => Promise.all([
   fetch(`data/${slug}.course.json`).then(r => r.json()),

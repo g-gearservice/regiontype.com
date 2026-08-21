@@ -4,6 +4,9 @@
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
   --land:#d3dde3; --land-line:#e8edf0; --card:#fff;
   --fast:.16s; --slow:.2s;
+  --indent:min(14vw,220px);   /* 타이틀 좌측 여백. 픽셀맵 우측 여백과 같은 값을 쓴다 */
+  --pm-h:min(76vh,720px);     /* 픽셀맵 높이 */
+  --pm-over:0;                /* 기준선 밖으로 나간 폭 ÷ 높이. app.js 가 데이터에서 넣는다 */
 }
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
@@ -145,7 +148,7 @@ body{
   #mobile{display:grid}
 }
 
-#title{justify-content:center;padding-left:min(14vw,220px)}
+#title{justify-content:center;padding-left:var(--indent)}
 
 /* 뒤로 버튼과 제목이 겹치지 않게 */
 #courses .head,#options .head{margin-left:56px}
@@ -154,3 +157,15 @@ body{
 #play{padding-bottom:20px}
 .stage{margin-bottom:4px}
 .opts{max-width:620px;margin-left:56px}
+
+/* ── 타이틀 픽셀맵 ─────────────────────── */
+#pixelmap{
+  /* viewBox 를 부산·울산이 있는 열에서 끊었으므로 right 가 곧 그 지점까지의 여백이다.
+     동해안(포항 쪽)이 더 튀어나와도 overflow 로 흘려보내 기준이 흔들리지 않는다. */
+  position:absolute; top:50%; transform:translateY(-50%);
+  height:var(--pm-h); width:auto; overflow:visible; pointer-events:none;
+  /* 여백 기준은 부산·울산이되, 그 밖의 울릉도·독도가 잘리지 않을 만큼은 보장한다 */
+  right:max(var(--indent), calc(var(--pm-h) * var(--pm-over) + 12px));
+}
+#pixelmap circle{fill:var(--block);opacity:.38}
+#pixelmap circle.seoul{fill:var(--accent);opacity:1}

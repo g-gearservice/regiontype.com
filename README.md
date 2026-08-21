@@ -16,12 +16,25 @@
     app.js       판정 엔진 + 게임 루프 + 결과 카드
     data/*.course.json   항목·별칭·한 줄 정보
     data/*.geom.json     화면 좌표로 투영된 SVG path (17KB)
-    tools/build_map.py   GeoJSON → geom.json
+    data/korea-pixels.json  타이틀 화면 픽셀맵 격자
+    tools/build_map.py      GeoJSON → geom.json
+    tools/build_pixels.py   GeoJSON → 픽셀 격자
 
 ## 지도 데이터 갱신
 
     curl -sL -o gu.json https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json
     python3 tools/build_map.py gu.json data/seoul-gu.geom.json
+
+## 타이틀 픽셀맵
+
+전국 시도 경계를 격자로 찍어 서울만 다른 색으로 둔다. v1 이 서울에서 시작해
+전국으로 넓어진다는 로드맵이 그림 하나로 보이도록.
+
+    curl -sL -o kr.json https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2018/json/skorea-provinces-2018-geo.json
+    python3 tools/build_pixels.py kr.json data/korea-pixels.json 34
+
+마지막 인자는 가로 칸 수(여백을 잘라내므로 결과는 더 좁다). 울릉도·독도처럼
+이웃 없는 한 칸짜리 섬은 장식으로서 잡티라 지운다.
 
 ## 정답 판정
 
