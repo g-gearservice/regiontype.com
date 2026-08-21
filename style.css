@@ -2,15 +2,22 @@
   --bg:#e8edf0; --grid:#dae2e7; --ink:#3c464a; --ink-soft:#5b676e;
   --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
-  --land:#d3dde3; --land-line:#e8edf0; --card:#fff;
+  --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s;
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --ease-in-out:cubic-bezier(.77,0,.175,1);
+  --road:#fff;
+  --shadow:0 20px 28px -16px rgba(58,78,88,.42), 0 3px 7px -3px rgba(58,78,88,.26);
+  --shadow-lift:0 30px 38px -18px rgba(58,78,88,.5), 0 5px 10px -4px rgba(58,78,88,.3);
   --indent:min(14vw,220px);   /* 타이틀 좌측 여백. 픽셀맵 우측 여백과 같은 값을 쓴다 */
   --pm-h:min(76vh,720px);     /* 픽셀맵 높이 */
   --pm-over:0;                /* 기준선 밖으로 나간 폭 ÷ 높이. app.js 가 데이터에서 넣는다 */
 }
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
-  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --land:#334047; --land-line:#232c31; --card:#2b353b;
+  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --road:#3a474e;
+  --shadow:0 18px 26px -18px rgba(0,0,0,.6), 0 3px 6px -3px rgba(0,0,0,.4);
+  --shadow-lift:0 26px 34px -20px rgba(0,0,0,.65), 0 4px 8px -4px rgba(0,0,0,.45); --land:#334047; --land-line:#232c31; --card:#2b353b;
 }
 @media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s } }
 :root[data-motion="off"]{ --fast:0s; --slow:0s }
@@ -23,11 +30,33 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 .grid-bg{
-  position:fixed; inset:-2px; z-index:-1; pointer-events:none;
+  position:fixed; inset:-2px; z-index:-3; pointer-events:none;
   background:
     linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 152px,
     linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/152px 100%;
 }
+/* 대각 광원과 가장자리 비네트 — 화면이 종이처럼 보이지 않게 */
+.grid-bg::after{
+  content:""; position:absolute; inset:0;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.30),rgba(255,255,255,0) 34%),
+    radial-gradient(130% 98% at 46% 36%,rgba(255,255,255,.10),rgba(74,102,116,.13) 84%);
+}
+:root[data-night] .grid-bg::after{
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.05),rgba(255,255,255,0) 46%),
+    radial-gradient(120% 90% at 50% 42%,rgba(255,255,255,.05),rgba(0,0,0,.34) 78%);
+}
+/* 배경을 가로지르는 도로. 메뉴 블록이 이 위에 얹힌다 */
+.road{
+  position:fixed; inset:0; width:100%; height:100%; z-index:-2; pointer-events:none;
+}
+.road path{
+  fill:none; stroke:var(--road); stroke-width:30;
+  stroke-linecap:round; stroke-linejoin:round;
+  filter:drop-shadow(0 7px 9px rgba(58,78,88,.16));
+}
+:root[data-night] .road path{filter:drop-shadow(0 7px 9px rgba(0,0,0,.3))}
 
 /* ── 화면 전환 ─────────────────────────── */
 .screen{
@@ -169,3 +198,110 @@ body{
 }
 #pixelmap circle{fill:var(--block);opacity:.38}
 #pixelmap circle.seoul{fill:var(--accent);opacity:1}
+
+/* ═══ Mini Motorways 질감 ═══════════════════════════════
+   블록 메뉴 · 긴 그림자 · 눌림 피드백 · 등장 모션 */
+
+/* 화면 전환 — 순간이동 대신 크로스페이드 */
+.screen{opacity:0;transition:opacity var(--slow) var(--ease-out)}
+.screen.on{opacity:1}
+
+/* 블록 버튼: 눌리고, 선택되면 커지고 진해진다 */
+.menu button, .course-list button, .scores .menu button{
+  transition:background var(--fast) var(--ease-out),
+             transform var(--fast) var(--ease-out),
+             letter-spacing var(--fast) var(--ease-out);
+}
+.menu button:active, .course-list button:active,
+.back:active, .toggle:active, .step:active{transform:scale(.97)}
+@media (hover:hover) and (pointer:fine){
+  .menu button:hover, .course-list button:hover{
+    background:var(--block-hi); transform:translateX(6px); letter-spacing:.01em;
+  }
+  .back:hover{transform:translateX(-4px)}
+  .step:hover{color:var(--accent)}      /* 레퍼런스의 앰버 화살표 */
+  .toggle:hover{border-color:var(--accent)}
+}
+.back{transition:transform var(--fast) var(--ease-out)}
+.step,.toggle{transition:color var(--fast) var(--ease-out),
+                         border-color var(--fast) var(--ease-out),
+                         transform var(--fast) var(--ease-out)}
+
+/* 설정: 항목 이름을 오른쪽 정렬 블록으로. 레퍼런스 사이드바 문법 */
+.opts{grid-template-columns:auto auto;gap:3px 34px}
+.opts dt{
+  background:var(--block); color:#fff; padding:5px 16px 7px;
+  justify-self:end; text-align:right; font-size:23px;
+  transition:background var(--fast) var(--ease-out);
+}
+.opts dt:has(+ dd :is(.toggle[aria-pressed="true"],.step)){background:var(--block-hi)}
+.opts dd{justify-self:start;padding-left:4px}
+
+/* 긴 우하향 그림자 — MM 의 모든 입체물이 갖는 것 */
+.course-list li{border-radius:5px;box-shadow:var(--shadow);
+  transition:transform var(--slow) var(--ease-out),box-shadow var(--slow) var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .course-list li:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+}
+.missed li{border-radius:4px;box-shadow:var(--shadow)}
+#card{border-radius:6px;box-shadow:var(--shadow-lift)}
+#typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
+#map path.got{filter:drop-shadow(0 10px 12px rgba(58,78,88,.28))}
+:root[data-night] #map path.got{filter:drop-shadow(0 10px 12px rgba(0,0,0,.45))}
+
+/* 등장 모션 — 무에서 나타나지 않고, 순서대로 */
+@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.screen.on .course-list li,
+.screen.on .missed li,
+.screen.on .menu button,
+.screen.on .opts > *{animation:rise .34s var(--ease-out) backwards}
+.screen.on .course-list li:nth-child(n+2){animation-delay:60ms}
+.screen.on .course-list li:nth-child(n+3){animation-delay:120ms}
+.screen.on .menu button:nth-child(2){animation-delay:60ms}
+.screen.on .menu button:nth-child(3){animation-delay:120ms}
+.missed li:nth-child(3n+2){animation-delay:50ms}
+.missed li:nth-child(3n+3){animation-delay:100ms}
+
+/* 카운트다운: scale(0) 이 아니라 거의 다 자란 상태에서 */
+.countdown{backdrop-filter:blur(2px)}
+.countdown b{display:block;animation:pop .5s var(--ease-out)}
+@keyframes pop{from{opacity:0;transform:scale(.92)}}
+
+/* 정답 정보: 아래에서 살짝 올라온다 */
+.fact{transform:translateY(6px);
+  transition:opacity var(--slow) var(--ease-out),transform var(--slow) var(--ease-out)}
+.fact.on{transform:translateY(0)}
+
+/* 콤보 배지 — 정답마다 한 번 튄다 */
+.combo{transition:transform var(--fast) var(--ease-out)}
+.combo.bump{transform:scale(1.16)}
+
+@media (prefers-reduced-motion:reduce){
+  .screen.on :is(.course-list li,.missed li,.menu button,.opts > *),
+  .countdown b{animation:none}
+}
+
+/* 스케일 — 레퍼런스는 타이포가 크고 여백이 넉넉하다 */
+.opts{
+  max-width:none; margin-left:0; font-size:30px;
+  grid-template-columns:minmax(0,34vw) auto; gap:4px 60px;
+  align-content:center; flex:1;
+}
+.opts dt{font-size:30px;padding:7px 20px 10px}
+.toggle{width:52px;height:52px;font-size:24px;border-width:4px}
+.step{font-size:30px;width:auto;padding:0 6px}
+#optTime{min-width:132px;font-size:30px;font-weight:800}
+.opts dd{gap:22px}
+
+.menu button{font-size:30px;padding:7px 20px 10px}
+.back{font-size:46px;font-weight:700}
+.head{font-size:40px}
+#courses .head,#options .head{margin-left:72px}
+
+/* 플레이 중에는 도로가 지도와 경쟁한다 — 물러난다 */
+body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
+.road{transition:opacity .4s var(--ease-out)}
+
+/* 정보 줄: 배경을 덧칠하면 비네트와 어긋나 띠가 생긴다. 자리를 비워 해결한다 */
+.fact{background:none;padding:0}
+.stage{padding-bottom:78px}

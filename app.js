@@ -157,7 +157,8 @@ async function start(slug) {
 function countdown(n, done) {
   const el = $('#countdown'); el.classList.add('on');
   const step = () => {
-    el.textContent = n > 0 ? n : '';
+    el.replaceChildren();
+    if (n > 0) { const b = document.createElement('b'); b.textContent = n; el.append(b); }
     if (n-- <= 0) { el.classList.remove('on'); return done(); }
     beep(440 + n * 110, .09, 'triangle');
     pending = setTimeout(step, 700);
@@ -197,7 +198,8 @@ function miss() {
   $('#typein').value = '';
   G.tries++; G.combo = 0;
   $('#statCombo').textContent = '';
-  const bar = $('.typebar'); bar.classList.add('bad');
+  const bar = $('.typebar');
+  bar.classList.remove('bad'); void bar.offsetWidth; bar.classList.add('bad');
   setTimeout(() => bar.classList.remove('bad'), 240);
   beep(160, .12, 'square');
 }
@@ -209,7 +211,10 @@ function claim(it) {
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
-  $('#statCombo').textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
+  const cb = $('#statCombo');
+  cb.textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
+  cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump');
+  setTimeout(() => cb.classList.remove('bump'), 160);
   const f = $('#fact');
   f.innerHTML = '<b></b><span></span>';
   f.querySelector('b').textContent = it.name;
