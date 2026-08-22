@@ -20,27 +20,51 @@ const sprite = fetch('assets/board.svg').then(r => r.text()).then(t => {
   document.body.insertAdjacentHTML('afterbegin', t);
 });
 
-/* 로드맵 타일을 비트맵 위에 얹을 때 쓰는 치수.
-   심볼 안에서 건물이 실제로 차지하는 비율을 알아야 중심을 맞출 수 있다.
-   rt-stop 뷰박스 "-4 4 190 144", 건물(지붕) 26,18 에서 128x72. */
-const TILE = { vx: -4, vy: 4, vw: 190, vh: 144, bx: 26, by: 18, bw: 128, bh: 72 };
-function tileBox(buildWidth) {
-  const w = buildWidth * TILE.vw / TILE.bw;
-  const h = w * TILE.vh / TILE.vw;
+/* 로드맵 에셋을 비트맵 위에 얹을 때 쓰는 치수.
+   v  뷰박스, b  건물(또는 상자)이 그 안에서 차지하는 칸,
+   c  도트를 지워야 하는 자리(토지까지 포함. 그림자는 뺀다). */
+const ASSET = {
+  // v 뷰박스 · b 건물 · c 토지 · p 꼭지 끝점(심볼 좌표) · nub 꼭지 폭
+  depot: { id: 'rt-block-depot', v: [-8, -10, 200, 152], b: [26, 18, 128, 72], c: [12, 10, 150, 98],
+           p: { l: [-4, 59], r: [178, 59], t: [87, -6], b: [87, 124] }, nub: 20 },
+  stop:  { id: 'rt-block', v: [-8, -10, 200, 152], b: [26, 18, 128, 72], c: [12, 10, 150, 98],
+           p: { l: [-4, 59], r: [178, 59], t: [87, -6], b: [87, 124] }, nub: 20 },
+  end:   { id: 'rt-block-end', v: [-8, -10, 200, 152], b: [26, 18, 128, 72], c: [12, 10, 150, 98],
+           p: { l: [-4, 59], r: [178, 59], t: [87, -6], b: [87, 124] }, nub: 20 },
+};
+
+/* 건물 폭을 지정하면 use 상자 크기와, 건물 중심·토지·꼭지를 그 상자 안
+   좌표로 돌려준다. */
+function tileBox(kind, buildWidth) {
+  const a = ASSET[kind];
+  const [vx, vy, vw, vh] = a.v, [bx, by, bw, bh] = a.b, [cx, cy, cw, ch] = a.c;
+  const w = buildWidth * vw / bw, h = w * vh / vw;
+  const sx = w / vw, sy = h / vh;
+  const at = ([x, y]) => [(x - vx) * sx, (y - vy) * sy];
+  const port = {};
+  for (const k in a.p) port[k] = at(a.p[k]);
   return {
-    w, h,
-    // use 상자 왼쪽 위에서 건물 한가운데까지의 거리
-    dx: w * (TILE.bx - TILE.vx + TILE.bw / 2) / TILE.vw,
-    dy: h * (TILE.by - TILE.vy + TILE.bh / 2) / TILE.vh,
+    id: a.id, w, h, nub: a.nub * sx,
+    dx: (bx - vx + bw / 2) * sx,          // 상자 왼쪽 위 → 건물 한가운데
+    dy: (by - vy + bh / 2) * sy,
+    clear: { x: (cx - vx) * sx, y: (cy - vy) * sy, w: cw * sx, h: ch * sy },
+    // 꼭지는 토지 한가운데를 기준으로 놓여 있다. 칸 중심에 이 점을 맞춘다
+    mid: at([cx + cw / 2, cy + ch / 2]),
+    port,
   };
 }
+
+/* 순서형 코스에서 이 항목이 무엇인가 — 출발·경유·종점 */
+const kindOf = (n, total) => n === 0 ? 'depot' : n === total - 1 ? 'end' : 'stop';
 const HUES = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'slate'];
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
 const opt = Object.assign(
-  { time: 120, strict: false, night: false, sound: true, motion: true },
+  { time: 120, strict: false, night: false, sound: true, motion: true, road: false },
   JSON.parse(localStorage.getItem('rt.opt') || '{}')
 );
+// 예전에는 style:'road' 로 적었다. 켜 두었던 사람이 조용히 비트맵으로 돌아가지 않게
+if (opt.style) { opt.road = opt.style === 'road'; delete opt.style; }
 const saveOpt = () => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
   document.documentElement.toggleAttribute('data-night', opt.night);
@@ -232,7 +256,9 @@ function wireBack(card, back, slug, geom, items) {
   const zoom = back.querySelector('.ov-zoom');
   const svg = back.querySelector('.ov-map');
   const z = () => Number(zoom.querySelector('[aria-pressed="true"]').dataset.v);
-  const at = items[0] && items[0].at;
+  // items[].at 은 플레이를 시작해야 채워진다. 미리보기는 geom 에서 직접 찾는다
+  const head = items[0] && geom.items.find(g => g.name === items[0].name);
+  const at = head && head.c;
   const apply = () => previewCam(svg, geom, z(), at);
   zoom.onclick = e => {
     const b = e.target.closest('button');
@@ -278,7 +304,13 @@ function wireRegionBack(card, back, courses) {
     if (n !== gen) return;
     const items = c.items.map(it => ({ ...it }));
     const svg = pane.querySelector('.ov-map');
-    drawDots(svg, geom, items);
+    const asRoad = opt.road && geom.slots;
+    svg.classList.toggle('road', !!asRoad);
+    if (asRoad) drawRoad(svg, geom, items, {});
+    else {
+      svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
+      drawDots(svg, geom, items);
+    }
     if (c.mode === 'sequence' && items[0] && items[0].el) items[0].el.classList.add('target');
     wireBack(card, pane, c.slug, geom, items);
   };
@@ -351,7 +383,7 @@ const load = slug => Promise.all([
 let G = null, tick = null, pending = null;
 
 async function start(slug, o = {}) {
-  const zoom = o.zoom || 1;
+  const zoom = o.zoom || 3;   // 1배를 없앴다 — 코스는 3배로만 돈다
   const [course, geom] = await load(slug);
   await sprite;   // 타일 심볼이 문서에 들어온 뒤에 그린다
   const items = course.items.map(it => {
@@ -363,12 +395,23 @@ async function start(slug, o = {}) {
        cell: geom.cell };
 
   const svg = $('#map');
-  svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
-  drawDots(svg, geom, items);
+  const road = opt.road && geom.slots;
+  G.road = !!road;
+  svg.classList.toggle('road', !!road);
+  if (road) {
+    drawRoad(svg, geom, items, G);
+  } else {
+    svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
+    drawDots(svg, geom, items, zoom > 1);   // 에셋은 확대해 볼 때만 얹는다
+  }
 
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
-  G.view = [geom.w, geom.h];
+  G.roads = svg.querySelector('.roads');
+  G.roadsEdge = svg.querySelector('.roads-edge');
+  G.car = svg.querySelector('.car');
+  const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+  G.view = [vb[2], vb[3]];
   // 정보 줄을 먼저 비운다 — aim() 이 띄운 첫 목표를 곧바로 지워버리던 순서였다
   $('#fact').classList.remove('on');
   $('#fact').innerHTML = '';
@@ -388,28 +431,259 @@ async function start(slug, o = {}) {
 }
 
 /* 도트 지도 — 격자 한 칸이 원 하나. 자치구 코스가 쓴다. */
-function drawDots(svg, geom, items) {
+/* withTiles 는 인자로 받는다. 미리보기는 게임이 시작되기 전에 이 함수를
+   쓰므로 여기서 전역 G 를 보면 null 참조로 지도가 통째로 안 그려진다. */
+function drawDots(svg, geom, items, withTiles = false) {
   const cells = geom.items.map(() => []);
   geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
     if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
   }));
   const cw = geom.cell, dr = (cw * .46).toFixed(1);
-  // 타일은 비트맵 위에 얹는다. 건물 폭은 중심 간 최소 간격보다 좁아야 겹치지 않는다
-  const b = tileBox(cw * 2.4);
-  svg.style.setProperty('--tf', (cw * .62).toFixed(1) + 'px');
+  svg.style.setProperty('--tf', (cw * .86).toFixed(1) + 'px');   // 칸을 꽉 채우게
 
   svg.innerHTML = '<g class="cam">' + geom.items.map((g, i) =>
     `<g id="p${i}">` + cells[i].map(([x, y], n) =>
       // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
       `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
       ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
+    // 이름의 y 는 격자 줄 한가운데로 맞춘다. 줄 사이에 걸치면 위아래 도트를
+    // 반씩 건드려 지저분해진다
     '<g class="tiles">' + geom.items.map((g, i) =>
-      `<g id="tl${i}" class="tile c-${HUES[i % HUES.length]}">` +
-      `<use href="#rt-stop" x="${(g.c[0] - b.dx).toFixed(1)}" y="${(g.c[1] - b.dy).toFixed(1)}"` +
-      ` width="${b.w.toFixed(1)}" height="${b.h.toFixed(1)}"/>` +
-      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text></g>`).join('') + '</g>' +
+      `<g id="tl${i}" class="tile"><text id="t${i}" x="${g.c[0]}"` +
+      ` y="${((Math.round(g.c[1] / cw - .5) + .5) * cw).toFixed(1)}"></text></g>`
+    ).join('') + '</g>' +
     '</g>';
+
   link(svg, geom, items);
+  // 글자 상자는 화면에 올라온 뒤에야 잴 수 있다. display:none 이면 0 이 나온다
+  requestAnimationFrame(() => coverDots(svg, items, cw));
+}
+
+/* ── 로드맵 (미니 모터웨이즈 방식) ─────────────────────
+   도트를 쓰지 않는다. 타일을 칸에 정렬해 놓고 길로 잇는다.
+   칸 하나를 CELL 로 잡고 그 안에서 타일 크기를 정한다. */
+const CELL = 100;
+
+/* ctx 에 결과를 담는다. 미리보기는 게임이 시작되기 전에 이 함수를 쓰므로
+   여기서 전역 G 를 만지면 null 참조로 지도가 통째로 안 그려진다. */
+function drawRoad(svg, geom, items, ctx = {}) {
+  const S = geom.slots;
+  const W = S.cols * CELL, H = S.rows * CELL;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.setProperty('--tf', (CELL * .17).toFixed(1) + 'px');
+  ctx.grid = { cols: S.cols, rows: S.rows,
+             blocked: new Set(geom.items.map(g => g.s.join(','))) };
+
+  const order = new Map(items.map((it, n) => [it.name, n]));
+  const box = geom.items.map(g => {
+    const kind = kindOf(order.get(g.name), items.length);
+    if (kind === 'depot') ctx.carHue = HUES[geom.items.indexOf(g) % HUES.length];
+    const b = tileBox(kind, CELL * .62);
+    const [c, r] = g.s;
+    b.kind = kind;
+    b.x = (c + .5) * CELL - b.mid[0];
+    b.y = (r + .5) * CELL - b.mid[1];
+    b.cx = (c + .5) * CELL;
+    b.cy = (r + .5) * CELL;
+    return b;
+  });
+  // 길 굵기는 꼭지 폭과 같아야 이음매가 벌어지지 않는다
+  const stop = box.find(b => b.kind !== 'depot') || box[0];
+  svg.style.setProperty('--road-w', stop.nub.toFixed(1) + 'px');
+  svg.style.setProperty('--road-edge', (7 * stop.w / 200).toFixed(2) + 'px');
+
+  // 먼저 항목을 이어 두어야 어느 꼭지를 쓸지 알 수 있다
+  const by = new Map(geom.items.map((g, i) => [g.name, i]));
+  geom.items.forEach((g, i) => {
+    const it = items.find(x => x.name === g.name);
+    const b = box[i];
+    it.slot = g.s; it.at = [b.cx, b.cy]; it.side = new Set();
+    it.port = {};
+    for (const k in b.port) it.port[k] = [b.x + b.port[k][0], b.y + b.port[k][1]];
+  });
+  ctx.legs = [];
+  for (let n = 0; n < items.length - 1; n++) {
+    const a = items[n], c = items[n + 1];
+    const cells = routeCells(a.slot, c.slot, ctx.grid.blocked, S.cols, S.rows);
+    let from = 'r', into = 'l';
+    if (cells && cells.length > 1) {
+      from = DIR(cells[0], cells[1]);
+      into = OPP[DIR(cells[cells.length - 2], cells[cells.length - 1])];
+    }
+    a.side.add(from); c.side.add(into);
+    ctx.legs.push({ cells, from, into });
+  }
+
+  // 토지 → 길 → 차 → 건물. 이 순서라야 차가 건물 아래로 지나간다
+  const plotId = it => 'rt-plot-' +
+    [...'lrtb'].filter(d => it.side.has(d)).join('') || 'rt-plot-lr';
+
+  let plots = '', blocks = '';
+  geom.items.forEach((g, i) => {
+    const it = items.find(x => x.name === g.name), b = box[i];
+    const pos = `x="${b.x.toFixed(1)}" y="${b.y.toFixed(1)}"` +
+                ` width="${b.w.toFixed(1)}" height="${b.h.toFixed(1)}"`;
+    plots += `<g id="pl${i}" class="plot"><use href="#${plotId(it)}" ${pos}/></g>`;
+    blocks += `<g id="bk${i}" class="tile c-${HUES[i % HUES.length]}">` +
+      `<use href="#${b.id}" ${pos}/>` +
+      `<text id="t${i}" x="${(b.x + b.dx).toFixed(1)}"` +
+      ` y="${(b.y + b.dy).toFixed(1)}"></text></g>`;
+  });
+
+  const show = location.search.includes('slots=1');
+  const used = new Set(geom.items.map(g => g.s.join(',')));
+  let grid = `<rect class="ground" x="0" y="0" width="${W}" height="${H}"/><g class="cells">`;
+  for (let r = 0; r < S.rows; r++)
+    for (let c = 0; c < S.cols; c++) {
+      grid += `<rect class="cell${used.has(c + ',' + r) ? ' used' : ''}" x="${c * CELL}"` +
+              ` y="${r * CELL}" width="${CELL}" height="${CELL}"/>`;
+      if (show) grid += `<text class="coord" x="${c * CELL + 6}" y="${r * CELL + 22}">${c},${r}</text>`;
+    }
+  grid += '</g>';
+
+  svg.innerHTML = '<g class="cam">' + grid +
+    `<g class="plots">${plots}</g>` +
+    '<g class="roads-edge"></g><g class="roads"></g>' +
+    `<g class="car c-${ctx.carHue}" hidden><use href="#rt-car" x="-12" y="-21"` +
+    ' width="31.5" height="45"/></g>' +
+    `<g class="blocks">${blocks}</g>` +
+    '</g>';
+
+  geom.items.forEach((g, i) => {
+    const it = items.find(x => x.name === g.name);
+    it.el = svg.querySelector('#bk' + i);        // 건물이 곧 그 지역이다
+    it.tile = it.el;
+    it.plot = svg.querySelector('#pl' + i);
+    it.label = svg.querySelector('#t' + i);
+    if (it.label) it.label.textContent = g.name;
+  });
+}
+
+/* 빈 칸만 밟아 두 칸을 잇는다. 꼭지가 네 방향이라 드나드는 방향은 자유다.
+   길이 없으면 null — 부르는 쪽이 곧장 잇는다. */
+function routeCells(from, to, blocked, cols, rows) {
+  const key = ([c, r]) => c + ',' + r;
+  const free = ([c, r]) => c >= 0 && c < cols && r >= 0 && r < rows && !blocked.has(key([c, r]));
+  const goal = key(to);
+  const near = ([c, r]) => Math.abs(c - to[0]) + Math.abs(r - to[1]);
+  const step = ([c, r]) => [[c - 1, r], [c + 1, r], [c, r - 1], [c, r + 1]];
+
+  const prev = new Map([[key(from), null]]);
+  const q = [from];
+  for (let i = 0; i < q.length; i++) {
+    const cur = q[i], k = key(cur);
+    if (k === goal) {
+      const path = [];
+      for (let kk = k; kk; kk = prev.get(kk)) path.unshift(kk.split(',').map(Number));
+      return path;
+    }
+    // 같은 길이면 목표에 가까운 쪽부터
+    for (const n of step(cur).sort((a, b) => near(a) - near(b))) {
+      const nk = key(n);
+      if (prev.has(nk)) continue;
+      if (nk !== goal && !free(n)) continue;   // 중간은 빈 칸만
+      prev.set(nk, k); q.push(n);
+    }
+  }
+  return null;
+}
+
+/* 꺾이는 자리마다 모서리를 둥글게 깎아 하나의 path 로 만든다 */
+function roundedPath(pts, r = 20) {
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1], [cx, cy] = pts[i], [nx, ny] = pts[i + 1];
+    const r1 = Math.min(r, Math.hypot(cx - px, cy - py) / 2);
+    const r2 = Math.min(r, Math.hypot(nx - cx, ny - cy) / 2);
+    const a = [cx + Math.sign(px - cx) * r1, cy + Math.sign(py - cy) * r1];
+    const b = [cx + Math.sign(nx - cx) * r2, cy + Math.sign(ny - cy) * r2];
+    d += `L${a[0].toFixed(1)} ${a[1].toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
+  }
+  const e = pts[pts.length - 1];
+  return d + `L${e[0].toFixed(1)} ${e[1].toFixed(1)}`;
+}
+
+/* 새로 깔린 길을 따라 차를 앞으로 보낸다.
+   경로를 직접 재지 않고 path 에게 물어본다 — 모서리가 둥글어 계산이 어긋난다. */
+function driveAlong(path, ms = 620) {
+  const car = G.car;
+  if (!car) return;
+  const len = path.getTotalLength();
+  if (!(len > 0)) return;
+  car.removeAttribute('hidden');
+  const t0 = performance.now();
+  const put = f => {
+    const p = path.getPointAtLength(len * f);
+    // 진행 방향을 알려면 조금 앞을 함께 본다
+    const q = path.getPointAtLength(Math.min(len, len * f + 1));
+    const a = Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI + 90;
+    car.setAttribute('transform',
+      `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${a.toFixed(1)})`);
+  };
+  cancelAnimationFrame(G.driveId);
+  const step = now => {
+    const f = Math.min(1, (now - t0) / ms);
+    put(f);
+    if (f < 1) G.driveId = requestAnimationFrame(step);
+  };
+  put(0);
+  G.driveId = requestAnimationFrame(step);
+}
+
+/* 두 타일을 잇는 길 하나를 만든다. 빈 칸만 밟고, 걸어 나가는 방향의 꼭지로 드나든다. */
+const DIR = (a, b) => b[0] > a[0] ? 'r' : b[0] < a[0] ? 'l' : b[1] > a[1] ? 'b' : 't';
+const OPP = { l: 'r', r: 'l', t: 'b', b: 't' };
+
+function makeRoad(a, b, leg) {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('class', 'road-line');
+  const cells = leg && leg.cells;
+  if (!cells || cells.length < 2) {            // 돌아갈 길이 없으면 곧장
+    const right = b.at[0] >= a.at[0];
+    p.setAttribute('d', roadPath(right ? a.port.r : a.port.l, right ? b.port.l : b.port.r));
+    return p;
+  }
+  const mid = ([c, r]) => [(c + .5) * CELL, (r + .5) * CELL];
+  p.setAttribute('d', roundedPath([a.port[leg.from], ...cells.slice(1, -1).map(mid),
+                                   b.port[leg.into]]));
+  return p;
+}
+
+/* 두 꼭지를 직각으로 잇는다. 가로 → 세로 → 가로, 모서리는 둥글게. */
+function roadPath(a, b, r = 22) {
+  const [ax, ay] = a, [bx, by] = b;
+  if (Math.abs(ay - by) < 1) return `M${ax} ${ay}H${bx}`;
+  const mx = (ax + bx) / 2, sy = Math.sign(by - ay), s1 = Math.sign(mx - ax), s2 = Math.sign(bx - mx);
+  const rr = Math.min(r, Math.abs(mx - ax), Math.abs(bx - mx), Math.abs(by - ay) / 2);
+  return `M${ax} ${ay}H${mx - s1 * rr}Q${mx} ${ay} ${mx} ${ay + sy * rr}` +
+         `V${by - sy * rr}Q${mx} ${by} ${mx + s2 * rr} ${by}H${bx}`;
+}
+
+/* 이름을 격자에 앉히고, 그 자리 도트를 찾아 둔다.
+   글자가 몇 칸을 차지하는지 재서 그 칸들의 한가운데로 옮긴다. 그래야
+   글자가 칸 경계에 걸치지 않고, 지울 도트도 칸 단위로 딱 떨어진다. */
+function coverDots(svg, items, cw) {
+  const cell = ([x, y]) => [Math.round(x / cw - .5), Math.round(y / cw - .5)];
+  const dots = [...svg.querySelectorAll('.cam > g[id^="p"] circle')].map(c => {
+    const [x, y] = [+c.getAttribute('cx'), +c.getAttribute('cy')];
+    const [col, row] = cell([x, y]);
+    return { el: c, col, row };
+  });
+
+  for (const it of items) {
+    if (!it.label) continue;
+    const b = it.label.getBBox();
+    const span = Math.max(1, Math.ceil(b.width / cw));
+    const start = Math.round((b.x + b.width / 2) / cw - span / 2);
+    it.label.setAttribute('x', ((start + span / 2) * cw).toFixed(1));
+
+    const row = Math.round(+it.label.getAttribute('y') / cw - .5);
+    const inside = (c, r) => r === row && c >= start && c < start + span;
+    const touch = (c, r) => r >= row - 1 && r <= row + 1 &&
+                            c >= start - 1 && c < start + span + 1;
+    it.under = dots.filter(d => inside(d.col, d.row)).map(d => d.el);
+    it.shrink = dots.filter(d => !inside(d.col, d.row) && touch(d.col, d.row)).map(d => d.el);
+  }
 }
 
 function link(svg, geom, items) {
@@ -417,8 +691,9 @@ function link(svg, geom, items) {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#p' + i);
     it.tile = svg.querySelector('#tl' + i);
+    // 이름표는 타일 안에 있다. 타일을 안 그리는 미리보기에서는 없다
     it.label = svg.querySelector('#t' + i);
-    it.label.textContent = g.name;
+    if (it.label) it.label.textContent = g.name;
     it.at = g.c;
   });
 }
@@ -427,10 +702,58 @@ function link(svg, geom, items) {
    '보임'에서는 윗줄이 지금 칠 곳, 아랫줄이 직전에 맞힌 곳의 설명이 된다. */
 function say(head, body) {
   const f = $('#fact');
-  if (!f.firstElementChild) f.innerHTML = '<b></b><span></span>';
-  if (head !== undefined) f.querySelector('b').textContent = head;
+  if (!f.firstElementChild) f.innerHTML = '<span></span>';
   if (body !== undefined) f.querySelector('span').textContent = body;
+  if (head !== undefined) setTarget(head);
   f.classList.add('on');
+}
+
+/* 칠 이름을 글자 하나씩 늘어놓는다. 이 자체가 입력창이다 —
+   맞게 친 글자만 색이 차오른다. */
+function setTarget(name) {
+  const box = $('#typing');
+  box.replaceChildren();
+  G.want = name;
+  for (const ch of name) {
+    const el = document.createElement('b');
+    el.textContent = ch;
+    box.append(el);
+  }
+  box.classList.remove('bad');
+  paintTyped('');
+}
+
+/* 지금까지 친 것을 그대로 보여준다.
+   맞은 글자는 색이 차고, 지금 치는 자리에는 조합 중인 자모(ㄱ, 가)가
+   그대로 뜬다. 조합 중인지 아닌지는 input 이벤트가 알려준다 —
+   자모 표를 들고 맞춰볼 필요가 없다. */
+function paintTyped(raw, composing = false) {
+  const box = $('#typing');
+  if (!G.want) return;
+  const buf = raw.replace(/\s/g, '');
+  // 앞에 붙은 찌꺼기를 흘려보낸다. 스페이스로 확정할 때 IME 가 조합을 끝내며
+  // 비운 입력창에 글자를 도로 넣는 일이 있어, 앞에서부터만 비교하면 그 뒤로
+  // 영영 색이 안 찬다. 정답 판정이 접미를 훑는 것과 같은 방식이다.
+  let n = 0, rest = buf;
+  for (let i = 0; i < buf.length; i++) {
+    const sub = buf.slice(i);
+    let k = 0;
+    while (k < sub.length && k < G.want.length && sub[k] === G.want[k]) k++;
+    if (k > n || i === 0) { n = k; rest = sub.slice(k); }
+    if (n === G.want.length) break;
+  }
+  const ing = composing && rest.length === 1;   // 아직 만들어지는 중인 한 글자
+  [...box.children].forEach((el, i) => {
+    el.classList.toggle('on', i < n);
+    const live = i === n && rest && (ing || !composing);
+    el.classList.toggle('ing', !!live);
+    el.textContent = live ? rest[0] : G.want[i];
+    // 커서는 방금 친 것 바로 뒤에 선다
+    el.classList.toggle('cur-l', i === n && !live);
+    el.classList.toggle('cur-r', !!live || (n >= G.want.length && i === G.want.length - 1));
+  });
+  // 조합이 끝났는데도 안 맞으면 오타다
+  box.classList.toggle('bad', rest.length > 0 && !ing);
 }
 
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
@@ -490,8 +813,23 @@ function stop() { clearInterval(tick); clearTimeout(pending); tick = pending = n
    keydown 으로 스페이스를 가로채면 한글 조합 확정 자체가 깨지므로
    (조합 중 스페이스는 isComposing:true 로 먼저 온다) 가로채지 않고
    입력값에 들어온 공백을 보고 판단한다. */
+/* 입력창은 1x1 로 숨겨 두었다. 다른 데를 클릭하면 포커스가 빠져나가
+   타이핑이 먹지 않으므로, 플레이 화면을 누르면 되돌린다.
+   pointerdown 에서 기본 동작을 막아야 포커스가 딴 데로 가지 않는다. */
+$('#play').addEventListener('pointerdown', e => {
+  if (e.target.closest('button, a, input, select, textarea')) return;
+  e.preventDefault();
+  $('#typein').focus();
+});
+
+/* 지금 칠 수 있는 상태인지 눈에 보이게 한다 */
+const markFocus = () => $('#typing').classList.toggle('off', document.activeElement !== $('#typein'));
+$('#typein').addEventListener('focus', markFocus);
+$('#typein').addEventListener('blur', markFocus);
+
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
+  paintTyped(e.target.value, e.isComposing);
   if (!/\s/.test(e.target.value)) return;        // 스페이스 전에는 판단하지 않는다
   const answer = e.target.value.replace(/\s+/g, '');
   e.target.value = '';
@@ -505,6 +843,7 @@ $('#typein').addEventListener('input', e => {
 
 function miss() {
   $('#typein').value = '';
+  paintTyped('');
   G.tries++; G.combo = 0;
   $('#statCombo').textContent = '';
   const bar = $('.typebar');
@@ -516,8 +855,21 @@ function miss() {
 function claim(it) {
   it.claimed = true;
   it.el.classList.add('got');
-  it.label.classList.add('on');
+  if (it.label) it.label.classList.add('on');
   if (it.tile) it.tile.classList.add('built');
+  if (it.plot) it.plot.classList.add('built');
+  if (it.under) it.under.forEach(c => c.classList.add('under'));
+  if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
+  if (G.road && G.prev) {
+    const p = makeRoad(G.prev, it, G.legs[G.idx - 1]);
+    // 테두리를 아래에 한 겹 더 깐다. 토지 꼭지의 테두리와 이어지게
+    const edge = p.cloneNode();
+    edge.setAttribute('class', 'road-edge');
+    G.roadsEdge.append(edge);
+    G.roads.append(p);
+    driveAlong(p);
+  }
+  if (G.road) G.prev = it;
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;

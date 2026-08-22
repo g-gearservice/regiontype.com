@@ -48,6 +48,8 @@
     <h2 class="head">설정</h2>
   </div>
   <dl class="opts">
+    <dt>미니 모터웨이즈</dt>
+    <dd><button class="toggle" data-opt="road" aria-label="미니 모터웨이즈 지도"></button></dd>
     <dt>제한 시간</dt>
     <dd><button class="step" data-opt="time" data-dir="-1" aria-label="제한 시간 줄이기">◀</button><span id="optTime" aria-live="polite"></span><button class="step" data-opt="time" data-dir="1" aria-label="제한 시간 늘리기">▶</button></dd>
     <dt>정식 명칭 강제</dt>
@@ -73,10 +75,13 @@
   </div>
   <div class="stage">
     <svg id="map" role="img" aria-label="서울 자치구 지도"></svg>
-    <div class="fact" id="fact" aria-live="polite"></div>
   </div>
+  <div class="fade fade-top" aria-hidden="true"></div>
+  <div class="fade fade-bot" aria-hidden="true"></div>
+  <div class="typing" id="typing" aria-hidden="true"></div>
+  <div class="fact" id="fact" aria-live="polite"></div>
   <div class="typebar">
-    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="지역 이름 입력" placeholder="지역 이름 입력 후 스페이스">
+    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="지역 이름 입력">
   </div>
   <div class="countdown" id="countdown" aria-live="assertive"></div>
 </section>
@@ -132,8 +137,7 @@
       <div class="choice" role="group">
         <span class="choice-l">배율</span>
         <div class="choice-b ov-zoom">
-          <button type="button" data-v="1" aria-pressed="true">1배</button>
-          <button type="button" data-v="3" aria-pressed="false">3배</button>
+          <button type="button" data-v="3" aria-pressed="true">3배</button>
         </div>
       </div>
       <div class="menu">
