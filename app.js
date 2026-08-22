@@ -2,8 +2,13 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const COURSES = ['seoul-gu'];
+const COURSES = ['seoul-gu', 'gangseo-dong'];
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
+const svgEl = (tag, at) => {
+  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in at) n.setAttribute(k, at[k]);
+  return n;
+};
 
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
@@ -173,27 +178,9 @@ async function start(slug, o = {}) {
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
-  // 격자를 자치구별로 쪼갠다 — 칸 하나가 원 하나. 타이틀 픽셀맵과 같은 문법이다
-  const cells = geom.items.map(() => []);
-  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
-    if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
-  }));
-  const cw = geom.cell, dr = (cw * .38).toFixed(1);
-
-  svg.innerHTML = '<g class="cam">' + geom.items.map((g, i) =>
-    `<g id="p${i}">` + cells[i].map(([x, y], n) =>
-      // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
-      `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
-      ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
-    geom.items.map((g, i) =>
-      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('') + '</g>';
-  geom.items.forEach((g, i) => {
-    const it = items.find(x => x.name === g.name);
-    it.el = svg.querySelector('#p' + i);
-    it.label = svg.querySelector('#t' + i);
-    it.label.textContent = g.name;
-    it.at = g.c;
-  });
+  G.board = !!course.board;
+  (G.board ? drawBoard : drawDots)(svg, geom, items);
+  G.roads = svg.querySelector('.roads');
 
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
@@ -214,6 +201,71 @@ async function start(slug, o = {}) {
   go('play');
   stop();
   countdown(3, run);
+}
+
+/* 도트 지도 — 격자 한 칸이 원 하나. 자치구 코스가 쓴다. */
+function drawDots(svg, geom, items) {
+  const cells = geom.items.map(() => []);
+  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
+  }));
+  const cw = geom.cell, dr = (cw * .38).toFixed(1);
+  svg.innerHTML = '<g class="cam">' + geom.items.map((g, i) =>
+    `<g id="p${i}">` + cells[i].map(([x, y], n) =>
+      // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
+      `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
+      ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
+    '<g class="roads"></g>' +
+    geom.items.map((g, i) =>
+      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('') + '</g>';
+  link(svg, geom, items);
+}
+
+/* 보드 지도 — 동 하나가 큰집 하나. 맞힐 때마다 집이 서고 길이 이어진다.
+   땅 → 길 → 작은 집 → 큰집 순으로 쌓아야 길이 집 밑으로 지나간다. */
+function drawBoard(svg, geom, items) {
+  const hue = i => 'h' + (i % 7);
+  svg.innerHTML = '<g class="cam">' +
+    '<g class="land">' + geom.items.map((g, i) =>
+      `<path id="p${i}" class="${hue(i)}" d="${g.d}"></path>`).join('') + '</g>' +
+    '<g class="roads"></g>' +
+    '<g class="huts">' + geom.items.map((g, i) =>
+      `<g id="hu${i}" class="${hue(i)}">` + g.houses.map(([x, y, k]) =>
+        `<rect x="${x - 7}" y="${y - 7}" width="14" height="14" rx="3"` +
+        ` style="--k:${k}"/>`).join('') + '</g>').join('') + '</g>' +
+    // 자리잡기(transform 속성)와 등장 연출(CSS transform)을 다른 그룹에 맡긴다.
+    // 한 노드에 두면 CSS 가 속성을 덮어써 집이 전부 원점으로 몰린다.
+    '<g class="towns">' + geom.items.map((g, i) =>
+      `<g id="bg${i}" class="${hue(i)}" transform="translate(${g.c[0]} ${g.c[1]})"><g class="pop">` +
+      '<rect class="l2" x="-23" y="-15" width="46" height="46" rx="9"/>' +
+      '<rect class="l1" x="-23" y="-20" width="46" height="46" rx="9"/>' +
+      '<rect class="top" x="-23" y="-25" width="46" height="46" rx="9"/>' +
+      '<path class="pin" d="M0 -3c-5.5-8.2-8.4-11.9-8.4-16.3a8.4 8.4 0 1 1 16.8 0C8.4-14.9 5.5-11.2 0-3Z"/>' +
+      '<circle class="eye" cx="0" cy="-19.3" r="3.2"/>' +
+      '</g></g>').join('') + '</g>' +
+    geom.items.map((g, i) =>
+      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1] + 48}"></text>`).join('') + '</g>';
+  link(svg, geom, items);
+}
+
+function link(svg, geom, items) {
+  geom.items.forEach((g, i) => {
+    const it = items.find(x => x.name === g.name);
+    it.el = svg.querySelector('#p' + i);
+    it.hut = svg.querySelector('#hu' + i);
+    it.big = svg.querySelector('#bg' + i);
+    it.label = svg.querySelector('#t' + i);
+    it.label.textContent = g.name;
+    it.at = g.c;
+  });
+}
+
+/* 길 — 가로로 갔다가 모서리를 둥글게 돌아 세로로. Mini Motorways 의 도로다. */
+function roadPath([ax, ay], [bx, by]) {
+  const r = Math.min(30, Math.abs(bx - ax), Math.abs(by - ay));
+  if (r < 2) return `M${ax} ${ay}L${bx} ${by}`;
+  const sx = Math.sign(bx - ax), sy = Math.sign(by - ay);
+  return `M${ax} ${ay}H${bx - sx * r}Q${bx} ${ay} ${bx} ${ay + sy * r}V${by}`;
 }
 
 /* 지도 아래 정보 줄. 윗줄과 아랫줄을 따로 갱신한다 —
@@ -309,6 +361,13 @@ function claim(it) {
   it.claimed = true;
   it.el.classList.add('got');
   it.label.classList.add('on');
+  if (G.board) {
+    it.hut.classList.add('built');
+    it.big.classList.add('built');
+    // 직전에 세운 집과 길을 잇는다. 경로가 맞닿은 동만 밟으므로 실제 이웃끼리 이어진다
+    if (G.last) G.roads.append(svgEl('path', { class: 'road-line', d: roadPath(G.last, it.at) }));
+    G.last = it.at;
+  }
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -366,9 +425,28 @@ function drawCard() {
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
-  svg.insertAdjacentHTML('afterbegin',
-    `<style>circle{fill:${land}}g.got circle{fill:${acc};r:9.5}` +
-    `g.miss circle{fill:${land};r:5}text{display:none}</style>`);
+  // 카드는 독립 SVG 라 CSS 변수가 없다 — 값을 풀어서 넣는다.
+  // 도트 지도와 보드 지도 두 가지를 모두 덮는다.
+  const v = n => css.getPropertyValue(n).trim();
+  const hue = i => v('--h' + i);
+  svg.insertAdjacentHTML('afterbegin', '<style>' +
+    // 도트 지도 — .got 는 도트를 담은 <g> 에 붙는다
+    `circle{fill:${land}}g.got circle{fill:${acc};r:9.5}g.miss circle{fill:${land};r:5}` +
+    // 보드 지도
+    `.land path{fill:${v('--ground')};stroke:${bg};stroke-width:3;stroke-linejoin:round}` +
+    [0, 1, 2, 3, 4, 5, 6].map(i =>
+      `.land .got.h${i}{fill:color-mix(in srgb,${hue(i)} 22%,${v('--card')})}`).join('') +
+    `.land .miss{fill:none;stroke:${v('--accent-text')};stroke-width:3;stroke-dasharray:9 7}` +
+    `.road-line{fill:none;stroke:${v('--card')};stroke-width:11;` +
+    `stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0}` +
+    `.huts rect{opacity:0}.huts .built rect{opacity:1}` +
+    [0, 1, 2, 3, 4, 5, 6].map(i => `.huts .h${i} rect{fill:${hue(i)}}`).join('') +
+    `.towns .pop{opacity:0;transform:none}.towns .built .pop{opacity:1}` +
+    `.towns rect{fill:${v('--card')}}.towns .l1{filter:brightness(.88)}` +
+    `.towns .l2{filter:brightness(.74)}` +
+    [0, 1, 2, 3, 4, 5, 6].map(i => `.towns .h${i} rect{fill:${hue(i)}}`).join('') +
+    `.towns .pin{fill:${ink}}.towns .eye{fill:#fff}` +
+    'text{display:none}</style>');
   const img = new Image();
   img.onload = () => {
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
