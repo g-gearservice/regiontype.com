@@ -134,14 +134,21 @@ async function start(slug) {
     geom.items.map((g, i) => `<path id="p${i}" class="h${i % 7}" d="${g.d}"></path>`).join('') +
     '</g>' +
     (geom.river ? `<path class="river" d="${geom.river}"></path>` : '') +
-    '<g class="roads"></g><g class="pins"></g>';
+    '<g class="roads"></g><g class="tiles"></g>';
+  const tiles = svg.querySelector('.tiles');
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#p' + i);
     it.at = g.c;
+    // 빈 대지 — 점령하면 여기에 건물이 올라간다
+    it.tile = el('g', { class: 'tile h' + (i % 7), transform: `translate(${g.c[0]} ${g.c[1]})` });
+    // 한 변 62 — 중심점 최소 간격 90.6 안에서 가장 크게 잡은 값
+    for (const [cls, dy] of [['l2', 9], ['l1', 4.5], ['top', 0]])
+      it.tile.append(el('rect', { class: cls, x: -31, y: -31 + dy, width: 62, height: 62, rx: 11 }));
+    tiles.append(it.tile);
   });
+
   G.roads = svg.querySelector('.roads');
-  G.pins = svg.querySelector('.pins');
   G.taken = [];                     // 이미 점령한 좌표 — 도로를 이어붙일 목적지
 
   $('#statTotal').textContent = '/' + items.length;
@@ -237,14 +244,15 @@ function claim(it) {
   }
   G.taken.push(it.at);
 
-  const [cx, cy] = it.at;
-  const g = el('g', { class: 'pin', transform: `translate(${cx} ${cy})` });
-  g.append(el('path', { d: 'M0 0C-5.5-8-8.5-11.5-8.5-16A8.5 8.5 0 1 1 8.5-16C8.5-11.5 5.5-8 0 0Z' }));
-  g.append(el('circle', { cx: 0, cy: -16, r: 3.2, class: 'eye' }));
-  const t = el('text', { x: 0, y: 26 });
+  it.tile.classList.add('built');
+  const pin = el('g', { class: 'pin' });
+  pin.setAttribute('transform', 'translate(0 6)');
+  pin.append(el('path', { d: 'M0 0C-7.5-11-11.5-16-11.5-22A11.5 11.5 0 1 1 11.5-22C11.5-16 7.5-11 0 0Z' }));
+  pin.append(el('circle', { cx: 0, cy: -22, r: 4.4, class: 'eye' }));
+  it.tile.append(pin);
+  const t = el('text', { x: 0, y: 58 });
   t.textContent = it.name;
-  g.append(t);
-  G.pins.append(g);
+  it.tile.append(t);
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -308,7 +316,10 @@ function drawCard() {
     hues +
     `.river{fill:none;stroke:${v('--sea')};stroke-width:20;stroke-linecap:round;stroke-linejoin:round}` +
     `.road-line{fill:none;stroke:${v('--road-line')};stroke-width:7;stroke-linecap:round;stroke-linejoin:round}` +
-    `.pin path{fill:${v('--pin')}}.pin .eye{fill:${v('--cream')}}.pin text{display:none}` +
+    `.tile{display:none}.tile.built{display:inline}` +
+    [0,1,2,3,4,5,6].map(i => `.tile.h${i}{fill:${v('--h' + i)}}`).join('') +
+    `.tile .l1{filter:brightness(.86)}.tile .l2{filter:brightness(.72)}` +
+    `.pin path{fill:${v('--pin')}}.pin .eye{fill:#fff}.tile text{display:none}` +
     `</style>`);
   const img = new Image();
   img.onload = () => {

@@ -322,10 +322,13 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
   stroke-linejoin:round; transition:fill var(--slow) var(--ease-out);
 }
 #map .land{filter:drop-shadow(0 14px 16px rgba(20,60,58,.34))}  /* 땅덩어리가 물 위에 뜬다 */
-#map .land .got.h0{fill:var(--h0)} #map .land .got.h1{fill:var(--h1)}
-#map .land .got.h2{fill:var(--h2)} #map .land .got.h3{fill:var(--h3)}
-#map .land .got.h4{fill:var(--h4)} #map .land .got.h5{fill:var(--h5)}
-#map .land .got.h6{fill:var(--h6)}
+#map .land .got.h0{fill:color-mix(in srgb,var(--h0) 14%,var(--cream))}
+#map .land .got.h1{fill:color-mix(in srgb,var(--h1) 14%,var(--cream))}
+#map .land .got.h2{fill:color-mix(in srgb,var(--h2) 14%,var(--cream))}
+#map .land .got.h3{fill:color-mix(in srgb,var(--h3) 14%,var(--cream))}
+#map .land .got.h4{fill:color-mix(in srgb,var(--h4) 14%,var(--cream))}
+#map .land .got.h5{fill:color-mix(in srgb,var(--h5) 14%,var(--cream))}
+#map .land .got.h6{fill:color-mix(in srgb,var(--h6) 14%,var(--cream))}
 #map .land path.miss{fill:none;stroke:var(--pin);stroke-width:3.2;stroke-dasharray:9 7}
 
 #map .river{
@@ -341,10 +344,33 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 }
 @keyframes pave{to{stroke-dashoffset:0}}
 
-#map .pin{animation:drop .34s var(--ease-out) backwards}
+/* ── 대지와 건물 ─────────────────────────────
+   점령 전에는 점선 빈 칸, 점령하면 층이 쌓인 색 타일이 올라간다 */
+#map .tile{fill:var(--cream)}
+#map .tile .l1,#map .tile .l2{display:none}
+#map .tile .top{
+  stroke:var(--pin); stroke-width:2.6; stroke-dasharray:8 6; opacity:.34;
+  transition:opacity var(--fast) var(--ease-out);
+}
+#map .tile.h0{fill:var(--h0)} #map .tile.h1{fill:var(--h1)}
+#map .tile.h2{fill:var(--h2)} #map .tile.h3{fill:var(--h3)}
+#map .tile.h4{fill:var(--h4)} #map .tile.h5{fill:var(--h5)}
+#map .tile.h6{fill:var(--h6)}
+#map .tile:not(.built){fill:var(--cream)}
+
+#map .tile.built{
+  animation:build .36s var(--ease-out) backwards;
+  filter:drop-shadow(9px 16px 12px rgba(20,60,58,.38));   /* MM 의 길고 부드러운 우하향 그림자 */
+}
+#map .tile.built .l1,#map .tile.built .l2{display:inline}
+#map .tile.built .l1{filter:brightness(.86)}
+#map .tile.built .l2{filter:brightness(.72)}
+#map .tile.built .top{stroke:none;opacity:1}
+@keyframes build{from{opacity:0;transform:translateY(-12px) scale(.86)}}
+
 #map .pin path{fill:var(--pin)}
-#map .pin .eye{fill:var(--cream)}
-#map .pin text{
+#map .pin .eye{fill:#fff}
+#map .tile text{
   font:800 26px system-ui,sans-serif; fill:var(--pin);
   text-anchor:middle; letter-spacing:.02em; paint-order:stroke;
   stroke:rgba(255,255,255,.85); stroke-width:4;
