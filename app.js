@@ -41,17 +41,6 @@ function matchInput(raw, items, strict) {
   }
   return null;
 }
-/* 이 입력이 아직 무언가로 이어질 수 있는가. 어느 접미도 미점령 항목의
-   앞부분이 아니면 오타로 확정한다. */
-function canContinue(raw, items) {
-  const buf = raw.replace(/\s/g, '');
-  if (!buf) return true;
-  const open = items.filter(it => !it.claimed);
-  for (let i = 0; i < buf.length; i++)
-    if (open.some(it => it.name.startsWith(buf.slice(i)))) return true;
-  return false;
-}
-
 /* ── 사운드 (WebAudio 삑 소리, 소재 확보 전 임시) ────── */
 let ac;
 function beep(freq, dur = .07, type = 'sine') {
@@ -288,21 +277,21 @@ function run() {
 }
 function stop() { clearInterval(tick); clearTimeout(pending); tick = pending = null; }
 
+/* 스페이스로 확정한다.
+   keydown 으로 스페이스를 가로채면 한글 조합 확정 자체가 깨지므로
+   (조합 중 스페이스는 isComposing:true 로 먼저 온다) 가로채지 않고
+   입력값에 들어온 공백을 보고 판단한다. */
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
+  if (!/\s/.test(e.target.value)) return;        // 스페이스 전에는 판단하지 않는다
+  const answer = e.target.value.replace(/\s+/g, '');
+  e.target.value = '';
+  if (!answer) return;                            // 빈 스페이스는 그냥 넘긴다
   // 미점령 전체를 대상으로 판정한 뒤 목표인지 본다. 목표만 넘기면
   // 약칭의 경쟁 판정(중 → 중구/중랑구)이 무너진다.
-  const hit = matchInput(e.target.value, G.items, opt.strict);
-  if (!hit) return;
-  e.target.value = '';
-  if (G.seq && hit !== target()) return miss();   // 순서가 아니면 오답
+  const hit = matchInput(answer, G.items, opt.strict);
+  if (!hit || (G.seq && hit !== target())) return miss();
   claim(hit);
-});
-// 조합이 끝난 시점에 어디로도 이어질 수 없으면 그때 오답이다.
-// keydown 으로 스페이스를 가로채면 IME 조합 확정 자체가 깨진다.
-$('#typein').addEventListener('compositionend', e => {
-  if (!G || !tick || canContinue(e.target.value, G.items)) return;
-  miss();
 });
 
 function miss() {
@@ -434,10 +423,5 @@ if (location.search.includes('rt=1')) {
   console.assert(m('역삼동', dong, true) === '역삼동', '정식 명칭 강제 모드에서도 마찬가지');
   console.assert(m('역삼1', dong) === '역삼1동', '별칭은 후보가 자기 자신뿐일 때 확정');
 
-  // 오타 확정 판정
-  console.assert(canContinue('강', gu) === true, '강: 강남구로 이어질 수 있다');
-  console.assert(canContinue('강난', gu) === false, '강난: 어디로도 이어지지 않는다');
-  console.assert(canContinue('', gu) === true, '빈 입력은 오답이 아니다');
-  console.assert(canContinue('가나강', gu) === true, '접미가 살아 있으면 이어진다');
   console.log('self-check done');
 }
