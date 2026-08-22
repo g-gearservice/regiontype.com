@@ -28,18 +28,18 @@
 <h2>이름이 들어간다</h2>
 <div style="display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap">
   <div style="position:relative">
-    <svg class="c-yellow" width="230" height="172"><use href="board.svg#rt-stop"/></svg>
-    <span style="position:absolute;left:31px;top:22px;width:154px;height:86px;display:grid;
+    <svg class="c-yellow" width="227" height="172"><use href="board.svg#rt-stop"/></svg>
+    <span style="position:absolute;left:36px;top:17px;width:153px;height:86px;display:grid;
                  place-items:center;font-weight:800;font-size:19px;color:#6b4b12">가양1동</span>
   </div>
   <div style="position:relative">
-    <svg class="c-teal" width="200" height="172"><use href="board.svg#rt-end"/></svg>
-    <span style="position:absolute;left:31px;top:22px;width:123px;height:86px;display:grid;
+    <svg class="c-teal" width="208" height="172"><use href="board.svg#rt-end"/></svg>
+    <span style="position:absolute;left:36px;top:17px;width:153px;height:86px;display:grid;
                  place-items:center;font-weight:800;font-size:17px;color:#12403a">염창동</span>
   </div>
   <div style="position:relative">
-    <svg class="c-purple" width="230" height="172"><use href="board.svg#rt-stop"/></svg>
-    <span style="position:absolute;left:31px;top:22px;width:154px;height:86px;display:grid;
+    <svg class="c-purple" width="227" height="172"><use href="board.svg#rt-stop"/></svg>
+    <span style="position:absolute;left:36px;top:17px;width:153px;height:86px;display:grid;
                  place-items:center;font-weight:800;font-size:19px;color:#2b2560">화곡본동</span>
   </div>
 </div>
@@ -49,47 +49,43 @@
   길과 부지를 하나의 합집합 외곽선으로 그린다. 같은 path 를 굵게 그은 뒤
   그 위에 채우면 안쪽 선이 덮여 바깥 윤곽만 남는다.
 </p>
-<svg class="chain" viewBox="0 0 1460 500" width="100%" style="max-width:1180px">
-  <defs>
-    <path id="chain-sil"
-      d="M110 336h1350a16 16 0 0 1 16 16v26a16 16 0 0 1-16 16H110a16 16 0 0 1-16-16v-26a16 16 0 0 1 16-16Z
-         M520 160h280a20 20 0 0 1 20 20v198a16 16 0 0 1-16 16H516a16 16 0 0 1-16-16V180a20 20 0 0 1 20-20Z
-         M1150 160h130a20 20 0 0 1 20 20v198a16 16 0 0 1-16 16h-154a16 16 0 0 1-16-16V180a20 20 0 0 1 20-20Z"/>
-    <rect id="blkA" x="524" y="212" width="272" height="140" rx="20"/>
-    <rect id="blkB" x="1154" y="212" width="126" height="140" rx="20"/>
-  </defs>
+<svg class="chain" viewBox="0 0 1400 430" width="100%" style="max-width:1180px">
+  <defs><path id="chain-sil" d="M85 250H1335A25 25 0 0 1 1360 275V275A25 25 0 0 1 1335 300H85A25 25 0 0 1 60 275V275A25 25 0 0 1 85 250ZM452 74H668A38 38 0 0 1 706 112V218A38 38 0 0 1 668 256H452A38 38 0 0 1 414 218V112A38 38 0 0 1 452 74ZM446 84H662A38 38 0 0 1 700 122V228A38 38 0 0 1 662 266H446A38 38 0 0 1 408 228V122A38 38 0 0 1 446 84ZM440 94H656A38 38 0 0 1 694 132V238A38 38 0 0 1 656 276H440A38 38 0 0 1 402 238V132A38 38 0 0 1 440 94ZM1022 74H1238A38 38 0 0 1 1276 112V218A38 38 0 0 1 1238 256H1022A38 38 0 0 1 984 218V112A38 38 0 0 1 1022 74ZM1016 84H1232A38 38 0 0 1 1270 122V228A38 38 0 0 1 1232 266H1016A38 38 0 0 1 978 228V122A38 38 0 0 1 1016 84ZM1010 94H1226A38 38 0 0 1 1264 132V238A38 38 0 0 1 1226 276H1010A38 38 0 0 1 972 238V132A38 38 0 0 1 1010 94Z"/></defs>
+  <!-- 길과 토지를 하나의 합집합 외곽선으로. 굵게 긋고 그 위를 채운다 -->
   <use href="#chain-sil" fill="none" stroke="#a9b9bc" stroke-width="9" stroke-linejoin="round"/>
   <use href="#chain-sil" fill="#fff"/>
-
   <g class="c-yellow">
     <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
-      <use href="#blkA" transform="translate(9 9)"/><use href="#blkA" transform="translate(18 18)"/>
-      <use href="#blkA" transform="translate(27 27)"/><use href="#blkA" transform="translate(36 36)"/>
+      <path d="M440 110H656A22 22 0 0 1 678 132V238A22 22 0 0 1 656 260H440A22 22 0 0 1 418 238V132A22 22 0 0 1 440 110Z" transform="translate(9 9)"/>
+      <path d="M440 110H656A22 22 0 0 1 678 132V238A22 22 0 0 1 656 260H440A22 22 0 0 1 418 238V132A22 22 0 0 1 440 110Z" transform="translate(18 18)"/>
+      <path d="M440 110H656A22 22 0 0 1 678 132V238A22 22 0 0 1 656 260H440A22 22 0 0 1 418 238V132A22 22 0 0 1 440 110Z" transform="translate(27 27)"/>
+      <path d="M440 110H656A22 22 0 0 1 678 132V238A22 22 0 0 1 656 260H440A22 22 0 0 1 418 238V132A22 22 0 0 1 440 110Z" transform="translate(36 36)"/>
     </g>
-    <use href="#blkA" fill="var(--rt-base)"/>
-    <use href="#blkA" fill="var(--rt-wall)" transform="translate(8 -13)"/>
-    <use href="#blkA" fill="var(--rt-roof)" transform="translate(16 -26)"/>
+    <path d="M440 110H656A22 22 0 0 1 678 132V238A22 22 0 0 1 656 260H440A22 22 0 0 1 418 238V132A22 22 0 0 1 440 110Z" fill="var(--rt-base)"/>
+    <path d="M446 100H662A22 22 0 0 1 684 122V228A22 22 0 0 1 662 250H446A22 22 0 0 1 424 228V122A22 22 0 0 1 446 100Z" fill="var(--rt-wall)"/>
+    <path d="M452 90H668A22 22 0 0 1 690 112V218A22 22 0 0 1 668 240H452A22 22 0 0 1 430 218V112A22 22 0 0 1 452 90Z" fill="var(--rt-roof)"/>
   </g>
-  <text x="668" y="272" text-anchor="middle" font-size="46" font-weight="800"
-        fill="#6b4b12" font-family="system-ui,sans-serif">가양1동</text>
-
+  <text x="560" y="181" text-anchor="middle" font-size="46"
+        font-weight="800" fill="rgba(0,0,0,.62)" font-family="system-ui,sans-serif">가양1동</text>
   <g class="c-teal">
     <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
-      <use href="#blkB" transform="translate(9 9)"/><use href="#blkB" transform="translate(18 18)"/>
-      <use href="#blkB" transform="translate(27 27)"/><use href="#blkB" transform="translate(36 36)"/>
+      <path d="M1010 110H1226A22 22 0 0 1 1248 132V238A22 22 0 0 1 1226 260H1010A22 22 0 0 1 988 238V132A22 22 0 0 1 1010 110Z" transform="translate(9 9)"/>
+      <path d="M1010 110H1226A22 22 0 0 1 1248 132V238A22 22 0 0 1 1226 260H1010A22 22 0 0 1 988 238V132A22 22 0 0 1 1010 110Z" transform="translate(18 18)"/>
+      <path d="M1010 110H1226A22 22 0 0 1 1248 132V238A22 22 0 0 1 1226 260H1010A22 22 0 0 1 988 238V132A22 22 0 0 1 1010 110Z" transform="translate(27 27)"/>
+      <path d="M1010 110H1226A22 22 0 0 1 1248 132V238A22 22 0 0 1 1226 260H1010A22 22 0 0 1 988 238V132A22 22 0 0 1 1010 110Z" transform="translate(36 36)"/>
     </g>
-    <use href="#blkB" fill="var(--rt-base)"/>
-    <use href="#blkB" fill="var(--rt-wall)" transform="translate(8 -13)"/>
-    <use href="#blkB" fill="var(--rt-roof)" transform="translate(16 -26)"/>
+    <path d="M1010 110H1226A22 22 0 0 1 1248 132V238A22 22 0 0 1 1226 260H1010A22 22 0 0 1 988 238V132A22 22 0 0 1 1010 110Z" fill="var(--rt-base)"/>
+    <path d="M1016 100H1232A22 22 0 0 1 1254 122V228A22 22 0 0 1 1232 250H1016A22 22 0 0 1 994 228V122A22 22 0 0 1 1016 100Z" fill="var(--rt-wall)"/>
+    <path d="M1022 90H1238A22 22 0 0 1 1260 112V218A22 22 0 0 1 1238 240H1022A22 22 0 0 1 1000 218V112A22 22 0 0 1 1022 90Z" fill="var(--rt-roof)"/>
   </g>
-  <text x="1256" y="272" text-anchor="middle" font-size="40" font-weight="800"
-        fill="#12403a" font-family="system-ui,sans-serif">염창동</text>
+  <text x="1130" y="181" text-anchor="middle" font-size="46"
+        font-weight="800" fill="rgba(0,0,0,.62)" font-family="system-ui,sans-serif">염창동</text>
 
-  <use class="c-orange" href="board.svg#rt-depot" x="72" y="306" width="128" height="126"/>
-  <use class="c-yellow" href="board.svg#rt-car" x="0" y="0" width="34" height="48"
-       transform="translate(348 342) rotate(90)"/>
-  <use class="c-teal" href="board.svg#rt-car" x="0" y="0" width="34" height="48"
-       transform="translate(1008 342) rotate(90)"/>
+  <use class="c-orange" href="board.svg#rt-depot" x="34" y="228" width="106" height="104"/>
+  <use class="c-yellow" href="board.svg#rt-car" x="0" y="0" width="30" height="42"
+       transform="translate(300 260) rotate(90)"/>
+  <use class="c-teal" href="board.svg#rt-car" x="0" y="0" width="30" height="42"
+       transform="translate(870 260) rotate(90)"/>
 </svg>
 
 <script>
@@ -97,8 +93,8 @@ const COLORS = ['red','orange','yellow','green','teal','blue','purple','pink','s
 const ROWS = [
   ['자동차',  '#rt-car',   28,  40],
   ['차고지',  '#rt-depot', 54,  52],
-  ['경유지',  '#rt-stop',  118, 72],
-  ['종점',    '#rt-end',    92, 72],
+  ['경유지',  '#rt-stop',   95, 72],
+  ['종점',    '#rt-end',    87, 72],
 ];
 const t = document.getElementById('grid');
 t.insertAdjacentHTML('beforeend',
