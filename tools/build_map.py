@@ -10,10 +10,21 @@ SYM = '0123456789abcdefghijklmnopqrstuvwxyz'
 W = 1000.0
 src, dst = sys.argv[1], sys.argv[2]
 COLS = int(sys.argv[3]) if len(sys.argv) > 3 else 46
+PREFIX = sys.argv[4] if len(sys.argv) > 4 else ""      # 코드 접두로 한 구만 뽑을 때
 
-feats = json.load(open(src))["features"]
-lats = [c[1] for f in feats for c in f["geometry"]["coordinates"][0]]
-lons = [c[0] for f in feats for c in f["geometry"]["coordinates"][0]]
+feats = [f for f in json.load(open(src))["features"]
+         if str(f["properties"].get("code", "")).startswith(PREFIX)]
+assert feats, f"코드 {PREFIX!r} 로 시작하는 항목이 없다"
+
+def outer(f):
+    """겉 테두리 하나만 쓴다 — 도트 격자에는 섬·구멍까지 필요하지 않다."""
+    g = f["geometry"]
+    if g["type"] == "Polygon":
+        return g["coordinates"][0]
+    return max((p[0] for p in g["coordinates"]), key=len)   # 가장 큰 조각
+
+lats = [c[1] for f in feats for c in outer(f)]
+lons = [c[0] for f in feats for c in outer(f)]
 k = math.cos(math.radians((min(lats) + max(lats)) / 2))   # 경도 1도의 실제 폭 보정
 x0 = min(lons) * k
 s = W / (max(lons) * k - x0)
@@ -22,7 +33,7 @@ H = round((max(lats) - min(lats)) * s, 1)
 def px(lon, lat):
     return (lon * k - x0) * s, (max(lats) - lat) * s
 
-rings = [[px(*c) for c in f["geometry"]["coordinates"][0]] for f in feats]
+rings = [[px(*c) for c in outer(f)] for f in feats]
 names = [f["properties"]["name"] for f in feats]
 
 cell = W / COLS
