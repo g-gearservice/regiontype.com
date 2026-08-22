@@ -97,20 +97,20 @@
   <symbol id="rt-stop" viewBox="-2 -2 190 118">
     <use href="#rt-stop-sil" fill="var(--rt-road,#fff)"
          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3.5" stroke-linejoin="round"/>
-    <use href="#rt-hatch" x="34" y="76"/>
-    <rect x="90" y="26" width="40" height="40" rx="6" fill="none"
-          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3" stroke-dasharray="7 6"
+    <use href="#rt-hatch" x="30" y="82" transform="scale(.8)" transform-origin="30 82"/>
+    <rect x="84" y="13" width="46" height="46" rx="7" fill="none"
+          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3" stroke-dasharray="8 7"
           stroke-linecap="round" opacity=".8"/>
-    <use href="#rt-house" x="34" y="22"/>
+    <use href="#rt-house" transform="translate(35.8 13) scale(1.15)"/>
   </symbol>
 
   <!-- ── 종점 : 길이 한쪽에만 붙은 막다른 큰집 ───────── -->
   <symbol id="rt-end" viewBox="-2 -2 148 118">
     <use href="#rt-end-sil" fill="var(--rt-road,#fff)"
          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3.5" stroke-linejoin="round"/>
-    <use href="#rt-hatch" x="34" y="76"/>
-    <use href="#rt-house" x="46" y="22"/>
-    <use href="#rt-pin" x="66" y="26"/>
+    <use href="#rt-hatch" x="30" y="82" transform="scale(.8)" transform-origin="30 82"/>
+    <use href="#rt-house" transform="translate(53.8 13) scale(1.15)"/>
+    <use href="#rt-pin" x="67" y="35"/>
   </symbol>
 </defs>
 </svg>
