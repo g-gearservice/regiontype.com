@@ -239,7 +239,8 @@ const promptName = it => (opt.strict ? null : stripSuffix(it.name)) || it.name;
 function aim() {
   const t = target();
   G.items.forEach(i => i.el.classList.toggle('target', i === t));
-  if (t) say(promptName(t));               // 칠 곳은 언제나 알려준다
+  // 이름과 설명은 언제나 같은 곳을 가리켜야 한다. 치는 동안 그곳을 읽게 된다
+  if (t) say(promptName(t), t.meta.description);
   $('#fact').classList.toggle('aim', !!t);
   const [W, H] = G.view, z = G.zoom;
   let tx = 0, ty = 0;
@@ -315,9 +316,8 @@ function claim(it) {
   cb.textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
   cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump');
   setTimeout(() => cb.classList.remove('bump'), 160);
-  // 순서형은 윗줄이 곧 다음 목표로 덮이므로 맞힌 이름을 설명 줄에 함께 남긴다
-  if (G.seq) say(undefined, `${it.name} — ${it.meta.description}`);
-  else say(it.name, it.meta.description);
+  // 순서형은 바로 뒤 aim() 이 다음 목표의 이름과 설명으로 갈아끼운다
+  if (!G.seq) say(it.name, it.meta.description);
   beep(520 + G.combo * 40, .08, 'triangle');
   if (G.hits === G.items.length) return finish();
   if (G.seq) { while (G.items[G.idx] && G.items[G.idx].claimed) G.idx++; }
