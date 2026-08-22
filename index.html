@@ -24,23 +24,29 @@
   <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
   <p class="tagline">지역을 타이핑으로 알리자</p>
   <nav class="menu">
-    <button data-go="courses">시작하기</button>
+    <button data-go="regions">시작하기</button>
     <button data-go="options">설정</button>
   </nav>
   <svg id="pixelmap" aria-hidden="true"></svg>
 </section>
 
-<!-- 코스 목록 -->
-<section id="courses" class="screen">
-  <button class="back" data-go="title" aria-label="뒤로">←</button>
-  <h2 class="head">코스</h2>
-  <ul class="course-list" id="courseList"></ul>
+<!-- 지역 목록 -->
+<section id="regions" class="screen">
+  <div class="screen-head">
+    <button class="back" data-go="title" aria-label="뒤로"></button>
+    <h2 class="head">지역</h2>
+  </div>
+  <div class="course-stage">
+    <ul class="course-list" id="regionList"></ul>
+  </div>
 </section>
 
 <!-- 설정 -->
 <section id="options" class="screen">
-  <button class="back" data-go="title" aria-label="뒤로">←</button>
-  <h2 class="head">설정</h2>
+  <div class="screen-head">
+    <button class="back" data-go="title" aria-label="뒤로"></button>
+    <h2 class="head">설정</h2>
+  </div>
   <dl class="opts">
     <dt>제한 시간</dt>
     <dd><button class="step" data-opt="time" data-dir="-1" aria-label="제한 시간 줄이기">◀</button><span id="optTime" aria-live="polite"></span><button class="step" data-opt="time" data-dir="1" aria-label="제한 시간 늘리기">▶</button></dd>
@@ -58,8 +64,8 @@
 
 <!-- 플레이 -->
 <section id="play" class="screen">
-  <button class="back" data-go="courses" aria-label="그만두기">←</button>
   <div class="hud">
+    <button class="back" data-go="regions" aria-label="그만두기"></button>
     <div class="gauge"><i id="gaugeFill"></i></div>
     <div class="stat time" id="statTime"><b>0:00</b></div>
     <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
@@ -82,13 +88,13 @@
     <canvas id="card" width="1600" height="900"></canvas>
     <div class="scores">
       <p><b id="rScore">0</b><span>점</span></p>
-      <p><b id="rCount">0</b><span>곳 점령</span></p>
+      <p><b id="rCount">0</b><span>들른 곳</span></p>
       <p><b id="rAcc">0%</b><span>정확도</span></p>
       <p class="best" id="rBest"></p>
       <div class="menu">
         <button id="again">다시 하기</button>
         <button id="save">이미지 저장</button>
-        <button data-go="courses">코스 목록</button>
+        <button data-go="regions">지역</button>
       </div>
     </div>
   </div>
@@ -96,25 +102,46 @@
   <ul class="missed" id="missed"></ul>
 </section>
 
-<!-- 코스 시작 옵션 -->
-<div id="ov" class="overlay" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
-    <h2 id="ovTitle"></h2>
-    <p class="ov-sub" id="ovSub"></p>
-    <div class="choice" role="group" aria-labelledby="ovZoomL">
-      <span class="choice-l" id="ovZoomL">배율</span>
-      <div class="choice-b" id="ovZoom">
-        <button data-v="1" aria-pressed="true">1배율</button>
-        <button data-v="3" aria-pressed="false">3배율</button>
+<!-- 지역 카드 뒷면: 코스 고르기 → 시작 옵션 -->
+<template id="regionTpl">
+  <div class="card-back">
+    <div class="ov-pick">
+      <b class="ov-title"></b>
+      <p class="ov-sub">코스를 고르세요</p>
+      <div class="choice" role="group">
+        <span class="choice-l">코스</span>
+        <div class="choice-b ov-courses"></div>
       </div>
     </div>
-    <p class="ov-note" id="ovNote"></p>
-    <div class="menu">
-      <button id="ovStart">시작</button>
-      <button id="ovCancel">취소</button>
+    <div class="ov-play" hidden></div>
+  </div>
+</template>
+
+<template id="ovTpl">
+  <div class="ov-game">
+    <div class="hud ov-hud">
+      <div class="gauge"><i></i></div>
+      <div class="stat time"><b class="ov-time">0:00</b></div>
+      <div class="stat"><b>0</b><span class="ov-total">/0</span></div>
+    </div>
+    <div class="ov-stage">
+      <svg class="ov-map" aria-hidden="true"></svg>
+    </div>
+    <div class="ov-dock">
+      <b class="ov-title"></b>
+      <div class="choice" role="group">
+        <span class="choice-l">배율</span>
+        <div class="choice-b ov-zoom">
+          <button type="button" data-v="1" aria-pressed="true">1배</button>
+          <button type="button" data-v="3" aria-pressed="false">3배</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button type="button" class="ov-start">시작</button>
+      </div>
     </div>
   </div>
-</div>
+</template>
 
 <div id="mobile">
   <h1 class="logo">region<span>type</span><i class="dot"></i></h1>

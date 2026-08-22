@@ -3,7 +3,7 @@
   --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
-  --fast:.16s; --slow:.2s;
+  --fast:.16s; --slow:.2s; --flip:.42s;
   --ease-out:cubic-bezier(.23,1,.32,1);
   --ease-in-out:cubic-bezier(.77,0,.175,1);
   --shadow:0 20px 28px -16px rgba(58,78,88,.42), 0 3px 7px -3px rgba(58,78,88,.26);
@@ -18,8 +18,9 @@
   --shadow:none;
   --shadow-lift:none; --land:#334047; --land-line:#232c31; --card:#2b353b;
 }
-@media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s } }
-:root[data-motion="off"]{ --fast:0s; --slow:0s }
+/* 모션을 줄이면 뒤집기도 즉시 전환된다 — 회전은 어지럼의 주 원인 */
+@media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s; --flip:0s } }
+:root[data-motion="off"]{ --fast:0s; --slow:0s; --flip:0s }
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -53,32 +54,99 @@ body{
 .logo span{font-weight:400}
 .dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);vertical-align:.9em;margin-left:.1em}
 .tagline{color:var(--ink-soft);margin-top:14px;font-size:18px}
-.head{font-size:34px;font-weight:800;letter-spacing:-.02em;margin-bottom:28px}
+.head{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin:0}
+
+.screen-head{
+  display:flex;align-items:center;gap:14px;
+  margin-bottom:28px;flex:0 0 auto;
+}
 
 /* ── 블록 버튼 (레퍼런스 메뉴) ───────────── */
 .menu{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-top:44px}
-.menu button, .course-list button, #save, #again{
+.menu button, #save, #again{
   font:inherit;font-weight:700;font-size:26px;color:#fff;cursor:pointer;
   background:var(--block); border:0; padding:6px 18px 8px;
-  transition:background var(--fast), transform var(--fast);
+  transition:background var(--fast);
 }
-.menu button:hover, .course-list button:hover{background:var(--block-hi);transform:translateX(4px)}
-.menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible,#save:focus-visible,#again:focus-visible{outline:3px solid transparent}
 .back{
-  position:absolute;top:40px;left:48px;z-index:3;
-  font-size:38px;line-height:1;background:none;border:0;color:var(--ink);cursor:pointer;
+  position:static;flex:0 0 auto;
+  width:40px;height:40px;padding:0;
+  background:var(--ink);border:0;cursor:pointer;
+  -webkit-mask:url(assets/arrow-back.svg) center / 100% no-repeat;
+  mask:url(assets/arrow-back.svg) center / 100% no-repeat;
 }
 
-/* ── 코스 목록 ─────────────────────────── */
-.course-list{list-style:none;display:flex;flex-wrap:wrap;gap:20px;max-width:1100px}
-.course-list li{
-  background:var(--card);padding:26px 28px;width:340px;
-  box-shadow:0 10px 22px -14px rgba(40,60,70,.5);
+/* ── 코스 목록 — 레퍼런스: 색 블록 상단 + 크림 본문, 아래 중앙에 공용 Play ── */
+.course-stage{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:40px;
 }
-.course-list h3{font-size:22px;font-weight:800;margin-bottom:8px}
-.course-list p{color:var(--ink-soft);font-size:15px;min-height:66px}
-.course-list .n{color:var(--accent-text);font-weight:700;font-size:14px;display:block;margin-bottom:16px}
-.course-list button{font-size:20px;padding:4px 14px 6px}
+.course-list{
+  list-style:none;display:flex;align-items:center;justify-content:center;
+  gap:26px;padding:0;perspective:1400px;
+}
+.course-list li{display:flex}
+.course-list li[hidden]{display:none}
+/* 코스마다 다른 색조 — 레퍼런스의 도시별 색. 기존 팔레트만 쓴다 */
+.course-list li:nth-child(2n) .card{--tint:var(--accent)}
+/* 앞면·뒷면을 겹쳐두고 카드를 통째로 돌린다 */
+.card{
+  --tint:var(--block);
+  width:230px;position:relative;
+  transform-style:preserve-3d;
+}
+.card-face{
+  font:inherit;color:inherit;text-align:center;
+  border:0;padding:0;overflow:hidden;background:var(--card);
+  width:100%;display:flex;flex-direction:column;
+  backface-visibility:hidden;
+}
+.card-front{cursor:pointer}
+.card-back{
+  position:absolute;inset:0;transform:rotateY(180deg);
+  padding:24px 22px;justify-content:center;gap:2px;
+}
+.card[data-preview="1"] .card-back{padding:12px 14px 10px;justify-content:stretch}
+.card[data-flip="true"] .card-front{pointer-events:none}
+.card[data-flip="false"] .card-back{pointer-events:none}
+.card[data-locking="1"]{pointer-events:none}
+.card-top{
+  background:color-mix(in srgb,var(--tint) 42%,var(--card));
+  height:186px;display:grid;place-items:center;
+}
+.thumb{width:126px;height:126px;border-radius:50%;
+  background:var(--card);display:grid;place-items:center;overflow:hidden}
+.thumb svg{width:80%;height:80%;fill:var(--tint)}
+.card-body{padding:20px 22px 26px;display:block}
+.card-body b{display:block;font-size:21px;font-weight:800;letter-spacing:-.01em}
+.card-body em{display:block;font-style:normal;color:var(--accent-text);
+  font-weight:700;font-size:13px;margin:6px 0 12px}
+.card-body .desc{display:block;color:var(--ink-soft);font-size:14px;line-height:1.55}
+
+/* 뒷면 — 시작 옵션 */
+.card-back .ov-title{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.card-back .ov-sub{color:var(--ink-soft);font-size:13px;margin-top:5px}
+.card-back .choice{display:grid;gap:7px;margin-top:20px;justify-items:center}
+.card-back .choice-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
+.card-back .menu{flex-direction:row;justify-content:center;gap:3px;margin-top:8px}
+.card-back .menu button{font-size:17px;padding:5px 15px 7px}
+.ov-pick,.ov-play{display:flex;flex-direction:column;justify-content:center;gap:2px;flex:1;min-height:0}
+.ov-pick[hidden],.ov-play[hidden]{display:none}
+.ov-play{justify-content:stretch}
+.ov-game{flex:1;min-height:0;display:flex;flex-direction:column;text-align:left}
+.ov-hud{margin-bottom:4px;gap:14px}
+.ov-stage{flex:1;min-height:0;position:relative}
+.ov-map{width:100%;height:100%;display:block}
+.ov-dock{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;
+  margin-top:8px;
+}
+.ov-dock .ov-title{font-size:18px}
+.ov-dock .choice{margin:0}
+.ov-dock .menu{margin:0}
+.ov-courses{flex-direction:column;align-items:stretch;width:100%}
+.ov-courses button{opacity:1;width:100%;font-size:14px;padding:6px 10px;line-height:1.35;white-space:normal}
 
 /* ── 설정 ─────────────────────────────── */
 .opts{display:grid;grid-template-columns:auto auto;gap:18px 40px;align-items:center;font-size:24px;font-weight:700}
@@ -96,7 +164,8 @@ body{
 
 /* ── 플레이 ───────────────────────────── */
 #play{padding:24px 40px 32px}
-.hud{display:flex;align-items:center;gap:24px;padding-left:56px;margin-bottom:8px}
+.hud{display:flex;align-items:center;gap:24px;margin-bottom:8px}
+#play .back{position:static;flex:0 0 auto}
 .gauge{flex:1;height:10px;background:var(--land);overflow:hidden}
 .gauge i{display:block;height:100%;width:100%;background:var(--block);transition:width 1s linear,background var(--slow)}
 .gauge.warn i{background:var(--accent-deep)}
@@ -107,22 +176,22 @@ body{
 .combo{color:var(--accent-text);font-weight:800;font-size:24px;min-width:80px}
 
 .stage{flex:1;position:relative;display:flex;justify-content:center;min-height:0}
-#map{width:100%;height:100%;display:block}
+#map,.ov-map{width:100%;height:100%;display:block}
 /* 자치구는 도형이 아니라 도트 격자다. 정답을 맞히면 그 구의 도트가 차례로 물든다 */
-#map circle{
+#map circle,.ov-map circle{
   fill:var(--land);
   transition:fill .24s var(--ease-out), r .24s var(--ease-out);
   transition-delay:calc(var(--i,0) * 7ms);
 }
-#map g.got circle{fill:var(--accent)}
-#map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land))}
-#map text{
+#map g.got circle,.ov-map g.got circle{fill:var(--accent)}
+#map g.miss circle,.ov-map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land))}
+#map text,.ov-map text{
   font:700 calc(19px / var(--z,1)) system-ui,sans-serif;   /* 확대해도 화면상 같은 크기 */
   fill:#2d3538;text-anchor:middle;
   paint-order:stroke;stroke:var(--bg);stroke-width:calc(5px / var(--z,1));
   stroke-linejoin:round;                                    /* 도트 위에서도 읽히게 */
   pointer-events:none;opacity:0;transition:opacity var(--slow)}
-#map text.on{opacity:1}
+#map text.on,.ov-map text.on{opacity:1}
 
 .fact{
   position:absolute;left:0;right:0;bottom:0;text-align:center;pointer-events:none;
@@ -146,8 +215,9 @@ body{
   font-size:180px;font-weight:800;color:var(--accent);background:rgba(232,237,240,.85);
 }
 :root[data-night] .countdown{background:rgba(35,44,49,.85)}
-:root[data-night] .course-list li,
+:root[data-night] .card,
 :root[data-night] #card,
+:root[data-night] #coursePlay,
 :root[data-night] #typein{box-shadow:none}
 .countdown.on{display:grid}
 
@@ -177,7 +247,6 @@ body{
 #title{justify-content:center;padding-left:var(--indent)}
 
 /* 뒤로 버튼과 제목이 겹치지 않게 */
-#courses .head,#options .head{margin-left:56px}
 /* 정보 줄이 지도를 가리지 않도록 바닥에 깔아준다 */
 .fact{padding:40px 0 10px;background:linear-gradient(transparent,var(--bg) 45%)}
 #play{padding-bottom:20px}
@@ -203,26 +272,16 @@ body{
 .screen{opacity:0;transition:opacity var(--slow) var(--ease-out)}
 .screen.on{opacity:1}
 
-/* 블록 버튼: 눌리고, 선택되면 커지고 진해진다 */
-.menu button, .course-list button, .scores .menu button{
-  transition:background var(--fast) var(--ease-out),
-             transform var(--fast) var(--ease-out),
-             letter-spacing var(--fast) var(--ease-out);
+.menu button, .scores .menu button, #save, #again{
+  transition:background var(--fast) var(--ease-out);
 }
-.menu button:active, .course-list button:active,
-.back:active, .toggle:active, .step:active{transform:scale(.97)}
 @media (hover:hover) and (pointer:fine){
-  .menu button:hover, .course-list button:hover{
-    background:var(--block-hi); transform:translateX(6px); letter-spacing:.01em;
-  }
-  .back:hover{transform:translateX(-4px)}
-  .step:hover{color:var(--accent)}      /* 레퍼런스의 앰버 화살표 */
+  .menu button:hover, #save:hover, #again:hover{background:var(--accent)}
+  .step:hover{color:var(--accent)}
   .toggle:hover{border-color:var(--accent)}
 }
-.back{transition:transform var(--fast) var(--ease-out)}
 .step,.toggle{transition:color var(--fast) var(--ease-out),
-                         border-color var(--fast) var(--ease-out),
-                         transform var(--fast) var(--ease-out)}
+                         border-color var(--fast) var(--ease-out)}
 
 /* 설정: 항목 이름을 오른쪽 정렬 블록으로. 레퍼런스 사이드바 문법 */
 .opts{grid-template-columns:auto auto;gap:3px 34px}
@@ -235,11 +294,24 @@ body{
 .opts dd{justify-self:start;padding-left:4px}
 
 /* 긴 우하향 그림자 — MM 의 모든 입체물이 갖는 것 */
-.course-list li{border-radius:5px;box-shadow:var(--shadow);
-  transition:transform var(--slow) var(--ease-out),box-shadow var(--slow) var(--ease-out)}
-@media (hover:hover) and (pointer:fine){
-  .course-list li:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+.card-face{border-radius:6px;box-shadow:var(--shadow)}
+/* 뒤집기 — 화면 안에서 모양이 바뀌는 동작이라 ease-in-out */
+.card{transition:transform var(--flip) var(--ease-in-out),
+               width var(--flip) var(--ease-in-out),
+               height var(--flip) var(--ease-in-out)}
+.card[data-flip="true"]{transform:rotateY(180deg) scale(1.06);z-index:1}
+.card[data-flip="true"][data-preview="1"]{
+  width:min(84vw,1000px);height:min(84vh,720px);
+  transform:rotateY(180deg);z-index:2;
 }
+.card[data-flip="true"] .card-face{box-shadow:var(--shadow-lift)}
+.card-front:active{transform:scale(.98)}
+.card-front{transition:transform var(--fast) var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .card[data-flip="false"]:hover{transform:translateY(-3px)}
+  .card[data-flip="false"]:hover .card-face{box-shadow:var(--shadow-lift)}
+}
+.card-back .menu{align-items:center}
 .missed li{border-radius:4px;box-shadow:var(--shadow)}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
@@ -290,9 +362,8 @@ body{
 .opts dd{gap:22px}
 
 .menu button{font-size:30px;padding:7px 20px 10px}
-.back{font-size:46px;font-weight:700}
+.back{width:44px;height:44px}
 .head{font-size:40px}
-#courses .head,#options .head{margin-left:72px}
 
 /* 정보 줄: 배경을 덧칠하면 비네트와 어긋나 띠가 생긴다. 자리를 비워 해결한다 */
 .fact{background:none;padding:0}
@@ -303,64 +374,45 @@ body{
    지도 라벨은 두 모드 모두 맞힌 뒤에만 나타난다. */
 .fact.aim b{color:var(--accent-text)}
 
-/* ── 코스 시작 옵션 오버레이 ───────────────────────────── */
-.overlay{
-  position:fixed; inset:0; z-index:20; display:grid; place-items:center;
-  background:color-mix(in srgb,var(--bg) 72%,transparent);
-  backdrop-filter:blur(3px);
-}
-.overlay[hidden]{display:none}
-.sheet{
-  background:var(--card); padding:34px 38px 30px; border-radius:6px;
-  box-shadow:var(--shadow-lift); min-width:min(460px,86vw);
-  animation:rise .22s var(--ease-out);
-}
-.sheet h2{font-size:26px;font-weight:800;letter-spacing:-.02em}
-.ov-sub{color:var(--ink-soft);font-size:15px;margin-top:6px}
-.choice{display:flex;align-items:center;gap:18px;margin-top:22px}
-.choice-l{font-weight:700;font-size:16px;min-width:74px}
-.choice-b{display:flex;gap:3px}
+/* ── 배율 선택 버튼 (카드 뒷면) ───────────────────────── */
+.choice-b{display:flex;gap:3px;justify-content:center}
 .choice-b button{
-  font:inherit;font-weight:700;font-size:17px;color:#fff;cursor:pointer;
-  background:var(--block);border:0;padding:5px 15px 7px;opacity:.5;
+  font:inherit;font-weight:700;font-size:15px;color:#fff;cursor:pointer;
+  background:var(--block);border:0;padding:4px 13px 6px;opacity:.5;
   transition:opacity var(--fast) var(--ease-out),
-             background var(--fast) var(--ease-out),
-             transform var(--fast) var(--ease-out);
+             background var(--fast) var(--ease-out);
 }
 .choice-b button[aria-pressed="true"]{opacity:1;background:var(--block-hi)}
-.choice-b button:active{transform:scale(.97)}
-.choice-b button:focus-visible,#ovStart:focus-visible,#ovCancel:focus-visible{
-  outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover) and (pointer:fine){ .choice-b button:hover{opacity:1} }
-.ov-note{color:var(--ink-soft);font-size:14px;margin-top:18px;min-height:20px}
-.sheet .menu{flex-direction:row;gap:3px;margin-top:20px}
-.sheet .menu button{font-size:20px;padding:5px 16px 7px}
-#ovCancel{background:color-mix(in srgb,var(--block) 55%,var(--card))}
+.choice-b button:focus-visible{outline:3px solid transparent}
+.card-face:focus-visible{outline:3px solid transparent}
+@media (hover:hover) and (pointer:fine){
+  .choice-b button:hover{opacity:1;background:var(--accent)}
+}
 
 /* ── 확대 카메라 ──────────────────────────────────────
    viewBox 는 그대로 두고 안쪽 그룹을 밀고 당긴다 — transform 이라야
    부드럽게 이어진다. */
-#map .cam{transition:transform .52s var(--ease-in-out)}
-@media (prefers-reduced-motion:reduce){ #map .cam{transition:none} }
+#map .cam,.ov-map .cam{transition:transform .52s var(--ease-in-out)}
+@media (prefers-reduced-motion:reduce){ #map .cam,.ov-map .cam{transition:none} }
 
 /* 지금 쳐야 할 구 — 이름을 숨겨도 어디인지는 보여야 한다 */
-#map g.target circle{
+#map g.target circle,.ov-map g.target circle{
   stroke:var(--accent-text); stroke-width:calc(2.4px / var(--z,1));
   animation:aimpulse 1.5s var(--ease-in-out) infinite;
 }
 @keyframes aimpulse{50%{stroke-opacity:.25}}
-@media (prefers-reduced-motion:reduce){ #map g.target circle{animation:none} }
+@media (prefers-reduced-motion:reduce){ #map g.target circle,.ov-map g.target circle{animation:none} }
 
 
 /* ── 로드맵 타일 — 비트맵 위에 얹는다 ──────────────────── */
-#map .tiles > g{
+#map .tiles > g,.ov-map .tiles > g{
   opacity:0; transform:translateY(7px) scale(.88);
   transform-box:fill-box; transform-origin:center;
   transition:opacity .18s var(--ease-out), transform .3s var(--ease-out);
 }
-#map .tiles > g.built{opacity:1;transform:none}
+#map .tiles > g.built,.ov-map .tiles > g.built{opacity:1;transform:none}
 /* 타일 글자는 지도와 함께 커진다 — 건물 위에 찍힌 글자이기 때문이다 */
-#map .tiles text{
+#map .tiles text,.ov-map .tiles text{
   font:800 var(--tf,14px)/1 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
   fill:rgba(0,0,0,.62); text-anchor:middle; dominant-baseline:central;
   paint-order:normal; stroke:none; opacity:1; pointer-events:none;

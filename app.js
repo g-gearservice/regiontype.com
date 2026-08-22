@@ -2,7 +2,15 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const COURSES = ['seoul-gu', 'gangseo-dong'];
+const REGIONS = [
+  {
+    id: 'seoul',
+    title: '서울',
+    description: '한강이 가로지르는 수도. 25개 자치구부터 행정동까지.',
+    thumb: 'seoul-gu',
+    courses: ['seoul-gu', 'gangseo-dong']
+  }
+];
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
 let PM = null;   // 타이틀 픽셀맵 메타. 배경 격자를 비트 칸에 맞출 때 쓴다.
 
@@ -121,6 +129,8 @@ function followGrid(ms) {
 }
 window.addEventListener('resize', syncGrid);
 document.addEventListener('click', e => {
+  const open = document.querySelector('.card[data-flip="true"]');
+  if (open && !open.contains(e.target)) flip(open, false);
   const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
   const t = e.target.closest('.toggle');
   if (t) { opt[t.dataset.opt] = !opt[t.dataset.opt]; saveOpt(); }
@@ -149,6 +159,146 @@ fetch('data/korea-pixels.json').then(r => r.json()).then(g => {
   requestAnimationFrame(() => requestAnimationFrame(syncGrid));
 });
 
+/* 코스 카드 원형 썸네일 — geom 도트를 그대로 축소해 그린다 */
+function thumbSvg(geom) {
+  const dots = [];
+  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch !== '.') dots.push(
+      `<circle cx="${((x + .5) * geom.cell).toFixed(1)}" cy="${((y + .5) * geom.cell).toFixed(1)}" r="${(geom.cell * .42).toFixed(1)}"/>`);
+  }));
+  return `<svg viewBox="0 0 ${geom.w} ${geom.h}" preserveAspectRatio="xMidYMid meet">${dots.join('')}</svg>`;
+}
+
+/* 카드를 누르면 그 자리에서 뒤집힌다 — 같은 목록에서 한 장만 열린다 */
+function flipMs() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--flip').trim();
+  return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+}
+function lockUntilSettled(card) {
+  card.dataset.locking = '1';
+  const ms = flipMs();
+  const unlock = () => { delete card.dataset.locking; };
+  if (!(ms > 0)) { unlock(); return; }
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    card.removeEventListener('transitionend', onEnd);
+    unlock();
+  };
+  const onEnd = e => { if (e.target === card && e.propertyName === 'transform') finish(); };
+  card.addEventListener('transitionend', onEnd);
+  setTimeout(finish, ms + 50);
+}
+function flip(card, open) {
+  if (open && (card.dataset.flip === 'true' || card.dataset.locking === '1')) return;
+  if (!open && card.dataset.flip !== 'true') return;
+  const list = card.closest('.course-list');
+  list.querySelectorAll('.card').forEach(c => {
+    const on = open && c === card;
+    const front = c.querySelector('.card-front'), back = c.querySelector('.card-back');
+    c.dataset.flip = on;
+    front.setAttribute('aria-expanded', on);
+    front.inert = on;
+    back.inert = !on;
+  });
+  if (!open) {
+    lockUntilSettled(card);
+    card.removeAttribute('data-preview');
+    card.querySelector('.card-front').focus();
+    return;
+  }
+  const play = card.querySelector('.ov-play');
+  const focus = (play && !play.hidden && card.querySelector('.ov-start'))
+    || card.querySelector('.ov-courses button')
+    || card.querySelector('.ov-start');
+  if (focus) focus.focus();
+}
+
+/* 뒷면 하나에 배율 선택·시작·취소를 묶는다 */
+function previewCam(svg, geom, zoom, at) {
+  const W = geom.w, H = geom.h, z = zoom;
+  let tx = 0, ty = 0;
+  if (z > 1 && at) {
+    tx = Math.min(0, Math.max(W - z * W, W / 2 - z * at[0]));
+    ty = Math.min(0, Math.max(H - z * H, H / 2 - z * at[1]));
+  }
+  svg.style.setProperty('--z', z);
+  const cam = svg.querySelector('.cam');
+  if (cam) cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
+}
+
+function wireBack(card, back, slug, geom, items) {
+  const zoom = back.querySelector('.ov-zoom');
+  const svg = back.querySelector('.ov-map');
+  const z = () => Number(zoom.querySelector('[aria-pressed="true"]').dataset.v);
+  const at = items[0] && items[0].at;
+  const apply = () => previewCam(svg, geom, z(), at);
+  zoom.onclick = e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    zoom.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    apply();
+  };
+  apply();
+  back.querySelector('.ov-start').onclick = () => {
+    flip(card, false);
+    if (card._showPick) card._showPick();
+    start(slug, { zoom: z() });
+  };
+}
+
+function wireRegionBack(card, back, courses) {
+  const pick = back.querySelector('.ov-pick');
+  const play = back.querySelector('.ov-play');
+  let gen = 0;
+  const showPick = () => {
+    gen++;
+    pick.hidden = false;
+    play.hidden = true;
+    play.replaceChildren();
+    card.removeAttribute('data-preview');
+    const first = back.querySelector('.ov-courses button');
+    if (first) first.focus();
+  };
+  const showPlay = async c => {
+    const n = ++gen;
+    pick.hidden = true;
+    play.hidden = false;
+    card.dataset.preview = '1';
+    const pane = $('#ovTpl').content.firstElementChild.cloneNode(true);
+    pane.querySelector('.ov-title').textContent = c.title;
+    pane.querySelector('.ov-total').textContent = '/' + c.items.length;
+    pane.querySelector('.ov-time').textContent =
+      Math.floor(opt.time / 60) + ':' + String(opt.time % 60).padStart(2, '0');
+    play.append(pane);
+    pane.querySelector('.ov-start').focus();
+    const [, geom] = await load(c.slug);
+    await sprite;
+    if (n !== gen) return;
+    const items = c.items.map(it => ({ ...it }));
+    const svg = pane.querySelector('.ov-map');
+    drawDots(svg, geom, items);
+    if (c.mode === 'sequence' && items[0] && items[0].el) items[0].el.classList.add('target');
+    wireBack(card, pane, c.slug, geom, items);
+  };
+  back.querySelector('.ov-courses').onclick = e => {
+    const b = e.target.closest('[data-slug]');
+    if (!b) return;
+    showPlay(courses.find(c => c.slug === b.dataset.slug));
+  };
+  card._showPick = showPick;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = document.querySelector('.card[data-flip="true"]');
+  if (!open) return;
+  const play = open.querySelector('.ov-play');
+  if (play && !play.hidden && open._showPick) { open._showPick(); return; }
+  flip(open, false);
+});
+
 /* ── 코스 로드 ──────────────────────────────────────── */
 const load = slug => Promise.all([
   fetch(`data/${slug}.course.json`).then(r => r.json()),
@@ -157,71 +307,45 @@ const load = slug => Promise.all([
 
 (async () => {
   saveOpt();
-  const list = $('#courseList');
-  for (const slug of COURSES) {
-    const [c] = await load(slug);
+  const regions = $('#regionList');
+  for (const r of REGIONS) {
+    const [, geom] = await load(r.thumb);
+    const courses = [];
+    for (const slug of r.courses) {
+      const [c] = await load(slug);
+      courses.push(c);
+    }
     const li = document.createElement('li');
-    li.innerHTML = `<h3></h3><p></p><span class="n"></span>
-      <button class="play-main">플레이</button>`;
-    li.querySelector('h3').textContent = c.title;
-    li.querySelector('p').textContent = c.description;
-    li.querySelector('.n').textContent =
-      `${c.items.length}개 항목 · ${c.mode === 'sequence' ? '순서형' : '자유형'}`;
-    li.querySelector('.play-main').onclick = () => openOptions(slug, c);
-    list.append(li);
+    li.innerHTML = `<div class="card" data-flip="false">
+        <button type="button" class="card-face card-front" aria-expanded="false">
+          <span class="card-top"><span class="thumb"></span></span>
+          <span class="card-body"><b></b><em></em><span class="desc"></span></span>
+        </button>
+      </div>`;
+    li.querySelector('.thumb').innerHTML = thumbSvg(geom);
+    li.querySelector('b').textContent = r.title;
+    li.querySelector('em').textContent = `${r.courses.length}개 코스`;
+    li.querySelector('.desc').textContent = r.description;
+
+    const card = li.querySelector('.card');
+    const back = $('#regionTpl').content.firstElementChild.cloneNode(true);
+    back.classList.add('card-face');
+    back.querySelector('.ov-title').textContent = r.title;
+    const pack = back.querySelector('.ov-courses');
+    courses.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.slug = c.slug;
+      b.textContent = c.title;
+      pack.append(b);
+    });
+    card.append(back);
+    back.inert = true;
+    wireRegionBack(card, back, courses);
+    li.querySelector('.card-front').onclick = () => flip(card, true);
+    regions.append(li);
   }
 })();
-
-/* ── 코스 시작 옵션 ─────────────────────────────────────
-   플레이를 누르면 열린다. 고른 값으로 바로 시작한다. */
-let pendingSlug = null, lastFocus = null;
-
-function pick(group, v) {
-  group.querySelectorAll('button').forEach(b =>
-    b.setAttribute('aria-pressed', b.dataset.v === String(v)));
-}
-const picked = group =>
-  group.querySelector('[aria-pressed="true"]').dataset.v;
-
-function openOptions(slug, course) {
-  pendingSlug = slug;
-  lastFocus = document.activeElement;
-  $('#ovTitle').textContent = course.title;
-  $('#ovSub').textContent = course.mode === 'sequence'
-    ? `${course.items[0].name}에서 시작해 ${course.items.at(-1).name}에서 끝납니다`
-    : '순서 없이 아는 곳부터';
-  $('#ov').hidden = false;
-  syncNote();
-  $('#ovStart').focus();
-}
-function closeOptions() {
-  $('#ov').hidden = true;
-  pendingSlug = null;
-  if (lastFocus) lastFocus.focus();
-}
-function syncNote() {
-  const z = Number(picked($('#ovZoom')));
-  $('#ovNote').textContent = z === 1
-    ? '서울 전체가 한눈에 보입니다.'
-    : `지도가 ${z}배로 확대되고, 화면이 다음 목표를 따라갑니다.`;
-}
-$('#ov').addEventListener('click', e => {
-  if (e.target === $('#ov')) return closeOptions();      // 바깥을 누르면 닫힌다
-  const b = e.target.closest('.choice-b button');
-  if (!b) return;
-  pick(b.parentElement, b.dataset.v);
-  syncNote();
-});
-$('#ovCancel').onclick = closeOptions;
-$('#ovStart').onclick = () => {
-  const slug = pendingSlug;
-  const zoom = Number(picked($('#ovZoom')));
-  closeOptions();
-  start(slug, { zoom });
-};
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !$('#ov').hidden) closeOptions();
-});
 
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
