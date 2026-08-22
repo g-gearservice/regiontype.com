@@ -91,6 +91,34 @@
   <ul class="missed" id="missed"></ul>
 </section>
 
+<!-- 코스 시작 옵션 -->
+<div id="ov" class="overlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+    <h2 id="ovTitle"></h2>
+    <p class="ov-sub" id="ovSub"></p>
+    <div class="choice" role="group" aria-labelledby="ovRevealL">
+      <span class="choice-l" id="ovRevealL">이름 표시</span>
+      <div class="choice-b" id="ovReveal">
+        <button data-v="0" aria-pressed="true">숨김</button>
+        <button data-v="1" aria-pressed="false">보임</button>
+      </div>
+    </div>
+    <div class="choice" role="group" aria-labelledby="ovZoomL">
+      <span class="choice-l" id="ovZoomL">배율</span>
+      <div class="choice-b" id="ovZoom">
+        <button data-v="1" aria-pressed="true">1배율</button>
+        <button data-v="3" aria-pressed="false">3배율</button>
+        <button data-v="7" aria-pressed="false">7배율</button>
+      </div>
+    </div>
+    <p class="ov-note" id="ovNote"></p>
+    <div class="menu">
+      <button id="ovStart">시작</button>
+      <button id="ovCancel">취소</button>
+    </div>
+  </div>
+</div>
+
 <div id="mobile">
   <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
   <p>타이핑 게임이라 물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>

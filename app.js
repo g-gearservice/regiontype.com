@@ -108,32 +108,79 @@ const load = slug => Promise.all([
     const [c] = await load(slug);
     const li = document.createElement('li');
     li.innerHTML = `<h3></h3><p></p><span class="n"></span>
-      <div class="play-group">
-        <button class="play-main" aria-hidden="true" tabindex="-1">플레이</button>
-        <div class="play-opts">
-          <button data-reveal="0">이름 숨김</button>
-          <button data-reveal="1">이름 보임</button>
-        </div>
-      </div>`;
+      <button class="play-main">플레이</button>`;
     li.querySelector('h3').textContent = c.title;
     li.querySelector('p').textContent = c.description;
-    li.querySelector('.n').textContent = `${c.items.length}개 항목 · 자유형`;
-    li.querySelectorAll('.play-opts button').forEach(b =>
-      b.onclick = () => start(slug, b.dataset.reveal === '1'));
+    li.querySelector('.n').textContent =
+      `${c.items.length}개 항목 · ${c.mode === 'sequence' ? '순서형' : '자유형'}`;
+    li.querySelector('.play-main').onclick = () => openOptions(slug, c);
     list.append(li);
   }
 })();
 
+/* ── 코스 시작 옵션 ─────────────────────────────────────
+   플레이를 누르면 열린다. 고른 값으로 바로 시작한다. */
+let pendingSlug = null, lastFocus = null;
+
+function pick(group, v) {
+  group.querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.v === String(v)));
+}
+const picked = group =>
+  group.querySelector('[aria-pressed="true"]').dataset.v;
+
+function openOptions(slug, course) {
+  pendingSlug = slug;
+  lastFocus = document.activeElement;
+  $('#ovTitle').textContent = course.title;
+  $('#ovSub').textContent = course.mode === 'sequence'
+    ? `${course.items[0].name}에서 시작해 ${course.items.at(-1).name}에서 끝납니다`
+    : '순서 없이 아는 곳부터';
+  $('#ov').hidden = false;
+  syncNote();
+  $('#ovStart').focus();
+}
+function closeOptions() {
+  $('#ov').hidden = true;
+  pendingSlug = null;
+  if (lastFocus) lastFocus.focus();
+}
+function syncNote() {
+  const z = Number(picked($('#ovZoom')));
+  $('#ovNote').textContent = z === 1
+    ? '서울 전체가 한눈에 보입니다.'
+    : `지도가 ${z}배로 확대되고, 화면이 다음 목표를 따라갑니다.`;
+}
+$('#ov').addEventListener('click', e => {
+  if (e.target === $('#ov')) return closeOptions();      // 바깥을 누르면 닫힌다
+  const b = e.target.closest('.choice-b button');
+  if (!b) return;
+  pick(b.parentElement, b.dataset.v);
+  syncNote();
+});
+$('#ovCancel').onclick = closeOptions;
+$('#ovStart').onclick = () => {
+  const slug = pendingSlug;
+  const o = { reveal: picked($('#ovReveal')) === '1', zoom: Number(picked($('#ovZoom'))) };
+  closeOptions();
+  start(slug, o);
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#ov').hidden) closeOptions();
+});
+
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
 
-async function start(slug, reveal = false) {
+async function start(slug, o = {}) {
+  const reveal = !!o.reveal, zoom = o.zoom || 1;
   const [course, geom] = await load(slug);
   const items = course.items.map(it => {
     const a = stripSuffix(it.name);
     return { ...it, aliases: [...(it.aliases || []), ...(a ? [a] : [])], claimed: false };
   });
-  G = { slug, course, items, reveal, total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
+  G = { slug, course, items, reveal, zoom, seq: course.mode === 'sequence', idx: 0,
+       total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
@@ -144,22 +191,27 @@ async function start(slug, reveal = false) {
   }));
   const cw = geom.cell, dr = (cw * .38).toFixed(1);
 
-  svg.innerHTML = geom.items.map((g, i) =>
+  svg.innerHTML = '<g class="cam">' + geom.items.map((g, i) =>
     `<g id="p${i}">` + cells[i].map(([x, y], n) =>
       // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
       `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
       ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
     geom.items.map((g, i) =>
-      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('');
+      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('') + '</g>';
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#p' + i);
     it.label = svg.querySelector('#t' + i);
     it.label.textContent = g.name;
+    it.at = g.c;
   });
 
   // 이름 보임 모드에서는 처음부터 전부 읽힌다
   svg.classList.toggle('reveal', reveal);
+  svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
+  G.cam = svg.querySelector('.cam');
+  G.view = [geom.w, geom.h];
+  aim();                              // 첫 목표를 잡고 화면을 맞춘다
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
   $('#statCombo').textContent = '';
@@ -173,6 +225,24 @@ async function start(slug, reveal = false) {
   go('play');
   stop();
   countdown(3, run);
+}
+
+/* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
+const target = () => G.seq ? G.items[G.idx] : null;
+
+/* 현재 목표를 표시하고 카메라를 그리로 옮긴다.
+   3·7배율에서는 전체가 안 보이므로 화면이 목표를 따라가야 한다. */
+function aim() {
+  const t = target();
+  G.items.forEach(i => i.el.classList.toggle('target', i === t));
+  const [W, H] = G.view, z = G.zoom;
+  let tx = 0, ty = 0;
+  if (t) {
+    // 지도 밖 빈 공간이 보이지 않게 가둔다. z=1 이면 범위가 0 하나뿐이다
+    tx = Math.min(0, Math.max(W - z * W, W / 2 - z * t.at[0]));
+    ty = Math.min(0, Math.max(H - z * H, H / 2 - z * t.at[1]));
+  }
+  G.cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
 }
 
 function countdown(n, done) {
@@ -203,9 +273,12 @@ function stop() { clearInterval(tick); clearTimeout(pending); tick = pending = n
 
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
+  // 미점령 전체를 대상으로 판정한 뒤 목표인지 본다. 목표만 넘기면
+  // 약칭의 경쟁 판정(중 → 중구/중랑구)이 무너진다.
   const hit = matchInput(e.target.value, G.items, opt.strict);
   if (!hit) return;
   e.target.value = '';
+  if (G.seq && hit !== target()) return miss();   // 순서가 아니면 오답
   claim(hit);
 });
 // 조합이 끝난 시점에 어디로도 이어질 수 없으면 그때 오답이다.
@@ -242,7 +315,9 @@ function claim(it) {
   f.querySelector('span').textContent = it.meta.description;
   f.classList.add('on');
   beep(520 + G.combo * 40, .08, 'triangle');
-  if (G.hits === G.items.length) finish();
+  if (G.hits === G.items.length) return finish();
+  if (G.seq) { while (G.items[G.idx] && G.items[G.idx].claimed) G.idx++; }
+  aim();
 }
 
 function finish() {
@@ -250,7 +325,7 @@ function finish() {
   beep(300, .3, 'triangle');
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
   pending = setTimeout(() => {
-    const key = `rt.best.${G.slug}.${G.reveal ? 'shown' : 'hidden'}`;
+    const key = `rt.best.${G.slug}.${G.reveal ? 'shown' : 'hidden'}.z${G.zoom}`;
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = G.score;
     $('#rCount').textContent = G.hits;
@@ -284,6 +359,7 @@ function drawCard() {
   ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
 
   const svg = $('#map').cloneNode(true);
+  svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
   svg.insertAdjacentHTML('afterbegin',
@@ -298,8 +374,8 @@ function drawCard() {
     ctx.font = '800 54px system-ui,sans-serif';
     ctx.fillText('regiontype', 70, 100);
     ctx.font = '500 38px system-ui,sans-serif';
-    ctx.fillText(`${G.course.title} · ${G.reveal ? '이름 보임' : '이름 숨김'} · ${G.score}점`,
-      70, cv.height - 118);
+    ctx.fillText(`${G.course.title} · ${G.reveal ? '이름 보임' : '이름 숨김'} · ` +
+      `${G.zoom}배율 · ${G.score}점`, 70, cv.height - 136);
     ctx.font = '800 76px system-ui,sans-serif';
     ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
     ctx.textAlign = 'right';
@@ -318,7 +394,7 @@ $('#save').onclick = async () => {
   a.href = $('#card').toDataURL('image/png');
   a.click();
 };
-$('#again').onclick = () => start(G.slug, G.reveal);
+$('#again').onclick = () => start(G.slug, { reveal: G.reveal, zoom: G.zoom });
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {

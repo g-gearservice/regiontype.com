@@ -132,8 +132,11 @@ body{
 }
 #map g.got circle{fill:var(--accent);r:9.5}          /* 차면 살짝 부푼다 */
 #map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land));r:5}
-#map text{font:700 19px system-ui,sans-serif;fill:#2d3538;text-anchor:middle;
-  paint-order:stroke;stroke:var(--bg);stroke-width:5;stroke-linejoin:round;   /* 도트 위에서도 읽히게 */
+#map text{
+  font:700 calc(19px / var(--z,1)) system-ui,sans-serif;   /* 확대해도 화면상 같은 크기 */
+  fill:#2d3538;text-anchor:middle;
+  paint-order:stroke;stroke:var(--bg);stroke-width:calc(5px / var(--z,1));
+  stroke-linejoin:round;                                    /* 도트 위에서도 읽히게 */
   pointer-events:none;opacity:0;transition:opacity var(--slow)}
 #map text.on{opacity:1}
 
@@ -312,45 +315,56 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 .fact{background:none;padding:0}
 .stage{padding-bottom:78px}
 
-/* ── 코스 진입 방식 ─────────────────────────────────────
-   플레이 위에 올리면 "이름 숨김 / 이름 보임" 두 갈래가 열린다.
-   두 버튼은 항상 DOM 에 있고 시각적으로만 접혀 있으므로
-   키보드·보조기기는 hover 없이도 그대로 닿는다. */
-.play-group{display:grid}
-.play-group > *{grid-area:1/1}          /* 겹쳐 두어 펼칠 때 카드가 튀지 않게 */
-.play-opts{display:flex;gap:3px;align-items:start}
-
-@media (hover:hover) and (pointer:fine){
-  .play-main{
-    opacity:1; transition:opacity .16s var(--ease-out);
-  }
-  .play-opts{
-    opacity:0; pointer-events:none;
-    transform:translateY(4px);
-    transition:opacity .16s var(--ease-out), transform .16s var(--ease-out);
-  }
-  .play-group:hover .play-main,
-  .play-group:focus-within .play-main{opacity:0;pointer-events:none}
-  .play-group:hover .play-opts,
-  .play-group:focus-within .play-opts{opacity:1;pointer-events:auto;transform:none}
-}
-/* 터치·hover 없는 환경에서는 접을 이유가 없다 */
-@media not all and (hover:hover){
-  .play-main{display:none}
-}
-
-.play-opts button{
-  font:inherit;font-weight:700;font-size:20px;color:#fff;cursor:pointer;
-  background:var(--block);border:0;padding:4px 14px 6px;
-  transition:background var(--fast) var(--ease-out), transform var(--fast) var(--ease-out);
-}
-.play-opts button:active{transform:scale(.97)}
-.play-opts button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover) and (pointer:fine){
-  .play-opts button:hover{background:var(--block-hi)}
-}
-.play-opts [data-reveal="1"]{background:var(--block-hi);opacity:.85}
-
 /* 이름 보임 모드 — 처음부터 전부 읽힌다 */
 #map.reveal text{opacity:1}
 #map.reveal text:not(.on){fill:var(--ink-soft)}   /* 아직 못 맞힌 이름은 흐리게 */
+
+/* ── 코스 시작 옵션 오버레이 ───────────────────────────── */
+.overlay{
+  position:fixed; inset:0; z-index:20; display:grid; place-items:center;
+  background:color-mix(in srgb,var(--bg) 72%,transparent);
+  backdrop-filter:blur(3px);
+}
+.overlay[hidden]{display:none}
+.sheet{
+  background:var(--card); padding:34px 38px 30px; border-radius:6px;
+  box-shadow:var(--shadow-lift); min-width:min(460px,86vw);
+  animation:rise .22s var(--ease-out);
+}
+.sheet h2{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.ov-sub{color:var(--ink-soft);font-size:15px;margin-top:6px}
+.choice{display:flex;align-items:center;gap:18px;margin-top:22px}
+.choice-l{font-weight:700;font-size:16px;min-width:74px}
+.choice-b{display:flex;gap:3px}
+.choice-b button{
+  font:inherit;font-weight:700;font-size:17px;color:#fff;cursor:pointer;
+  background:var(--block);border:0;padding:5px 15px 7px;opacity:.5;
+  transition:opacity var(--fast) var(--ease-out),
+             background var(--fast) var(--ease-out),
+             transform var(--fast) var(--ease-out);
+}
+.choice-b button[aria-pressed="true"]{opacity:1;background:var(--block-hi)}
+.choice-b button:active{transform:scale(.97)}
+.choice-b button:focus-visible,#ovStart:focus-visible,#ovCancel:focus-visible{
+  outline:3px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){ .choice-b button:hover{opacity:1} }
+.ov-note{color:var(--ink-soft);font-size:14px;margin-top:18px;min-height:20px}
+.sheet .menu{flex-direction:row;gap:3px;margin-top:20px}
+.sheet .menu button{font-size:20px;padding:5px 16px 7px}
+#ovCancel{background:color-mix(in srgb,var(--block) 55%,var(--card))}
+
+/* ── 확대 카메라 ──────────────────────────────────────
+   viewBox 는 그대로 두고 안쪽 그룹을 밀고 당긴다 — transform 이라야
+   부드럽게 이어진다. */
+#map .cam{transition:transform .52s var(--ease-in-out)}
+@media (prefers-reduced-motion:reduce){ #map .cam{transition:none} }
+
+/* 지금 쳐야 할 구 — 이름을 숨겨도 어디인지는 보여야 한다 */
+#map g.target circle{
+  stroke:var(--accent-text); stroke-width:calc(2.4px / var(--z,1));
+  animation:aimpulse 1.5s var(--ease-in-out) infinite;
+}
+@keyframes aimpulse{50%{stroke-opacity:.25}}
+@media (prefers-reduced-motion:reduce){ #map g.target circle{animation:none} }
+
+/* 이름 보임 모드 — 처음부터 전부 읽힌다 */
