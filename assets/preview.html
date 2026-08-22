@@ -25,6 +25,25 @@
 
 <table id="grid"></table>
 
+<h2>이름이 들어간다</h2>
+<div style="display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap">
+  <div style="position:relative">
+    <svg class="c-yellow" width="230" height="172"><use href="board.svg#rt-stop"/></svg>
+    <span style="position:absolute;left:31px;top:22px;width:154px;height:86px;display:grid;
+                 place-items:center;font-weight:800;font-size:19px;color:#6b4b12">가양1동</span>
+  </div>
+  <div style="position:relative">
+    <svg class="c-teal" width="200" height="172"><use href="board.svg#rt-end"/></svg>
+    <span style="position:absolute;left:31px;top:22px;width:123px;height:86px;display:grid;
+                 place-items:center;font-weight:800;font-size:17px;color:#12403a">염창동</span>
+  </div>
+  <div style="position:relative">
+    <svg class="c-purple" width="230" height="172"><use href="board.svg#rt-stop"/></svg>
+    <span style="position:absolute;left:31px;top:22px;width:154px;height:86px;display:grid;
+                 place-items:center;font-weight:800;font-size:19px;color:#2b2560">화곡본동</span>
+  </div>
+</div>
+
 <h2>이어 붙이면</h2>
 <p class="sub" style="margin-bottom:16px">
   길과 부지를 하나의 합집합 외곽선으로 그린다. 같은 path 를 굵게 그은 뒤
@@ -35,20 +54,36 @@
     <path id="chain-sil"
       d="M110 336h1350a16 16 0 0 1 16 16v26a16 16 0 0 1-16 16H110a16 16 0 0 1-16-16v-26a16 16 0 0 1 16-16Z
          M520 160h280a20 20 0 0 1 20 20v198a16 16 0 0 1-16 16H516a16 16 0 0 1-16-16V180a20 20 0 0 1 20-20Z
-         M1170 160h110a20 20 0 0 1 20 20v198a16 16 0 0 1-16 16h-134a16 16 0 0 1-16-16V180a20 20 0 0 1 20-20Z"/>
+         M1150 160h130a20 20 0 0 1 20 20v198a16 16 0 0 1-16 16h-154a16 16 0 0 1-16-16V180a20 20 0 0 1 20-20Z"/>
+    <rect id="blkA" x="524" y="212" width="272" height="140" rx="20"/>
+    <rect id="blkB" x="1154" y="212" width="126" height="140" rx="20"/>
   </defs>
   <use href="#chain-sil" fill="none" stroke="#a9b9bc" stroke-width="9" stroke-linejoin="round"/>
   <use href="#chain-sil" fill="#fff"/>
 
-  <use href="board.svg#rt-hatch" transform="translate(556 372) scale(1.5)"/>
-  <rect x="680" y="182" width="120" height="120" rx="12" fill="none"
-        stroke="#a9b9bc" stroke-width="4" stroke-dasharray="12 10" stroke-linecap="round" opacity=".8"/>
-  <use class="c-yellow" href="board.svg#rt-house" transform="translate(524 182) scale(3)"/>
-  <use href="board.svg#rt-pin" transform="translate(566 226) scale(1.7)"/>
+  <g class="c-yellow">
+    <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
+      <use href="#blkA" transform="translate(9 9)"/><use href="#blkA" transform="translate(18 18)"/>
+      <use href="#blkA" transform="translate(27 27)"/><use href="#blkA" transform="translate(36 36)"/>
+    </g>
+    <use href="#blkA" fill="var(--rt-base)"/>
+    <use href="#blkA" fill="var(--rt-wall)" transform="translate(8 -13)"/>
+    <use href="#blkA" fill="var(--rt-roof)" transform="translate(16 -26)"/>
+  </g>
+  <text x="668" y="272" text-anchor="middle" font-size="46" font-weight="800"
+        fill="#6b4b12" font-family="system-ui,sans-serif">가양1동</text>
 
-  <use href="board.svg#rt-hatch" transform="translate(1188 372) scale(1.5)"/>
-  <use class="c-teal" href="board.svg#rt-house" transform="translate(1174 182) scale(3)"/>
-  <use href="board.svg#rt-pin" transform="translate(1216 226) scale(1.7)"/>
+  <g class="c-teal">
+    <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
+      <use href="#blkB" transform="translate(9 9)"/><use href="#blkB" transform="translate(18 18)"/>
+      <use href="#blkB" transform="translate(27 27)"/><use href="#blkB" transform="translate(36 36)"/>
+    </g>
+    <use href="#blkB" fill="var(--rt-base)"/>
+    <use href="#blkB" fill="var(--rt-wall)" transform="translate(8 -13)"/>
+    <use href="#blkB" fill="var(--rt-roof)" transform="translate(16 -26)"/>
+  </g>
+  <text x="1256" y="272" text-anchor="middle" font-size="40" font-weight="800"
+        fill="#12403a" font-family="system-ui,sans-serif">염창동</text>
 
   <use class="c-orange" href="board.svg#rt-depot" x="72" y="306" width="128" height="126"/>
   <use class="c-yellow" href="board.svg#rt-car" x="0" y="0" width="34" height="48"

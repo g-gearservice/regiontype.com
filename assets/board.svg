@@ -10,44 +10,22 @@
 -->
 <defs>
   <!-- ── 공통 조각 ─────────────────────────────────── -->
-  <g id="rt-house">
-    <!-- 솟아 있는 것만 그림자를 진다. 길과 부지는 바닥이라 지지 않는다 -->
-    <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
-      <use href="#rt-house-sil" transform="translate(3 3)"/>
-      <use href="#rt-house-sil" transform="translate(6 6)"/>
-      <use href="#rt-house-sil" transform="translate(9 9)"/>
-      <use href="#rt-house-sil" transform="translate(12 12)"/>
-      <use href="#rt-house-sil" transform="translate(15 15)"/>
-      <use href="#rt-house-sil" transform="translate(18 18)"/>
-      <use href="#rt-house-sil" transform="translate(21 21)"/>
-      <use href="#rt-house-sil" transform="translate(24 24)"/>
-      <use href="#rt-house-sil" transform="translate(27 27)"/>
-    </g>
-    <rect x="-5" y="8"   width="40" height="40" rx="6" fill="var(--rt-base,#e08b3d)"/>
-    <rect x="-2.5" y="4" width="40" height="40" rx="6" fill="var(--rt-wall,#c85a4e)"/>
-    <rect x="0"  y="0"   width="40" height="40" rx="6" fill="var(--rt-roof,#f6cf5b)"/>
-    <path d="M40 6v7l-9-9h5a4 4 0 0 1 4 4Z" fill="#000" opacity=".15"/>
-    <path d="M15 40v-8h10v8Z" fill="#000" opacity=".13"/>
-  </g>
-  <rect id="rt-house-sil" x="-5" y="8" width="40" height="40" rx="6"/>
+  <rect id="rt-blk-stop-sil" x="20" y="28" width="128" height="72" rx="11"/>
+  <rect id="rt-blk-end-sil"  x="20" y="28" width="102" height="72" rx="11"/>
 
   <g id="rt-pin">
     <path d="M0 0c-4.7-7-7.2-10.2-7.2-14A7.2 7.2 0 1 1 7.2-14C7.2-10.2 4.7-7 0 0Z"
           fill="var(--rt-pin,#2b3033)"/>
     <circle cy="-14" r="2.8" fill="#fff"/>
   </g>
-  <g id="rt-hatch" stroke="var(--rt-edge,#a9b9bc)" stroke-width="2.6"
-     opacity=".4" stroke-linecap="round">
-    <path d="M0 0l16-16M9 3l16-16M18 6l16-16"/>
-  </g>
 
   <!-- 실루엣 (그림자용, 채움만) -->
   <path id="rt-stop-sil"
-        d="M38 6H122Q136 6 136 20V35H149Q160 35 160 46T149 57H136V72Q136 86 122 86H38
-           Q24 86 24 72V57H11Q0 57 0 46T11 35H24V20Q24 6 38 6Z"/>
+        d="M34 6H146Q166 6 166 26V44H170Q180 44 180 54Q180 64 170 64H166V82Q166 102 146 102H34
+           Q14 102 14 82V64H10Q0 64 0 54Q0 44 10 44H14V26Q14 6 34 6Z"/>
   <path id="rt-end-sil"
-        d="M38 6H104Q118 6 118 20V72Q118 86 104 86H38Q24 86 24 72V57H11Q0 57 0 46T11 35H24V20
-           Q24 6 38 6Z"/>
+        d="M34 6H120Q140 6 140 26V82Q140 102 120 102H34Q14 102 14 82V64H10Q0 64 0 54
+           Q0 44 10 44H14V26Q14 6 34 6Z"/>
   <rect id="rt-depot-sil" x="8" y="8" width="46" height="46" rx="8"/>
   <rect id="rt-car-sil" x="2" y="3" width="24" height="46" rx="7"/>
 
@@ -94,23 +72,52 @@
   </symbol>
 
   <!-- ── 경유지 : 좌우로 길이 지나고 큰집 하나 ───────── -->
-  <symbol id="rt-stop" viewBox="-2 -2 190 118">
+  <symbol id="rt-stop" viewBox="-2 -2 192 144">
     <use href="#rt-stop-sil" fill="var(--rt-road,#fff)"
          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3.5" stroke-linejoin="round"/>
-    <use href="#rt-hatch" x="30" y="82" transform="scale(.8)" transform-origin="30 82"/>
-    <rect x="84" y="13" width="46" height="46" rx="7" fill="none"
-          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3" stroke-dasharray="8 7"
-          stroke-linecap="round" opacity=".8"/>
-    <use href="#rt-house" transform="translate(35.8 13) scale(1.15)"/>
+    <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
+      <use href="#rt-blk-stop-sil" transform="translate(3 3)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(6 6)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(9 9)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(12 12)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(15 15)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(18 18)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(21 21)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(24 24)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(27 27)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(30 30)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(33 33)"/>
+      <use href="#rt-blk-stop-sil" transform="translate(36 36)"/>
+    </g>
+    <rect x="20" y="28" width="128" height="72" rx="11" fill="var(--rt-base,#e08b3d)"/>
+    <rect x="23" y="23" width="128" height="72" rx="11" fill="var(--rt-wall,#c85a4e)"/>
+    <rect x="26" y="18" width="128" height="72" rx="11" fill="var(--rt-roof,#f6cf5b)"/>
+    <path d="M154 26v11l-14-14h7a7 7 0 0 1 7 7Z" fill="#000" opacity=".15"/>
   </symbol>
 
   <!-- ── 종점 : 길이 한쪽에만 붙은 막다른 큰집 ───────── -->
-  <symbol id="rt-end" viewBox="-2 -2 148 118">
+  <symbol id="rt-end" viewBox="-2 -2 166 144">
     <use href="#rt-end-sil" fill="var(--rt-road,#fff)"
          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3.5" stroke-linejoin="round"/>
-    <use href="#rt-hatch" x="30" y="82" transform="scale(.8)" transform-origin="30 82"/>
-    <use href="#rt-house" transform="translate(53.8 13) scale(1.15)"/>
-    <use href="#rt-pin" x="67" y="35"/>
+    <g fill="var(--rt-shadow,#8fa3a6)" opacity=".42">
+      <use href="#rt-blk-end-sil" transform="translate(3 3)"/>
+      <use href="#rt-blk-end-sil" transform="translate(6 6)"/>
+      <use href="#rt-blk-end-sil" transform="translate(9 9)"/>
+      <use href="#rt-blk-end-sil" transform="translate(12 12)"/>
+      <use href="#rt-blk-end-sil" transform="translate(15 15)"/>
+      <use href="#rt-blk-end-sil" transform="translate(18 18)"/>
+      <use href="#rt-blk-end-sil" transform="translate(21 21)"/>
+      <use href="#rt-blk-end-sil" transform="translate(24 24)"/>
+      <use href="#rt-blk-end-sil" transform="translate(27 27)"/>
+      <use href="#rt-blk-end-sil" transform="translate(30 30)"/>
+      <use href="#rt-blk-end-sil" transform="translate(33 33)"/>
+      <use href="#rt-blk-end-sil" transform="translate(36 36)"/>
+    </g>
+    <rect x="20" y="28" width="102" height="72" rx="11" fill="var(--rt-base,#e08b3d)"/>
+    <rect x="23" y="23" width="102" height="72" rx="11" fill="var(--rt-wall,#c85a4e)"/>
+    <rect x="26" y="18" width="102" height="72" rx="11" fill="var(--rt-roof,#f6cf5b)"/>
+    <path d="M128 26v11l-14-14h7a7 7 0 0 1 7 7Z" fill="#000" opacity=".15"/>
+    <use href="#rt-pin" x="46" y="44"/>
   </symbol>
 </defs>
 </svg>
