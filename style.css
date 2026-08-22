@@ -316,8 +316,12 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 .stage{padding-bottom:78px}
 
 /* 이름 보임 모드 — 처음부터 전부 읽힌다 */
-#map.reveal text{opacity:1}
-#map.reveal text:not(.on){fill:var(--ink-soft)}   /* 아직 못 맞힌 이름은 흐리게 */
+/* '보임'은 지도를 라벨로 덮는 게 아니라 칠 곳을 정보 줄에 띄우는 것이다.
+   지도 라벨은 두 모드 모두 맞힌 뒤에만 나타난다. */
+.fact.aim b{color:var(--accent-text)}
+.fact.aim b::after{
+  content:" 치세요"; font-size:15px; font-weight:500; color:var(--ink-soft);
+}
 
 /* ── 코스 시작 옵션 오버레이 ───────────────────────────── */
 .overlay{

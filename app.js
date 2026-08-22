@@ -211,11 +211,13 @@ async function start(slug, o = {}) {
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
   G.view = [geom.w, geom.h];
+  // 정보 줄을 먼저 비운다 — aim() 이 띄운 첫 목표를 곧바로 지워버리던 순서였다
+  $('#fact').classList.remove('on');
+  $('#fact').innerHTML = '';
   aim();                              // 첫 목표를 잡고 화면을 맞춘다
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
   $('#statCombo').textContent = '';
-  $('#fact').classList.remove('on');
   $('#typein').value = '';
   $('#gaugeFill').style.width = '100%';
   $('#statTime').firstElementChild.textContent =
@@ -227,6 +229,16 @@ async function start(slug, o = {}) {
   countdown(3, run);
 }
 
+/* 지도 아래 정보 줄. 윗줄과 아랫줄을 따로 갱신한다 —
+   '보임'에서는 윗줄이 지금 칠 곳, 아랫줄이 직전에 맞힌 곳의 설명이 된다. */
+function say(head, body) {
+  const f = $('#fact');
+  if (!f.firstElementChild) f.innerHTML = '<b></b><span></span>';
+  if (head !== undefined) f.querySelector('b').textContent = head;
+  if (body !== undefined) f.querySelector('span').textContent = body;
+  f.classList.add('on');
+}
+
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
 const target = () => G.seq ? G.items[G.idx] : null;
 
@@ -235,6 +247,8 @@ const target = () => G.seq ? G.items[G.idx] : null;
 function aim() {
   const t = target();
   G.items.forEach(i => i.el.classList.toggle('target', i === t));
+  if (G.reveal && t) say(t.name);          // 이름 보임 — 칠 곳을 알려준다
+  $('#fact').classList.toggle('aim', G.reveal);
   const [W, H] = G.view, z = G.zoom;
   let tx = 0, ty = 0;
   if (t) {
@@ -309,11 +323,8 @@ function claim(it) {
   cb.textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
   cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump');
   setTimeout(() => cb.classList.remove('bump'), 160);
-  const f = $('#fact');
-  f.innerHTML = '<b></b><span></span>';
-  f.querySelector('b').textContent = it.name;
-  f.querySelector('span').textContent = it.meta.description;
-  f.classList.add('on');
+  if (G.reveal) say(undefined, `${it.name} — ${it.meta.description}`);
+  else say(it.name, it.meta.description);
   beep(520 + G.combo * 40, .08, 'triangle');
   if (G.hits === G.items.length) return finish();
   if (G.seq) { while (G.items[G.idx] && G.items[G.idx].claimed) G.idx++; }
