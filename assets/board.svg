@@ -22,11 +22,6 @@
       <use href="#rt-house-sil" transform="translate(21 21)"/>
       <use href="#rt-house-sil" transform="translate(24 24)"/>
       <use href="#rt-house-sil" transform="translate(27 27)"/>
-      <use href="#rt-house-sil" transform="translate(30 30)"/>
-      <use href="#rt-house-sil" transform="translate(33 33)"/>
-      <use href="#rt-house-sil" transform="translate(36 36)"/>
-      <use href="#rt-house-sil" transform="translate(39 39)"/>
-      <use href="#rt-house-sil" transform="translate(42 42)"/>
     </g>
     <rect x="-5" y="8"   width="40" height="40" rx="6" fill="var(--rt-base,#e08b3d)"/>
     <rect x="-2.5" y="4" width="40" height="40" rx="6" fill="var(--rt-wall,#c85a4e)"/>
