@@ -128,16 +128,21 @@ async function start(slug) {
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
-  svg.innerHTML = geom.items.map((g, i) =>
-    `<path id="p${i}" d="${g.d}"></path>`).join('') +
-    geom.items.map((g, i) =>
-      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('');
+  // 땅 → 한강 → 도로 → 핀. Mini Motorways 보드의 쌓는 순서다
+  svg.innerHTML =
+    '<g class="land">' +
+    geom.items.map((g, i) => `<path id="p${i}" class="h${i % 7}" d="${g.d}"></path>`).join('') +
+    '</g>' +
+    (geom.river ? `<path class="river" d="${geom.river}"></path>` : '') +
+    '<g class="roads"></g><g class="pins"></g>';
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#p' + i);
-    it.label = svg.querySelector('#t' + i);
-    it.label.textContent = g.name;
+    it.at = g.c;
   });
+  G.roads = svg.querySelector('.roads');
+  G.pins = svg.querySelector('.pins');
+  G.taken = [];                     // 이미 점령한 좌표 — 도로를 이어붙일 목적지
 
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
@@ -204,10 +209,42 @@ function miss() {
   beep(160, .12, 'square');
 }
 
+const SVGNS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs) => {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+};
+
+/* 두 목적지를 잇는 도로. 가로로 갔다가 모서리를 둥글게 돌아 세로로 내려간다 */
+function roadPath([x1, y1], [x2, y2]) {
+  const sx = Math.sign(x2 - x1), sy = Math.sign(y2 - y1);
+  const r = Math.min(20, Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 2);
+  if (!r) return `M${x1} ${y1}L${x2} ${y2}`;
+  return `M${x1} ${y1}H${x2 - r * sx}Q${x2} ${y1} ${x2} ${y1 + r * sy}V${y2}`;
+}
+
 function claim(it) {
   it.claimed = true;
   it.el.classList.add('got');
-  it.label.classList.add('on');
+
+  // 가장 가까운 기존 목적지와 길을 잇는다
+  if (G.taken.length) {
+    const near = G.taken.reduce((a, b) =>
+      Math.hypot(b[0] - it.at[0], b[1] - it.at[1]) <
+      Math.hypot(a[0] - it.at[0], a[1] - it.at[1]) ? b : a);
+    G.roads.append(el('path', { class: 'road-line', d: roadPath(near, it.at) }));
+  }
+  G.taken.push(it.at);
+
+  const [cx, cy] = it.at;
+  const g = el('g', { class: 'pin', transform: `translate(${cx} ${cy})` });
+  g.append(el('path', { d: 'M0 0C-5.5-8-8.5-11.5-8.5-16A8.5 8.5 0 1 1 8.5-16C8.5-11.5 5.5-8 0 0Z' }));
+  g.append(el('circle', { cx: 0, cy: -16, r: 3.2, class: 'eye' }));
+  const t = el('text', { x: 0, y: 26 });
+  t.textContent = it.name;
+  g.append(t);
+  G.pins.append(g);
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -259,14 +296,20 @@ function drawCard() {
   cardReady = new Promise(r => done = r);
   const cv = $('#card'), ctx = cv.getContext('2d');
   const css = getComputedStyle(document.body);
-  const bg = css.backgroundColor, ink = css.color;
+  const ink = css.color, bg = css.getPropertyValue('--sea').trim();
   ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
 
   const svg = $('#map').cloneNode(true);
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
+  const v = n => css.getPropertyValue(n);
+  const hues = [0, 1, 2, 3, 4, 5, 6].map(i => `.land .h${i}.got{fill:${v('--h' + i)}}`).join('');
   svg.insertAdjacentHTML('afterbegin',
-    `<style>path{fill:${land};stroke:${bg};stroke-width:2.5}path.got{fill:${acc}}text{display:none}</style>`);
+    `<style>.land path{fill:${v('--cream')};stroke:${v('--road-line')};stroke-width:3}` +
+    hues +
+    `.river{fill:none;stroke:${v('--sea')};stroke-width:20;stroke-linecap:round;stroke-linejoin:round}` +
+    `.road-line{fill:none;stroke:${v('--road-line')};stroke-width:7;stroke-linecap:round;stroke-linejoin:round}` +
+    `.pin path{fill:${v('--pin')}}.pin .eye{fill:${v('--cream')}}.pin text{display:none}` +
+    `</style>`);
   const img = new Image();
   img.onload = () => {
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
