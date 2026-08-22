@@ -2,6 +2,8 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
+const VER = '0.2';
+const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
     id: 'seoul',
@@ -16,7 +18,7 @@ let PM = null;   // 타이틀 픽셀맵 메타. 배경 격자를 비트 칸에 �
 
 /* 보드 에셋을 문서 안에 심는다. 외부 파일을 use 로 참조하면 브라우저에 따라
    CSS 변수가 그림자 트리로 넘어가지 않아 색을 바꿀 수 없다. */
-const sprite = fetch('assets/board.svg').then(r => r.text()).then(t => {
+const sprite = fetch(asset('assets/board.svg')).then(r => r.text()).then(t => {
   document.body.insertAdjacentHTML('afterbegin', t);
 });
 
@@ -168,7 +170,7 @@ document.addEventListener('click', e => {
 /* ── 타이틀 픽셀맵 ──────────────────────────────────
    대한민국을 격자로 찍고 서울만 다른 색으로 둔다. v1 이 서울에서
    시작해 전국으로 넓어진다는 로드맵이 그림 하나로 보이게. */
-fetch('data/korea-pixels.json').then(r => r.json()).then(g => {
+fetch(asset('data/korea-pixels.json')).then(r => r.json()).then(g => {
   const svg = $('#pixelmap');
   // 우측 여백은 부산·울산까지로 잰다 (g.anchor). 더 동쪽으로 튀어나온 해안은
   // viewBox 밖으로 흘려보내되 지워지지는 않는다.
@@ -333,8 +335,8 @@ document.addEventListener('keydown', e => {
 
 /* ── 코스 로드 ──────────────────────────────────────── */
 const load = slug => Promise.all([
-  fetch(`data/${slug}.course.json`).then(r => r.json()),
-  fetch(`data/${slug}.geom.json`).then(r => r.json())
+  fetch(asset(`data/${slug}.course.json`)).then(r => r.json()),
+  fetch(asset(`data/${slug}.geom.json`)).then(r => r.json())
 ]);
 
 (async () => {

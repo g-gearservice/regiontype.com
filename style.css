@@ -73,8 +73,8 @@ body{
   position:static;flex:0 0 auto;
   width:40px;height:40px;padding:0;
   background:var(--ink);border:0;cursor:pointer;
-  -webkit-mask:url(assets/arrow-back.svg) center / 100% no-repeat;
-  mask:url(assets/arrow-back.svg) center / 100% no-repeat;
+  -webkit-mask:url(assets/arrow-back.svg?v=0.2) center / 100% no-repeat;
+  mask:url(assets/arrow-back.svg?v=0.2) center / 100% no-repeat;
 }
 
 /* ── 코스 목록 — 레퍼런스: 색 블록 상단 + 크림 본문, 아래 중앙에 공용 Play ── */
