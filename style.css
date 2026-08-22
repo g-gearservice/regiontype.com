@@ -319,9 +319,6 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 /* '보임'은 지도를 라벨로 덮는 게 아니라 칠 곳을 정보 줄에 띄우는 것이다.
    지도 라벨은 두 모드 모두 맞힌 뒤에만 나타난다. */
 .fact.aim b{color:var(--accent-text)}
-.fact.aim b::after{
-  content:" 치세요"; font-size:15px; font-weight:500; color:var(--ink-soft);
-}
 
 /* ── 코스 시작 옵션 오버레이 ───────────────────────────── */
 .overlay{

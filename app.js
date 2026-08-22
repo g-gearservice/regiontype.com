@@ -240,12 +240,17 @@ function say(head, body) {
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
 const target = () => G.seq ? G.items[G.idx] : null;
 
+/* 안내에 띄울 이름. 약칭이 허용되면 실제로 쳐야 하는 만큼만 보여준다 —
+   '양천'만 쳐도 되는데 '양천구'라고 적어두면 안내와 판정이 어긋난다.
+   어간이 한 글자인 중구처럼 약칭이 없는 곳은 정식 명칭 그대로다. */
+const promptName = it => (opt.strict ? null : stripSuffix(it.name)) || it.name;
+
 /* 현재 목표를 표시하고 카메라를 그리로 옮긴다.
    3·7배율에서는 전체가 안 보이므로 화면이 목표를 따라가야 한다. */
 function aim() {
   const t = target();
   G.items.forEach(i => i.el.classList.toggle('target', i === t));
-  if (t) say(t.name);                      // 칠 곳은 언제나 알려준다
+  if (t) say(promptName(t));               // 칠 곳은 언제나 알려준다
   $('#fact').classList.toggle('aim', !!t);
   const [W, H] = G.view, z = G.zoom;
   let tx = 0, ty = 0;
