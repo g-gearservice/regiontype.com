@@ -3,6 +3,7 @@
 
 const $ = s => document.querySelector(s);
 const COURSES = ['seoul-gu'];
+const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
 
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
@@ -128,13 +129,22 @@ async function start(slug) {
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
-  // 땅 → 한강 → 도로 → 핀. Mini Motorways 보드의 쌓는 순서다
+  // 격자를 자치구별로 쪼갠다 — 칸 하나가 원 하나
+  const cells = geom.items.map(() => []);
+  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
+  }));
+  const cw = geom.cell, dr = (cw * .38).toFixed(1);
+
+  // 땅(도트) → 도로 → 건물. Mini Motorways 보드의 쌓는 순서다
   svg.innerHTML =
     '<g class="land">' +
-    geom.items.map((g, i) => `<path id="p${i}" class="h${i % 7}" d="${g.d}"></path>`).join('') +
-    '</g>' +
-    (geom.river ? `<path class="river" d="${geom.river}"></path>` : '') +
-    '<g class="roads"></g><g class="tiles"></g>';
+    geom.items.map((g, i) =>
+      `<g id="p${i}" class="h${i % 7}">` + cells[i].map(([x, y], n) =>
+        // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
+        `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
+        ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
+    '</g><g class="roads"></g><g class="tiles"></g>';
   const tiles = svg.querySelector('.tiles');
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
@@ -310,11 +320,11 @@ function drawCard() {
   const svg = $('#map').cloneNode(true);
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const v = n => css.getPropertyValue(n);
-  const hues = [0, 1, 2, 3, 4, 5, 6].map(i => `.land .h${i}.got{fill:${v('--h' + i)}}`).join('');
+  const hues = [0, 1, 2, 3, 4, 5, 6].map(i => `.land .h${i}.got circle{fill:${v('--h' + i)}}`).join('');
   svg.insertAdjacentHTML('afterbegin',
-    `<style>.land path{fill:${v('--cream')};stroke:${v('--road-line')};stroke-width:3}` +
+    `<style>.land circle{fill:${v('--cream')}}.land .got circle{r:9.5}` +
     hues +
-    `.river{fill:none;stroke:${v('--sea')};stroke-width:20;stroke-linecap:round;stroke-linejoin:round}` +
+    `.land .miss circle{fill:${v('--cream')};r:5}` +
     `.road-line{fill:none;stroke:${v('--road-line')};stroke-width:7;stroke-linecap:round;stroke-linejoin:round}` +
     `.tile{display:none}.tile.built{display:inline}` +
     [0,1,2,3,4,5,6].map(i => `.tile.h${i}{fill:${v('--h' + i)}}`).join('') +

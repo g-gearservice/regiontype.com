@@ -317,19 +317,22 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 #play > *{position:relative}
 #play .back{position:absolute}   /* 위 규칙이 절대배치를 덮어썼다 */
 
-#map .land path{
-  fill:var(--cream); stroke:var(--road-line); stroke-width:3.2;
-  stroke-linejoin:round; transition:fill var(--slow) var(--ease-out);
+/* 자치구는 도형이 아니라 도트 격자다. 정답을 맞히면 그 구의 도트가 차례로 물든다 */
+#map .land circle{
+  fill:var(--cream);
+  transition:fill .24s var(--ease-out), r .24s var(--ease-out);
+  transition-delay:calc(var(--i,0) * 7ms);
 }
-#map .land{filter:drop-shadow(0 14px 16px rgba(20,60,58,.34))}  /* 땅덩어리가 물 위에 뜬다 */
-#map .land .got.h0{fill:color-mix(in srgb,var(--h0) 14%,var(--cream))}
-#map .land .got.h1{fill:color-mix(in srgb,var(--h1) 14%,var(--cream))}
-#map .land .got.h2{fill:color-mix(in srgb,var(--h2) 14%,var(--cream))}
-#map .land .got.h3{fill:color-mix(in srgb,var(--h3) 14%,var(--cream))}
-#map .land .got.h4{fill:color-mix(in srgb,var(--h4) 14%,var(--cream))}
-#map .land .got.h5{fill:color-mix(in srgb,var(--h5) 14%,var(--cream))}
-#map .land .got.h6{fill:color-mix(in srgb,var(--h6) 14%,var(--cream))}
-#map .land path.miss{fill:none;stroke:var(--pin);stroke-width:3.2;stroke-dasharray:9 7}
+#map .land{filter:drop-shadow(0 12px 14px rgba(20,60,58,.28))}  /* 땅이 물 위에 뜬다 */
+#map .land .got.h0 circle{fill:var(--h0)}
+#map .land .got.h1 circle{fill:var(--h1)}
+#map .land .got.h2 circle{fill:var(--h2)}
+#map .land .got.h3 circle{fill:var(--h3)}
+#map .land .got.h4 circle{fill:var(--h4)}
+#map .land .got.h5 circle{fill:var(--h5)}
+#map .land .got.h6 circle{fill:var(--h6)}
+#map .land .got circle{r:9.5}                       /* 차면 살짝 부푼다 */
+#map .land .miss circle{fill:color-mix(in srgb,var(--pin) 22%,var(--cream));r:5}
 
 #map .river{
   fill:none; stroke:var(--sea); stroke-width:20;
