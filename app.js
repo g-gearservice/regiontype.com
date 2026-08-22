@@ -4,6 +4,29 @@
 const $ = s => document.querySelector(s);
 const COURSES = ['seoul-gu', 'gangseo-dong'];
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
+let PM = null;   // 타이틀 픽셀맵 메타. 배경 격자를 비트 칸에 맞출 때 쓴다.
+
+/* 보드 에셋을 문서 안에 심는다. 외부 파일을 use 로 참조하면 브라우저에 따라
+   CSS 변수가 그림자 트리로 넘어가지 않아 색을 바꿀 수 없다. */
+const sprite = fetch('assets/board.svg').then(r => r.text()).then(t => {
+  document.body.insertAdjacentHTML('afterbegin', t);
+});
+
+/* 로드맵 타일을 비트맵 위에 얹을 때 쓰는 치수.
+   심볼 안에서 건물이 실제로 차지하는 비율을 알아야 중심을 맞출 수 있다.
+   rt-stop 뷰박스 "-4 4 190 144", 건물(지붕) 26,18 에서 128x72. */
+const TILE = { vx: -4, vy: 4, vw: 190, vh: 144, bx: 26, by: 18, bw: 128, bh: 72 };
+function tileBox(buildWidth) {
+  const w = buildWidth * TILE.vw / TILE.bw;
+  const h = w * TILE.vh / TILE.vw;
+  return {
+    w, h,
+    // use 상자 왼쪽 위에서 건물 한가운데까지의 거리
+    dx: w * (TILE.bx - TILE.vx + TILE.bw / 2) / TILE.vw,
+    dy: h * (TILE.by - TILE.vy + TILE.bh / 2) / TILE.vh,
+  };
+}
+const HUES = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'slate'];
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
 const opt = Object.assign(
@@ -56,7 +79,47 @@ function beep(freq, dur = .07, type = 'sine') {
 function go(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id !== 'play') stop();
+  requestAnimationFrame(() => requestAnimationFrame(syncGrid));
 }
+
+function applyGrid(ox, oy, n) {
+  const svg = $('.grid-bg'), p = $('#bitgrid');
+  if (!p || !(n > 0)) return;
+  svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
+  p.setAttribute('width', n);
+  p.setAttribute('height', n);
+  p.setAttribute('x', ox);
+  p.setAttribute('y', oy);
+  p.querySelector('path').setAttribute('d', `M${n} 0 V${n} H0`);
+}
+/* SVG 유저 좌표 → 화면. 추정하지 않고 CTM 으로 격자 원점·칸을 읽는다. */
+function syncGrid() {
+  let root, space, cell;
+  if ($('#play').classList.contains('on') && G && G.cam) {
+    root = $('#map'); space = G.cam; cell = G.cell;
+  } else {
+    const pm = $('#pixelmap');
+    if (!pm || !$('#title').classList.contains('on')) return;
+    root = space = pm; cell = 1;
+  }
+  const ctm = space.getScreenCTM();
+  if (!ctm) return;
+  const a = root.createSVGPoint();
+  a.x = 0; a.y = 0;
+  const o = a.matrixTransform(ctm);
+  a.x = cell;
+  const x1 = a.matrixTransform(ctm);
+  applyGrid(o.x, o.y, Math.hypot(x1.x - o.x, x1.y - o.y));
+}
+function followGrid(ms) {
+  const t0 = performance.now();
+  const step = () => {
+    syncGrid();
+    if (performance.now() - t0 < ms) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+window.addEventListener('resize', syncGrid);
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
   const t = e.target.closest('.toggle');
@@ -77,10 +140,13 @@ fetch('data/korea-pixels.json').then(r => r.json()).then(g => {
   // viewBox 밖으로 흘려보내되 지워지지는 않는다.
   svg.setAttribute('viewBox', `0 0 ${g.anchor + 1} ${g.h}`);
   // 기준선 밖(울릉도·독도)이 차지하는 폭을 높이 대비 비율로 넘겨 잘림을 막는다
-  svg.style.setProperty('--pm-over', (g.w - g.anchor - 1) / g.h);
+  g.over = (g.w - g.anchor - 1) / g.h;
+  svg.style.setProperty('--pm-over', g.over);
+  PM = g;
   svg.innerHTML = g.rows.flatMap((row, y) => [...row].map((ch, x) => ch === '.' ? '' :
-    `<circle cx="${x + .5}" cy="${y + .5}" r=".36"${ch === 'S' ? ' class="seoul"' : ''}/>`
+    `<circle cx="${x + .5}" cy="${y + .5}" r=".46"${ch === 'S' ? ' class="seoul"' : ''}/>`
   )).join('');
+  requestAnimationFrame(() => requestAnimationFrame(syncGrid));
 });
 
 /* ── 코스 로드 ──────────────────────────────────────── */
@@ -163,12 +229,14 @@ let G = null, tick = null, pending = null;
 async function start(slug, o = {}) {
   const zoom = o.zoom || 1;
   const [course, geom] = await load(slug);
+  await sprite;   // 타일 심볼이 문서에 들어온 뒤에 그린다
   const items = course.items.map(it => {
     const a = stripSuffix(it.name);
     return { ...it, aliases: [...(it.aliases || []), ...(a ? [a] : [])], claimed: false };
   });
   G = { slug, course, items, zoom, seq: course.mode === 'sequence', idx: 0,
-       total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
+       total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0,
+       cell: geom.cell };
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
@@ -201,14 +269,22 @@ function drawDots(svg, geom, items) {
   geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
     if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
   }));
-  const cw = geom.cell, dr = (cw * .38).toFixed(1);
+  const cw = geom.cell, dr = (cw * .46).toFixed(1);
+  // 타일은 비트맵 위에 얹는다. 건물 폭은 중심 간 최소 간격보다 좁아야 겹치지 않는다
+  const b = tileBox(cw * 2.4);
+  svg.style.setProperty('--tf', (cw * .62).toFixed(1) + 'px');
+
   svg.innerHTML = '<g class="cam">' + geom.items.map((g, i) =>
     `<g id="p${i}">` + cells[i].map(([x, y], n) =>
       // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
       `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
       ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
-    geom.items.map((g, i) =>
-      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('') + '</g>';
+    '<g class="tiles">' + geom.items.map((g, i) =>
+      `<g id="tl${i}" class="tile c-${HUES[i % HUES.length]}">` +
+      `<use href="#rt-stop" x="${(g.c[0] - b.dx).toFixed(1)}" y="${(g.c[1] - b.dy).toFixed(1)}"` +
+      ` width="${b.w.toFixed(1)}" height="${b.h.toFixed(1)}"/>` +
+      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text></g>`).join('') + '</g>' +
+    '</g>';
   link(svg, geom, items);
 }
 
@@ -216,6 +292,7 @@ function link(svg, geom, items) {
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#p' + i);
+    it.tile = svg.querySelector('#tl' + i);
     it.label = svg.querySelector('#t' + i);
     it.label.textContent = g.name;
     it.at = g.c;
@@ -256,6 +333,7 @@ function aim() {
     ty = Math.min(0, Math.max(H - z * H, H / 2 - z * t.at[1]));
   }
   G.cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
+  followGrid(600);
 }
 
 function countdown(n, done) {
@@ -315,6 +393,7 @@ function claim(it) {
   it.claimed = true;
   it.el.classList.add('got');
   it.label.classList.add('on');
+  if (it.tile) it.tile.classList.add('built');
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -372,13 +451,8 @@ function drawCard() {
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
-  // 카드는 독립 SVG 라 CSS 변수가 없다 — 값을 풀어서 넣는다.
-  // 도트 지도와 보드 지도 두 가지를 모두 덮는다.
-  const v = n => css.getPropertyValue(n).trim();
-  const hue = i => v('--h' + i);
   svg.insertAdjacentHTML('afterbegin', '<style>' +
-    // 도트 지도 — .got 는 도트를 담은 <g> 에 붙는다
-    `circle{fill:${land}}g.got circle{fill:${acc};r:9.5}g.miss circle{fill:${land};r:5}` +
+    `circle{fill:${land}}g.got circle{fill:${acc}}g.miss circle{fill:${land}}` +
     'text{display:none}</style>');
   const img = new Image();
   img.onload = () => {

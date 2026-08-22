@@ -4,9 +4,9 @@
 
 ## 실행
 
-    python3 -m http.server 4173
+    python3 -m http.server 3000
 
-`http://localhost:4173` — 정적 파일뿐이라 아무 정적 호스팅에나 그대로 올라간다.
+`http://localhost:3000` — 정적 파일뿐이라 아무 정적 호스팅에나 그대로 올라간다.
 `?rt=1` 을 붙이면 정답 판정 엔진 자체 검사가 콘솔에서 돈다.
 
 ## 파일

@@ -9,7 +9,7 @@ import json, math, sys
 SYM = '0123456789abcdefghijklmnopqrstuvwxyz'
 W = 1000.0
 src, dst = sys.argv[1], sys.argv[2]
-COLS = int(sys.argv[3]) if len(sys.argv) > 3 else 46
+COLS = int(sys.argv[3]) if len(sys.argv) > 3 else 32
 PREFIX = sys.argv[4] if len(sys.argv) > 4 else ""      # 코드 접두로 한 구만 뽑을 때
 
 feats = [f for f in json.load(open(src))["features"]

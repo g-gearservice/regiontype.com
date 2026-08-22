@@ -6,7 +6,6 @@
   --fast:.16s; --slow:.2s;
   --ease-out:cubic-bezier(.23,1,.32,1);
   --ease-in-out:cubic-bezier(.77,0,.175,1);
-  --road:#fff;
   --shadow:0 20px 28px -16px rgba(58,78,88,.42), 0 3px 7px -3px rgba(58,78,88,.26);
   --shadow-lift:0 30px 38px -18px rgba(58,78,88,.5), 0 5px 10px -4px rgba(58,78,88,.3);
   --indent:min(14vw,220px);   /* 타이틀 좌측 여백. 픽셀맵 우측 여백과 같은 값을 쓴다 */
@@ -15,9 +14,9 @@
 }
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
-  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --road:#3a474e;
-  --shadow:0 18px 26px -18px rgba(0,0,0,.6), 0 3px 6px -3px rgba(0,0,0,.4);
-  --shadow-lift:0 26px 34px -20px rgba(0,0,0,.65), 0 4px 8px -4px rgba(0,0,0,.45); --land:#334047; --land-line:#232c31; --card:#2b353b;
+  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f;
+  --shadow:none;
+  --shadow-lift:none; --land:#334047; --land-line:#232c31; --card:#2b353b;
 }
 @media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s } }
 :root[data-motion="off"]{ --fast:0s; --slow:0s }
@@ -30,11 +29,10 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 .grid-bg{
-  position:fixed; inset:-2px; z-index:-3; pointer-events:none;
-  background:
-    linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 152px,
-    linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/152px 100%;
+  position:fixed; inset:0; width:100%; height:100%; z-index:-3; pointer-events:none;
+  display:block;
 }
+.grid-bg path{fill:none;stroke:var(--grid);stroke-width:1}
 /* 대각 광원과 가장자리 비네트 — 화면이 종이처럼 보이지 않게 */
 .grid-bg::after{
   content:""; position:absolute; inset:0;
@@ -42,21 +40,7 @@ body{
     linear-gradient(118deg,rgba(255,255,255,.30),rgba(255,255,255,0) 34%),
     radial-gradient(130% 98% at 46% 36%,rgba(255,255,255,.10),rgba(74,102,116,.13) 84%);
 }
-:root[data-night] .grid-bg::after{
-  background:
-    linear-gradient(118deg,rgba(255,255,255,.05),rgba(255,255,255,0) 46%),
-    radial-gradient(120% 90% at 50% 42%,rgba(255,255,255,.05),rgba(0,0,0,.34) 78%);
-}
-/* 배경을 가로지르는 도로. 메뉴 블록이 이 위에 얹힌다 */
-.road{
-  position:fixed; inset:0; width:100%; height:100%; z-index:-2; pointer-events:none;
-}
-.road path{
-  fill:none; stroke:var(--road); stroke-width:30;
-  stroke-linecap:round; stroke-linejoin:round;
-  filter:drop-shadow(0 7px 9px rgba(58,78,88,.16));
-}
-:root[data-night] .road path{filter:drop-shadow(0 7px 9px rgba(0,0,0,.3))}
+:root[data-night] .grid-bg::after{background:none}
 
 /* ── 화면 전환 ─────────────────────────── */
 .screen{
@@ -123,15 +107,15 @@ body{
 .combo{color:var(--accent-text);font-weight:800;font-size:24px;min-width:80px}
 
 .stage{flex:1;position:relative;display:flex;justify-content:center;min-height:0}
-#map{width:100%;height:100%}
+#map{width:100%;height:100%;display:block}
 /* 자치구는 도형이 아니라 도트 격자다. 정답을 맞히면 그 구의 도트가 차례로 물든다 */
 #map circle{
   fill:var(--land);
   transition:fill .24s var(--ease-out), r .24s var(--ease-out);
   transition-delay:calc(var(--i,0) * 7ms);
 }
-#map g.got circle{fill:var(--accent);r:9.5}          /* 차면 살짝 부푼다 */
-#map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land));r:5}
+#map g.got circle{fill:var(--accent)}
+#map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land))}
 #map text{
   font:700 calc(19px / var(--z,1)) system-ui,sans-serif;   /* 확대해도 화면상 같은 크기 */
   fill:#2d3538;text-anchor:middle;
@@ -162,6 +146,9 @@ body{
   font-size:180px;font-weight:800;color:var(--accent);background:rgba(232,237,240,.85);
 }
 :root[data-night] .countdown{background:rgba(35,44,49,.85)}
+:root[data-night] .course-list li,
+:root[data-night] #card,
+:root[data-night] #typein{box-shadow:none}
 .countdown.on{display:grid}
 
 /* ── 결과 ─────────────────────────────── */
@@ -202,7 +189,7 @@ body{
   /* viewBox 를 부산·울산이 있는 열에서 끊었으므로 right 가 곧 그 지점까지의 여백이다.
      동해안(포항 쪽)이 더 튀어나와도 overflow 로 흘려보내 기준이 흔들리지 않는다. */
   position:absolute; top:50%; transform:translateY(-50%);
-  height:var(--pm-h); width:auto; overflow:visible; pointer-events:none;
+  display:block; height:var(--pm-h); width:auto; overflow:visible; pointer-events:none;
   /* 여백 기준은 부산·울산이되, 그 밖의 울릉도·독도가 잘리지 않을 만큼은 보장한다 */
   right:max(var(--indent), calc(var(--pm-h) * var(--pm-over) + 12px));
 }
@@ -307,10 +294,6 @@ body{
 .head{font-size:40px}
 #courses .head,#options .head{margin-left:72px}
 
-/* 플레이 중에는 도로가 지도와 경쟁한다 — 물러난다 */
-body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
-.road{transition:opacity .4s var(--ease-out)}
-
 /* 정보 줄: 배경을 덧칠하면 비네트와 어긋나 띠가 생긴다. 자리를 비워 해결한다 */
 .fact{background:none;padding:0}
 .stage{padding-bottom:78px}
@@ -368,6 +351,17 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 @keyframes aimpulse{50%{stroke-opacity:.25}}
 @media (prefers-reduced-motion:reduce){ #map g.target circle{animation:none} }
 
-/* 이름 보임 모드 — 처음부터 전부 읽힌다 */
 
+/* ── 로드맵 타일 — 비트맵 위에 얹는다 ──────────────────── */
+#map .tiles > g{
+  opacity:0; transform:translateY(7px) scale(.88);
+  transform-box:fill-box; transform-origin:center;
+  transition:opacity .18s var(--ease-out), transform .3s var(--ease-out);
+}
+#map .tiles > g.built{opacity:1;transform:none}
+/* 타일 글자는 지도와 함께 커진다 — 건물 위에 찍힌 글자이기 때문이다 */
+#map .tiles text{
+  font:800 var(--tf,14px)/1 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+  fill:rgba(0,0,0,.62); text-anchor:middle; dominant-baseline:central;
+  paint-order:normal; stroke:none; opacity:1; pointer-events:none;
 }
