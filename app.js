@@ -3,6 +3,7 @@
 
 const $ = s => document.querySelector(s);
 const COURSES = ['seoul-gu'];
+const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
 
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
@@ -128,8 +129,18 @@ async function start(slug) {
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
+  // 격자를 자치구별로 쪼갠다 — 칸 하나가 원 하나. 타이틀 픽셀맵과 같은 문법이다
+  const cells = geom.items.map(() => []);
+  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
+  }));
+  const cw = geom.cell, dr = (cw * .38).toFixed(1);
+
   svg.innerHTML = geom.items.map((g, i) =>
-    `<path id="p${i}" d="${g.d}"></path>`).join('') +
+    `<g id="p${i}">` + cells[i].map(([x, y], n) =>
+      // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
+      `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
+      ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
     geom.items.map((g, i) =>
       `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('');
   geom.items.forEach((g, i) => {
@@ -266,7 +277,8 @@ function drawCard() {
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
   svg.insertAdjacentHTML('afterbegin',
-    `<style>path{fill:${land};stroke:${bg};stroke-width:2.5}path.got{fill:${acc}}text{display:none}</style>`);
+    `<style>circle{fill:${land}}g.got circle{fill:${acc};r:9.5}` +
+    `g.miss circle{fill:${land};r:5}text{display:none}</style>`);
   const img = new Image();
   img.onload = () => {
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);

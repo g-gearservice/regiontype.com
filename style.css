@@ -124,10 +124,17 @@ body{
 
 .stage{flex:1;position:relative;display:flex;justify-content:center;min-height:0}
 #map{width:100%;height:100%}
-#map path{fill:var(--land);stroke:var(--land-line);stroke-width:2.5;transition:fill var(--slow)}
-#map path.got{fill:var(--accent);stroke:var(--accent-text);stroke-width:3}
-#map path.miss{fill:none;stroke:var(--accent-deep);stroke-width:4;stroke-dasharray:8 6}
-#map text{font:700 15px system-ui,sans-serif;fill:#2d3538;text-anchor:middle;pointer-events:none;opacity:0;transition:opacity var(--slow)}
+/* 자치구는 도형이 아니라 도트 격자다. 정답을 맞히면 그 구의 도트가 차례로 물든다 */
+#map circle{
+  fill:var(--land);
+  transition:fill .24s var(--ease-out), r .24s var(--ease-out);
+  transition-delay:calc(var(--i,0) * 7ms);
+}
+#map g.got circle{fill:var(--accent);r:9.5}          /* 차면 살짝 부푼다 */
+#map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land));r:5}
+#map text{font:700 19px system-ui,sans-serif;fill:#2d3538;text-anchor:middle;
+  paint-order:stroke;stroke:var(--bg);stroke-width:5;stroke-linejoin:round;   /* 도트 위에서도 읽히게 */
+  pointer-events:none;opacity:0;transition:opacity var(--slow)}
 #map text.on{opacity:1}
 
 .fact{
@@ -246,8 +253,7 @@ body{
 .missed li{border-radius:4px;box-shadow:var(--shadow)}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
-#map path.got{filter:drop-shadow(0 10px 12px rgba(58,78,88,.28))}
-:root[data-night] #map path.got{filter:drop-shadow(0 10px 12px rgba(0,0,0,.45))}
+
 
 /* 등장 모션 — 무에서 나타나지 않고, 순서대로 */
 @keyframes rise{from{opacity:0;transform:translateY(10px) scale(.98)}}
