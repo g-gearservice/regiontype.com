@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>regiontype — 보드 에셋</title>
+<style>
+  body{margin:0;padding:48px 56px;background:#f7f2e4;
+       font:500 15px/1.6 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;color:#3c464a}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+  p.sub{color:#8b8372;margin:0 0 36px}
+  h2{font-size:17px;font-weight:800;margin:34px 0 12px}
+  .row{display:flex;align-items:flex-end;gap:44px;flex-wrap:wrap}
+  .cell{text-align:center}
+  .cell b{display:block;font-size:13px;font-weight:600;color:#8b8372;margin-top:10px}
+  svg.a{overflow:visible}
+  .road{background:#fff;border:3px solid #a9b9bc;border-radius:30px;height:44px;
+        display:flex;align-items:center;gap:26px;padding:0 22px;width:max-content}
+</style>
+
+<h1>보드 에셋</h1>
+<p class="sub">색은 전부 CSS 변수다. 쓰는 쪽에서 덮으면 그 하나만 바뀐다.</p>
+
+<h2>자동차 — 색 커스텀</h2>
+<div class="row">
+  <div class="cell"><svg class="a" width="26" height="38"><use href="board.svg#rt-car"/></svg><b>기본</b></div>
+  <div class="cell"><svg class="a" width="26" height="38" style="--rt-car:#efa14a"><use href="board.svg#rt-car"/></svg><b>--rt-car</b></div>
+  <div class="cell"><svg class="a" width="26" height="38" style="--rt-car:#7cc17a"><use href="board.svg#rt-car"/></svg><b>초록</b></div>
+  <div class="cell"><svg class="a" width="26" height="38" style="--rt-car:#5fb0c9"><use href="board.svg#rt-car"/></svg><b>파랑</b></div>
+  <div class="cell"><svg class="a" width="26" height="38" style="--rt-car:#7d8fd6"><use href="board.svg#rt-car"/></svg><b>보라</b></div>
+  <div class="cell"><svg class="a" width="26" height="38" style="--rt-car:#2b3033"><use href="board.svg#rt-car"/></svg><b>검정</b></div>
+</div>
+
+<h2>차고지 — 코스가 시작되는 곳</h2>
+<div class="row">
+  <div class="cell"><svg class="a" width="76" height="66"><use href="board.svg#rt-depot"/></svg><b>기본</b></div>
+  <div class="cell"><svg class="a" width="76" height="66" style="--rt-depot:#9fd0e2;--rt-depot-base:#5fb0c9"><use href="board.svg#rt-depot"/></svg><b>파랑</b></div>
+  <div class="cell"><svg class="a" width="76" height="66" style="--rt-depot:#a8dba6;--rt-depot-base:#7cc17a"><use href="board.svg#rt-depot"/></svg><b>초록</b></div>
+</div>
+
+<h2>경유지 — 좌우로 길이 지나고 큰집 하나</h2>
+<div class="row">
+  <div class="cell"><svg class="a" width="240" height="150"><use href="board.svg#rt-stop"/></svg><b>기본</b></div>
+  <div class="cell"><svg class="a" width="240" height="150" style="--rt-roof:#9fd0e2;--rt-wall:#5fb0c9;--rt-base:#3f8ba4"><use href="board.svg#rt-stop"/></svg><b>집 색 변경</b></div>
+</div>
+
+<h2>종점 — 길이 한쪽에만 붙은 막다른 큰집</h2>
+<div class="row">
+  <div class="cell"><svg class="a" width="200" height="156"><use href="board.svg#rt-end"/></svg><b>기본</b></div>
+  <div class="cell"><svg class="a" width="200" height="156" style="--rt-roof:#a8dba6;--rt-wall:#7cc17a;--rt-base:#4f9b6a"><use href="board.svg#rt-end"/></svg><b>집 색 변경</b></div>
+</div>
+
+<h2>이어 붙이면</h2>
+<div class="road">
+  <svg class="a" width="52" height="46"><use href="board.svg#rt-depot"/></svg>
+  <svg class="a" width="16" height="24" style="--rt-car:#efa14a;transform:rotate(90deg)"><use href="board.svg#rt-car"/></svg>
+  <svg class="a" width="150" height="94"><use href="board.svg#rt-stop"/></svg>
+  <svg class="a" width="16" height="24" style="--rt-car:#5fb0c9;transform:rotate(90deg)"><use href="board.svg#rt-car"/></svg>
+  <svg class="a" width="128" height="100"><use href="board.svg#rt-end"/></svg>
+</div>

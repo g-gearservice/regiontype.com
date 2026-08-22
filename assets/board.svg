@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<!--
+  regiontype 로드맵 에셋.
+
+  색은 전부 CSS 변수다. 쓰는 쪽 style 에 rt-car 같은 변수를 주면
+  그 인스턴스 하나만 색이 바뀐다.
+
+  긴 그림자는 흐림이 없다. 실루엣을 오른쪽 아래로 조금씩 여러 번 밀어
+  겹쳐 만든다. 쐐기를 따로 그리면 끝이 뾰족해져 레퍼런스와 어긋난다.
+-->
+<defs>
+  <!-- ── 공통 조각 ─────────────────────────────────── -->
+  <g id="rt-house">
+    <rect x="-5" y="8"   width="40" height="40" rx="6" fill="var(--rt-base,#e08b3d)"/>
+    <rect x="-2.5" y="4" width="40" height="40" rx="6" fill="var(--rt-wall,#c85a4e)"/>
+    <rect x="0"  y="0"   width="40" height="40" rx="6" fill="var(--rt-roof,#f6cf5b)"/>
+    <path d="M40 6v7l-9-9h5a4 4 0 0 1 4 4Z" fill="#000" opacity=".15"/>
+    <path d="M15 40v-8h10v8Z" fill="#000" opacity=".13"/>
+  </g>
+  <g id="rt-pin">
+    <path d="M0 0c-4.7-7-7.2-10.2-7.2-14A7.2 7.2 0 1 1 7.2-14C7.2-10.2 4.7-7 0 0Z"
+          fill="var(--rt-pin,#2b3033)"/>
+    <circle cy="-14" r="2.8" fill="#fff"/>
+  </g>
+  <g id="rt-hatch" stroke="var(--rt-edge,#a9b9bc)" stroke-width="2.6"
+     opacity=".4" stroke-linecap="round">
+    <path d="M0 0l16-16M9 3l16-16M18 6l16-16"/>
+  </g>
+
+  <!-- 실루엣 (그림자용, 채움만) -->
+  <path id="rt-stop-sil"
+        d="M38 6H122Q136 6 136 20V35H149Q160 35 160 46T149 57H136V72Q136 86 122 86H38
+           Q24 86 24 72V57H11Q0 57 0 46T11 35H24V20Q24 6 38 6Z"/>
+  <path id="rt-end-sil"
+        d="M38 6H104Q118 6 118 20V72Q118 86 104 86H38Q24 86 24 72V57H11Q0 57 0 46T11 35H24V20
+           Q24 6 38 6Z"/>
+  <rect id="rt-depot-sil" x="8" y="8" width="46" height="46" rx="8"/>
+  <rect id="rt-car-sil" x="2" y="3" width="24" height="46" rx="7"/>
+
+  <!-- 긴 그림자 — 실루엣을 조금씩 밀어 겹친다 -->
+  <g id="rt-sh-stop" fill="var(--rt-shadow,#8fa3a6)" opacity=".28">
+    <use href="#rt-stop-sil" transform="translate(4 4)"/>
+    <use href="#rt-stop-sil" transform="translate(8 8)"/>
+    <use href="#rt-stop-sil" transform="translate(12 12)"/>
+    <use href="#rt-stop-sil" transform="translate(16 16)"/>
+    <use href="#rt-stop-sil" transform="translate(20 20)"/>
+    <use href="#rt-stop-sil" transform="translate(24 24)"/>
+  </g>
+  <g id="rt-sh-end" fill="var(--rt-shadow,#8fa3a6)" opacity=".28">
+    <use href="#rt-end-sil" transform="translate(4 4)"/>
+    <use href="#rt-end-sil" transform="translate(8 8)"/>
+    <use href="#rt-end-sil" transform="translate(12 12)"/>
+    <use href="#rt-end-sil" transform="translate(16 16)"/>
+    <use href="#rt-end-sil" transform="translate(20 20)"/>
+    <use href="#rt-end-sil" transform="translate(24 24)"/>
+  </g>
+  <g id="rt-sh-depot" fill="var(--rt-shadow,#8fa3a6)" opacity=".3">
+    <use href="#rt-depot-sil" transform="translate(3 3)"/>
+    <use href="#rt-depot-sil" transform="translate(6 6)"/>
+    <use href="#rt-depot-sil" transform="translate(9 9)"/>
+    <use href="#rt-depot-sil" transform="translate(12 12)"/>
+    <use href="#rt-depot-sil" transform="translate(15 15)"/>
+    <use href="#rt-depot-sil" transform="translate(18 18)"/>
+  </g>
+  <g id="rt-sh-car" fill="var(--rt-shadow,#8fa3a6)" opacity=".26">
+    <use href="#rt-car-sil" transform="translate(2 2)"/>
+    <use href="#rt-car-sil" transform="translate(4 4)"/>
+    <use href="#rt-car-sil" transform="translate(6 6)"/>
+    <use href="#rt-car-sil" transform="translate(8 8)"/>
+  </g>
+
+  <!-- ── 자동차 : 진행 방향은 위 ────────────────────── -->
+  <symbol id="rt-car" viewBox="-2 -2 42 60">
+    <use href="#rt-sh-car"/>
+    <rect x="2" y="3" width="24" height="46" rx="7" fill="var(--rt-car,#e2695e)"/>
+    <rect x="2" y="15" width="24" height="12" fill="#fff" opacity=".34"/>
+    <rect x="2" y="3" width="24" height="8" rx="4" fill="#fff" opacity=".2"/>
+  </symbol>
+
+  <!-- ── 차고지 : 코스가 시작되는 곳 ────────────────── -->
+  <symbol id="rt-depot" viewBox="-2 -2 84 82">
+    <use href="#rt-sh-depot"/>
+    <rect x="8" y="8" width="46" height="46" rx="8" fill="var(--rt-depot-base,#d98b3a)"/>
+    <path d="M16 8h30a8 8 0 0 1 8 8v16H8V16a8 8 0 0 1 8-8Z" fill="var(--rt-depot,#f2c94c)"/>
+    <rect x="8" y="32" width="46" height="4" fill="#000" opacity=".1"/>
+  </symbol>
+
+  <!-- ── 경유지 : 좌우로 길이 지나고 큰집 하나 ───────── -->
+  <symbol id="rt-stop" viewBox="-2 -2 190 118">
+    <use href="#rt-sh-stop"/>
+    <use href="#rt-stop-sil" fill="var(--rt-road,#fff)"
+         stroke="var(--rt-edge,#a9b9bc)" stroke-width="3.5" stroke-linejoin="round"/>
+    <use href="#rt-hatch" x="34" y="76"/>
+    <rect x="90" y="26" width="40" height="40" rx="6" fill="none"
+          stroke="var(--rt-edge,#a9b9bc)" stroke-width="3" stroke-dasharray="7 6"
+          stroke-linecap="round" opacity=".8"/>
+    <use href="#rt-house" x="34" y="22"/>
+  </symbol>
+
+  <!-- ── 종점 : 길이 한쪽에만 붙은 막다른 큰집 ───────── -->
+  <symbol id="rt-end" viewBox="-2 -2 148 118">
+    <use href="#rt-sh-end"/>
+    <use href="#rt-end-sil" fill="var(--rt-road,#fff)"
+         stroke="var(--rt-edge,#a9b9bc)" stroke-width="3.5" stroke-linejoin="round"/>
+    <use href="#rt-hatch" x="34" y="76"/>
+    <use href="#rt-house" x="46" y="22"/>
+    <use href="#rt-pin" x="66" y="26"/>
+  </symbol>
+</defs>
+</svg>
