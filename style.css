@@ -311,3 +311,46 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 /* 정보 줄: 배경을 덧칠하면 비네트와 어긋나 띠가 생긴다. 자리를 비워 해결한다 */
 .fact{background:none;padding:0}
 .stage{padding-bottom:78px}
+
+/* ── 코스 진입 방식 ─────────────────────────────────────
+   플레이 위에 올리면 "이름 숨김 / 이름 보임" 두 갈래가 열린다.
+   두 버튼은 항상 DOM 에 있고 시각적으로만 접혀 있으므로
+   키보드·보조기기는 hover 없이도 그대로 닿는다. */
+.play-group{display:grid}
+.play-group > *{grid-area:1/1}          /* 겹쳐 두어 펼칠 때 카드가 튀지 않게 */
+.play-opts{display:flex;gap:3px;align-items:start}
+
+@media (hover:hover) and (pointer:fine){
+  .play-main{
+    opacity:1; transition:opacity .16s var(--ease-out);
+  }
+  .play-opts{
+    opacity:0; pointer-events:none;
+    transform:translateY(4px);
+    transition:opacity .16s var(--ease-out), transform .16s var(--ease-out);
+  }
+  .play-group:hover .play-main,
+  .play-group:focus-within .play-main{opacity:0;pointer-events:none}
+  .play-group:hover .play-opts,
+  .play-group:focus-within .play-opts{opacity:1;pointer-events:auto;transform:none}
+}
+/* 터치·hover 없는 환경에서는 접을 이유가 없다 */
+@media not all and (hover:hover){
+  .play-main{display:none}
+}
+
+.play-opts button{
+  font:inherit;font-weight:700;font-size:20px;color:#fff;cursor:pointer;
+  background:var(--block);border:0;padding:4px 14px 6px;
+  transition:background var(--fast) var(--ease-out), transform var(--fast) var(--ease-out);
+}
+.play-opts button:active{transform:scale(.97)}
+.play-opts button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){
+  .play-opts button:hover{background:var(--block-hi)}
+}
+.play-opts [data-reveal="1"]{background:var(--block-hi);opacity:.85}
+
+/* 이름 보임 모드 — 처음부터 전부 읽힌다 */
+#map.reveal text{opacity:1}
+#map.reveal text:not(.on){fill:var(--ink-soft)}   /* 아직 못 맞힌 이름은 흐리게 */

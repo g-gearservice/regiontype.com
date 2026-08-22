@@ -107,11 +107,19 @@ const load = slug => Promise.all([
   for (const slug of COURSES) {
     const [c] = await load(slug);
     const li = document.createElement('li');
-    li.innerHTML = `<h3></h3><p></p><span class="n"></span><button>플레이</button>`;
+    li.innerHTML = `<h3></h3><p></p><span class="n"></span>
+      <div class="play-group">
+        <button class="play-main" aria-hidden="true" tabindex="-1">플레이</button>
+        <div class="play-opts">
+          <button data-reveal="0">이름 숨김</button>
+          <button data-reveal="1">이름 보임</button>
+        </div>
+      </div>`;
     li.querySelector('h3').textContent = c.title;
     li.querySelector('p').textContent = c.description;
     li.querySelector('.n').textContent = `${c.items.length}개 항목 · 자유형`;
-    li.querySelector('button').onclick = () => start(slug);
+    li.querySelectorAll('.play-opts button').forEach(b =>
+      b.onclick = () => start(slug, b.dataset.reveal === '1'));
     list.append(li);
   }
 })();
@@ -119,13 +127,13 @@ const load = slug => Promise.all([
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
 
-async function start(slug) {
+async function start(slug, reveal = false) {
   const [course, geom] = await load(slug);
   const items = course.items.map(it => {
     const a = stripSuffix(it.name);
     return { ...it, aliases: [...(it.aliases || []), ...(a ? [a] : [])], claimed: false };
   });
-  G = { slug, course, items, total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
+  G = { slug, course, items, reveal, total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
@@ -150,6 +158,8 @@ async function start(slug) {
     it.label.textContent = g.name;
   });
 
+  // 이름 보임 모드에서는 처음부터 전부 읽힌다
+  svg.classList.toggle('reveal', reveal);
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
   $('#statCombo').textContent = '';
@@ -240,7 +250,7 @@ function finish() {
   beep(300, .3, 'triangle');
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
   pending = setTimeout(() => {
-    const key = 'rt.best.' + G.slug;
+    const key = `rt.best.${G.slug}.${G.reveal ? 'shown' : 'hidden'}`;
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = G.score;
     $('#rCount').textContent = G.hits;
@@ -288,7 +298,8 @@ function drawCard() {
     ctx.font = '800 54px system-ui,sans-serif';
     ctx.fillText('regiontype', 70, 100);
     ctx.font = '500 38px system-ui,sans-serif';
-    ctx.fillText(`${G.course.title} · ${G.score}점`, 70, cv.height - 118);
+    ctx.fillText(`${G.course.title} · ${G.reveal ? '이름 보임' : '이름 숨김'} · ${G.score}점`,
+      70, cv.height - 118);
     ctx.font = '800 76px system-ui,sans-serif';
     ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
     ctx.textAlign = 'right';
@@ -307,7 +318,7 @@ $('#save').onclick = async () => {
   a.href = $('#card').toDataURL('image/png');
   a.click();
 };
-$('#again').onclick = () => start(G.slug);
+$('#again').onclick = () => start(G.slug, G.reveal);
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
