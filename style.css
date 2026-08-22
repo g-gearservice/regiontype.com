@@ -7,10 +7,6 @@
   --ease-out:cubic-bezier(.23,1,.32,1);
   --ease-in-out:cubic-bezier(.77,0,.175,1);
   --road:#fff;
-  /* ── 인게임 보드 ── */
-  --sea:#6ec7bf; --cream:#f2e7cf; --road-line:#fff; --pin:#2b3033;
-  --h0:#e2695e; --h1:#efa14a; --h2:#f2c75c; --h3:#7cc17a;
-  --h4:#3fa89b; --h5:#6fb4d8; --h6:#9b8ac4;
   --shadow:0 20px 28px -16px rgba(58,78,88,.42), 0 3px 7px -3px rgba(58,78,88,.26);
   --shadow-lift:0 30px 38px -18px rgba(58,78,88,.5), 0 5px 10px -4px rgba(58,78,88,.3);
   --indent:min(14vw,220px);   /* 타이틀 좌측 여백. 픽셀맵 우측 여백과 같은 값을 쓴다 */
@@ -20,7 +16,6 @@
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
   --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --road:#3a474e;
-  --sea:#2f5f5c; --cream:#c9bda6; --road-line:#e9eff0; --pin:#1b1f21;
   --shadow:0 18px 26px -18px rgba(0,0,0,.6), 0 3px 6px -3px rgba(0,0,0,.4);
   --shadow-lift:0 26px 34px -20px rgba(0,0,0,.65), 0 4px 8px -4px rgba(0,0,0,.45); --land:#334047; --land-line:#232c31; --card:#2b353b;
 }
@@ -129,6 +124,11 @@ body{
 
 .stage{flex:1;position:relative;display:flex;justify-content:center;min-height:0}
 #map{width:100%;height:100%}
+#map path{fill:var(--land);stroke:var(--land-line);stroke-width:2.5;transition:fill var(--slow)}
+#map path.got{fill:var(--accent);stroke:var(--accent-text);stroke-width:3}
+#map path.miss{fill:none;stroke:var(--accent-deep);stroke-width:4;stroke-dasharray:8 6}
+#map text{font:700 15px system-ui,sans-serif;fill:#2d3538;text-anchor:middle;pointer-events:none;opacity:0;transition:opacity var(--slow)}
+#map text.on{opacity:1}
 
 .fact{
   position:absolute;left:0;right:0;bottom:0;text-align:center;pointer-events:none;
@@ -246,6 +246,8 @@ body{
 .missed li{border-radius:4px;box-shadow:var(--shadow)}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
+#map path.got{filter:drop-shadow(0 10px 12px rgba(58,78,88,.28))}
+:root[data-night] #map path.got{filter:drop-shadow(0 10px 12px rgba(0,0,0,.45))}
 
 /* 등장 모션 — 무에서 나타나지 않고, 순서대로 */
 @keyframes rise{from{opacity:0;transform:translateY(10px) scale(.98)}}
@@ -303,88 +305,3 @@ body:has(#play.on) .road{opacity:0;transition:opacity .3s var(--ease-out)}
 /* 정보 줄: 배경을 덧칠하면 비네트와 어긋나 띠가 생긴다. 자리를 비워 해결한다 */
 .fact{background:none;padding:0}
 .stage{padding-bottom:78px}
-
-/* ═══ 인게임 보드 ══════════════════════════════════════
-   크림색 땅을 청록 위에 올리고, 흰 경계가 도로 노릇을 한다 */
-#play{background:var(--sea)}
-#play::before{                       /* 바다에도 격자가 비친다 */
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:
-    linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px) 0 0/100% 96px,
-    linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px) 0 0/96px 100%,
-    radial-gradient(120% 90% at 50% 40%,rgba(255,255,255,.12),rgba(0,0,0,.14) 84%);
-}
-#play > *{position:relative}
-#play .back{position:absolute}   /* 위 규칙이 절대배치를 덮어썼다 */
-
-/* 자치구는 도형이 아니라 도트 격자다. 정답을 맞히면 그 구의 도트가 차례로 물든다 */
-#map .land circle{
-  fill:var(--cream);
-  transition:fill .24s var(--ease-out), r .24s var(--ease-out);
-  transition-delay:calc(var(--i,0) * 7ms);
-}
-#map .land{filter:drop-shadow(0 12px 14px rgba(20,60,58,.28))}  /* 땅이 물 위에 뜬다 */
-#map .land .got.h0 circle{fill:var(--h0)}
-#map .land .got.h1 circle{fill:var(--h1)}
-#map .land .got.h2 circle{fill:var(--h2)}
-#map .land .got.h3 circle{fill:var(--h3)}
-#map .land .got.h4 circle{fill:var(--h4)}
-#map .land .got.h5 circle{fill:var(--h5)}
-#map .land .got.h6 circle{fill:var(--h6)}
-#map .land .got circle{r:9.5}                       /* 차면 살짝 부푼다 */
-#map .land .miss circle{fill:color-mix(in srgb,var(--pin) 22%,var(--cream));r:5}
-
-#map .river{
-  fill:none; stroke:var(--sea); stroke-width:20;
-  stroke-linecap:round; stroke-linejoin:round;
-}
-#map .roads .road-line{
-  fill:none; stroke:var(--road-line); stroke-width:7;
-  stroke-linecap:round; stroke-linejoin:round;
-  filter:drop-shadow(0 3px 3px rgba(20,60,58,.3));
-  stroke-dasharray:1000; stroke-dashoffset:1000;
-  animation:pave .5s var(--ease-out) forwards;
-}
-@keyframes pave{to{stroke-dashoffset:0}}
-
-/* ── 대지와 건물 ─────────────────────────────
-   점령 전에는 점선 빈 칸, 점령하면 층이 쌓인 색 타일이 올라간다 */
-#map .tile{fill:var(--cream)}
-#map .tile .l1,#map .tile .l2{display:none}
-#map .tile .top{
-  stroke:var(--pin); stroke-width:2.6; stroke-dasharray:8 6; opacity:.34;
-  transition:opacity var(--fast) var(--ease-out);
-}
-#map .tile.h0{fill:var(--h0)} #map .tile.h1{fill:var(--h1)}
-#map .tile.h2{fill:var(--h2)} #map .tile.h3{fill:var(--h3)}
-#map .tile.h4{fill:var(--h4)} #map .tile.h5{fill:var(--h5)}
-#map .tile.h6{fill:var(--h6)}
-#map .tile:not(.built){fill:var(--cream)}
-
-#map .tile.built{
-  animation:build .36s var(--ease-out) backwards;
-  filter:drop-shadow(9px 16px 12px rgba(20,60,58,.38));   /* MM 의 길고 부드러운 우하향 그림자 */
-}
-#map .tile.built .l1,#map .tile.built .l2{display:inline}
-#map .tile.built .l1{filter:brightness(.86)}
-#map .tile.built .l2{filter:brightness(.72)}
-#map .tile.built .top{stroke:none;opacity:1}
-@keyframes build{from{opacity:0;transform:translateY(-12px) scale(.86)}}
-
-#map .pin path{fill:var(--pin)}
-#map .pin .eye{fill:#fff}
-#map .tile text{
-  font:800 26px system-ui,sans-serif; fill:var(--pin);
-  text-anchor:middle; letter-spacing:.02em; paint-order:stroke;
-  stroke:rgba(255,255,255,.85); stroke-width:4;
-}
-@keyframes drop{from{opacity:0;transform:translateY(-10px) scale(.9)}}
-
-/* 보드 위에서는 HUD·정보 글자가 물 위에 놓인다 */
-#play .stat b,#play .stat span,#play .combo,.fact b,.fact span{color:#1e3b39}
-#play .back{color:#1e3b39}
-.gauge{background:rgba(255,255,255,.34)}
-.gauge i{background:rgba(30,59,57,.62)}
-.gauge.warn i{background:var(--h0)}
-:root[data-night] :is(#play .stat b,#play .stat span,#play .combo,.fact b,.fact span,#play .back){color:#dceceb}
-:root[data-night] .gauge i{background:rgba(220,236,235,.7)}

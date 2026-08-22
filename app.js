@@ -3,7 +3,6 @@
 
 const $ = s => document.querySelector(s);
 const COURSES = ['seoul-gu'];
-const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
 
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
@@ -129,37 +128,16 @@ async function start(slug) {
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
-  // 격자를 자치구별로 쪼갠다 — 칸 하나가 원 하나
-  const cells = geom.items.map(() => []);
-  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
-    if (ch !== '.') cells[SYM.indexOf(ch)].push([x, y]);
-  }));
-  const cw = geom.cell, dr = (cw * .38).toFixed(1);
-
-  // 땅(도트) → 도로 → 건물. Mini Motorways 보드의 쌓는 순서다
-  svg.innerHTML =
-    '<g class="land">' +
+  svg.innerHTML = geom.items.map((g, i) =>
+    `<path id="p${i}" d="${g.d}"></path>`).join('') +
     geom.items.map((g, i) =>
-      `<g id="p${i}" class="h${i % 7}">` + cells[i].map(([x, y], n) =>
-        // --i 는 도트가 차오르는 순서. 한 구가 다 차는 데 최대 0.28초
-        `<circle cx="${((x + .5) * cw).toFixed(1)}" cy="${((y + .5) * cw).toFixed(1)}"` +
-        ` r="${dr}" style="--i:${Math.min(n, 40)}"/>`).join('') + '</g>').join('') +
-    '</g><g class="roads"></g><g class="tiles"></g>';
-  const tiles = svg.querySelector('.tiles');
+      `<text id="t${i}" x="${g.c[0]}" y="${g.c[1]}"></text>`).join('');
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#p' + i);
-    it.at = g.c;
-    // 빈 대지 — 점령하면 여기에 건물이 올라간다
-    it.tile = el('g', { class: 'tile h' + (i % 7), transform: `translate(${g.c[0]} ${g.c[1]})` });
-    // 한 변 62 — 중심점 최소 간격 90.6 안에서 가장 크게 잡은 값
-    for (const [cls, dy] of [['l2', 9], ['l1', 4.5], ['top', 0]])
-      it.tile.append(el('rect', { class: cls, x: -31, y: -31 + dy, width: 62, height: 62, rx: 11 }));
-    tiles.append(it.tile);
+    it.label = svg.querySelector('#t' + i);
+    it.label.textContent = g.name;
   });
-
-  G.roads = svg.querySelector('.roads');
-  G.taken = [];                     // 이미 점령한 좌표 — 도로를 이어붙일 목적지
 
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
@@ -226,43 +204,10 @@ function miss() {
   beep(160, .12, 'square');
 }
 
-const SVGNS = 'http://www.w3.org/2000/svg';
-const el = (tag, attrs) => {
-  const n = document.createElementNS(SVGNS, tag);
-  for (const k in attrs) n.setAttribute(k, attrs[k]);
-  return n;
-};
-
-/* 두 목적지를 잇는 도로. 가로로 갔다가 모서리를 둥글게 돌아 세로로 내려간다 */
-function roadPath([x1, y1], [x2, y2]) {
-  const sx = Math.sign(x2 - x1), sy = Math.sign(y2 - y1);
-  const r = Math.min(20, Math.abs(x2 - x1) / 2, Math.abs(y2 - y1) / 2);
-  if (!r) return `M${x1} ${y1}L${x2} ${y2}`;
-  return `M${x1} ${y1}H${x2 - r * sx}Q${x2} ${y1} ${x2} ${y1 + r * sy}V${y2}`;
-}
-
 function claim(it) {
   it.claimed = true;
   it.el.classList.add('got');
-
-  // 가장 가까운 기존 목적지와 길을 잇는다
-  if (G.taken.length) {
-    const near = G.taken.reduce((a, b) =>
-      Math.hypot(b[0] - it.at[0], b[1] - it.at[1]) <
-      Math.hypot(a[0] - it.at[0], a[1] - it.at[1]) ? b : a);
-    G.roads.append(el('path', { class: 'road-line', d: roadPath(near, it.at) }));
-  }
-  G.taken.push(it.at);
-
-  it.tile.classList.add('built');
-  const pin = el('g', { class: 'pin' });
-  pin.setAttribute('transform', 'translate(0 6)');
-  pin.append(el('path', { d: 'M0 0C-7.5-11-11.5-16-11.5-22A11.5 11.5 0 1 1 11.5-22C11.5-16 7.5-11 0 0Z' }));
-  pin.append(el('circle', { cx: 0, cy: -22, r: 4.4, class: 'eye' }));
-  it.tile.append(pin);
-  const t = el('text', { x: 0, y: 58 });
-  t.textContent = it.name;
-  it.tile.append(t);
+  it.label.classList.add('on');
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -314,23 +259,14 @@ function drawCard() {
   cardReady = new Promise(r => done = r);
   const cv = $('#card'), ctx = cv.getContext('2d');
   const css = getComputedStyle(document.body);
-  const ink = css.color, bg = css.getPropertyValue('--sea').trim();
+  const bg = css.backgroundColor, ink = css.color;
   ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
 
   const svg = $('#map').cloneNode(true);
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  const v = n => css.getPropertyValue(n);
-  const hues = [0, 1, 2, 3, 4, 5, 6].map(i => `.land .h${i}.got circle{fill:${v('--h' + i)}}`).join('');
+  const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
   svg.insertAdjacentHTML('afterbegin',
-    `<style>.land circle{fill:${v('--cream')}}.land .got circle{r:9.5}` +
-    hues +
-    `.land .miss circle{fill:${v('--cream')};r:5}` +
-    `.road-line{fill:none;stroke:${v('--road-line')};stroke-width:7;stroke-linecap:round;stroke-linejoin:round}` +
-    `.tile{display:none}.tile.built{display:inline}` +
-    [0,1,2,3,4,5,6].map(i => `.tile.h${i}{fill:${v('--h' + i)}}`).join('') +
-    `.tile .l1{filter:brightness(.86)}.tile .l2{filter:brightness(.72)}` +
-    `.pin path{fill:${v('--pin')}}.pin .eye{fill:#fff}.tile text{display:none}` +
-    `</style>`);
+    `<style>path{fill:${land};stroke:${bg};stroke-width:2.5}path.got{fill:${acc}}text{display:none}</style>`);
   const img = new Image();
   img.onload = () => {
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
