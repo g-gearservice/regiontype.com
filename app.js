@@ -161,9 +161,9 @@ $('#ov').addEventListener('click', e => {
 $('#ovCancel').onclick = closeOptions;
 $('#ovStart').onclick = () => {
   const slug = pendingSlug;
-  const o = { reveal: picked($('#ovReveal')) === '1', zoom: Number(picked($('#ovZoom'))) };
+  const zoom = Number(picked($('#ovZoom')));
   closeOptions();
-  start(slug, o);
+  start(slug, { zoom });
 };
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !$('#ov').hidden) closeOptions();
@@ -173,13 +173,13 @@ document.addEventListener('keydown', e => {
 let G = null, tick = null, pending = null;
 
 async function start(slug, o = {}) {
-  const reveal = !!o.reveal, zoom = o.zoom || 1;
+  const zoom = o.zoom || 1;
   const [course, geom] = await load(slug);
   const items = course.items.map(it => {
     const a = stripSuffix(it.name);
     return { ...it, aliases: [...(it.aliases || []), ...(a ? [a] : [])], claimed: false };
   });
-  G = { slug, course, items, reveal, zoom, seq: course.mode === 'sequence', idx: 0,
+  G = { slug, course, items, zoom, seq: course.mode === 'sequence', idx: 0,
        total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0 };
 
   const svg = $('#map');
@@ -206,8 +206,6 @@ async function start(slug, o = {}) {
     it.at = g.c;
   });
 
-  // 이름 보임 모드에서는 처음부터 전부 읽힌다
-  svg.classList.toggle('reveal', reveal);
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
   G.view = [geom.w, geom.h];
@@ -247,8 +245,8 @@ const target = () => G.seq ? G.items[G.idx] : null;
 function aim() {
   const t = target();
   G.items.forEach(i => i.el.classList.toggle('target', i === t));
-  if (G.reveal && t) say(t.name);          // 이름 보임 — 칠 곳을 알려준다
-  $('#fact').classList.toggle('aim', G.reveal);
+  if (t) say(t.name);                      // 칠 곳은 언제나 알려준다
+  $('#fact').classList.toggle('aim', !!t);
   const [W, H] = G.view, z = G.zoom;
   let tx = 0, ty = 0;
   if (t) {
@@ -323,7 +321,8 @@ function claim(it) {
   cb.textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
   cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump');
   setTimeout(() => cb.classList.remove('bump'), 160);
-  if (G.reveal) say(undefined, `${it.name} — ${it.meta.description}`);
+  // 순서형은 윗줄이 곧 다음 목표로 덮이므로 맞힌 이름을 설명 줄에 함께 남긴다
+  if (G.seq) say(undefined, `${it.name} — ${it.meta.description}`);
   else say(it.name, it.meta.description);
   beep(520 + G.combo * 40, .08, 'triangle');
   if (G.hits === G.items.length) return finish();
@@ -336,7 +335,7 @@ function finish() {
   beep(300, .3, 'triangle');
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
   pending = setTimeout(() => {
-    const key = `rt.best.${G.slug}.${G.reveal ? 'shown' : 'hidden'}.z${G.zoom}`;
+    const key = `rt.best.${G.slug}.z${G.zoom}`;
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = G.score;
     $('#rCount').textContent = G.hits;
@@ -385,8 +384,7 @@ function drawCard() {
     ctx.font = '800 54px system-ui,sans-serif';
     ctx.fillText('regiontype', 70, 100);
     ctx.font = '500 38px system-ui,sans-serif';
-    ctx.fillText(`${G.course.title} · ${G.reveal ? '이름 보임' : '이름 숨김'} · ` +
-      `${G.zoom}배율 · ${G.score}점`, 70, cv.height - 136);
+    ctx.fillText(`${G.course.title} · ${G.zoom}배율 · ${G.score}점`, 70, cv.height - 136);
     ctx.font = '800 76px system-ui,sans-serif';
     ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
     ctx.textAlign = 'right';
@@ -405,7 +403,7 @@ $('#save').onclick = async () => {
   a.href = $('#card').toDataURL('image/png');
   a.click();
 };
-$('#again').onclick = () => start(G.slug, { reveal: G.reveal, zoom: G.zoom });
+$('#again').onclick = () => start(G.slug, { zoom: G.zoom });
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
