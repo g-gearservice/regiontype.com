@@ -1,6 +1,11 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "regiontype", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "3000"], "port": 3000 }
+    {
+      "name": "regiontype",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "exec python3 -m http.server \"$PORT\""],
+      "autoPort": true
+    }
   ]
 }

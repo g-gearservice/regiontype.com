@@ -59,20 +59,58 @@ function tileBox(kind, buildWidth) {
 /* 순서형 코스에서 이 항목이 무엇인가 — 출발·경유·종점 */
 const kindOf = (n, total) => n === 0 ? 'depot' : n === total - 1 ? 'end' : 'stop';
 const HUES = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'slate'];
+/* 건물 색 배합. 느와르는 한 색, 유사색은 이웃한 세 색만 돈다 */
+const TINTS = { rainbow: HUES, noir: ['slate'], akin: ['teal', 'blue', 'green'] };
+const hueAt = i => { const t = TINTS[opt.tint] || HUES; return t[i % t.length]; };
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
+const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+/* 미니 모터웨이즈 지도는 아직 다듬는 중이다 — 개발 환경에서만 켤 수 있다.
+   배포본에서는 설정 항목 자체가 사라지고 값도 강제로 꺼진다. */
+const DEV = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname) ||
+            location.search.includes('dev=1');
+document.documentElement.toggleAttribute('data-dev', DEV);
+
 const opt = Object.assign(
-  { time: 120, strict: false, night: false, sound: true, motion: true, road: false },
+  { time: 120, strict: false, night: false, sound: true, motion: true, road: false, hint: true, tint: 'rainbow' },
   JSON.parse(localStorage.getItem('rt.opt') || '{}')
 );
 // 예전에는 style:'road' 로 적었다. 켜 두었던 사람이 조용히 비트맵으로 돌아가지 않게
 if (opt.style) { opt.road = opt.style === 'road'; delete opt.style; }
+if (!DEV) opt.road = false;
 const saveOpt = () => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
   document.documentElement.toggleAttribute('data-night', opt.night);
   document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
-  $('#optTime').textContent = opt.time + '초';
+  // 미니 모터웨이즈는 지도만이 아니라 화면 전체의 말투다 — 토큰째 갈아끼운다
+  document.documentElement.toggleAttribute('data-road', opt.road);
+  REDRAW.forEach(f => f());   // 도트 그림은 모드마다 모양이 달라 다시 그린다
+  requestAnimationFrame(syncGrid);
   document.querySelectorAll('.toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+  $('#optStyle').textContent = opt.road ? '미니 모터웨이즈' : '비트맵';
+};
+
+/* 못 넘기는 스타일 — 값 자리에 ✕ 를 잠깐 띄운다 */
+function denyStyle() {
+  const el = $('#optStyle');
+  el.innerHTML = '<i class="ms">close</i>';
+  el.classList.remove('deny'); void el.offsetWidth; el.classList.add('deny');
+  setTimeout(() => {
+    el.classList.remove('deny');
+    el.textContent = opt.road ? '미니 모터웨이즈' : '비트맵';
+  }, 700);
+}
+
+/* 모드가 바뀌면 다시 그려야 하는 그림들 */
+const REDRAW = [];
+/* 비트맵은 도트, 미니 모터웨이즈는 칸을 채운 타일이다 */
+const dot = (x, y, cell, cls) => {
+  const a = cls ? ` class="${cls}"` : '';
+  if (!opt.road) return `<circle cx="${((x + .5) * cell).toFixed(2)}" cy="${((y + .5) * cell).toFixed(2)}" r="${(cell * .46).toFixed(2)}"${a}/>`;
+  const p = cell * .04;   // 타일 사이 실틈. 붙여 놓으면 덩어리가 뭉개진다
+  return `<rect x="${(x * cell + p).toFixed(2)}" y="${(y * cell + p).toFixed(2)}"` +
+    ` width="${(cell - p * 2).toFixed(2)}" height="${(cell - p * 2).toFixed(2)}"` +
+    ` rx="${(cell * .18).toFixed(2)}"${a}/>`;
 };
 
 /* ── 정답 판정 ───────────────────────────────────────
@@ -114,6 +152,8 @@ function go(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id !== 'play') stop();
   requestAnimationFrame(() => requestAnimationFrame(syncGrid));
+  // 숨은 화면에서는 높이가 0으로 읽힌다. 보이게 된 뒤에 재어 둔다
+  requestAnimationFrame(() => document.querySelectorAll('.course-list .card').forEach(measureCard));
 }
 
 function applyGrid(ox, oy, n) {
@@ -134,7 +174,7 @@ function syncGrid() {
   } else {
     const pm = $('#pixelmap');
     if (!pm || !$('#title').classList.contains('on')) return;
-    root = space = pm; cell = 1;
+    root = space = pm; cell = opt.road ? 4 : 1;
   }
   const ctm = space.getScreenCTM();
   if (!ctm) return;
@@ -155,17 +195,61 @@ function followGrid(ms) {
 }
 window.addEventListener('resize', syncGrid);
 document.addEventListener('click', e => {
+  const drum = document.querySelector('.wheel[data-on]');
+  if (drum && !drum.closest('.stat.time').contains(e.target)) closeWheel(drum);
   const open = document.querySelector('.card[data-flip="true"]');
   if (open && !open.contains(e.target)) flip(open, false);
   const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
   const t = e.target.closest('.toggle');
   if (t) { opt[t.dataset.opt] = !opt[t.dataset.opt]; saveOpt(); }
-  const s = e.target.closest('.step');
+  // 스타일은 화살표로 넘긴다. 지금은 두 가지뿐이라 어느 쪽이든 반대편으로 간다
+  const s = e.target.closest('[data-style]');
   if (s) {
-    const i = TIMES.indexOf(opt.time) + Number(s.dataset.dir);
-    opt.time = TIMES[Math.min(TIMES.length - 1, Math.max(0, i))]; saveOpt();
+    // 배포본에서 미니 모터웨이즈는 아직 못 켠다 — ✕ 만 띄우고 자리에 둔다
+    if (!DEV && !opt.road) return denyStyle();
+    opt.road = !opt.road; saveOpt();
   }
 });
+
+/* ── 배경 보드 (미니 모터웨이즈 모드) ────────────────
+   홈·설정 화면 뒤로 길과 건물이 지난다. 레퍼런스의 메뉴 화면처럼
+   놀고 있는 지도 위에 UI 가 얹힌 꼴이 되게. 좌표는 1600x900 기준.
+   심볼 뷰박스가 (-8,-10,200,152) 라 좌표는 그대로 8·10 만 밀면 된다. */
+/* 레퍼런스 타이틀 화면을 그대로 옮긴 배치다. 위에서 내려온 길이 꺾여
+   왼쪽 아래로 빠지고, 오른쪽에 목적지 한 채, 가지 끝에 차고지 하나. */
+const BOARD = [
+  // x, y, 꼭지 방향, 건물 심볼, 색  (심볼 뷰박스가 -8/-10 이라 좌표는 그만큼만 밀면 된다)
+  [560, 88, 'l', 'rt-block-end', 'c-orange', '대치동'],   // 목적지 — 길 오른쪽에 붙는다
+  [529, 314, null, 'rt-depot', 'c-red'],        // 차고지 — 토지 없이 상자만 (레퍼런스와 같게)
+];
+const ROADS = [
+  'M564 -10 V236 L346 460',       // 본선: 위에서 내려와 왼쪽 아래로 빠진다
+  'M521 280 Q560 292 560 320',    // 차고지로 갈라지는 가지
+];
+function drawBoard() {
+  const svg = $('.road-bg');
+  if (!opt.road) { svg.innerHTML = ''; return; }
+  const place = (id, x, y, w = 200, h = 152) => `<use href="#${id}" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
+  // 게임판과 같은 순서로 쌓는다 — 토지 → 길 → 건물. 길이 토지 꼭지를 덮어야
+  // 이음매의 테두리가 지워지고 하나로 이어져 보인다.
+  const layer = f => BOARD.map(a => f(...a)).join('');
+  const lines = w => ROADS.map(d => `<path d="${d}" stroke-width="${w}"/>`).join('');
+  svg.innerHTML =
+    `<g class="rb-plots">${layer((x, y, dir) => dir ? place('rt-plot-' + dir, x, y) : '')}</g>` +
+    `<g class="rb-edge">${lines(27)}</g><g class="rb-road">${lines(20)}</g>` +
+    // 길 테두리가 토지 입구를 가로지른다. 테두리 없는 토지를 한 번 더 얹어 지운다
+    `<g class="rb-plots rb-plots-top">${layer((x, y, dir) => dir ? place('rt-plot-' + dir, x, y) : '')}</g>` +
+    layer((x, y, dir, blk, hue, label) =>
+      `<g class="rb-tile ${hue}">${dir ? place(blk, x, y) : place(blk, x, y, 84, 82)}` +
+      // 건물 위에 찍힌 글자다 — 지도와 같이 커지고, 핀 아래에 앉는다
+      (label ? `<text x="${x + 98}" y="${y + 78}">${label}</text>` : '') + '</g>') +
+    // 차 심볼은 코가 위(-y)를 본다. rotate="auto" 는 +x 를 진행방향에 맞추므로 90도 미리 돌린다
+    (opt.motion ? '<g class="rb-car c-yellow"><g transform="rotate(90)">' +
+      '<use href="#rt-car" x="-12" y="-21" width="31.5" height="45"/></g>' +
+      '<animateMotion dur="11s" repeatCount="indefinite" rotate="auto"' +
+      ` path="${ROADS[0]}"/></g>` : '');
+}
+sprite.then(() => { REDRAW.push(drawBoard); drawBoard(); });
 
 /* ── 타이틀 픽셀맵 ──────────────────────────────────
    대한민국을 격자로 찍고 서울만 다른 색으로 둔다. v1 이 서울에서
@@ -179,20 +263,27 @@ fetch(asset('data/korea-pixels.json')).then(r => r.json()).then(g => {
   g.over = (g.w - g.anchor - 1) / g.h;
   svg.style.setProperty('--pm-over', g.over);
   PM = g;
-  svg.innerHTML = g.rows.flatMap((row, y) => [...row].map((ch, x) => ch === '.' ? '' :
-    `<circle cx="${x + .5}" cy="${y + .5}" r=".46"${ch === 'S' ? ' class="seoul"' : ''}/>`
-  )).join('');
+  const draw = () => svg.innerHTML = opt.road ? '' : g.rows.flatMap((row, y) =>
+    [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'seoul' : ''))).join('');
+  REDRAW.push(draw); draw();
   requestAnimationFrame(() => requestAnimationFrame(syncGrid));
 });
 
-/* 코스 카드 원형 썸네일 — geom 도트를 그대로 축소해 그린다 */
+/* 카드 상단은 흰 원 없이 도트만. 빈 칸을 잘라 초록 면을 채운다 */
 function thumbSvg(geom) {
+  let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
   const dots = [];
   geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
-    if (ch !== '.') dots.push(
-      `<circle cx="${((x + .5) * geom.cell).toFixed(1)}" cy="${((y + .5) * geom.cell).toFixed(1)}" r="${(geom.cell * .42).toFixed(1)}"/>`);
+    if (ch === '.') return;
+    dots.push(dot(x, y, geom.cell, ''));
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
   }));
-  return `<svg viewBox="0 0 ${geom.w} ${geom.h}" preserveAspectRatio="xMidYMid meet">${dots.join('')}</svg>`;
+  const c = geom.cell;
+  return `<svg viewBox="${minX * c} ${minY * c} ${(maxX - minX + 1) * c} ${(maxY - minY + 1) * c}"` +
+    ` preserveAspectRatio="xMidYMid slice">${dots.join('')}</svg>`;
 }
 
 /* 카드를 누르면 그 자리에서 뒤집힌다 — 같은 목록에서 한 장만 열린다 */
@@ -200,10 +291,13 @@ function flipMs() {
   const raw = getComputedStyle(document.documentElement).getPropertyValue('--flip').trim();
   return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
 }
-function lockUntilSettled(card) {
+function lockUntilSettled(card, after) {
   card.dataset.locking = '1';
   const ms = flipMs();
-  const unlock = () => { delete card.dataset.locking; };
+  const unlock = () => {
+    delete card.dataset.locking;
+    if (after) after();
+  };
   if (!(ms > 0)) { unlock(); return; }
   let done = false;
   const finish = () => {
@@ -216,11 +310,9 @@ function lockUntilSettled(card) {
   card.addEventListener('transitionend', onEnd);
   setTimeout(finish, ms + 50);
 }
-function flip(card, open) {
-  if (open && (card.dataset.flip === 'true' || card.dataset.locking === '1')) return;
-  if (!open && card.dataset.flip !== 'true') return;
-  const list = card.closest('.course-list');
-  list.querySelectorAll('.card').forEach(c => {
+
+function applyFlip(card, open) {
+  card.closest('.course-list').querySelectorAll('.card').forEach(c => {
     const on = open && c === card;
     const front = c.querySelector('.card-front'), back = c.querySelector('.card-back');
     c.dataset.flip = on;
@@ -228,9 +320,50 @@ function flip(card, open) {
     front.inert = on;
     back.inert = !on;
   });
+}
+
+/* 프리뷰 → 카드: 먼저 반 이상 접고, 그다음 뒤집는다. 코스 고르기로 한 단 내려오는 길은 그대로다 */
+function closePreviewToCard(card) {
+  card.dataset.locking = '1';
+  const half = (card.getBoundingClientRect().width + 230) / 2;
+  card.removeAttribute('data-preview');
+  let flipped = false;
+  const startFlip = () => {
+    if (flipped) return;
+    flipped = true;
+    applyFlip(card, false);
+    lockUntilSettled(card, card._resetPick);
+    card.querySelector('.card-front').focus();
+  };
+  const tick = () => {
+    if (flipped) return;
+    if (card.getBoundingClientRect().width <= half) startFlip();
+    else requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  setTimeout(startFlip, flipMs() * .72);
+}
+
+/* 닫힌 높이를 픽셀로 박아둔다 — auto 로는 접히는 길이를 잇지 못한다 */
+function measureCard(card) {
+  if (card.dataset.flip === 'true' || card.dataset.locking === '1') return;
+  card.style.removeProperty('--card-h');
+  const h = card.querySelector('.card-front').offsetHeight;
+  if (h) card.style.setProperty('--card-h', h + 'px');
+}
+function flip(card, open) {
+  if (open && (card.dataset.flip === 'true' || card.dataset.locking === '1')) return;
+  if (!open && (card.dataset.flip !== 'true' || card.dataset.locking === '1')) return;
+  if (open) measureCard(card);
+  if (!open && card.dataset.preview === '1' && flipMs() > 0) {
+    closePreviewToCard(card);
+    return;
+  }
+  applyFlip(card, open);
   if (!open) {
-    lockUntilSettled(card);
+    const wasPreview = card.dataset.preview === '1';
     card.removeAttribute('data-preview');
+    lockUntilSettled(card, wasPreview ? card._resetPick : null);
     card.querySelector('.card-front').focus();
     return;
   }
@@ -255,51 +388,153 @@ function previewCam(svg, geom, zoom, at) {
 }
 
 function wireBack(card, back, slug, geom, items) {
-  const zoom = back.querySelector('.ov-zoom');
   const svg = back.querySelector('.ov-map');
-  const z = () => Number(zoom.querySelector('[aria-pressed="true"]').dataset.v);
-  // items[].at 은 플레이를 시작해야 채워진다. 미리보기는 geom 에서 직접 찾는다
   const head = items[0] && geom.items.find(g => g.name === items[0].name);
   const at = head && head.c;
-  const apply = () => previewCam(svg, geom, z(), at);
-  zoom.onclick = e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    zoom.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-    apply();
-  };
-  apply();
+  previewCam(svg, geom, 1, at);
+  wireDock(back);
   back.querySelector('.ov-start').onclick = () => {
     flip(card, false);
-    if (card._showPick) card._showPick();
-    start(slug, { zoom: z() });
+    start(slug, { zoom: 3 });
   };
+}
+
+/* 미리보기 독 — 이름 보임·색. 제한 시간은 HUD 드럼에서 고른다 */
+function closeWheel(wheel) {
+  if (!wheel || wheel.hidden) return;
+  const btn = wheel.closest('.stat.time')?.querySelector('.ov-time');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  wheel.removeAttribute('data-on');
+  const hide = () => { wheel.hidden = true; };
+  if (!opt.motion || matchMedia('(prefers-reduced-motion:reduce)').matches) { hide(); return; }
+  wheel.addEventListener('transitionend', hide, { once: true });
+  setTimeout(hide, 240);
+}
+function wireTimeWheel(pane, paint) {
+  const slot = pane.querySelector('.stat.time');
+  const btn = pane.querySelector('.ov-time');
+  if (!slot || !btn) return;
+  const wheel = document.createElement('div');
+  wheel.className = 'wheel';
+  wheel.hidden = true;
+  wheel.setAttribute('role', 'listbox');
+  wheel.innerHTML = '<div class="wheel-band" aria-hidden="true"></div><div class="wheel-drum"></div>';
+  const drum = wheel.querySelector('.wheel-drum');
+  TIMES.forEach((sec, i) => {
+    const it = document.createElement('button');
+    it.type = 'button';
+    it.className = 'wheel-item';
+    it.setAttribute('role', 'option');
+    it.textContent = clock(sec);
+    it.dataset.i = i;
+    drum.append(it);
+  });
+  slot.append(wheel);
+  const items = [...drum.children];
+  const last = TIMES.length - 1;
+  const ITEM = 36;
+  const indexOf = () => Math.min(last, Math.max(0, Math.round(drum.scrollTop / ITEM)));
+  const draw = () => {
+    const mid = drum.scrollTop + drum.clientHeight / 2;
+    items.forEach((el, i) => {
+      const c = el.offsetTop + el.offsetHeight / 2;
+      const d = (c - mid) / ITEM;
+      el.style.opacity = String(Math.max(.22, 1 - Math.abs(d) / 1.5));
+      el.setAttribute('aria-selected', i === indexOf());
+    });
+  };
+  const commit = () => {
+    const i = indexOf();
+    if (TIMES[i] !== opt.time) { opt.time = TIMES[i]; saveOpt(); paint(); }
+    draw();
+  };
+
+  btn.onclick = e => {
+    e.stopPropagation();
+    if (!wheel.hidden && wheel.dataset.on) { closeWheel(wheel); return; }
+    wheel.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    drum.scrollTop = Math.max(0, TIMES.indexOf(opt.time)) * ITEM;
+    draw();
+    requestAnimationFrame(() => { wheel.dataset.on = '1'; });
+  };
+  drum.addEventListener('scroll', commit, { passive: true });
+  items.forEach(it => {
+    it.onclick = () => { drum.scrollTop = +it.dataset.i * ITEM; commit(); };
+  });
+}
+
+function wireDock(pane) {
+  const hint = pane.querySelector('.ov-hint');
+  const tint = pane.querySelector('.ov-tint');
+  if (!hint) return;
+  const paint = () => {
+    hint.querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', (b.dataset.v === '1') === !!opt.hint));
+    if (tint) tint.querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', b.dataset.v === opt.tint));
+    pane.querySelector('.ov-time').textContent = clock(opt.time);
+  };
+  wireTimeWheel(pane, paint);
+  if (tint) tint.onclick = e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    opt.tint = b.dataset.v;
+    saveOpt(); paint();
+    pane.querySelectorAll('.blocks > g').forEach((g, i) => {
+      g.className.baseVal = g.className.baseVal.replace(/c-\w+/, 'c-' + hueAt(i));
+    });
+  };
+  hint.onclick = e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    opt.hint = b.dataset.v === '1';
+    saveOpt(); paint();
+  };
+  paint();
 }
 
 function wireRegionBack(card, back, courses) {
   const pick = back.querySelector('.ov-pick');
   const play = back.querySelector('.ov-play');
   let gen = 0;
-  const showPick = () => {
+  /* 미리보기를 접는다 — 카드 크기로 줄어들며 흐려진 뒤에 치운다.
+     instant 는 카드가 이미 앞면으로 돌아간 뒤의 뒷정리용이다. */
+  const showPick = (instant) => {
     gen++;
-    pick.hidden = false;
-    play.hidden = true;
-    play.replaceChildren();
     card.removeAttribute('data-preview');
-    const first = back.querySelector('.ov-courses button');
-    if (first) first.focus();
+    const pane = play.firstElementChild;
+    const done = () => {
+      play.hidden = true;
+      play.replaceChildren();
+      pick.hidden = false;
+      if (card.dataset.flip !== 'true') return;
+      const first = back.querySelector('.ov-courses button');
+      if (first) first.focus();
+    };
+    const ms = flipMs();
+    if (instant || !pane || !(ms > 0)) { done(); return; }
+    setTimeout(done, ms);
   };
-  const showPlay = async c => {
+  const showPlay = async (c, from) => {
     const n = ++gen;
+    // 누른 버튼 자리를 원점으로 삼는다. 숨기기 전에 재야 좌표가 살아 있고,
+    // offset 은 레이아웃 좌표라 카드가 뒤집혀 있어도 좌우가 뒤바뀌지 않는다
+    const org = from && `${(from.offsetLeft + from.offsetWidth / 2).toFixed(1)}px ` +
+                        `${(from.offsetTop + from.offsetHeight / 2).toFixed(1)}px`;
     pick.hidden = true;
     play.hidden = false;
-    card.dataset.preview = '1';
     const pane = $('#ovTpl').content.firstElementChild.cloneNode(true);
+    if (org) pane.style.transformOrigin = org;
     pane.querySelector('.ov-title').textContent = c.title;
     pane.querySelector('.ov-total').textContent = '/' + c.items.length;
     pane.querySelector('.ov-time').textContent =
       Math.floor(opt.time / 60) + ':' + String(opt.time % 60).padStart(2, '0');
     play.append(pane);
+    // 자리를 잡은 다음 프레임에 켠다 — 같은 프레임에 켜면 커지는 과정이 없다
+    requestAnimationFrame(() => {
+      if (n === gen && card.dataset.flip === 'true') card.dataset.preview = '1';
+    });
     pane.querySelector('.ov-start').focus();
     const [, geom] = await load(c.slug);
     await sprite;
@@ -319,13 +554,16 @@ function wireRegionBack(card, back, courses) {
   back.querySelector('.ov-courses').onclick = e => {
     const b = e.target.closest('[data-slug]');
     if (!b) return;
-    showPlay(courses.find(c => c.slug === b.dataset.slug));
+    showPlay(courses.find(c => c.slug === b.dataset.slug), b);
   };
   card._showPick = showPick;
+  card._resetPick = () => showPick(true);
 }
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  const drum = document.querySelector('.wheel[data-on]');
+  if (drum) { closeWheel(drum); return; }
   const open = document.querySelector('.card[data-flip="true"]');
   if (!open) return;
   const play = open.querySelector('.ov-play');
@@ -356,7 +594,9 @@ const load = slug => Promise.all([
           <span class="card-body"><b></b><em></em><span class="desc"></span></span>
         </button>
       </div>`;
-    li.querySelector('.thumb').innerHTML = thumbSvg(geom);
+    const thumb = li.querySelector('.thumb');
+    const drawThumb = () => thumb.innerHTML = thumbSvg(geom);
+    REDRAW.push(drawThumb); drawThumb();
     li.querySelector('b').textContent = r.title;
     li.querySelector('em').textContent = `${r.courses.length}개 코스`;
     li.querySelector('.desc').textContent = r.description;
@@ -378,6 +618,7 @@ const load = slug => Promise.all([
     wireRegionBack(card, back, courses);
     li.querySelector('.card-front').onclick = () => flip(card, true);
     regions.append(li);
+    window.addEventListener('resize', () => measureCard(card));
   }
 })();
 
@@ -420,6 +661,7 @@ async function start(slug, o = {}) {
   aim();                              // 첫 목표를 잡고 화면을 맞춘다
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
+  $('#statScore').textContent = '0';
   $('#statCombo').textContent = '';
   $('#typein').value = '';
   $('#gaugeFill').style.width = '100%';
@@ -461,6 +703,23 @@ function drawDots(svg, geom, items, withTiles = false) {
   requestAnimationFrame(() => coverDots(svg, items, cw));
 }
 
+/* 지형도 — 비트맵 격자를 가로줄 단위로 이어 붙여 서울 모양을 만든다.
+   슬롯 좌표가 지리에서 나온 것이라 보드에 그대로 겹치면 자리가 맞는다. */
+function landRects(geom, W, H) {
+  const cw = geom.cell;
+  let out = '';
+  geom.grid.forEach((row, y) => {
+    let run = 0;
+    for (let x = 0; x <= row.length; x++) {
+      if (row[x] && row[x] !== '.') { run++; continue; }
+      if (run) out += `<rect x="${((x - run) * cw).toFixed(1)}" y="${(y * cw).toFixed(1)}"` +
+        ` width="${(run * cw).toFixed(1)}" height="${cw.toFixed(1)}"/>`;
+      run = 0;
+    }
+  });
+  return `<g class="land" transform="scale(${(W / geom.w).toFixed(4)} ${(H / geom.h).toFixed(4)})">${out}</g>`;
+}
+
 /* ── 로드맵 (미니 모터웨이즈 방식) ─────────────────────
    도트를 쓰지 않는다. 타일을 칸에 정렬해 놓고 길로 잇는다.
    칸 하나를 CELL 로 잡고 그 안에서 타일 크기를 정한다. */
@@ -479,7 +738,7 @@ function drawRoad(svg, geom, items, ctx = {}) {
   const order = new Map(items.map((it, n) => [it.name, n]));
   const box = geom.items.map(g => {
     const kind = kindOf(order.get(g.name), items.length);
-    if (kind === 'depot') ctx.carHue = HUES[geom.items.indexOf(g) % HUES.length];
+    if (kind === 'depot') ctx.carHue = hueAt(geom.items.indexOf(g));
     const b = tileBox(kind, CELL * .62);
     const [c, r] = g.s;
     b.kind = kind;
@@ -520,13 +779,14 @@ function drawRoad(svg, geom, items, ctx = {}) {
   const plotId = it => 'rt-plot-' +
     [...'lrtb'].filter(d => it.side.has(d)).join('') || 'rt-plot-lr';
 
-  let plots = '', blocks = '';
+  let plots = '', tops = '', blocks = '';
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name), b = box[i];
     const pos = `x="${b.x.toFixed(1)}" y="${b.y.toFixed(1)}"` +
                 ` width="${b.w.toFixed(1)}" height="${b.h.toFixed(1)}"`;
     plots += `<g id="pl${i}" class="plot"><use href="#${plotId(it)}" ${pos}/></g>`;
-    blocks += `<g id="bk${i}" class="tile c-${HUES[i % HUES.length]}">` +
+    tops += `<g id="pt${i}" class="plot"><use href="#${plotId(it)}" ${pos}/></g>`;
+    blocks += `<g id="bk${i}" class="tile c-${hueAt(i)}">` +
       `<use href="#${b.id}" ${pos}/>` +
       `<text id="t${i}" x="${(b.x + b.dx).toFixed(1)}"` +
       ` y="${(b.y + b.dy).toFixed(1)}"></text></g>`;
@@ -534,7 +794,8 @@ function drawRoad(svg, geom, items, ctx = {}) {
 
   const show = location.search.includes('slots=1');
   const used = new Set(geom.items.map(g => g.s.join(',')));
-  let grid = `<rect class="ground" x="0" y="0" width="${W}" height="${H}"/><g class="cells">`;
+  let grid = `<rect class="ground" x="0" y="0" width="${W}" height="${H}"/>` +
+             landRects(geom, W, H) + '<g class="cells">';
   for (let r = 0; r < S.rows; r++)
     for (let c = 0; c < S.cols; c++) {
       grid += `<rect class="cell${used.has(c + ',' + r) ? ' used' : ''}" x="${c * CELL}"` +
@@ -546,16 +807,21 @@ function drawRoad(svg, geom, items, ctx = {}) {
   svg.innerHTML = '<g class="cam">' + grid +
     `<g class="plots">${plots}</g>` +
     '<g class="roads-edge"></g><g class="roads"></g>' +
+    // 길 테두리가 토지 입구를 가로지른다. 테두리 없는 토지를 덧대 이음매를 지운다
+    `<g class="plots plots-top">${tops}</g>` +
     `<g class="car c-${ctx.carHue}" hidden><use href="#rt-car" x="-12" y="-21"` +
     ' width="31.5" height="45"/></g>' +
     `<g class="blocks">${blocks}</g>` +
     '</g>';
+
+  paveAll(svg, items, ctx.legs);   // 길은 처음부터 깔려 있다. 맞히면 차가 그 위를 달린다
 
   geom.items.forEach((g, i) => {
     const it = items.find(x => x.name === g.name);
     it.el = svg.querySelector('#bk' + i);        // 건물이 곧 그 지역이다
     it.tile = it.el;
     it.plot = svg.querySelector('#pl' + i);
+    it.plotTop = svg.querySelector('#pt' + i);
     it.label = svg.querySelector('#t' + i);
     if (it.label) it.label.textContent = g.name;
   });
@@ -630,6 +896,18 @@ function driveAlong(path, ms = 620) {
   };
   put(0);
   G.driveId = requestAnimationFrame(step);
+}
+
+/* 코스 전체의 길을 한 번에 깐다. 미리보기용 — 진행 상태가 없다. */
+function paveAll(svg, items, legs) {
+  const roads = svg.querySelector('.roads'), edges = svg.querySelector('.roads-edge');
+  if (!roads || !legs) return;
+  for (let n = 0; n < items.length - 1; n++) {
+    const p = makeRoad(items[n], items[n + 1], legs[n]);
+    const edge = p.cloneNode();
+    edge.setAttribute('class', 'road-edge');
+    edges.append(edge); roads.append(p);
+  }
 }
 
 /* 두 타일을 잇는 길 하나를 만든다. 빈 칸만 밟고, 걸어 나가는 방향의 꼭지로 드나든다. */
@@ -722,6 +1000,7 @@ function setTarget(name) {
     box.append(el);
   }
   box.classList.remove('bad');
+  box.classList.toggle('hide', !opt.hint);   // 숨김이면 글자를 가리고 친 만큼만 드러난다
   paintTyped('');
 }
 
@@ -774,6 +1053,11 @@ function aim() {
   // 이름과 설명은 언제나 같은 곳을 가리켜야 한다. 치는 동안 그곳을 읽게 된다
   if (t) say(promptName(t), t.meta.description);
   $('#fact').classList.toggle('aim', !!t);
+  G.items.forEach(i => {
+    if (!i.label) return;
+    const show = i.claimed || (opt.hint && (!G.seq || i === t));
+    i.label.classList.toggle('on', show);
+  });
   const [W, H] = G.view, z = G.zoom;
   let tx = 0, ty = 0;
   if (t) {
@@ -860,21 +1144,19 @@ function claim(it) {
   if (it.label) it.label.classList.add('on');
   if (it.tile) it.tile.classList.add('built');
   if (it.plot) it.plot.classList.add('built');
+  if (it.plotTop) it.plotTop.classList.add('built');
   if (it.under) it.under.forEach(c => c.classList.add('under'));
   if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
   if (G.road && G.prev) {
-    const p = makeRoad(G.prev, it, G.legs[G.idx - 1]);
-    // 테두리를 아래에 한 겹 더 깐다. 토지 꼭지의 테두리와 이어지게
-    const edge = p.cloneNode();
-    edge.setAttribute('class', 'road-edge');
-    G.roadsEdge.append(edge);
-    G.roads.append(p);
-    driveAlong(p);
+    const p = G.roads.children[G.idx - 1];   // 길은 이미 깔려 있다
+    if (p) driveAlong(p);
   }
   if (G.road) G.prev = it;
   G.hits++; G.tries++; G.combo++;
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
+  $('#statScore').textContent = G.score;
+  if (it.tile) { it.tile.classList.remove('pop'); void it.tile.getBBox(); it.tile.classList.add('pop'); }
   const cb = $('#statCombo');
   cb.textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
   cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump');
