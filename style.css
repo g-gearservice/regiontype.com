@@ -77,7 +77,8 @@ body{
   transition:background var(--fast);
 }
 .menu a{text-decoration:none}
-.menu a.alt{font-size:20px;background:#4A3B31}
+.menu a.alt{display:none;font-size:20px;background:#4A3B31}
+:root[data-dev] .menu a.alt{display:inline-block}
 .menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible,#save:focus-visible,#again:focus-visible{outline:3px solid transparent}
 /* 내려받은 심볼은 마스크로 쓴다 — 색을 글자색에 맞춰야 하기 때문이다.
    파일은 구글 폰트에서 받은 것 그대로 (FILL0 · wght300 · GRAD200 · opsz24) */

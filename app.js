@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.34';
+const VER = '0.35';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
@@ -22,6 +22,13 @@ const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
+
+/* mimi 는 아직 내부용이다. 로컬에서만 문을 열어 둔다. CSS 기본이 숨김이라
+   배포에서 잠깐 보였다 사라지는 일이 없다 — 여는 쪽에만 표시를 남긴다. */
+if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) || location.protocol === 'file:') {
+  document.documentElement.dataset.dev = '';
+}
+
 const saveOpt = () => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
   document.documentElement.toggleAttribute('data-night', opt.night);
