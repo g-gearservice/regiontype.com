@@ -69,8 +69,16 @@ export async function table({ id = 'gangseo-dong', mode = 'learning', go }) {
       hint.textContent = run.hint
         ? `초성 ${run.hint}`
         : mode === 'practice' ? 'Enter — 모르겠으면 넘어간다' : '';
-      /* 쳐야 할 지명을 입력칸 안에 흐리게 깔아 둔다. QUIZ는 그게 답이라 안 깐다. */
-      ghost.textContent = mode === 'quiz' || run.over ? '' : run.target;
+      /* 쳐야 할 지명을 입력칸 안에 흐리게 깔아 둔다. QUIZ는 그게 답이라 안 깐다.
+         친 만큼은 자리만 차지하고 안 그린다 — '과'와 '광'은 다른 글리프라
+         겹쳐 놓으면 받침 때문에 초성·중성이 어긋난다. 남은 글자만 이어 붙인다. */
+      if (mode === 'quiz' || run.over) ghost.replaceChildren();
+      else {
+        const eaten = document.createElement('span');
+        eaten.className = 'eaten';
+        eaten.textContent = run.typed;
+        ghost.replaceChildren(eaten, run.target.slice(run.typed.length));
+      }
       /* 조합 중인 한글을 건드리면 IME가 깨진다. 달라졌을 때만 쓴다. */
       if (input.value !== run.typed) input.value = run.typed;
     }

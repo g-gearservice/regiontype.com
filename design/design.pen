@@ -5,7 +5,7 @@
       "type": "frame",
       "id": "zrSLV",
       "x": 3224,
-      "y": -4546,
+      "y": -4614,
       "name": "00 · Style Foundation",
       "clip": true,
       "width": 1400,
@@ -766,581 +766,775 @@
           ]
         },
         {
-          "type": "frame",
-          "id": "EtLUg",
-          "name": "regiontype · Mini Motorways 급진 스타일",
-          "width": "fill_container",
-          "gap": 6,
-          "children": [
-            {
-              "type": "text",
-              "id": "oTUyX",
-              "name": "Title",
-              "fill": "$ink",
-              "content": "카드 스타일",
-              "fontFamily": "$font-display",
-              "fontSize": 34,
-              "fontWeight": "normal",
-              "letterSpacing": 0.5
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "j89hJ",
-          "name": "Course Card",
-          "reusable": true,
-          "clip": true,
-          "width": 430,
-          "height": 325,
-          "fill": "$paper",
-          "cornerRadius": 22,
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#8A746647",
-            "offset": {
-              "x": 14,
-              "y": 18
-            }
-          },
-          "layout": "vertical",
+          "type": "group",
+          "id": "s9wgc",
           "children": [
             {
               "type": "frame",
-              "id": "pT5L5",
-              "name": "Thumb",
-              "clip": true,
-              "width": "fill_container",
-              "height": 176,
-              "fill": "$map-base",
-              "layout": "none",
+              "id": "A6NIR",
+              "x": 0,
+              "y": 0,
+              "name": "regiontype · Mini Motorways 급진 스타일",
+              "width": "fill_container(1256)",
+              "gap": 6,
               "children": [
                 {
-                  "type": "path",
-                  "id": "h3Cq1J",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Grid",
-                  "geometry": "M0 0l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m-300-120l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#00000000",
-                  "width": 430,
-                  "height": 176,
-                  "stroke": "#C97F6E26",
-                  "strokeWidth": 1.5
-                },
-                {
-                  "type": "path",
-                  "id": "fkRPt",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Water",
-                  "geometry": "M0 16.39796l150-7.88475 150 1.88475 0 27-150-3.88475-150 9.88475z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "$water",
-                  "width": 430,
-                  "height": 176
-                },
-                {
-                  "type": "path",
-                  "id": "ydRa9",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 1",
-                  "geometry": "M9.3 15.1l0.1-2.1 0.4-1.8 0.7-1.6 1-1.2 1.2-1 1.6-0.7 1.8-0.5 2.1-0.1 30.2-0.2 2.1 0.1 1.9 0.4 1.5 0.7 1.2 1 0.9 1.2 0.7 1.6 0.4 1.8 0 2.1-0.4 11.5-0.2 2.1-0.5 1.8-0.7 1.6-1 1.2-1.3 0.9-1.6 0.7-1.8 0.3-2.2 0.1-29-1.1-2.1-0.2-1.9-0.5-1.5-0.8-1.3-1-1-1.3-0.7-1.6-0.4-1.8-0.2-2.2z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#9EC6DE",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "Q4q6N",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 2",
-                  "geometry": "M125 13.1l-0.1-2.1 0.2-1.8 0.6-1.5 0.9-1.3 1.1-0.9 1.5-0.7 1.8-0.4 2.1-0.1 31.1 0.4 2.1 0.1 1.9 0.5 1.5 0.7 1.3 1 1.1 1.3 0.7 1.5 0.5 1.8 0.2 2.2 0.4 11-0.1 2.1-0.3 1.8-0.7 1.6-0.9 1.2-1.3 1-1.5 0.7-1.8 0.4-2.1 0.1-29.3-0.2-2.2-0.1-1.8-0.4-1.6-0.8-1.4-0.9-1.1-1.3-0.8-1.6-0.6-1.8-0.4-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#EFD79A",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "e7wjP",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 3",
-                  "geometry": "M180 12.9l0.1-2.1 0.5-1.9 0.7-1.5 1-1.2 1.3-1 1.6-0.7 1.8-0.4 2.1-0.1 31.8 0.6 2.1 0.2 1.9 0.4 1.6 0.7 1.3 1 1.1 1.3 0.8 1.6 0.6 1.8 0.3 2.1 1 13.9 0 2.1-0.2 1.8-0.6 1.6-0.9 1.3-1.2 1-1.5 0.7-1.8 0.4-2.1 0.2-34.9 0.6-2.1-0.1-1.8-0.4-1.5-0.6-1.3-1-0.9-1.3-0.7-1.5-0.4-1.8-0.1-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#A8BE7E",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "Fqe6f",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 4",
-                  "geometry": "M239.5 16l0.5-2.1 0.6-1.8 0.9-1.5 1.2-1.3 1.4-1 1.6-0.7 1.9-0.4 2.1-0.2 34.1-0.2 2.1 0.1 1.8 0.4 1.6 0.7 1.2 1 1 1.3 0.7 1.5 0.4 1.8 0.1 2.1-0.1 12.3-0.2 2.1-0.4 1.8-0.7 1.5-1 1.2-1.3 0.9-1.5 0.5-1.8 0.3-2.2 0-37.3-2.6-2.1-0.3-1.7-0.6-1.5-0.8-1.1-1-0.8-1.3-0.5-1.6-0.2-1.9 0.1-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#E8622B",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "l5XoXS",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 5",
-                  "geometry": "M7.6 49.1l0.1-2.1 0.5-1.8 0.6-1.4 1-1.2 1.3-0.9 1.5-0.5 1.8-0.3 2.1 0.1 30.1 2.8 2.1 0.3 1.8 0.6 1.6 0.8 1.3 1.1 1.1 1.4 0.8 1.6 0.5 1.9 0.3 2.1 0.6 9-0.1 2.1-0.3 1.8-0.6 1.6-0.9 1.4-1.2 1-1.5 0.8-1.8 0.6-2.1 0.2-31.4 2-2.1 0-1.8-0.3-1.6-0.6-1.3-0.9-1-1.2-0.7-1.5-0.4-1.8-0.2-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#9EC6DE",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "LfTIk",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 6",
-                  "geometry": "M66.4 51l0.3-2.1 0.6-1.9 0.8-1.5 1.1-1.3 1.3-1 1.6-0.8 1.9-0.4 2.1-0.2 30-0.8 2.1 0.1 1.9 0.4 1.5 0.7 1.2 0.9 0.9 1.3 0.7 1.5 0.3 1.8 0.1 2.1-0.6 15.7-0.3 2.1-0.5 1.8-0.7 1.5-1.1 1.1-1.3 0.9-1.5 0.6-1.9 0.2-2.1 0-30.9-2.8-2.1-0.3-1.8-0.6-1.5-0.8-1.1-1.1-0.9-1.4-0.6-1.6-0.3-1.8 0-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#EFD79A",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "ZADhe",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 7",
-                  "geometry": "M123.5 49.2l0-2 0.4-1.8 0.6-1.5 0.9-1.2 1.2-0.8 1.5-0.6 1.8-0.2 2.1 0.1 34.2 3.4 2 0.4 1.9 0.6 1.5 0.8 1.2 1.2 0.9 1.3 0.7 1.6 0.4 1.9 0 2.1-0.3 10.5-0.2 2.1-0.4 1.8-0.8 1.6-1 1.2-1.3 1-1.6 0.8-1.8 0.4-2.1 0.2-31.4 0.3-2.1-0.1-1.8-0.4-1.6-0.7-1.3-1-1.1-1.2-0.8-1.5-0.5-1.9-0.3-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#A8BE7E",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "dWCen",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 8",
-                  "geometry": "M241.5 54.3l0-2.1 0.3-1.8 0.6-1.6 0.9-1.2 1.2-1 1.5-0.7 1.8-0.5 2.1-0.1 33.9-0.2 2.1 0.1 1.8 0.4 1.5 0.7 1.1 1 0.9 1.2 0.6 1.6 0.3 1.8 0 2.1-0.9 11.8-0.3 2.1-0.5 1.8-0.8 1.5-1.1 1.2-1.4 0.9-1.5 0.7-1.9 0.3-2.1 0-29.8-1.5-2.1-0.3-1.9-0.5-1.6-0.8-1.3-1-1.1-1.3-0.8-1.6-0.5-1.9-0.3-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#8FD9C8",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "z1ntd",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 9",
-                  "geometry": "M6.8 88.9l-0.3-2 0.1-1.8 0.4-1.5 0.7-1.2 1.1-1 1.4-0.6 1.8-0.4 2-0.1 34 0.8 2.1 0.2 1.8 0.5 1.6 0.7 1.3 1 1.1 1.3 0.7 1.6 0.5 1.8 0.3 2.1 0.5 11.2-0.1 2.1-0.3 1.9-0.6 1.5-1 1.2-1.2 1-1.5 0.6-1.8 0.4-2.1 0.1-29.4-0.7-2.2-0.2-1.9-0.5-1.7-0.7-1.4-1-1.3-1.3-1-1.5-0.7-1.8-0.6-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#9EC6DE",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "fZOdE",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 10",
-                  "geometry": "M64.7 89.8l0.3-2.1 0.6-1.8 0.9-1.6 1.1-1.2 1.4-1 1.6-0.7 1.9-0.5 2.1-0.1 33.8-0.4 2.1 0.1 1.8 0.4 1.5 0.7 1.2 1 0.8 1.2 0.6 1.6 0.2 1.8 0 2.1-0.9 9.2-0.3 2.1-0.6 1.8-0.9 1.5-1.1 1.2-1.3 1-1.6 0.6-1.9 0.4-2.1 0.1-33.8-0.8-2.1-0.2-1.8-0.5-1.5-0.7-1.2-1-0.8-1.3-0.6-1.6-0.2-1.8 0-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#EFD79A",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "q4YX5r",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 11",
-                  "geometry": "M126.3 89.8l0.1-2.1 0.3-1.9 0.7-1.5 0.9-1.3 1.3-1 1.5-0.7 1.8-0.4 2.1-0.1 27.1-0.1 2.1 0.2 1.9 0.4 1.6 0.7 1.4 1 1.1 1.2 0.9 1.5 0.7 1.9 0.3 2.1 1.4 11.7 0.1 2-0.2 1.8-0.5 1.5-0.8 1.2-1.2 0.9-1.5 0.7-1.7 0.3-2.1 0-29.6-1.6-2.2-0.3-1.8-0.5-1.6-0.8-1.3-1.1-1-1.3-0.8-1.6-0.4-1.8-0.3-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#A8BE7E",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "jzBOR",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 12",
-                  "geometry": "M182.6 90.8l0.2-2.1 0.5-1.8 0.8-1.6 1-1.2 1.3-1 1.5-0.7 1.9-0.4 2.1-0.1 31.8 0.1 2.1 0.1 1.8 0.4 1.5 0.7 1.2 1 0.8 1.3 0.6 1.5 0.2 1.8 0 2.1-1.2 12.1-0.3 2.1-0.6 1.8-0.9 1.5-1.1 1.2-1.4 0.9-1.6 0.6-1.8 0.4-2.2 0-29.8-1.6-2.1-0.3-1.8-0.5-1.5-0.8-1.2-1-1-1.3-0.6-1.6-0.4-1.9-0.1-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#8FD9C8",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
-                },
-                {
-                  "type": "path",
-                  "id": "dl23X",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Tile 13",
-                  "geometry": "M240.4 87.2l-0.1-2.1 0.2-1.8 0.5-1.4 0.9-1.2 1.1-0.9 1.5-0.6 1.8-0.3 2.1 0 34.5 2.6 2.1 0.3 1.8 0.6 1.6 0.8 1.2 1.1 1 1.3 0.6 1.6 0.4 1.8 0.1 2.2-0.1 9.8-0.2 2.1-0.5 1.8-0.7 1.5-1 1.3-1.3 1-1.5 0.7-1.9 0.4-2.1 0.1-30.5-0.2-2.1-0.1-1.9-0.5-1.6-0.7-1.4-1-1.1-1.2-0.9-1.6-0.6-1.8-0.4-2.1z",
-                  "viewBox": [
-                    0,
-                    0,
-                    300,
-                    120
-                  ],
-                  "fill": "#9EC6DE",
-                  "width": 430,
-                  "height": 176,
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#8A74664D",
-                    "offset": {
-                      "x": 6,
-                      "y": 8
-                    }
-                  }
+                  "type": "text",
+                  "id": "tw75h",
+                  "name": "Title",
+                  "fill": "$ink",
+                  "content": "타이핑 세션 디자인",
+                  "fontFamily": "$font-display",
+                  "fontSize": 34,
+                  "fontWeight": "normal",
+                  "letterSpacing": 0.5
                 }
               ]
             },
             {
               "type": "frame",
-              "id": "Yf2mp",
-              "name": "Body",
-              "width": "fill_container",
-              "layout": "vertical",
-              "gap": 13,
-              "padding": [
-                18,
-                22,
-                22,
-                22
-              ],
+              "id": "AyIFP",
+              "x": 0,
+              "y": 99,
+              "name": "Queue",
+              "width": 403,
+              "gap": 24,
+              "justifyContent": "space_between",
+              "alignItems": "center",
               "children": [
                 {
+                  "type": "rectangle",
+                  "cornerRadius": 31,
+                  "id": "zpiNn",
+                  "layoutPosition": "absolute",
+                  "x": 0,
+                  "y": 0,
+                  "fill": "#CCCCCC",
+                  "width": "fill_container(403)",
+                  "height": "fill_container(75)"
+                },
+                {
                   "type": "frame",
-                  "id": "WYOON",
-                  "name": "Tags",
-                  "gap": 8,
+                  "id": "orxEh",
+                  "name": "이전 지역",
+                  "width": 97,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    30
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tkDcb",
+                      "x": 0,
+                      "y": 72,
+                      "name": "Prev Cap",
+                      "enabled": false,
+                      "fill": "#5B676E",
+                      "content": "이전",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 12,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.4
+                    },
+                    {
+                      "type": "text",
+                      "id": "l13zA3",
+                      "name": "Prev Name",
+                      "fill": "#5B676E",
+                      "content": "마포구",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 24,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "a2QoIT",
+                  "name": "타이핑",
+                  "width": "fit_content(103)",
+                  "height": "fit_content(75)",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "z0NBl",
-                      "name": "Region Pill",
-                      "fill": "#E7DCC9",
-                      "cornerRadius": 999,
-                      "padding": [
-                        5,
-                        12
-                      ],
+                      "id": "uXKhW",
+                      "layoutPosition": "absolute",
+                      "x": -0.5,
+                      "y": -2,
+                      "name": "Letters",
+                      "gap": 2,
+                      "alignItems": "center",
                       "children": [
                         {
                           "type": "text",
-                          "id": "chEOH",
-                          "name": "Region",
-                          "fill": "#7A6A5A",
-                          "content": "강서구",
-                          "fontFamily": "$font-body",
-                          "fontSize": 12,
-                          "fontWeight": "600"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "TPPz0",
-                      "name": "Mode Pill",
-                      "fill": "#DCE8DE",
-                      "cornerRadius": 999,
-                      "padding": [
-                        5,
-                        12
-                      ],
-                      "children": [
+                          "id": "yasKP",
+                          "name": "G1",
+                          "fill": "#A54F22",
+                          "content": "중",
+                          "fontFamily": "Noto Sans KR",
+                          "fontSize": 52,
+                          "fontWeight": "800",
+                          "letterSpacing": -0.5
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "QGnSr",
+                          "name": "Cursor",
+                          "fill": "#3C464A",
+                          "width": 3,
+                          "height": 40
+                        },
                         {
                           "type": "text",
-                          "id": "aEHks",
-                          "name": "Mode",
-                          "fill": "#5E7A63",
-                          "content": "순서형",
-                          "fontFamily": "$font-body",
-                          "fontSize": 12,
-                          "fontWeight": "600"
+                          "id": "xP9RD",
+                          "name": "G2",
+                          "opacity": 0.38,
+                          "fill": "#5b676eff",
+                          "content": "구",
+                          "fontFamily": "Noto Sans KR",
+                          "fontSize": 52,
+                          "fontWeight": "800",
+                          "letterSpacing": -0.5
                         }
                       ]
                     }
                   ]
                 },
                 {
+                  "type": "frame",
+                  "id": "Z52Ldk",
+                  "name": "이후 지역",
+                  "width": 97,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": [
+                    0,
+                    30
+                  ],
+                  "alignItems": "end",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "b1LA6",
+                      "x": 319.5,
+                      "y": 87,
+                      "name": "Next Cap",
+                      "enabled": false,
+                      "fill": "#5B676E",
+                      "content": "다음",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 12,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.4
+                    },
+                    {
+                      "type": "text",
+                      "id": "A9kKlb",
+                      "name": "Next Name",
+                      "fill": "#5B676E",
+                      "content": "용산구",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 24,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "id": "ZLIzh",
+          "children": [
+            {
+              "type": "frame",
+              "id": "EtLUg",
+              "x": 0,
+              "y": 0,
+              "name": "regiontype · Mini Motorways 급진 스타일",
+              "width": "fill_container(1256)",
+              "gap": 6,
+              "children": [
+                {
                   "type": "text",
-                  "id": "C2mOlp",
+                  "id": "oTUyX",
                   "name": "Title",
                   "fill": "$ink",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "강서구 20개 행정동",
+                  "content": "카드 스타일",
                   "fontFamily": "$font-display",
-                  "fontSize": 24,
+                  "fontSize": 34,
                   "fontWeight": "normal",
                   "letterSpacing": 0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "j89hJ",
+              "x": 0,
+              "y": 99,
+              "name": "Course Card",
+              "reusable": true,
+              "clip": true,
+              "width": 430,
+              "height": 325,
+              "fill": "$paper",
+              "cornerRadius": 22,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#8A746647",
+                "offset": {
+                  "x": 14,
+                  "y": 18
+                }
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "pT5L5",
+                  "name": "Thumb",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 176,
+                  "fill": "$map-base",
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "path",
+                      "id": "h3Cq1J",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Grid",
+                      "geometry": "M0 0l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m20-120l0 120m-300-120l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0m-300 20l300 0",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#00000000",
+                      "width": 430,
+                      "height": 176,
+                      "stroke": "#C97F6E26",
+                      "strokeWidth": 1.5
+                    },
+                    {
+                      "type": "path",
+                      "id": "fkRPt",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Water",
+                      "geometry": "M0 16.39796l150-7.88475 150 1.88475 0 27-150-3.88475-150 9.88475z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "$water",
+                      "width": 430,
+                      "height": 176
+                    },
+                    {
+                      "type": "path",
+                      "id": "ydRa9",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 1",
+                      "geometry": "M9.3 15.1l0.1-2.1 0.4-1.8 0.7-1.6 1-1.2 1.2-1 1.6-0.7 1.8-0.5 2.1-0.1 30.2-0.2 2.1 0.1 1.9 0.4 1.5 0.7 1.2 1 0.9 1.2 0.7 1.6 0.4 1.8 0 2.1-0.4 11.5-0.2 2.1-0.5 1.8-0.7 1.6-1 1.2-1.3 0.9-1.6 0.7-1.8 0.3-2.2 0.1-29-1.1-2.1-0.2-1.9-0.5-1.5-0.8-1.3-1-1-1.3-0.7-1.6-0.4-1.8-0.2-2.2z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#9EC6DE",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "Q4q6N",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 2",
+                      "geometry": "M125 13.1l-0.1-2.1 0.2-1.8 0.6-1.5 0.9-1.3 1.1-0.9 1.5-0.7 1.8-0.4 2.1-0.1 31.1 0.4 2.1 0.1 1.9 0.5 1.5 0.7 1.3 1 1.1 1.3 0.7 1.5 0.5 1.8 0.2 2.2 0.4 11-0.1 2.1-0.3 1.8-0.7 1.6-0.9 1.2-1.3 1-1.5 0.7-1.8 0.4-2.1 0.1-29.3-0.2-2.2-0.1-1.8-0.4-1.6-0.8-1.4-0.9-1.1-1.3-0.8-1.6-0.6-1.8-0.4-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#EFD79A",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "e7wjP",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 3",
+                      "geometry": "M180 12.9l0.1-2.1 0.5-1.9 0.7-1.5 1-1.2 1.3-1 1.6-0.7 1.8-0.4 2.1-0.1 31.8 0.6 2.1 0.2 1.9 0.4 1.6 0.7 1.3 1 1.1 1.3 0.8 1.6 0.6 1.8 0.3 2.1 1 13.9 0 2.1-0.2 1.8-0.6 1.6-0.9 1.3-1.2 1-1.5 0.7-1.8 0.4-2.1 0.2-34.9 0.6-2.1-0.1-1.8-0.4-1.5-0.6-1.3-1-0.9-1.3-0.7-1.5-0.4-1.8-0.1-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#A8BE7E",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "Fqe6f",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 4",
+                      "geometry": "M239.5 16l0.5-2.1 0.6-1.8 0.9-1.5 1.2-1.3 1.4-1 1.6-0.7 1.9-0.4 2.1-0.2 34.1-0.2 2.1 0.1 1.8 0.4 1.6 0.7 1.2 1 1 1.3 0.7 1.5 0.4 1.8 0.1 2.1-0.1 12.3-0.2 2.1-0.4 1.8-0.7 1.5-1 1.2-1.3 0.9-1.5 0.5-1.8 0.3-2.2 0-37.3-2.6-2.1-0.3-1.7-0.6-1.5-0.8-1.1-1-0.8-1.3-0.5-1.6-0.2-1.9 0.1-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#E8622B",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "l5XoXS",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 5",
+                      "geometry": "M7.6 49.1l0.1-2.1 0.5-1.8 0.6-1.4 1-1.2 1.3-0.9 1.5-0.5 1.8-0.3 2.1 0.1 30.1 2.8 2.1 0.3 1.8 0.6 1.6 0.8 1.3 1.1 1.1 1.4 0.8 1.6 0.5 1.9 0.3 2.1 0.6 9-0.1 2.1-0.3 1.8-0.6 1.6-0.9 1.4-1.2 1-1.5 0.8-1.8 0.6-2.1 0.2-31.4 2-2.1 0-1.8-0.3-1.6-0.6-1.3-0.9-1-1.2-0.7-1.5-0.4-1.8-0.2-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#9EC6DE",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "LfTIk",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 6",
+                      "geometry": "M66.4 51l0.3-2.1 0.6-1.9 0.8-1.5 1.1-1.3 1.3-1 1.6-0.8 1.9-0.4 2.1-0.2 30-0.8 2.1 0.1 1.9 0.4 1.5 0.7 1.2 0.9 0.9 1.3 0.7 1.5 0.3 1.8 0.1 2.1-0.6 15.7-0.3 2.1-0.5 1.8-0.7 1.5-1.1 1.1-1.3 0.9-1.5 0.6-1.9 0.2-2.1 0-30.9-2.8-2.1-0.3-1.8-0.6-1.5-0.8-1.1-1.1-0.9-1.4-0.6-1.6-0.3-1.8 0-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#EFD79A",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "ZADhe",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 7",
+                      "geometry": "M123.5 49.2l0-2 0.4-1.8 0.6-1.5 0.9-1.2 1.2-0.8 1.5-0.6 1.8-0.2 2.1 0.1 34.2 3.4 2 0.4 1.9 0.6 1.5 0.8 1.2 1.2 0.9 1.3 0.7 1.6 0.4 1.9 0 2.1-0.3 10.5-0.2 2.1-0.4 1.8-0.8 1.6-1 1.2-1.3 1-1.6 0.8-1.8 0.4-2.1 0.2-31.4 0.3-2.1-0.1-1.8-0.4-1.6-0.7-1.3-1-1.1-1.2-0.8-1.5-0.5-1.9-0.3-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#A8BE7E",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "dWCen",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 8",
+                      "geometry": "M241.5 54.3l0-2.1 0.3-1.8 0.6-1.6 0.9-1.2 1.2-1 1.5-0.7 1.8-0.5 2.1-0.1 33.9-0.2 2.1 0.1 1.8 0.4 1.5 0.7 1.1 1 0.9 1.2 0.6 1.6 0.3 1.8 0 2.1-0.9 11.8-0.3 2.1-0.5 1.8-0.8 1.5-1.1 1.2-1.4 0.9-1.5 0.7-1.9 0.3-2.1 0-29.8-1.5-2.1-0.3-1.9-0.5-1.6-0.8-1.3-1-1.1-1.3-0.8-1.6-0.5-1.9-0.3-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#8FD9C8",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "z1ntd",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 9",
+                      "geometry": "M6.8 88.9l-0.3-2 0.1-1.8 0.4-1.5 0.7-1.2 1.1-1 1.4-0.6 1.8-0.4 2-0.1 34 0.8 2.1 0.2 1.8 0.5 1.6 0.7 1.3 1 1.1 1.3 0.7 1.6 0.5 1.8 0.3 2.1 0.5 11.2-0.1 2.1-0.3 1.9-0.6 1.5-1 1.2-1.2 1-1.5 0.6-1.8 0.4-2.1 0.1-29.4-0.7-2.2-0.2-1.9-0.5-1.7-0.7-1.4-1-1.3-1.3-1-1.5-0.7-1.8-0.6-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#9EC6DE",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "fZOdE",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 10",
+                      "geometry": "M64.7 89.8l0.3-2.1 0.6-1.8 0.9-1.6 1.1-1.2 1.4-1 1.6-0.7 1.9-0.5 2.1-0.1 33.8-0.4 2.1 0.1 1.8 0.4 1.5 0.7 1.2 1 0.8 1.2 0.6 1.6 0.2 1.8 0 2.1-0.9 9.2-0.3 2.1-0.6 1.8-0.9 1.5-1.1 1.2-1.3 1-1.6 0.6-1.9 0.4-2.1 0.1-33.8-0.8-2.1-0.2-1.8-0.5-1.5-0.7-1.2-1-0.8-1.3-0.6-1.6-0.2-1.8 0-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#EFD79A",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "q4YX5r",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 11",
+                      "geometry": "M126.3 89.8l0.1-2.1 0.3-1.9 0.7-1.5 0.9-1.3 1.3-1 1.5-0.7 1.8-0.4 2.1-0.1 27.1-0.1 2.1 0.2 1.9 0.4 1.6 0.7 1.4 1 1.1 1.2 0.9 1.5 0.7 1.9 0.3 2.1 1.4 11.7 0.1 2-0.2 1.8-0.5 1.5-0.8 1.2-1.2 0.9-1.5 0.7-1.7 0.3-2.1 0-29.6-1.6-2.2-0.3-1.8-0.5-1.6-0.8-1.3-1.1-1-1.3-0.8-1.6-0.4-1.8-0.3-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#A8BE7E",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "jzBOR",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 12",
+                      "geometry": "M182.6 90.8l0.2-2.1 0.5-1.8 0.8-1.6 1-1.2 1.3-1 1.5-0.7 1.9-0.4 2.1-0.1 31.8 0.1 2.1 0.1 1.8 0.4 1.5 0.7 1.2 1 0.8 1.3 0.6 1.5 0.2 1.8 0 2.1-1.2 12.1-0.3 2.1-0.6 1.8-0.9 1.5-1.1 1.2-1.4 0.9-1.6 0.6-1.8 0.4-2.2 0-29.8-1.6-2.1-0.3-1.8-0.5-1.5-0.8-1.2-1-1-1.3-0.6-1.6-0.4-1.9-0.1-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#8FD9C8",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    },
+                    {
+                      "type": "path",
+                      "id": "dl23X",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Tile 13",
+                      "geometry": "M240.4 87.2l-0.1-2.1 0.2-1.8 0.5-1.4 0.9-1.2 1.1-0.9 1.5-0.6 1.8-0.3 2.1 0 34.5 2.6 2.1 0.3 1.8 0.6 1.6 0.8 1.2 1.1 1 1.3 0.6 1.6 0.4 1.8 0.1 2.2-0.1 9.8-0.2 2.1-0.5 1.8-0.7 1.5-1 1.3-1.3 1-1.5 0.7-1.9 0.4-2.1 0.1-30.5-0.2-2.1-0.1-1.9-0.5-1.6-0.7-1.4-1-1.1-1.2-0.9-1.6-0.6-1.8-0.4-2.1z",
+                      "viewBox": [
+                        0,
+                        0,
+                        300,
+                        120
+                      ],
+                      "fill": "#9EC6DE",
+                      "width": 430,
+                      "height": 176,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#8A74664D",
+                        "offset": {
+                          "x": 6,
+                          "y": 8
+                        }
+                      }
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
-                  "id": "bVIy8",
-                  "name": "Meta",
+                  "id": "Yf2mp",
+                  "name": "Body",
                   "width": "fill_container",
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
+                  "layout": "vertical",
+                  "gap": 13,
+                  "padding": [
+                    18,
+                    22,
+                    22,
+                    22
+                  ],
                   "children": [
                     {
                       "type": "frame",
-                      "id": "ybJ4r",
-                      "name": "Plays",
-                      "gap": 7,
-                      "alignItems": "center",
+                      "id": "WYOON",
+                      "name": "Tags",
+                      "gap": 8,
                       "children": [
                         {
-                          "type": "icon",
-                          "id": "NWGdz",
-                          "name": "Icon",
-                          "width": 17,
-                          "height": 17,
-                          "icon": "keyboard",
-                          "library": "lucide",
-                          "fill": "$ink-soft"
+                          "type": "frame",
+                          "id": "z0NBl",
+                          "name": "Region Pill",
+                          "fill": "#E7DCC9",
+                          "cornerRadius": 999,
+                          "padding": [
+                            5,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "chEOH",
+                              "name": "Region",
+                              "fill": "#7A6A5A",
+                              "content": "강서구",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
                         },
                         {
-                          "type": "text",
-                          "id": "RO9bZ",
-                          "name": "Count",
-                          "fill": "$ink",
-                          "content": "12,430",
-                          "fontFamily": "$font-num",
-                          "fontSize": 16,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.5
+                          "type": "frame",
+                          "id": "TPPz0",
+                          "name": "Mode Pill",
+                          "fill": "#DCE8DE",
+                          "cornerRadius": 999,
+                          "padding": [
+                            5,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "aEHks",
+                              "name": "Mode",
+                              "fill": "#5E7A63",
+                              "content": "순서형",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
                         }
                       ]
                     },
                     {
+                      "type": "text",
+                      "id": "C2mOlp",
+                      "name": "Title",
+                      "fill": "$ink",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "강서구 20개 행정동",
+                      "fontFamily": "$font-display",
+                      "fontSize": 24,
+                      "fontWeight": "normal",
+                      "letterSpacing": 0.5
+                    },
+                    {
                       "type": "frame",
-                      "id": "Hbd5d",
-                      "name": "Difficulty",
-                      "gap": 5,
+                      "id": "bVIy8",
+                      "name": "Meta",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "ellipse",
-                          "id": "EvDsk",
-                          "name": "Dot 1",
-                          "fill": "$accent",
-                          "width": 10,
-                          "height": 10
+                          "type": "frame",
+                          "id": "ybJ4r",
+                          "name": "Plays",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "NWGdz",
+                              "name": "Icon",
+                              "width": 17,
+                              "height": 17,
+                              "icon": "keyboard",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            },
+                            {
+                              "type": "text",
+                              "id": "RO9bZ",
+                              "name": "Count",
+                              "fill": "$ink",
+                              "content": "12,430",
+                              "fontFamily": "$font-num",
+                              "fontSize": 16,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.5
+                            }
+                          ]
                         },
                         {
-                          "type": "ellipse",
-                          "id": "gZCt5",
-                          "name": "Dot 2",
-                          "fill": "$accent",
-                          "width": 10,
-                          "height": 10
-                        },
-                        {
-                          "type": "ellipse",
-                          "id": "WNX5G",
-                          "name": "Dot 3",
-                          "fill": "#DFD2BE",
-                          "width": 10,
-                          "height": 10
+                          "type": "frame",
+                          "id": "Hbd5d",
+                          "name": "Difficulty",
+                          "gap": 5,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "ellipse",
+                              "id": "EvDsk",
+                              "name": "Dot 1",
+                              "fill": "$accent",
+                              "width": 10,
+                              "height": 10
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "gZCt5",
+                              "name": "Dot 2",
+                              "fill": "$accent",
+                              "width": 10,
+                              "height": 10
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "WNX5G",
+                              "name": "Dot 3",
+                              "fill": "#DFD2BE",
+                              "width": 10,
+                              "height": 10
+                            }
+                          ]
                         }
                       ]
                     }
@@ -2568,8 +2762,8 @@
             {
               "type": "group",
               "id": "QJdO0",
-              "x": 449,
-              "y": 829,
+              "x": 360,
+              "y": 852,
               "children": [
                 {
                   "type": "frame",
@@ -2577,150 +2771,210 @@
                   "x": 0,
                   "y": 14,
                   "name": "Typing Cue Panel",
-                  "width": 542,
-                  "height": 113,
+                  "width": 720,
                   "fill": "$paper",
-                  "cornerRadius": 26,
+                  "cornerRadius": 20,
                   "effect": {
                     "type": "shadow",
                     "shadowType": "outer",
-                    "color": "#8A746647",
+                    "color": "#8A74663D",
                     "offset": {
-                      "x": 14,
-                      "y": 18
+                      "x": 8,
+                      "y": 11
                     }
                   },
-                  "layout": "none",
+                  "gap": 16,
+                  "padding": [
+                    16,
+                    22
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
                       "id": "eKBSB",
-                      "x": 86,
-                      "y": 40,
                       "name": "Prev",
-                      "width": 94,
-                      "gap": 8,
-                      "padding": [
-                        0,
-                        34,
-                        0,
-                        0
-                      ],
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
                       "justifyContent": "end",
-                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon",
-                          "id": "sGsqe",
-                          "name": "Check",
-                          "width": 20,
-                          "height": 20,
-                          "icon": "check",
-                          "library": "lucide",
-                          "fill": "#C6B49F"
+                          "type": "text",
+                          "id": "ICgD3",
+                          "name": "Prev Cap",
+                          "fill": "$ink-soft",
+                          "content": "이전",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.8
                         },
                         {
-                          "type": "text",
-                          "id": "p0xjmY",
-                          "name": "Prev Name",
-                          "fill": "#C6B49F",
-                          "content": "공항동",
-                          "fontFamily": "$font-display",
-                          "fontSize": 26,
-                          "fontWeight": "normal",
-                          "letterSpacing": 1
+                          "type": "frame",
+                          "id": "kPLTV",
+                          "name": "Prev Name Row",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "sGsqe",
+                              "name": "Check",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$green"
+                            },
+                            {
+                              "type": "text",
+                              "id": "p0xjmY",
+                              "name": "Prev Name",
+                              "opacity": 0.42,
+                              "fill": "$ink",
+                              "content": "공항동",
+                              "fontFamily": "$font-display",
+                              "fontSize": 24,
+                              "fontWeight": "normal",
+                              "letterSpacing": 1
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "dbUoD",
-                      "x": 180.5068787301816,
-                      "y": 26.45289855921601,
-                      "name": "Input",
-                      "rotation": -0.013132866646039465,
-                      "width": 181,
-                      "height": 60,
-                      "fill": "#FFFDF8",
-                      "cornerRadius": 16,
-                      "stroke": "$accent",
-                      "strokeWidth": 4,
-                      "strokeAlignment": "inner",
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "#8A746614",
-                        "offset": {
-                          "x": 0,
-                          "y": 3
-                        }
-                      },
-                      "gap": 3,
-                      "padding": [
-                        0,
-                        22
-                      ],
-                      "justifyContent": "center",
+                      "id": "NyFTj",
+                      "name": "지금",
+                      "layout": "vertical",
+                      "gap": 4,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "text",
-                          "id": "Mw0NL",
-                          "name": "Typed",
-                          "fill": "$ink",
-                          "content": "화곡1",
-                          "fontFamily": "$font-display",
-                          "fontSize": 30,
-                          "fontWeight": "normal",
-                          "letterSpacing": 2
+                          "id": "IYjmV",
+                          "name": "Now Cap",
+                          "fill": "$accent",
+                          "content": "지금",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.8
                         },
                         {
-                          "type": "rectangle",
-                          "cornerRadius": 2,
-                          "id": "I0amqn",
-                          "name": "Caret",
-                          "fill": "$accent",
-                          "width": 3,
-                          "height": 34
+                          "type": "frame",
+                          "id": "dbUoD",
+                          "name": "Input",
+                          "fill": "#FFFDF8",
+                          "cornerRadius": 14,
+                          "stroke": "$accent",
+                          "strokeWidth": 2.5,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#8A746614",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            }
+                          },
+                          "gap": 2,
+                          "padding": [
+                            10,
+                            22
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Mw0NL",
+                              "name": "Typed",
+                              "fill": "$accent",
+                              "content": "화곡1",
+                              "fontFamily": "$font-display",
+                              "fontSize": 36,
+                              "fontWeight": "normal",
+                              "letterSpacing": 2
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "I0amqn",
+                              "name": "Caret",
+                              "fill": "$ink",
+                              "width": 3,
+                              "height": 32
+                            },
+                            {
+                              "type": "text",
+                              "id": "Ov7Jq",
+                              "name": "Rest",
+                              "opacity": 0.34,
+                              "fill": "$ink-soft",
+                              "content": "동",
+                              "fontFamily": "$font-display",
+                              "fontSize": 36,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
                       "id": "ZiTHa",
-                      "x": 362,
-                      "y": 40,
                       "name": "Next",
-                      "gap": 8,
-                      "padding": [
-                        0,
-                        0,
-                        0,
-                        34
-                      ],
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
                       "justifyContent": "end",
-                      "alignItems": "center",
+                      "alignItems": "end",
                       "children": [
                         {
                           "type": "text",
-                          "id": "QVfCM",
-                          "name": "Next Name",
-                          "fill": "#C6B49F",
-                          "content": "화곡2동",
-                          "fontFamily": "$font-display",
-                          "fontSize": 26,
-                          "fontWeight": "normal",
-                          "letterSpacing": 1
+                          "id": "BQxS1",
+                          "name": "Next Cap",
+                          "fill": "$ink-soft",
+                          "content": "다음",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "letterSpacing": 1.8
                         },
                         {
-                          "type": "icon",
-                          "id": "eEdDm",
-                          "name": "Arrow",
-                          "width": 20,
-                          "height": 20,
-                          "icon": "chevron-right",
-                          "library": "lucide",
-                          "fill": "#C6B49F"
+                          "type": "frame",
+                          "id": "stozK",
+                          "name": "Next Name Row",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QVfCM",
+                              "name": "Next Name",
+                              "opacity": 0.42,
+                              "fill": "$ink",
+                              "content": "화곡2동",
+                              "fontFamily": "$font-display",
+                              "fontSize": 24,
+                              "fontWeight": "normal",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "icon",
+                              "id": "eEdDm",
+                              "name": "Arrow",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevron-right",
+                              "library": "lucide",
+                              "fill": "$ink-soft"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -2729,57 +2983,52 @@
                 {
                   "type": "frame",
                   "id": "m0KLw",
-                  "x": 220.5,
-                  "y": 0,
+                  "x": 304,
+                  "y": -40,
                   "name": "Typing Cue Panel",
-                  "width": 101,
-                  "height": 29,
                   "fill": "$paper",
                   "cornerRadius": 26,
-                  "layout": "vertical",
                   "gap": 16,
-                  "justifyContent": "space_around",
+                  "padding": [
+                    6,
+                    12
+                  ],
+                  "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
                     {
                       "type": "group",
                       "id": "u4FpH",
+                      "x": 12,
+                      "y": 22,
+                      "enabled": false
+                    },
+                    {
+                      "type": "frame",
+                      "id": "coe72",
+                      "name": "진행 시간",
+                      "gap": 6,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "coe72",
-                          "x": 0,
-                          "y": 0,
-                          "name": "진행 시간",
-                          "width": 63,
-                          "height": 26,
-                          "layout": "none",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "W72mk",
-                              "x": 0,
-                              "y": 5,
-                              "name": "Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "timer",
-                              "library": "lucide",
-                              "fill": "$ink-soft"
-                            },
-                            {
-                              "type": "text",
-                              "id": "v99Gho",
-                              "x": 26.5,
-                              "y": -3,
-                              "name": "Value",
-                              "fill": "$ink",
-                              "content": "2:14",
-                              "fontFamily": "$font-num",
-                              "fontSize": 20,
-                              "fontWeight": "700"
-                            }
-                          ]
+                          "type": "icon",
+                          "id": "W72mk",
+                          "name": "Icon",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "timer",
+                          "library": "lucide",
+                          "fill": "$ink-soft"
+                        },
+                        {
+                          "type": "text",
+                          "id": "v99Gho",
+                          "name": "Value",
+                          "fill": "$ink",
+                          "content": "2:14",
+                          "fontFamily": "$font-num",
+                          "fontSize": 20,
+                          "fontWeight": "700"
                         }
                       ]
                     }
@@ -15798,8 +16047,8 @@
                     {
                       "type": "group",
                       "id": "D5Fvi",
-                      "x": 449,
-                      "y": 819,
+                      "x": 360,
+                      "y": 852,
                       "children": [
                         {
                           "type": "frame",
@@ -15807,150 +16056,210 @@
                           "x": 0,
                           "y": 14,
                           "name": "Typing Cue Panel",
-                          "width": 542,
-                          "height": 113,
+                          "width": 720,
                           "fill": "$paper",
-                          "cornerRadius": 26,
+                          "cornerRadius": 20,
                           "effect": {
                             "type": "shadow",
                             "shadowType": "outer",
-                            "color": "#8A746647",
+                            "color": "#8A74663D",
                             "offset": {
-                              "x": 14,
-                              "y": 18
+                              "x": 8,
+                              "y": 11
                             }
                           },
-                          "layout": "none",
+                          "gap": 16,
+                          "padding": [
+                            16,
+                            22
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
                           "children": [
                             {
                               "type": "frame",
                               "id": "gjW4Q",
-                              "x": 86,
-                              "y": 40,
                               "name": "Prev",
-                              "width": 94,
-                              "gap": 8,
-                              "padding": [
-                                0,
-                                34,
-                                0,
-                                0
-                              ],
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
                               "justifyContent": "end",
-                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "icon",
-                                  "id": "gwiwG",
-                                  "name": "Check",
-                                  "width": 20,
-                                  "height": 20,
-                                  "icon": "check",
-                                  "library": "lucide",
-                                  "fill": "#C6B49F"
+                                  "type": "text",
+                                  "id": "JEAzO",
+                                  "name": "Prev Cap",
+                                  "fill": "$ink-soft",
+                                  "content": "이전",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1.8
                                 },
                                 {
-                                  "type": "text",
-                                  "id": "fZZ3Y",
-                                  "name": "Prev Name",
-                                  "fill": "#C6B49F",
-                                  "content": "공항동",
-                                  "fontFamily": "$font-display",
-                                  "fontSize": 26,
-                                  "fontWeight": "normal",
-                                  "letterSpacing": 1
+                                  "type": "frame",
+                                  "id": "zvHYX",
+                                  "name": "Prev Name Row",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "gwiwG",
+                                      "name": "Check",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "check",
+                                      "library": "lucide",
+                                      "fill": "$green"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "fZZ3Y",
+                                      "name": "Prev Name",
+                                      "opacity": 0.42,
+                                      "fill": "$ink",
+                                      "content": "마포구",
+                                      "fontFamily": "$font-display",
+                                      "fontSize": 24,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 1
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "w2YMt",
-                              "x": 180.5068787301816,
-                              "y": 26.45289855921601,
-                              "name": "Input",
-                              "rotation": -0.013132866646039465,
-                              "width": 181,
-                              "height": 60,
-                              "fill": "#FFFDF8",
-                              "cornerRadius": 16,
-                              "stroke": "$accent",
-                              "strokeWidth": 4,
-                              "strokeAlignment": "inner",
-                              "effect": {
-                                "type": "shadow",
-                                "shadowType": "outer",
-                                "color": "#8A746614",
-                                "offset": {
-                                  "x": 0,
-                                  "y": 3
-                                }
-                              },
-                              "gap": 3,
-                              "padding": [
-                                0,
-                                22
-                              ],
-                              "justifyContent": "center",
+                              "id": "NklCB",
+                              "name": "지금",
+                              "layout": "vertical",
+                              "gap": 4,
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "facFm",
-                                  "name": "Typed",
-                                  "fill": "$ink",
-                                  "content": "화곡1",
-                                  "fontFamily": "$font-display",
-                                  "fontSize": 30,
-                                  "fontWeight": "normal",
-                                  "letterSpacing": 2
+                                  "id": "mA4nD",
+                                  "name": "Now Cap",
+                                  "fill": "$accent",
+                                  "content": "지금",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1.8
                                 },
                                 {
-                                  "type": "rectangle",
-                                  "cornerRadius": 2,
-                                  "id": "Msytv",
-                                  "name": "Caret",
-                                  "fill": "$accent",
-                                  "width": 3,
-                                  "height": 34
+                                  "type": "frame",
+                                  "id": "w2YMt",
+                                  "name": "Input",
+                                  "fill": "#FFFDF8",
+                                  "cornerRadius": 14,
+                                  "stroke": "$accent",
+                                  "strokeWidth": 2.5,
+                                  "strokeAlignment": "inner",
+                                  "effect": {
+                                    "type": "shadow",
+                                    "shadowType": "outer",
+                                    "color": "#8A746614",
+                                    "offset": {
+                                      "x": 0,
+                                      "y": 3
+                                    }
+                                  },
+                                  "gap": 2,
+                                  "padding": [
+                                    10,
+                                    22
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "facFm",
+                                      "name": "Typed",
+                                      "fill": "$accent",
+                                      "content": "중",
+                                      "fontFamily": "$font-display",
+                                      "fontSize": 36,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 2
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "Msytv",
+                                      "name": "Caret",
+                                      "fill": "$ink",
+                                      "width": 3,
+                                      "height": 32
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "Z7epY",
+                                      "name": "Rest",
+                                      "opacity": 0.34,
+                                      "fill": "$ink-soft",
+                                      "content": "구",
+                                      "fontFamily": "$font-display",
+                                      "fontSize": 36,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
                               "id": "u9cMvc",
-                              "x": 362,
-                              "y": 40,
                               "name": "Next",
-                              "gap": 8,
-                              "padding": [
-                                0,
-                                0,
-                                0,
-                                34
-                              ],
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
                               "justifyContent": "end",
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "raRzK",
-                                  "name": "Next Name",
-                                  "fill": "#C6B49F",
-                                  "content": "화곡2동",
-                                  "fontFamily": "$font-display",
-                                  "fontSize": 26,
-                                  "fontWeight": "normal",
-                                  "letterSpacing": 1
+                                  "id": "hx4re",
+                                  "name": "Next Cap",
+                                  "fill": "$ink-soft",
+                                  "content": "다음",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "600",
+                                  "letterSpacing": 1.8
                                 },
                                 {
-                                  "type": "icon",
-                                  "id": "hqLV9",
-                                  "name": "Arrow",
-                                  "width": 20,
-                                  "height": 20,
-                                  "icon": "chevron-right",
-                                  "library": "lucide",
-                                  "fill": "#C6B49F"
+                                  "type": "frame",
+                                  "id": "tnzXy",
+                                  "name": "Next Name Row",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "raRzK",
+                                      "name": "Next Name",
+                                      "opacity": 0.42,
+                                      "fill": "$ink",
+                                      "content": "용산구",
+                                      "fontFamily": "$font-display",
+                                      "fontSize": 24,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "hqLV9",
+                                      "name": "Arrow",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-right",
+                                      "library": "lucide",
+                                      "fill": "$ink-soft"
+                                    }
+                                  ]
                                 }
                               ]
                             }
@@ -15959,57 +16268,52 @@
                         {
                           "type": "frame",
                           "id": "X4gtzw",
-                          "x": 220.5,
-                          "y": 0,
+                          "x": 304,
+                          "y": -40,
                           "name": "Typing Cue Panel",
-                          "width": 101,
-                          "height": 29,
                           "fill": "$paper",
                           "cornerRadius": 26,
-                          "layout": "vertical",
                           "gap": 16,
-                          "justifyContent": "space_around",
+                          "padding": [
+                            6,
+                            12
+                          ],
+                          "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
                               "type": "group",
                               "id": "DiOX9",
+                              "x": 12,
+                              "y": 22,
+                              "enabled": false
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dn8ss",
+                              "name": "진행 시간",
+                              "gap": 6,
+                              "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "frame",
-                                  "id": "dn8ss",
-                                  "x": 0,
-                                  "y": 0,
-                                  "name": "진행 시간",
-                                  "width": 63,
-                                  "height": 26,
-                                  "layout": "none",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "X8Igsh",
-                                      "x": 0,
-                                      "y": 5,
-                                      "name": "Icon",
-                                      "width": 16,
-                                      "height": 16,
-                                      "icon": "timer",
-                                      "library": "lucide",
-                                      "fill": "$ink-soft"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "l55Djt",
-                                      "x": 26.5,
-                                      "y": -3,
-                                      "name": "Value",
-                                      "fill": "$ink",
-                                      "content": "2:14",
-                                      "fontFamily": "$font-num",
-                                      "fontSize": 20,
-                                      "fontWeight": "700"
-                                    }
-                                  ]
+                                  "type": "icon",
+                                  "id": "X8Igsh",
+                                  "name": "Icon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "timer",
+                                  "library": "lucide",
+                                  "fill": "$ink-soft"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "l55Djt",
+                                  "name": "Value",
+                                  "fill": "$ink",
+                                  "content": "2:14",
+                                  "fontFamily": "$font-num",
+                                  "fontSize": 20,
+                                  "fontWeight": "700"
                                 }
                               ]
                             }
@@ -16189,6 +16493,597 @@
                           "height": "fill_container"
                         }
                       ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "h9ieK",
+          "layoutPosition": "absolute",
+          "x": 240,
+          "y": 848,
+          "name": "이전 · 지금 · 다음",
+          "enabled": false,
+          "width": 960,
+          "height": 280,
+          "fill": "#E8EDF0",
+          "cornerRadius": 26,
+          "layout": "vertical",
+          "padding": [
+            36,
+            40
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "path",
+              "id": "ypo1s",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 0,
+              "name": "Bit Grid",
+              "geometry": "M0 0v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m24-248v248m-912-248h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920m-920 24h920",
+              "viewBox": [
+                0,
+                0,
+                920,
+                248
+              ],
+              "fill": "#00000000",
+              "width": 920,
+              "height": 248,
+              "stroke": "#DAE2E7",
+              "strokeWidth": 1
+            },
+            {
+              "type": "frame",
+              "id": "gapXx",
+              "name": "Queue",
+              "width": "fill_container",
+              "gap": 24,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "e4gDKb",
+                  "name": "이전 지역",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jwH7y",
+                      "name": "마포 도트",
+                      "width": 92,
+                      "height": 62,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "qtLTC",
+                          "x": 0,
+                          "y": 15,
+                          "name": "d0-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "WsV6p",
+                          "x": 15,
+                          "y": 0,
+                          "name": "d1-0",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "IZNIy",
+                          "x": 15,
+                          "y": 15,
+                          "name": "d1-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "Et8O4",
+                          "x": 15,
+                          "y": 30,
+                          "name": "d1-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "UHHSI",
+                          "x": 30,
+                          "y": 0,
+                          "name": "d2-0",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "kwO1u",
+                          "x": 30,
+                          "y": 15,
+                          "name": "d2-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "p1NrI",
+                          "x": 30,
+                          "y": 30,
+                          "name": "d2-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "aMN9e",
+                          "x": 30,
+                          "y": 45,
+                          "name": "d2-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "tdCpF",
+                          "x": 45,
+                          "y": 0,
+                          "name": "d3-0",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "JLz5K",
+                          "x": 45,
+                          "y": 15,
+                          "name": "d3-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "DMCPN",
+                          "x": 45,
+                          "y": 30,
+                          "name": "d3-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "LLoSx",
+                          "x": 45,
+                          "y": 45,
+                          "name": "d3-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "uFdwD",
+                          "x": 60,
+                          "y": 15,
+                          "name": "d4-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "geN6J",
+                          "x": 60,
+                          "y": 30,
+                          "name": "d4-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "W6QZY",
+                          "x": 60,
+                          "y": 45,
+                          "name": "d4-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "a3vH6Z",
+                          "x": 75,
+                          "y": 30,
+                          "name": "d5-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "irSJV",
+                          "x": 75,
+                          "y": 45,
+                          "name": "d5-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PENnC",
+                      "name": "Prev Chip",
+                      "fill": "#6F9A9E",
+                      "padding": [
+                        4,
+                        12,
+                        5,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YqvRg",
+                          "name": "Prev Cap",
+                          "fill": "#FFFFFF",
+                          "content": "이전",
+                          "fontFamily": "Noto Sans KR",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "bVrUY",
+                      "x": 0,
+                      "y": 72,
+                      "name": "Prev Cap",
+                      "enabled": false,
+                      "fill": "#5B676E",
+                      "content": "이전",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 12,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.4
+                    },
+                    {
+                      "type": "text",
+                      "id": "RtkZx",
+                      "name": "Prev Name",
+                      "fill": "#5B676E",
+                      "content": "마포구",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "c5m9TU",
+                  "name": "타이핑",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "a1Jl6o",
+                      "name": "Now Cap",
+                      "fill": "#A54F22",
+                      "content": "지금",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 12,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.4
+                    },
+                    {
+                      "type": "frame",
+                      "id": "APOLf",
+                      "name": "Letters",
+                      "gap": 2,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wzWwM",
+                          "name": "G1",
+                          "fill": "#A54F22",
+                          "content": "중",
+                          "fontFamily": "Noto Sans KR",
+                          "fontSize": 52,
+                          "fontWeight": "800",
+                          "letterSpacing": -0.5
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "nOIRe",
+                          "name": "Cursor",
+                          "fill": "#3C464A",
+                          "width": 3,
+                          "height": 40
+                        },
+                        {
+                          "type": "text",
+                          "id": "M4Me9v",
+                          "name": "G2",
+                          "opacity": 0.38,
+                          "fill": "#6F9A9E",
+                          "content": "구",
+                          "fontFamily": "Noto Sans KR",
+                          "fontSize": 52,
+                          "fontWeight": "800",
+                          "letterSpacing": -0.5
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ka7jE",
+                  "name": "이후 지역",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "alignItems": "end",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "L4JS6M",
+                      "name": "용산 도트",
+                      "width": 77,
+                      "height": 77,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "QYfLN",
+                          "x": 15,
+                          "y": 0,
+                          "name": "d1-0",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "ESfwc",
+                          "x": 30,
+                          "y": 0,
+                          "name": "d2-0",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "XDuED",
+                          "x": 45,
+                          "y": 0,
+                          "name": "d3-0",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "f2zszx",
+                          "x": 0,
+                          "y": 15,
+                          "name": "d0-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "o8HIi9",
+                          "x": 15,
+                          "y": 15,
+                          "name": "d1-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "AeBzv",
+                          "x": 30,
+                          "y": 15,
+                          "name": "d2-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "OxCnW",
+                          "x": 45,
+                          "y": 15,
+                          "name": "d3-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "lnWkV",
+                          "x": 60,
+                          "y": 15,
+                          "name": "d4-1",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "mdwXw",
+                          "x": 0,
+                          "y": 30,
+                          "name": "d0-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "CPshc",
+                          "x": 15,
+                          "y": 30,
+                          "name": "d1-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "oDF5B",
+                          "x": 30,
+                          "y": 30,
+                          "name": "d2-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "SEDfV",
+                          "x": 45,
+                          "y": 30,
+                          "name": "d3-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "Dho4K",
+                          "x": 60,
+                          "y": 30,
+                          "name": "d4-2",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "R2EPu",
+                          "x": 15,
+                          "y": 45,
+                          "name": "d1-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "dft2n",
+                          "x": 30,
+                          "y": 45,
+                          "name": "d2-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "VaFrR",
+                          "x": 45,
+                          "y": 45,
+                          "name": "d3-3",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        },
+                        {
+                          "type": "ellipse",
+                          "id": "O8mqUV",
+                          "x": 30,
+                          "y": 60,
+                          "name": "d2-4",
+                          "fill": "#8FB0B4",
+                          "width": 12,
+                          "height": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xuXNc",
+                      "name": "Next Chip",
+                      "fill": "#6F9A9E",
+                      "padding": [
+                        4,
+                        12,
+                        5,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "irQW6",
+                          "name": "Next Cap",
+                          "fill": "#FFFFFF",
+                          "content": "다음",
+                          "fontFamily": "Noto Sans KR",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Wde8L",
+                      "x": 319.5,
+                      "y": 87,
+                      "name": "Next Cap",
+                      "enabled": false,
+                      "fill": "#5B676E",
+                      "content": "다음",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 12,
+                      "fontWeight": "600",
+                      "letterSpacing": 1.4
+                    },
+                    {
+                      "type": "text",
+                      "id": "k0b49v",
+                      "name": "Next Name",
+                      "fill": "#5B676E",
+                      "content": "용산구",
+                      "fontFamily": "Noto Sans KR",
+                      "fontSize": 20,
+                      "fontWeight": "700"
                     }
                   ]
                 }

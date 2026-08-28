@@ -141,6 +141,9 @@
   position: absolute; left: 22px; top: 50%; transform: translateY(-50%);
   color: var(--hint); white-space: nowrap; pointer-events: none;
 }
+/* 이미 친 만큼 — 폭은 그대로 두고 칠하지만 않는다. 입력칸 글자와 폰트·크기·자간이
+   같아서, 남은 글자가 친 글자 바로 뒤에 딱 이어진다. */
+.cue .eaten { visibility: hidden }
 .cue input {
   position: relative; width: 11rem;
   border: 0; outline: none; background: none;

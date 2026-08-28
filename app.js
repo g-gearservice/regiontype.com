@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.35';
+const VER = '0.37';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
@@ -713,10 +713,24 @@ function say(head, body) {
   f.classList.add('on');
 }
 
+function fillSide(el, it, hideName) {
+  if (!el) return;
+  if (!it || hideName) { el.replaceChildren(); return; }
+  el.innerHTML = `<span class="q-name">${promptName(it)}</span>`;
+}
+
+function paintQueue() {
+  if (!G) return;
+  const t = target();
+  const i = t ? G.items.indexOf(t) : -1;
+  fillSide($('#qPrev'), i > 0 ? G.items[i - 1] : null, false);
+  fillSide($('#qNext'), i >= 0 ? G.items[i + 1] : null, !opt.hint);
+}
+
 /* 칠 이름을 글자 하나씩 늘어놓는다. 이 자체가 입력창이다 —
    맞게 친 글자만 색이 차오른다. */
 function setTarget(name) {
-  const box = $('#typing');
+  const box = $('#qLetters') || $('#typing');
   box.replaceChildren();
   G.want = name;
   for (const ch of name) {
@@ -724,8 +738,8 @@ function setTarget(name) {
     el.textContent = ch;
     box.append(el);
   }
-  box.classList.remove('bad');
-  box.classList.toggle('hide', !opt.hint);   // 숨김이면 글자를 가리고 친 만큼만 드러난다
+  $('#typing').classList.remove('bad');
+  $('#typing').classList.toggle('hide', !opt.hint);
   paintTyped('');
 }
 
@@ -734,7 +748,7 @@ function setTarget(name) {
    그대로 뜬다. 조합 중인지 아닌지는 input 이벤트가 알려준다 —
    자모 표를 들고 맞춰볼 필요가 없다. */
 function paintTyped(raw, composing = false) {
-  const box = $('#typing');
+  const box = $('#qLetters') || $('#typing');
   if (!G.want) return;
   const buf = raw.replace(/\s/g, '');
   // 앞에 붙은 찌꺼기를 흘려보낸다. 스페이스로 확정할 때 IME 가 조합을 끝내며
@@ -759,7 +773,7 @@ function paintTyped(raw, composing = false) {
     el.classList.toggle('cur-r', !!live || (n >= G.want.length && i === G.want.length - 1));
   });
   // 조합이 끝났는데도 안 맞으면 오타다
-  box.classList.toggle('bad', rest.length > 0 && !ing);
+  $('#typing').classList.toggle('bad', rest.length > 0 && !ing);
 }
 
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
@@ -776,6 +790,7 @@ function aim() {
   G.items.forEach(i => i.el.classList.toggle('target', i === t));
   // 이름과 설명은 언제나 같은 곳을 가리켜야 한다. 치는 동안 그곳을 읽게 된다
   if (t) say(promptName(t), t.meta.description);
+  paintQueue();
   $('#fact').classList.toggle('aim', !!t);
   G.items.forEach(i => {
     if (!i.label) return;
