@@ -18,12 +18,22 @@
     data/*.geom.json     화면 좌표로 투영된 SVG path (17KB)
     data/korea-pixels.json  타이틀 화면 픽셀맵 격자
     tools/build_map.py      GeoJSON → geom.json
+    tools/build_dong.py     25개 구 행정동 코스를 한꺼번에
     tools/build_pixels.py   GeoJSON → 픽셀 격자
 
 ## 지도 데이터 갱신
 
     curl -sL -o gu.json https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json
     python3 tools/build_map.py gu.json data/seoul-gu.geom.json
+
+25개 자치구의 행정동 코스는 한 번에 찍어낸다. 격자는 채워진 도트 수를 보고
+구마다 다르게 잡는다 — 폭만 고정하면 세로로 긴 구에서 도트가 폭발한다.
+
+    curl -sL -o dong.json https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_submunicipalities_geo_simple.json
+    python3 tools/build_dong.py dong.json gu.json data/
+
+강서구 코스는 한 줄 소개를 손으로 썼기 때문에 덮어쓰지 않는다(build_dong.py 의 KEEP).
+나머지 코스의 한 줄 소개는 비어 있다 — 400곳을 지어낼 수는 없어 사람이 채울 자리로 뒀다.
 
 ## 타이틀 픽셀맵
 
@@ -45,7 +55,6 @@
 - `중` → 중구·중랑구가 모두 남아 있으면 확정하지 않음 (`중구`를 다 쳐야 함)
 - 어간이 한 글자면 약칭으로 인정하지 않음
 - 앞에 붙은 오타는 접미 검사로 흘려보냄 (`ㅋㅋ강남` → 강남구)
-- 설정에서 "정식 명칭 강제"를 켜면 약칭 전부 불인정
 
 오답은 **조합이 끝난 시점에 어느 접미도 미점령 항목의 앞부분이 아닐 때** 자동
 확정된다(`강난` → 즉시 오답). 스페이스를 keydown 으로 가로채면 IME 조합 확정

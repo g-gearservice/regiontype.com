@@ -15,6 +15,7 @@
      지도는 쪼그라들고 독은 눌린다 — 한 변에서 다른 변을 만든다 */
   --pv-w:min(84vw, 1000px, 84vh * 10 / 7);
   --pv-h:calc(var(--pv-w) * .7);
+  --pk-w:min(72vw, 460px);   /* 뒤집힌 카드 폭. 높이는 앞면을 따른다 */
 }
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
@@ -56,8 +57,11 @@ body{
 
 .logo{font-size:clamp(38px,5vw,64px);font-weight:800;letter-spacing:-.03em;line-height:1}
 .logo span{font-weight:400}
-.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);vertical-align:.9em;margin-left:.1em}
-.tagline{color:var(--ink-soft);margin-top:14px;font-size:18px}
+/* e 의 오른쪽 위. 가로는 자간만큼만 띄우고, 높이는 글자 위로 띄워 둔다 */
+/* 로고 점 — 'e' 어깨에 바로 붙는다. inline-block 의 베이스라인은 아래 모서리라
+   vertical-align 이 곧 '베이스라인에서 점 밑면까지'다. e 의 x-하이트가 .54em 이니
+   .6em 이면 글자 꼭대기 살짝 위에 앉는다. */
+.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);vertical-align:.6em;margin-left:.03em}
 .head{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin:0}
 
 .screen-head{
@@ -67,11 +71,13 @@ body{
 
 /* ── 블록 버튼 (레퍼런스 메뉴) ───────────── */
 .menu{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-top:44px}
-.menu button, #save, #again{
+.menu button, .menu a, #save, #again{
   font:inherit;font-weight:700;font-size:26px;color:#fff;cursor:pointer;
   background:var(--block); border:0; padding:6px 18px 8px;
   transition:background var(--fast);
 }
+.menu a{text-decoration:none}
+.menu a.alt{font-size:20px;background:#4A3B31}
 .menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible,#save:focus-visible,#again:focus-visible{outline:3px solid transparent}
 /* 내려받은 심볼은 마스크로 쓴다 — 색을 글자색에 맞춰야 하기 때문이다.
    파일은 구글 폰트에서 받은 것 그대로 (FILL0 · wght300 · GRAD200 · opsz24) */
@@ -110,12 +116,40 @@ body{
   flex:1;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:40px;
 }
+/* 목록은 무대 폭을 다 쓴다. 내용에 맞춰 줄어들게 두면 그 폭이 닫힌 카드(230px)로
+   굳어서, 뒤집힌 카드가 고르는 판 크기로 자라지 못하고 도로 눌린다. */
 .course-list{
   list-style:none;display:flex;align-items:center;justify-content:center;
-  gap:26px;padding:0;perspective:1400px;
+  width:100%;gap:26px;padding:0;perspective:1400px;
 }
+.course-list li{flex:0 0 auto}
 .course-list li{display:flex}
 .course-list li[hidden]{display:none}
+
+/* 고르는 판 — 카드 뒷면. 지도가 남는 높이를 다 갖는다 */
+.pickmap{flex:1;min-height:0;display:grid;place-items:center;margin:8px 0 2px}
+.pickmap svg{width:100%;height:100%;display:block}
+.pickmap circle{fill:var(--block);transition:fill var(--fast) var(--ease-out)}
+.pickmap .hit{fill:none;pointer-events:all}
+.gu{cursor:pointer}
+.gu.off{cursor:default}
+.gu.off circle{fill:var(--land)}
+.gu:focus{outline:none}
+.gu:focus-visible circle,.gu:hover:not(.off) circle{fill:var(--accent)}
+.pickname{
+  font-size:12px;font-weight:700;color:var(--ink-soft);text-align:center;
+  min-height:1.4em;word-break:keep-all;margin-bottom:6px;
+}
+.course{
+  font:inherit;color:inherit;border:0;cursor:pointer;
+  background:var(--bg);border-radius:5px;
+  font-size:12px;font-weight:800;padding:8px 10px;text-align:center;
+  transition:background var(--fast) var(--ease-out);
+}
+.course:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){
+  .course:hover{background:var(--grid)}
+}
 /* 코스마다 다른 색조 — 레퍼런스의 도시별 색. 기존 팔레트만 쓴다 */
 .course-list li:nth-child(2n) .card{--tint:var(--accent)}
 /* 앞면·뒷면을 겹쳐두고 카드를 통째로 돌린다 */
@@ -133,7 +167,7 @@ body{
 .card-front{cursor:pointer}
 .card-back{
   position:absolute;inset:0;transform:rotateY(180deg);
-  padding:24px 22px;justify-content:center;gap:2px;
+  padding:16px 14px 14px;justify-content:center;gap:2px;
 }
 .card-back{transition:padding var(--flip) var(--ease-in-out)}
 .card[data-preview="1"] .card-back{padding:12px 14px 10px;justify-content:stretch}
@@ -155,13 +189,14 @@ body{
 .card-body .desc{display:block;color:var(--ink-soft);font-size:14px;line-height:1.55}
 
 /* 뒷면 — 시작 옵션 */
-.card-back .ov-title{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.card-back .ov-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
 .card-back .ov-sub{color:var(--ink-soft);font-size:13px;margin-top:5px}
 .card-back .choice{display:grid;gap:7px;margin-top:20px;justify-items:center}
 .card-back .choice-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
 .card-back .menu{flex-direction:row;justify-content:center;gap:3px;margin-top:8px}
 .card-back .menu button{font-size:17px;padding:5px 15px 7px}
 .ov-pick,.ov-play{display:flex;flex-direction:column;justify-content:center;gap:2px;flex:1;min-height:0}
+.ov-pick{justify-content:stretch}
 .ov-pick[hidden],.ov-play[hidden]{display:none}
 .ov-play{justify-content:stretch}
 /* 열림·닫힘을 한 상태로 묶는다 — 같은 속성·같은 시간·같은 곡선이라
@@ -174,6 +209,7 @@ body{
 .card[data-preview="1"] .ov-game{opacity:1;transform:none}
 .ov-game{flex:1;min-height:0;display:flex;flex-direction:column;text-align:left}
 .ov-hud{margin-bottom:4px;gap:14px;position:relative;z-index:3}
+.ov-body{flex:1;min-height:0;display:flex;align-items:stretch}
 .ov-stage{flex:1;min-height:0;position:relative}
 .ov-map{width:100%;height:100%;display:block}
 .ov-dock{
@@ -184,8 +220,6 @@ body{
 .ov-dock .choice{margin:0;justify-self:start;justify-items:start}
 .ov-dock .ov-title{font-size:18px;justify-self:center;text-align:center}
 .ov-dock .menu{margin:0;justify-self:end}
-.ov-courses{flex-direction:column;align-items:stretch;width:100%}
-.ov-courses button{opacity:1;width:100%;font-size:14px;padding:6px 10px;line-height:1.35;white-space:normal}
 
 /* ── 설정 ─────────────────────────────── */
 .opts{display:grid;grid-template-columns:auto auto;gap:18px 40px;align-items:center;font-size:24px;font-weight:700}
@@ -204,7 +238,6 @@ body{
   display:block; width:1em; height:1em; text-align:center;
 }
 .toggle[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-#optStyle{text-align:center;display:inline-block}
 .ver{margin-top:auto;color:var(--ink-soft);font-size:14px}
 
 /* ── 플레이 ───────────────────────────── */
@@ -314,19 +347,20 @@ body{
 }
 #pixelmap circle{fill:var(--block);opacity:.38}
 #pixelmap circle.seoul{fill:var(--accent);opacity:1}
+.thumb svg circle{fill:#fff}
 
-/* ═══ Mini Motorways 질감 ═══════════════════════════════
+/* ═══ UI 질감 ═══════════════════════════════════════════
    블록 메뉴 · 긴 그림자 · 눌림 피드백 · 등장 모션 */
 
 /* 화면 전환 — 순간이동 대신 크로스페이드 */
 .screen{opacity:0;transition:opacity var(--slow) var(--ease-out)}
 .screen.on{opacity:1}
 
-.menu button, .scores .menu button, #save, #again{
+.menu button, .scores .menu button, .menu a, #save, #again{
   transition:background var(--fast) var(--ease-out);
 }
 @media (hover:hover) and (pointer:fine){
-  .menu button:hover, #save:hover, #again:hover{background:var(--accent)}
+  .menu button:hover, .menu a:hover, #save:hover, #again:hover{background:var(--accent)}
   .step:hover{color:var(--accent)}
   .toggle:hover{border-color:var(--accent)}
 }
@@ -348,8 +382,11 @@ body{
 /* 뒤집기 — 화면 안에서 모양이 바뀌는 동작이라 ease-in-out */
 .card{transition:transform var(--flip) var(--ease-in-out),
                width var(--flip) var(--ease-in-out),
-               height var(--flip) var(--ease-in-out)}
-.card[data-flip="true"]{transform:rotateY(180deg) scale(1.06);z-index:1}
+               height var(--flip) var(--ease-in-out),
+               translate var(--fast) var(--ease-out)}
+/* 돌면서 가로로만 넓어진다. 높이는 앞면 그대로라 카드가 제자리에서 펴지는 걸로 읽힌다 —
+   width 트랜지션이 회전과 같은 시간·같은 곡선이라 한 동작으로 붙는다. */
+.card[data-flip="true"]{width:var(--pk-w);transform:rotateY(180deg);z-index:1}
 .card[data-flip="true"][data-preview="1"]{
   width:var(--pv-w);height:var(--pv-h);
   transform:rotateY(180deg);z-index:2;
@@ -358,8 +395,12 @@ body{
 .card-front:active{transform:scale(.98)}
 .card-front{transition:transform var(--fast) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
-  .card[data-flip="false"]:hover{transform:translateY(-3px)}
-  .card[data-flip="false"]:hover .card-top{background:var(--accent)}
+  /* 살짝 뜨는 건 transform 이 아니라 translate 로 준다. 같은 transform 을 두고
+     회전과 다투면, 앞면으로 돌아올 때 rotateY(180deg) → translateY(-3px) 로
+     보간되면서 회전이 뭉개진다 — 커서가 카드 안에 있을 때만 그랬다.
+     locking 동안에는 아예 안 띄운다. 도는 중에 3px 씩 오르내릴 이유가 없다. */
+  .card[data-flip="false"]:not([data-locking="1"]):hover{translate:0 -3px}
+  .card[data-flip="false"]:not([data-locking="1"]):hover .card-top{background:var(--accent)}
 }
 .card-back .menu{align-items:center}
 .missed li{border-radius:4px;box-shadow:var(--shadow)}
@@ -408,20 +449,6 @@ body{
 .opts dt{font-size:30px;padding:7px 20px 10px}
 .toggle{width:52px;height:52px;font-size:24px;border-width:4px}
 .step{font-size:30px;width:auto;padding:0 6px}
-/* 값 폭은 글자에 맞춘다. 스타일이 바뀌면 그 폭까지 미끄러진다 */
-#optStyle{
-  width:3.8em; font-size:22px; font-weight:800;
-  white-space:nowrap; overflow:hidden;
-  transition:width var(--slow) var(--ease-out);
-}
-:root[data-road] #optStyle{width:7.6em}
-/* 화살표는 하나뿐이다 — 스타일이 넘어가면 반대쪽을 가리키며 돈다 */
-.opts dd .step[data-style]{transition:transform var(--slow) var(--ease-out)}
-:root[data-road] .opts dd .step[data-style]{transform:rotate(180deg)}
-/* 값이 짧아 화살표를 멀리 벌릴 이유가 없다 */
-.opts dd:has(#optStyle){gap:10px}
-.opts dd:has(#optStyle) .step{font-size:22px}
-/* arrow_left 는 글자 상자 안에서 작게 그려진다 — 한 급 키워야 값과 어울린다 */
 .opts .step :is(.ms,.i){font-size:40px}
 .opts dd{gap:22px}
 
@@ -467,7 +494,7 @@ body{
 @media (prefers-reduced-motion:reduce){ #map g.target circle,.ov-map g.target circle{animation:none} }
 
 
-/* ── 로드맵 타일 — 비트맵 위에 얹는다 ──────────────────── */
+/* ── 이름 타일 — 비트맵 위에 얹는다 ────────────────────── */
 #map .tiles > g,.ov-map .tiles > g{
   opacity:0; transform:translateY(7px) scale(.88);
   transform-box:fill-box; transform-origin:center;
@@ -483,54 +510,6 @@ body{
 
 /* 에셋이 앉은 자리의 도트는 사라진다 — 픽셀 위에 떠 있지 않게 */
 #map circle.under{opacity:0;transition:opacity .16s var(--ease-out)}
-/* 차고지는 상자가 작아 이름을 아래에 적는다 */
-#map .tiles text.below{fill:var(--ink);font-size:calc(var(--tf,14px) * .9)}
-
-/* ── 로드맵 (미니 모터웨이즈 방식) ─────────────────────
-   도트가 없다. 크림색 바탕에 칸 정렬된 타일과 길뿐이다. */
-.rt-map.road .ground{fill:var(--rt-ground,#f5efe0)}
-.rt-map.road{--rt-edge:#a9b9bc}
-.rt-map.road .roads .road-line{
-  /* 굵기는 꼭지 폭과 같다. 끝을 둥글게 하면 꼭지 밖으로 삐져나온다 */
-  fill:none; stroke:#fff; stroke-width:var(--road-w,15);
-  stroke-linecap:butt; stroke-linejoin:round;
-  stroke-dasharray:2000; stroke-dashoffset:2000;
-  animation:pave .5s var(--ease-out) forwards;
-}
-.rt-map.road .roads .road-line::before{content:""}
-@keyframes pave{to{stroke-dashoffset:0}}
-/* 길 테두리 — 토지 꼭지와 같은 굵기·같은 색이라야 이음매가 이어진다.
-   토지는 stroke 7 로 긋고 채우므로 바깥으로 3.5 씩 나온다 */
-.rt-map.road .roads-edge .road-edge{
-  fill:none; stroke:var(--rt-edge,#a9b9bc);
-  stroke-width:calc(var(--road-w,15) + var(--road-edge,7));
-  stroke-linecap:butt; stroke-linejoin:round;
-}
-/* 지금 쳐야 할 칸 */
-.rt-map.road g.target{animation:tilepulse 1.5s var(--ease-in-out) infinite}
-@keyframes tilepulse{50%{opacity:.45}}
-.rt-map.road .tiles > g:not(.built){opacity:0}
-.rt-map.road .tiles > g.target:not(.built){opacity:.28;transform:none}
-@media (prefers-reduced-motion:reduce){ .rt-map.road g.target{animation:none} }
-
-/* 로드맵의 칸 격자 — 미니 모터웨이즈의 바닥 눈금 */
-.rt-map.road .cells .cell{fill:none;stroke:rgba(150,140,115,.16);stroke-width:1.5}
-.rt-map.road .cells .cell.used{fill:rgba(150,140,115,.10)}
-/* 좌표는 뷰박스 단위다. 칸이 100 이니 22 쯤이라야 화면에서 읽힌다 */
-.rt-map.road .cells .coord{
-  font:700 22px system-ui,sans-serif; fill:rgba(120,105,80,.5);
-  dominant-baseline:auto; text-anchor:start; pointer-events:none;
-  opacity:1;   /* #map text 의 opacity:0(맞히기 전 이름 숨김)을 되돌린다 */
-}
-.rt-map.road .cells .cell.used + .coord{fill:rgba(150,80,30,.75)}
-
-/* 로드맵에서는 토지 테두리를 없앤다. 길과 만나는 자리에 선이 남아
-   꼭지가 어긋나 보였다. 심볼 안 stroke 는 CSS 변수라 여기서 끌 수 있다 */
-.rt-map.road .tiles{--rt-edge:transparent}
-
-/* 길 위의 차 — 차고지 지붕색을 그대로 쓴다 */
-.rt-map.road .car{pointer-events:none}
-.rt-map.road .car[hidden]{display:none}
 
 /* ── 타이핑 섹션 ───────────────────────────────────────
    칠 이름 자체가 입력창이다. 맞게 친 글자만 색이 차오른다.
@@ -574,30 +553,14 @@ body{
 .typing.off b.cur-l::before, .typing.off b.cur-r::after{display:none}
 .typing{cursor:text}
 
-/* 토지와 건물이 따로 서고, 그 사이로 길과 차가 지난다 */
-.rt-map.road .plots > g{
-  opacity:0; transition:opacity .18s var(--ease-out);
-}
-.rt-map.road .plots > g.built{opacity:1}
-.rt-map.road .blocks > g{
-  opacity:0; transform:translateY(7px) scale(.88);
-  transform-box:fill-box; transform-origin:center;
-  transition:opacity .18s var(--ease-out), transform .3s var(--ease-out);
-}
-.rt-map.road .blocks > g.built{opacity:1;transform:none}
-.rt-map.road .blocks{--rt-edge:transparent}
-
-/* 차고지 토지도 다른 곳과 같이 뜬다 */
-.rt-map.road .plots > g{will-change:opacity}
-
 /* 비트맵에는 이름만 얹는다. 글자 자리 도트는 지우고 둘레는 줄인다 */
-.rt-map:not(.road) .tiles text{
+.rt-map .tiles text{
   fill:var(--ink); opacity:.72; font-weight:800;
   paint-order:stroke; stroke:var(--bg); stroke-width:calc(5px / var(--z,1));
   stroke-linejoin:round; text-anchor:middle; dominant-baseline:central;
 }
-.rt-map:not(.road) .tiles > g{opacity:0;transition:opacity .18s var(--ease-out)}
-.rt-map:not(.road) .tiles > g.built{opacity:1}
+.rt-map .tiles > g{opacity:0;transition:opacity .18s var(--ease-out)}
+.rt-map .tiles > g.built{opacity:1}
 #map circle.near{transform:scale(.55);transform-box:fill-box;transform-origin:center;
   transition:transform .18s var(--ease-out)}
 
@@ -609,101 +572,49 @@ body{
 #play > .hud{margin-bottom:auto}
 #play > .typing{margin-top:auto}
 
-/* 위아래로 갈수록 흐려지는 띠. backdrop-filter 에 마스크를 씌우면
-   블러가 서서히 사라진다 — 그라디언트 블러를 직접 줄 방법은 없다 */
-.fade{position:absolute;left:0;right:0;z-index:1;pointer-events:none}
-.fade-top{
-  top:0; height:var(--fade-top,190px);
-  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.55) 55%,transparent 100%);
-  -webkit-mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.55) 55%,transparent 100%);
+/* 상단 그라디언트 블러 — 블러 세기가 다른 여섯 겹을 각자 다른 띠로 마스크해서 겹친다.
+   backdrop-filter 하나에 마스크를 씌우면 블러가 뚝 끊기지만, 이렇게 쌓으면 부드럽게 번진다.
+   출처: OuterVale, "Blobby Navbar Blur" (codepen.io/OuterVale/pen/emJQXOx) */
+.backdrop-blur{
+  position:absolute; top:0; left:0; right:0; z-index:1;
+  display:grid; height:var(--blur-top,100px); pointer-events:none;
 }
-.fade-bot{
-  bottom:0; height:var(--fade-bot,280px);
-  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.55) 55%,transparent 100%);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.55) 55%,transparent 100%);
+.backdrop-blur > span{grid-area:1/1}
+.backdrop-blur > :nth-child(1){
+  backdrop-filter:blur(1px); -webkit-backdrop-filter:blur(1px);
+  mask:linear-gradient(0deg,transparent,#000 8%);
+  -webkit-mask:linear-gradient(0deg,transparent,#000 8%);
 }
-.fade-bot::after{
-  content:""; position:absolute; left:0; right:0; bottom:0; height:58%;
-  backdrop-filter:blur(44px); -webkit-backdrop-filter:blur(44px);
-  mask-image:linear-gradient(to top,#000 0%,transparent 100%);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,transparent 100%);
+.backdrop-blur > :nth-child(2){
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  mask:linear-gradient(0deg,transparent 8%,#000 16%);
+  -webkit-mask:linear-gradient(0deg,transparent 8%,#000 16%);
 }
-
-/* ═══ 미니 모터웨이즈 모드 ═══════════════════════════════
-   지도만 바꾸면 화면이 반쪽만 그 게임이 된다. 토큰을 통째로 갈아
-   메뉴·카드·HUD 까지 같은 말투로 맞춘다. 야간 모드가 켜져 있으면
-   그쪽이 이긴다 — 어두운 화면에서 크림색 종이는 눈을 찌른다. */
-:root[data-road]:not([data-night]){
-  --bg:#eef2f4; --grid:#dfe7ec; --ink:#3a4245; --ink-soft:#77878e;
-  --block:#b3cacd; --block-hi:#9dbabe; --accent:#f8c56b; --accent-deep:#eda23f;
-  --accent-text:#c07a1c;
-  --land:#dfe6ea; --land-line:#eef2f4; --card:#fff;
-  --shadow:0 10px 16px -12px rgba(70,95,110,.18), 0 2px 4px -2px rgba(70,95,110,.1);
-  --shadow-lift:0 16px 22px -14px rgba(70,95,110,.24), 0 3px 6px -3px rgba(70,95,110,.14);
+.backdrop-blur > :nth-child(3){
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  mask:linear-gradient(0deg,transparent 16%,#000 24%);
+  -webkit-mask:linear-gradient(0deg,transparent 16%,#000 24%);
 }
-/* 블록은 모서리가 각지고, 고른 항목만 호박색으로 켜진다 (MM 사이드바) */
-:root[data-road] :is(.menu button,.opts dt,.choice-b button,#save,#again){border-radius:0}
-:root[data-road] .opts dt:has(+ dd .toggle[aria-pressed="true"]){background:var(--accent);color:#fff}
-:root[data-road] .choice-b button[aria-pressed="true"]{background:var(--accent)}
-:root[data-road] .toggle[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
-@media (hover:hover) and (pointer:fine){
-  /* MM 은 올린 항목이 옆으로 한 칸 미끄러진다 */
-  :root[data-road] .menu button:hover,
-  :root[data-road] .opts dt:hover{transform:translateX(6px)}
+.backdrop-blur > :nth-child(4){
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  mask:linear-gradient(0deg,transparent 24%,#000 36%);
+  -webkit-mask:linear-gradient(0deg,transparent 24%,#000 36%);
 }
-:root[data-road] :is(.menu button,.opts dt){
-  transition:background var(--fast) var(--ease-out),transform var(--fast) var(--ease-out);
+.backdrop-blur > :nth-child(5){
+  backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  mask:linear-gradient(0deg,transparent 36%,#000 48%);
+  -webkit-mask:linear-gradient(0deg,transparent 36%,#000 48%);
 }
-/* 카드·칩은 흰 아스팔트 판. 게이지는 포장 중인 길처럼 채워진다 */
-:root[data-road] :is(.card-face,.missed li,#card){border-radius:3px}
-:root[data-road] .gauge{border-radius:99px}
-:root[data-road] .gauge i{border-radius:99px;background:var(--accent)}
-:root[data-road] .grid-bg path{stroke-width:1.5}
-
-/* 켜는 순간 화면이 새로 포장된다 — 한 번만, 짧게 */
-:root[data-road] .screen.on{animation:repave .34s var(--ease-out)}
-@keyframes repave{from{opacity:.4;filter:saturate(.5)}}
-@media (prefers-reduced-motion:reduce){ :root[data-road] .screen.on{animation:none} }
-
-/* 도트 그림은 모드에 따라 circle 또는 rect 로 그려진다 (app.js 의 dot) */
-#pixelmap :is(circle,rect){fill:var(--block);opacity:.38}
-#pixelmap :is(circle,rect).seoul{fill:var(--accent);opacity:1}
-.thumb svg :is(circle,rect){fill:#fff}
-/* 미니 모터웨이즈에서는 땅이 이어진 덩어리라 옅게 깔고 서울만 띄운다 */
-:root[data-road] #pixelmap rect{opacity:.5}
-:root[data-road] #pixelmap rect.seoul{filter:drop-shadow(0 .18px .18px rgba(80,60,20,.5))}
-
-/* ── 배경 보드 — 홈·설정 뒤로 지나는 길과 건물 ──────────── */
-.road-bg{display:none}
-:root[data-road] body:has(:is(#title,#options).on) .road-bg{display:block}
-.road-bg{
-  position:fixed;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none;
-  --rt-edge:#c2ced2;
+.backdrop-blur > :nth-child(6){
+  backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
+  mask:linear-gradient(0deg,transparent 48%,#000 60%);
+  -webkit-mask:linear-gradient(0deg,transparent 48%,#000 60%);
 }
-.road-bg .rb-road path{fill:none;stroke:#fff;stroke-linecap:round;stroke-linejoin:round}
-.road-bg .rb-edge path{fill:none;stroke:var(--rt-edge);stroke-linecap:round;stroke-linejoin:round}
-/* 레퍼런스의 길은 순백이다. 흐리면 종이에 그린 그림이 된다 */
-:root[data-night] .road-bg{opacity:.32}
-/* 길 위에 다시 얹는 토지는 테두리를 지운다 — 입구의 이음매를 덮는 용도다 */
-.road-bg .rb-plots-top{--rt-edge:transparent}
-.road-bg .rb-tile text{
-  font:800 26px/1 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
-  fill:rgba(0,0,0,.62); text-anchor:middle; dominant-baseline:central;
+/* 원본은 검정 스크림이다. 여기 배경은 밝으니 사이트 배경색으로 깐다 */
+.backdrop-blur::after{
+  content:""; grid-area:1/1;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 34%,transparent) 60%,transparent);
 }
-
-/* 로고 점 — 모터웨이즈에서는 목적지 핀이 된다. 보드의 rt-pin 과 같은 모양을
-   마스크로 오려 accent 로 칠한다. 글자 오른쪽, 대문자 높이에 걸치게 */
-:root[data-road] .dot{
-  width:.30em; height:.42em; border-radius:0; margin-left:.04em;
-  vertical-align:.32em; background:var(--accent);
-  --pin:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-8 -22 16 23'%3E%3Cpath d='M0 0c-4.7-7-7.2-10.2-7.2-14A7.2 7.2 0 1 1 7.2-14C7.2-10.2 4.7-7 0 0Z'/%3E%3C/svg%3E");
-  -webkit-mask:var(--pin) center / 100% 100% no-repeat;
-  mask:var(--pin) center / 100% 100% no-repeat;
-}
-/* 지형도 — 길과 건물이 얹힐 땅. 눈금보다 아래, 바탕보다 한 톤 진하게 */
-.rt-map.road .land rect{fill:rgba(150,140,115,.14)}
 
 /* 시간 드럼 — 스크롤은 브라우저·OS 설정을 그대로 탄다 */
 .wheel{
@@ -749,32 +660,11 @@ body{
   border-radius:4px; margin:0 .03em;
 }
 
-/* 미리보기는 게임 진행이 없다 — 등장 규칙(맞히면 나타남)을 걷어내고 전부 보여준다 */
-.ov-map.road :is(.tiles,.blocks,.plots) > g{opacity:1;transform:none}
-
-/* 색 배합은 미니 모터웨이즈에만 있는 것이다 — 비트맵에서는 레일째 걷어낸다 */
-:root:not([data-road]) .ov-side{display:none}
-
-/* 미리보기 좌우 여백 — 지도는 가운데, 색 배합은 왼쪽 레일에 */
-.ov-body{flex:1;min-height:0;display:flex;align-items:stretch;gap:16px}
-.ov-side{flex:0 0 132px;display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
-.ov-side .choice{display:grid;gap:6px;justify-items:start}
-.ov-side .choice-b{flex-direction:column;align-items:stretch;width:100%}
-.ov-side .choice-b button{width:100%;font-size:13px;padding:5px 10px}
-
-/* 덧댄 토지는 테두리를 지운다 — 길과 꼭지의 이음매만 덮는 겹이다 */
-.rt-map.road .plots-top{--rt-edge:transparent}
-
 /* 맞힌 건물이 한 번 튄다 — 커졌다 제자리로. 등장(.built)과 별개의 한 방 */
-.rt-map .blocks > g.pop, .rt-map .tiles > g.pop{
+.rt-map .tiles > g.pop{
   transform-box:fill-box; transform-origin:center;
   animation:tilepop .34s var(--ease-out);
 }
 @keyframes tilepop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
-@media (prefers-reduced-motion:reduce){ .rt-map .blocks > g.pop{animation:none} }
+@media (prefers-reduced-motion:reduce){ .rt-map .tiles > g.pop{animation:none} }
 
-/* 개발 환경 전용 조작 — 배포본에서는 존재하지 않는 것처럼 둔다 */
-:root:not([data-dev]) [data-dev-only]{display:none}
-
-/* 스타일 값 — 못 넘길 때 그 자리가 흔들리며 ✕ 가 뜬다 */
-#optStyle.deny{color:var(--accent-deep);animation:shake .22s}

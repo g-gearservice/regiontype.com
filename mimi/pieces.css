@@ -1,0 +1,175 @@
+/* Mimi pieces — slabs, chips, tiles, docks. Not parent .card / .hud / .menu. */
+
+.slab {
+  background: var(--paper);
+  border-radius: var(--round-tile);
+  box-shadow: var(--lift);
+}
+.slab-s { box-shadow: var(--lift-s) }
+
+.chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 40px; padding: 0 18px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--mark);
+  font-size: 14px; font-weight: 600;
+  box-shadow: var(--lift-s);
+  white-space: nowrap;
+}
+.chip[aria-pressed="true"], .chip.on {
+  background: var(--flare); color: var(--warm); box-shadow: none;
+}
+
+.seg {
+  display: flex; gap: 4px; padding: 5px;
+  background: var(--seg); border-radius: 999px;
+}
+.seg b {
+  display: grid; place-items: center;
+  height: 40px; padding: 0 16px; border-radius: 999px;
+  font-size: 14px; font-weight: 700; letter-spacing: .04em;
+  color: #8A7A67; cursor: pointer;
+}
+.seg b[aria-pressed="true"] { color: #F6EEE2 }
+.seg[data-mode="practice"] b[data-mode="practice"] { background: var(--drill); color: #F6EEE2 }
+.seg[data-mode="learning"] b[data-mode="learning"] { background: var(--mark); color: #F1E9DC }
+.seg[data-mode="quiz"] b[data-mode="quiz"] { background: var(--flare); color: #F6EEE2 }
+
+.find {
+  display: flex; align-items: center; gap: 10px;
+  width: 300px; height: 50px; padding: 0 20px;
+  background: var(--paper); border-radius: 999px;
+  box-shadow: var(--lift-s);
+}
+.find input {
+  flex: 1; border: 0; outline: none; background: none;
+  font-size: 15px; font-weight: 500; color: var(--mark);
+}
+.find input::placeholder { color: var(--hint) }
+
+.tile {
+  display: flex; flex-direction: column;
+  width: 100%; overflow: hidden; text-align: left;
+  background: var(--paper); border-radius: var(--round-tile);
+  box-shadow: var(--lift);
+  color: var(--mark);
+}
+.tile:focus-visible { outline: 3px solid var(--flare); outline-offset: 3px }
+.tile:active { transform: translate(2px, 3px); box-shadow: 10px 12px 0 var(--slab) }
+.mosaic {
+  position: relative; height: 176px; overflow: hidden;
+  background: var(--terrain);
+  background-image:
+    linear-gradient(#C97F6E26 1.5px, transparent 1.5px),
+    linear-gradient(90deg, #C97F6E26 1.5px, transparent 1.5px);
+  background-size: 28px 28px;
+}
+.mosaic .river {
+  position: absolute; left: -6%; right: -6%; top: 38%;
+  height: 28%; border-radius: 40% 60% 50% 40%;
+  background: var(--river);
+}
+.mosaic i {
+  position: absolute; border-radius: 10px;
+  box-shadow: 4px 5px 0 var(--slab);
+}
+.tile .body { display: flex; flex-direction: column; gap: 13px; padding: 18px 22px 22px }
+.pills { display: flex; gap: 8px }
+.pill {
+  padding: 5px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+}
+.pill.region { background: var(--pill-region); color: var(--pill-region-ink) }
+.tile h3 {
+  font-family: var(--face); font-size: 24px; font-weight: 400; line-height: 1.15;
+}
+.meta { display: flex; align-items: center; justify-content: space-between }
+.plays {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--tally); font-size: 16px; font-weight: 600;
+}
+.dots { display: flex; gap: 5px }
+.dots i {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #E7DCC9;
+}
+.dots i.on { background: var(--flare) }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 42px; padding: 0 20px; border-radius: 999px;
+  background: var(--drill); color: #fff;
+  font-size: 13px; font-weight: 700; letter-spacing: .06em;
+}
+
+.tally {
+  width: 268px; padding: 22px;
+  background: var(--paper); border-radius: var(--round-tally);
+  box-shadow: var(--lift-s);
+}
+.tally .num { display: flex; align-items: baseline; gap: 4px }
+.tally .num b { font-family: var(--tally); font-size: 42px; font-weight: 700; color: var(--flare); line-height: 1 }
+.tally .num span { font-family: var(--tally); font-size: 20px; color: var(--mute) }
+.tally .cap { margin-left: auto; font-size: 13px; color: var(--mute) }
+.tally .row { display: flex; align-items: baseline }
+.bar { height: 16px; margin-top: 14px; background: var(--track); border-radius: 999px; overflow: hidden }
+.bar i { display: block; height: 100%; background: var(--flare); border-radius: inherit }
+
+.cue {
+  display: flex; align-items: center; justify-content: center;
+  width: 542px; height: 113px;
+  background: var(--paper); border-radius: var(--round-cue);
+  box-shadow: var(--lift); gap: 8px;
+}
+.cue .side {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 26px; color: var(--cue); min-width: 94px;
+}
+.cue .side.next { justify-content: flex-end }
+.cue .box {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center;
+  height: 60px; padding: 0 22px;
+  background: var(--input); border-radius: 16px;
+  box-shadow: inset 0 0 0 3px var(--flare);
+}
+.cue .ghost, .cue input {
+  font-family: var(--face); font-size: 30px; letter-spacing: .06em;
+}
+.cue .ghost {
+  position: absolute; left: 22px; top: 50%; transform: translateY(-50%);
+  color: var(--hint); white-space: nowrap; pointer-events: none;
+}
+.cue input {
+  position: relative; width: 11rem;
+  border: 0; outline: none; background: none;
+}
+.clock {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 29px; padding: 0 12px;
+  background: var(--paper); border-radius: 999px;
+  font-family: var(--tally); font-size: 20px; font-weight: 600;
+  box-shadow: var(--lift-s);
+}
+
+.act {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 52px; padding: 0 22px; border-radius: 14px;
+  font-size: 20px; font-weight: 700;
+  box-shadow: var(--lift-s);
+}
+.act.flare { background: var(--flare); color: var(--warm); box-shadow: var(--lift-s) }
+.act.paper { background: var(--paper) }
+.act:active { transform: translate(1px, 2px) }
+
+.rail {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 28px 0 8px;
+}
+.rail a {
+  font-size: 13px; font-weight: 600; color: var(--mute);
+  text-decoration: none; padding: 6px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+.rail a[aria-current="page"] { color: var(--paper); background: var(--mark) }

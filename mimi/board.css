@@ -1,0 +1,72 @@
+/* Mimi board tokens — from design.pen variables. Independent of the parent site. */
+
+:root {
+  --outer: #F1E9DC;
+  --paper: #FBF6EE;
+  --terrain: #E2D8C6;
+  --river: #8FD9C8;
+  --park: #BCCB90;
+  --mark: #4A3B31;
+  --mute: #93806F;
+  --flare: #E8622B;
+  --slab: #8A746647;
+  --slab-soft: #8A74663D;
+  --grid-ink: #C97F6E26;
+  --stripe: #E3B3A6;
+  --wait: #CFC1AA;
+  --seg: #E1D4BF;
+  --track: #E0D3BE;
+  --cue: #C6B49F;
+  --hint: #B7A692;
+  --pill-region: #E7DCC9;
+  --pill-region-ink: #7A6A5A;
+  --miss: #FBE7DE;
+  --input: #FFFDF8;
+  --warm: #FFF3E8;
+  --drill: #2F7DD1;
+  --night: #14110E;
+  --night-ink: #F4EADB;
+  --safe: #EFE7D8;
+  --safe-ink: #2E3238;
+
+  --face: "Jua", system-ui, sans-serif;
+  --copy: "Noto Sans KR", system-ui, sans-serif;
+  --tally: "Baloo 2", system-ui, sans-serif;
+
+  --lift: 14px 18px 0 var(--slab);
+  --lift-s: 8px 11px 0 var(--slab-soft);
+  --round-tile: 22px;
+  --round-sheet: 28px;
+  --round-tally: 20px;
+  --round-cue: 26px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+html, body { height: 100% }
+html { background: var(--outer) }
+body {
+  min-height: 100%;
+  /* 한글은 어절 단위로 끊는다. 안 그러면 '완주'가 '완/주'로 갈라진다. */
+  word-break: keep-all;
+  color: var(--mark);
+  font-family: var(--copy);
+  font-weight: 500;
+  background: var(--outer);
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit }
+button { border: 0; background: none; cursor: pointer }
+a { color: inherit }
+
+#root { min-height: 100% }
+
+.grain {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-ink) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, var(--grid-ink) 1.5px, transparent 1.5px);
+  background-size: 68px 68px;
+  opacity: .55;
+}
+
+#stage { position: relative; z-index: 1; min-height: 100% }
