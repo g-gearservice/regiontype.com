@@ -23,6 +23,7 @@
     style.css
     app.js       판정 엔진 + 게임 루프 + 결과 카드
     design/      플레이·큐 화면 디자인 (`design.pen`)
+    relay/       피드백 → GitHub 이슈 중계기 (Cloudflare Worker)
     mimi/        미니 모터웨이즈 스타일 보드 (개발용)
     data/*.course.json   항목·별칭·한 줄 정보 (mode: sequence)
     data/*.geom.json     비트맵 도트 격자
@@ -69,6 +70,50 @@
 오답은 **조합이 끝난 시점에 어느 접미도 미점령 항목의 앞부분이 아닐 때** 자동
 확정된다(`강난` → 즉시 오답). 스페이스를 keydown 으로 가로채면 IME 조합 확정
 자체가 깨지므로 그렇게 하지 않는다. 감점은 없고 콤보만 끊긴다.
+
+## 피드백
+
+타이틀 로고의 노란 점이 곧 피드백 버튼이다. 손을 얹거나 탭으로 옮겨오면 점이
+커지며 깃발이 뜨고, 누르면 `<dialog>` 가 모달로 열린다. 화면을 하나 더 만들지
+않은 건 "여기서 말을 걸 수 있다"를 로고 옆 점 하나로 끝내기 위해서다.
+
+받는 쪽은 `app.js` 위쪽 상수 하나로 갈린다.
+
+    const FEEDBACK_URL = ''       // 채우면 여기로 JSON 을 POST
+    const FEEDBACK_REPO = 'pistolinkr/regiontype.com'
+
+보내는 몸통은
+
+    { kind, body, from, v, href, ua }
+
+`kind` 는 버그 / 제안 / 지명·정보 오류. 글만 받으면 재현할 수 없어 버전·주소·
+브라우저를 함께 싣는다. 회신 주소는 적었을 때만 실린다 — 공개 이슈에 남으므로
+폼에서 그렇다고 밝히고, `@` 를 풀어 적는다.
+
+`FEEDBACK_URL` 이 비어 있으면 `FEEDBACK_REPO` 의 이슈 초안을 미리 채워 새 탭으로
+연다. 인프라 없이 도는 길이라 기본값으로 두었지만, 제보자에게 GitHub 계정을
+요구한다. 그게 싫으면 아래 중계기를 세운다.
+
+### 중계기 (`relay/`)
+
+GitHub 이슈는 토큰 없이 만들 수 없고, 정적 사이트에 토큰을 두면 그대로 털린다.
+그래서 토큰을 쥔 Cloudflare Worker 한 장을 사이에 둔다. 하는 일은 그것뿐이다 —
+받은 JSON 을 이슈 한 장으로 지어 GitHub API 로 넘긴다.
+
+    cd relay
+    wrangler login
+    wrangler secret put GH_TOKEN     # 그 저장소의 Issues 쓰기만 가진 세밀 토큰
+    wrangler deploy
+
+찍혀 나온 주소를 `app.js` 의 `FEEDBACK_URL` 에 붙이면 '보내기'가 곧 이슈 등록이
+된다. 토큰은 Worker 안에만 있고 브라우저로는 내려가지 않는다.
+
+    node relay/test.mjs      이슈 한 장이 제대로 지어지는지 검사
+
+이슈를 만드는 열린 주소라 언젠가 스팸이 온다. IP 하나당 60초 창을 두었고,
+메타는 코드 블록에 가둬 남이 보낸 값이 이슈 서식을 흔들지 못하게 했다. 그래도
+새는 날이 오면 Turnstile 을 앞에 세운다 — 토큰이 그 저장소 이슈만 만질 수 있어
+최악이라도 README 한 장짜리 저장소를 비우면 끝이다.
 
 ## 접근성
 

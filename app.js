@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.37';
+const VER = '0.41';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
@@ -976,6 +976,79 @@ $('#save').onclick = async () => {
 };
 $('#again').onclick = () => start(G.slug, { zoom: G.zoom });
 
+/* ── 피드백 ──────────────────────────────────────────
+   정적 사이트에는 GitHub 토큰을 둘 수 없다. relay/ 의 중계기가 토큰을 쥐고
+   이슈를 대신 만든다 — FEEDBACK_URL 이 그 주소다. 비어 있으면 이슈 초안을
+   새 탭으로 열어, 중계기가 서기 전에도 피드백이 쌓이도록 한다.
+   글만으로는 재현할 수 없어 버전·주소·브라우저를 함께 싣는다. */
+const FEEDBACK_URL = 'https://rt-feedback.g-gearservice.workers.dev';
+const FEEDBACK_REPO = 'pistolinkr/regiontype.com';   // 코드는 없고 이슈만 받는 곳
+const FB_KIND = { bug: '버그', idea: '제안', data: '지명·정보 오류' };
+
+const fbIssue = c => {
+  const lines = [c.body, '', '---', `종류: ${FB_KIND[c.kind]}`,
+                 `버전: ${c.v}`, `주소: ${c.href}`, `브라우저: ${c.ua}`];
+  if (c.from) lines.push(`회신: ${c.from}`);
+  return `https://github.com/${FEEDBACK_REPO}/issues/new`
+    + `?title=${encodeURIComponent(`[${FB_KIND[c.kind]}] ${c.body.slice(0, 50)}`)}`
+    + `&body=${encodeURIComponent(lines.join('\n'))}`;
+};
+
+const fbNote = $('#fbNote');
+const fbSay = (msg, bad) => { fbNote.textContent = msg; fbNote.classList.toggle('bad', !!bad); };
+const FB_MAIL = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+let fbKind = 'bug';
+const fbPlaceholder = () => {
+  $('#fbBody').placeholder = FB_KIND[fbKind] + '내용';
+};
+fbPlaceholder();
+
+$('#fbOpen').onclick = () => { fbSay(''); fbPlaceholder(); $('#feedback').showModal(); };
+$('#fbClose').onclick = () => $('#feedback').close();
+/* dialog 는 배경 클릭으로 닫히지 않는다. 여백은 form 이 갖고 있으니
+   dialog 자신이 표적이면 곧 바깥이다. */
+$('#feedback').onclick = e => { if (e.target === e.currentTarget) e.currentTarget.close(); };
+
+$('.fb-kind').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  fbKind = b.dataset.v;
+  $('.fb-kind').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  fbPlaceholder();
+};
+
+$('#fbFrom').oninput = () => {
+  const el = $('#fbFrom');
+  el.value = el.value.replace(/[^a-zA-Z0-9._%+\-@]/g, '');
+};
+
+$('#fbForm').onsubmit = async e => {
+  e.preventDefault();
+  const body = $('#fbBody').value.trim();
+  if (!body) return;
+  const from = $('#fbFrom').value.trim();
+  if (from && !FB_MAIL.test(from)) {
+    fbSay('메일 주소만 입력해 주세요.', true);
+    $('#fbFrom').focus();
+    return;
+  }
+  const c = { kind: fbKind, body, from,
+              v: VER, href: location.href, ua: navigator.userAgent };
+  if (!FEEDBACK_URL) { window.open(fbIssue(c), '_blank', 'noopener'); $('#feedback').close(); return; }
+  $('#fbSend').disabled = true;
+  fbSay('보내는 중…');
+  try {
+    const r = await fetch(FEEDBACK_URL, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(c) });
+    if (!r.ok) throw new Error(r.status);
+    $('#fbBody').value = '';
+    fbSay('보내주셔서 고맙습니다.');
+    setTimeout(() => $('#feedback').close(), 1200);
+  } catch {
+    fbSay('보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true);
+  }
+  $('#fbSend').disabled = false;
+};
+
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
   const mk = names => names.map(n => ({ name: n, aliases: [stripSuffix(n)].filter(Boolean), claimed: false }));
@@ -995,6 +1068,11 @@ if (location.search.includes('rt=1')) {
                 { name: '역삼동', aliases: [], claimed: false }];
   console.assert(m('역삼동', dong) === '역삼동', '정식 명칭 일치가 남의 별칭에 가려지면 안 된다');
   console.assert(m('역삼1', dong) === '역삼1동', '별칭은 후보가 자기 자신뿐일 때 확정');
+
+  const fbu = fbIssue({ kind: 'bug', body: '가양1동이 오답으로 처리됨', v: '0.38',
+                        href: 'https://regiontype.com/', ua: 'UA', from: '' });
+  console.assert(fbu.includes(encodeURIComponent('[버그] 가양1동이 오답으로 처리됨')), '이슈 제목 = 종류 + 앞머리');
+  console.assert(!fbu.includes(encodeURIComponent('회신:')), '회신 주소는 적었을 때만 싣는다');
 
   console.log('self-check done');
 }
