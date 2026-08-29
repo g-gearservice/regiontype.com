@@ -562,8 +562,8 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
   color:color-mix(in srgb,var(--ink-soft) 38%,transparent);
   transition:color .12s var(--ease-out), transform .12s var(--ease-out);
 }
-.typing b.on{color:var(--accent-text)}
-.typing.bad b:not(.on){color:color-mix(in srgb,var(--accent-deep) 45%,transparent)}
+.typing b.on{color:color-mix(in srgb,var(--accent-deep) 45%,transparent)}
+.typing.bad b:not(.on){color:var(--accent-text)}
 .typing.bad .q-letters{animation:shake .22s}
 
 /* 원래 입력창은 화면에서 뺀다. display:none 이면 포커스가 안 잡혀 IME 가 죽는다 */
