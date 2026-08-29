@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.47';
+const VER = '0.49';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -150,10 +150,61 @@ fetch(asset('data/korea-pixels.json')).then(r => r.json()).then(g => {
   g.over = (g.w - g.anchor - 1) / g.h;
   svg.style.setProperty('--pm-over', g.over);
   PM = g;
-  const draw = () => svg.innerHTML = g.rows.flatMap((row, y) =>
-    [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'seoul' : ''))).join('');
+  let bits = [];
+  const bindBits = () => {
+    bits = [...svg.querySelectorAll('circle')].map(el => ({
+      el, x: +el.getAttribute('cx'), y: +el.getAttribute('cy'),
+      seoul: el.classList.contains('seoul')
+    }));
+  };
+  const draw = () => {
+    svg.innerHTML = g.rows.flatMap((row, y) =>
+      [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'seoul' : ''))).join('');
+    bindBits();
+  };
   REDRAW.push(draw); draw();
   requestAnimationFrame(() => requestAnimationFrame(syncGrid));
+
+  /* 타이틀 맵 근접장. 포인터는 창에서 읽고 SVG 유저 좌표로 옮긴다.
+     #pixelmap 은 pointer-events:none 이라 클릭을 가로채지 않는다. */
+  const R = 1.8, HOVER = 0.62;
+  let mx = 0, my = 0, raf = 0;
+  const fine = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
+  const skipScale = () => document.documentElement.dataset.motion === 'off'
+    || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clearBit = b => {
+    b.el.style.transform = '';
+    b.el.style.fill = '';
+    b.el.style.opacity = '';
+  };
+  const paint = () => {
+    raf = 0;
+    if (!fine() || !bits.length) return;
+    if (!$('#title.on, #options.on')) { bits.forEach(clearBit); return; }
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = svg.createSVGPoint();
+    pt.x = mx; pt.y = my;
+    const p = pt.matrixTransform(ctm.inverse());
+    const noScale = skipScale();
+    for (const b of bits) {
+      const d = Math.hypot(b.x - p.x, b.y - p.y);
+      if (d >= R) { clearBit(b); continue; }
+      const t = 1 - d / R;
+      /* 서울은 이미 강조색에 불투명하다. 근접장의 색·투명도까지 씌우면 바닥을
+         0.38 로 잡은 식이 서울을 되레 흐리게 만든다 — 크기만 반응시킨다. */
+      if (!b.seoul) {
+        b.el.style.fill = 'var(--accent)';
+        b.el.style.opacity = d < HOVER ? '1' : String(0.38 + 0.62 * t);
+      }
+      b.el.style.transform = noScale ? ''
+        : (d < HOVER ? 'scale(1)' : `scale(${1 - 0.5 * t * t})`);
+    }
+  };
+  window.addEventListener('pointermove', e => {
+    mx = e.clientX; my = e.clientY;
+    if (!raf) raf = requestAnimationFrame(paint);
+  }, { passive: true });
 });
 
 /* 카드 상단은 흰 원 없이 도트만. 빈 칸을 잘라 초록 면을 채운다 */
