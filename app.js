@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.44';
+const VER = '0.46';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
@@ -104,7 +104,7 @@ function syncGrid() {
     root = $('#map'); space = G.cam; cell = G.cell;
   } else {
     const pm = $('#pixelmap');
-    if (!pm || !$('#title').classList.contains('on')) return;
+    if (!pm || !$('#title.on, #options.on')) return;
     root = space = pm; cell = 1;
   }
   const ctm = space.getScreenCTM();
@@ -989,7 +989,6 @@ const FB_KIND = { bug: '버그', idea: '제안', data: '지명·정보 오류' }
 const fbIssue = c => {
   const lines = [c.body, '', '---', `종류: ${FB_KIND[c.kind]}`,
                  `버전: ${c.v}`, `주소: ${c.href}`, `브라우저: ${c.ua}`];
-  if (c.from) lines.push(`회신: ${c.from}`);
   return `https://github.com/${FEEDBACK_REPO}/issues/new`
     + `?title=${encodeURIComponent(`[${FB_KIND[c.kind]}] ${c.body.slice(0, 50)}`)}`
     + `&body=${encodeURIComponent(lines.join('\n'))}`;
@@ -997,7 +996,6 @@ const fbIssue = c => {
 
 const fbNote = $('#fbNote');
 const fbSay = (msg, bad) => { fbNote.textContent = msg; fbNote.classList.toggle('bad', !!bad); };
-const FB_MAIL = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 let fbKind = 'bug';
 const fbPlaceholder = () => {
   $('#fbBody').placeholder = FB_KIND[fbKind] + '내용';
@@ -1017,22 +1015,11 @@ $('.fb-kind').onclick = e => {
   fbPlaceholder();
 };
 
-$('#fbFrom').oninput = () => {
-  const el = $('#fbFrom');
-  el.value = el.value.replace(/[^a-zA-Z0-9._%+\-@]/g, '');
-};
-
 $('#fbForm').onsubmit = async e => {
   e.preventDefault();
   const body = $('#fbBody').value.trim();
   if (!body) return;
-  const from = $('#fbFrom').value.trim();
-  if (from && !FB_MAIL.test(from)) {
-    fbSay('메일 주소만 입력해 주세요.', true);
-    $('#fbFrom').focus();
-    return;
-  }
-  const c = { kind: fbKind, body, from,
+  const c = { kind: fbKind, body,
               v: VER, href: location.href, ua: navigator.userAgent };
   if (!FEEDBACK_URL) { window.open(fbIssue(c), '_blank', 'noopener'); $('#feedback').close(); return; }
   $('#fbSend').disabled = true;
@@ -1071,9 +1058,9 @@ if (location.search.includes('rt=1')) {
   console.assert(m('역삼1', dong) === '역삼1동', '별칭은 후보가 자기 자신뿐일 때 확정');
 
   const fbu = fbIssue({ kind: 'bug', body: '가양1동이 오답으로 처리됨', v: '0.38',
-                        href: 'https://regiontype.com/', ua: 'UA', from: '' });
+                        href: 'https://regiontype.com/', ua: 'UA' });
   console.assert(fbu.includes(encodeURIComponent('[버그] 가양1동이 오답으로 처리됨')), '이슈 제목 = 종류 + 앞머리');
-  console.assert(!fbu.includes(encodeURIComponent('회신:')), '회신 주소는 적었을 때만 싣는다');
+  console.assert(fbu.includes(encodeURIComponent('브라우저: UA')), '메타는 버전·주소·브라우저까지');
 
   console.log('self-check done');
 }
