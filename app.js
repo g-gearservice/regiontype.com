@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.65';
+const VER = '0.66';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -817,6 +817,11 @@ function paintTyped(raw, composing = false) {
     if (k > n || i === 0) { n = k; rest = sub.slice(k); }
     if (n === G.want.length) break;
   }
+  /* 목표를 다 맞힌 뒤에 남은 것은 IME 가 되돌려 넣은 찌꺼기다. 스페이스로 확정할
+     때 조합을 끝내며 비운 입력창에 글자를 도로 넣는 일이 있다 — 그걸 칸을 늘려
+     보여 주면 같은 음절이 두 번 찍힌 것처럼 된다. 다 맞혔으면 거기서 끝이다. */
+  if (n >= G.want.length) rest = '';
+
   const ing = composing && rest.length > 0;     // 마지막 한 글자는 아직 만들어지는 중
   // 그 앞의 것들은 이미 굳은 오타다
   const bad = rest.length - (ing ? 1 : 0) > 0;
