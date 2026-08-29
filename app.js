@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.61';
+const VER = '0.62';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -828,7 +828,20 @@ function paintTyped(raw, composing = false) {
     el.classList.toggle('cur-r', !!live || (n >= G.want.length && i === G.want.length - 1));
   });
   // 조합이 끝났는데도 안 맞으면 오타다
-  $('#typing').classList.toggle('bad', rest.length > 0 && !ing);
+  const bad = rest.length > 0 && !ing;
+  $('#typing').classList.toggle('bad', bad);
+  return bad;
+}
+
+/* 오타를 붙잡아 두지 않고 한 번 흔들어 알린다. 남겨 두면 화면이 첫 오타
+   글자에서 굳는다 — 뒤에 친 글자는 그려질 자리가 없어 아무리 쳐도 안 바뀌고,
+   버퍼에 몇 자가 쌓였는지 보이지 않아 몇 번을 지워야 할지도 알 수 없다. */
+let badFlash = null;
+function flashBad() {
+  const t = $('#typing');
+  clearTimeout(badFlash);
+  t.classList.remove('bad'); void t.offsetWidth; t.classList.add('bad');
+  badFlash = setTimeout(() => t.classList.remove('bad'), 240);
 }
 
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
@@ -909,7 +922,13 @@ $('#typein').addEventListener('blur', markFocus);
 
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
-  paintTyped(e.target.value, e.isComposing);
+  /* 조합 중에 비우면 IME 가 깨진다. 조합이 끝난 뒤에만 흘려보낸다. */
+  if (paintTyped(e.target.value, e.isComposing) && !e.isComposing) {
+    e.target.value = '';
+    paintTyped('');
+    flashBad();
+    return;
+  }
   if (!/\s/.test(e.target.value)) return;        // 스페이스 전에는 판단하지 않는다
   const answer = e.target.value.replace(/\s+/g, '');
   e.target.value = '';
