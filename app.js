@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.64';
+const VER = '0.65';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -839,7 +839,8 @@ function paintTyped(raw, composing = false) {
     el.textContent = typed || G.want[i] || '';
     // 커서는 방금 친 것 바로 뒤에 선다
     el.classList.toggle('cur-l', i === n && !typed);
-    el.classList.toggle('cur-r', !!typed && last);
+    // 다 맞게 쳤으면 마지막 글자 뒤에 선다 — 칸이 없어 cur-l 이 설 자리가 없다
+    el.classList.toggle('cur-r', (!!typed && last) || (!rest.length && n >= need && i === need - 1));
   });
   $('#typing').classList.toggle('bad', bad);
   return bad;
