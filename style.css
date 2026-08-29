@@ -575,6 +575,8 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
 /* 지금 치고 있는 자리 — 조합 중인 자모가 그대로 보인다 */
 .typing b.ing{color:var(--ink);transform:translateY(-1px)}
 .typing.bad b.ing{color:var(--accent-deep)}
+/* 목표보다 길게 친 글자. 지워야 할 것이라고 눈에 띄어야 한다 */
+.typing b.over{color:var(--accent-deep);opacity:.75}
 
 /* 타이핑 커서 — 방금 친 글자 바로 뒤에 선다 */
 .typing b.cur-l::before, .typing b.cur-r::after{

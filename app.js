@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.63';
+const VER = '0.64';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -817,32 +817,34 @@ function paintTyped(raw, composing = false) {
     if (k > n || i === 0) { n = k; rest = sub.slice(k); }
     if (n === G.want.length) break;
   }
-  const ing = composing && rest.length === 1;   // 아직 만들어지는 중인 한 글자
+  const ing = composing && rest.length > 0;     // 마지막 한 글자는 아직 만들어지는 중
+  // 그 앞의 것들은 이미 굳은 오타다
+  const bad = rest.length - (ing ? 1 : 0) > 0;
+
+  /* 칸은 목표 글자 수에 맞춰 만들어져 있다. 오타로 길어지면 그릴 자리가 없어
+     화면이 첫 오타 글자에서 굳고 — 아무리 더 쳐도 안 바뀐다 — 버퍼에 몇 자가
+     쌓였는지 보이지 않아 몇 번을 지워야 할지도 알 수 없다. 넘치면 칸을 늘린다.
+     한글 IME 는 스페이스 전까지 조합을 끝내지 않아 isComposing 이 계속 참이므로,
+     조합 중이라고 손을 놓으면 그 사이 내내 굳어 있게 된다. */
+  const need = Math.max(G.want.length, n + rest.length);
+  while (box.children.length < need) box.append(document.createElement('b'));
+  while (box.children.length > need) box.lastChild.remove();
+
   [...box.children].forEach((el, i) => {
+    const typed = i >= n ? rest[i - n] : null;   // 이 자리에 실제로 친 글자
+    const last = i === n + rest.length - 1;      // 방금 친 자리
     el.classList.toggle('on', i < n);
-    const live = i === n && rest && (ing || !composing);
-    el.classList.toggle('ing', !!live);
-    el.textContent = live ? rest[0] : G.want[i];
+    el.classList.toggle('ing', !!typed);
+    el.classList.toggle('over', i >= G.want.length);   // 목표보다 길어진 자리
+    el.textContent = typed || G.want[i] || '';
     // 커서는 방금 친 것 바로 뒤에 선다
-    el.classList.toggle('cur-l', i === n && !live);
-    el.classList.toggle('cur-r', !!live || (n >= G.want.length && i === G.want.length - 1));
+    el.classList.toggle('cur-l', i === n && !typed);
+    el.classList.toggle('cur-r', !!typed && last);
   });
-  // 조합이 끝났는데도 안 맞으면 오타다
-  const bad = rest.length > 0 && !ing;
   $('#typing').classList.toggle('bad', bad);
   return bad;
 }
 
-/* 오타를 붙잡아 두지 않고 한 번 흔들어 알린다. 남겨 두면 화면이 첫 오타
-   글자에서 굳는다 — 뒤에 친 글자는 그려질 자리가 없어 아무리 쳐도 안 바뀌고,
-   버퍼에 몇 자가 쌓였는지 보이지 않아 몇 번을 지워야 할지도 알 수 없다. */
-let badFlash = null;
-function flashBad() {
-  const t = $('#typing');
-  clearTimeout(badFlash);
-  t.classList.remove('bad'); void t.offsetWidth; t.classList.add('bad');
-  badFlash = setTimeout(() => t.classList.remove('bad'), 240);
-}
 
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
 const target = () => G.seq ? G.items[G.idx] : null;
@@ -922,13 +924,7 @@ $('#typein').addEventListener('blur', markFocus);
 
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
-  /* 조합 중에 비우면 IME 가 깨진다. 조합이 끝난 뒤에만 흘려보낸다. */
-  if (paintTyped(e.target.value, e.isComposing) && !e.isComposing) {
-    e.target.value = '';
-    paintTyped('');
-    flashBad();
-    return;
-  }
+  paintTyped(e.target.value, e.isComposing);
   if (!/\s/.test(e.target.value)) return;        // 스페이스 전에는 판단하지 않는다
   const answer = e.target.value.replace(/\s+/g, '');
   e.target.value = '';
