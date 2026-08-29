@@ -5,11 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Regiontype</title>
 <meta name="description" content="지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구부터.">
+<!-- 파비콘은 기기 테마(prefers-color-scheme)만 따른다. 사이트의 야간 모드는
+     data-night 로 도는 별개의 것이라, 설정을 만져도 아이콘은 바뀌지 않는다.
+     media 를 못 읽는 브라우저를 위해 마지막에 기본값 하나를 남긴다. -->
+<link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="favicon/white.png">
+<link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="favicon/dark.png">
+<link rel="icon" type="image/png" href="favicon/dark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 아이콘: Material Symbols Rounded · FILL 0 · wght 300 · GRAD 200 · opsz 24 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300..700,0,200">
-<link rel="stylesheet" href="style.css?v=0.51">
+<link rel="stylesheet" href="style.css?v=0.57">
 </head>
 <body>
 
@@ -24,7 +30,7 @@
 
 <!-- 타이틀 -->
 <section id="title" class="screen on">
-  <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
+  <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="ms">flag</i></button></h1>
   <nav class="menu">
     <button data-go="regions">시작하기</button>
     <button data-go="options">설정</button>
@@ -57,8 +63,10 @@
     <dd><button class="toggle" data-opt="sound" aria-label="효과음"></button></dd>
     <dt>애니메이션</dt>
     <dd><button class="toggle" data-opt="motion" aria-label="애니메이션"></button></dd>
+    <dt>그리드</dt>
+    <dd><button class="toggle" data-opt="grid" aria-label="그리드"></button></dd>
   </dl>
-  <p class="ver">regiontype v0.2 · 서울 자치구 경계 2013 기준</p>
+  <p class="ver">regiontype v0.3.43 · 서울 자치구 경계 2013 기준</p>
 </section>
 
 <!-- 플레이 -->
@@ -161,6 +169,35 @@
   <p>타이핑 게임이라 물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>
 </div>
 
-<script src="app.js?v=0.37"></script>
+
+<!-- 피드백 — 로고 점에서 열린다 -->
+<dialog id="feedback" aria-labelledby="fbHead">
+  <form id="fbForm">
+    <div class="fb-head">
+      <h2 id="fbHead">피드백</h2>
+      <button type="button" class="back" id="fbClose" aria-label="닫기"><i class="ms">close</i></button>
+    </div>
+    <p class="fb-lead">뭐가 이상했는지, 뭐가 있었으면 좋겠는지 적어주세요.</p>
+    <div class="choice-b fb-kind" role="group" aria-label="피드백 종류">
+      <button type="button" data-v="bug" aria-pressed="true">버그</button>
+      <button type="button" data-v="idea" aria-pressed="false">제안</button>
+      <button type="button" data-v="data" aria-pressed="false">지명·정보 오류</button>
+    </div>
+    <textarea id="fbBody" required autofocus maxlength="500" aria-label="내용"
+      placeholder="버그내용"></textarea>
+    <input id="fbFrom" type="email" inputmode="email" maxlength="120"
+      autocomplete="email" spellcheck="false"
+      pattern="^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+      title="메일 주소만 입력해 주세요"
+      placeholder="메일 (선택)" aria-label="메일 (선택)">
+    <small class="fb-priv">적으시면 공개 이슈에 함께 올라갑니다.</small>
+    <div class="fb-foot">
+      <p class="fb-note" id="fbNote" aria-live="polite"></p>
+      <button type="submit" class="fb-send" id="fbSend">보내기</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js?v=0.43"></script>
 </body>
 </html>

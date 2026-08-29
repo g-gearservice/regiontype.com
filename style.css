@@ -28,6 +28,8 @@
 :root[data-motion="off"]{ --fast:0s; --slow:0s; --flip:0s }
 
 *{box-sizing:border-box;margin:0;padding:0}
+::selection{background:var(--accent);color:var(--ink)}
+::-moz-selection{background:var(--accent);color:var(--ink)}
 html,body{height:100%}
 body{
   background:var(--bg); color:var(--ink); overflow:hidden;
@@ -47,6 +49,8 @@ body{
     radial-gradient(130% 98% at 46% 36%,rgba(255,255,255,.10),rgba(74,102,116,.13) 84%);
 }
 :root[data-night] .grid-bg::after{background:none}
+/* 그리드를 끄면 격자 무늬만 지운다 — 대각 광원·비네트는 그대로 둔다 */
+:root[data-no-grid] .grid-bg rect{display:none}
 
 /* ── 화면 전환 ─────────────────────────── */
 .screen{
@@ -727,3 +731,59 @@ body{
 @keyframes tilepop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){ .rt-map .tiles > g.pop{animation:none} }
 
+
+/* ── 피드백 ────────────────────────────────────────────
+   로고의 점이 그대로 버튼이다. 평소엔 점, 손을 얹으면 깃발이 뜬다 —
+   타이틀에 버튼을 하나 더 놓지 않고도 "여기서 말을 걸 수 있다"가 보인다. */
+button.dot{
+  font:inherit; border:0; padding:0; cursor:pointer; color:#fff;
+  position:relative; z-index:1;
+  transition:transform var(--fast) var(--ease-out);
+}
+/* 점은 14px 남짓이라 그대로는 겨눌 수 없다 — 보이지 않는 여유를 두른다 */
+button.dot::before{content:"";position:absolute;inset:-.14em;border-radius:50%}
+button.dot .ms{
+  position:absolute; left:50%; top:50%; font-size:.15em;
+  transform:translate(-50%,-50%); opacity:0; pointer-events:none;
+  transition:opacity var(--fast) var(--ease-out);
+}
+button.dot:is(:hover,:focus-visible){transform:scale(2.3);background:var(--accent-deep)}
+button.dot:is(:hover,:focus-visible) .ms{opacity:1}
+button.dot:focus-visible{outline:3px solid transparent}
+
+#feedback{
+  border:0; padding:0; background:none; color:var(--ink);
+  width:min(92vw,520px); max-width:none;
+  margin:auto;   /* * { margin:0 } 이 UA 의 가운데 정렬을 지운다 — 되돌린다 */
+}
+#feedback::backdrop{background:rgba(35,44,49,.42);backdrop-filter:blur(2px)}
+#fbForm{
+  display:flex; flex-direction:column; gap:14px;
+  background:var(--card); border-radius:6px; box-shadow:var(--shadow-lift);
+  padding:24px 28px 22px; max-height:88vh; overflow:auto;
+}
+:root[data-night] #fbForm{border:1px solid var(--grid)}
+.fb-head{display:flex;align-items:center;gap:12px}
+.fb-head h2{flex:1;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.fb-lead{margin-top:-8px;color:var(--ink-soft);font-size:15px;line-height:1.6}
+.fb-kind{justify-content:flex-start}
+#fbForm :is(textarea,input){
+  font:inherit; font-size:16px; width:100%; color:var(--ink);
+  background:var(--bg); border:2px solid var(--grid); border-radius:4px;
+  padding:10px 12px; transition:border-color var(--fast) var(--ease-out);
+}
+#fbForm textarea{height:130px;min-height:130px;resize:none;line-height:1.6}
+#fbForm :is(textarea,input):focus{outline:0;border-color:transparent}
+.fb-priv{margin-top:-9px;color:var(--ink-soft);font-size:13px;line-height:1.4}
+.fb-foot{display:flex;align-items:center;gap:14px}
+.fb-note{flex:1;font-size:14px;line-height:1.4;color:var(--ink-soft)}
+.fb-note.bad{color:var(--accent-text)}
+.fb-send{
+  font:inherit;font-weight:700;font-size:20px;color:#fff;cursor:pointer;
+  background:var(--block);border:0;padding:6px 18px 8px;
+  transition:background var(--fast) var(--ease-out);
+}
+.fb-send[disabled]{opacity:.5;cursor:default}
+@media (hover:hover) and (pointer:fine){
+  .fb-send:not([disabled]):hover{background:var(--accent)}
+}
