@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.45';
+const VER = '0.46';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
@@ -104,7 +104,7 @@ function syncGrid() {
     root = $('#map'); space = G.cam; cell = G.cell;
   } else {
     const pm = $('#pixelmap');
-    if (!pm || !$('#title').classList.contains('on')) return;
+    if (!pm || !$('#title.on, #options.on')) return;
     root = space = pm; cell = 1;
   }
   const ctm = space.getScreenCTM();

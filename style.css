@@ -341,15 +341,24 @@ body{
 .stage{margin-bottom:4px}
 .opts{max-width:620px;margin-left:56px}
 
-/* ── 타이틀 픽셀맵 ─────────────────────── */
+/* ── 픽셀맵 (타이틀·설정 공용) ─────────── */
 #pixelmap{
   /* viewBox 를 부산·울산이 있는 열에서 끊었으므로 right 가 곧 그 지점까지의 여백이다.
      동해안(포항 쪽)이 더 튀어나와도 overflow 로 흘려보내 기준이 흔들리지 않는다. */
-  position:absolute; top:50%; transform:translateY(-50%);
+  /* 화면 밖에 사는 한 장이라 뷰포트 기준으로 고정한다 — 타이틀에서 설정으로
+     넘어가도 같은 자리에 그대로 남는다. */
+  position:fixed; top:50%; transform:translateY(-50%);
   display:block; height:var(--pm-h); width:auto; overflow:visible; pointer-events:none;
   /* 여백 기준은 부산·울산이되, 그 밖의 울릉도·독도가 잘리지 않을 만큼은 보장한다 */
   right:max(var(--indent), calc(var(--pm-h) * var(--pm-over) + 12px));
+  z-index:-2;   /* 격자(-3) 위, 화면 내용 아래 */
+  opacity:0; transition:opacity var(--slow) var(--ease-out);
 }
+/* 타이틀과 설정에서만 보인다. 나머지 화면에서는 조용히 빠진다 */
+body:has(#title.on, #options.on) #pixelmap{opacity:1}
+/* 모바일 안내 화면에서는 .screen 을 숨겨도 픽셀맵은 화면 밖이라 따라 숨지
+   않는다. 위 display:block 보다 뒤에 와야 이긴다 — 같은 특이도라 순서가 정한다 */
+@media (pointer:coarse),(max-width:640px){ #pixelmap{display:none} }
 #pixelmap circle{fill:var(--block);opacity:.38}
 #pixelmap circle.seoul{fill:var(--accent);opacity:1}
 .thumb svg circle{fill:#fff}
