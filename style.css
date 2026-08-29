@@ -49,6 +49,8 @@ body{
     radial-gradient(130% 98% at 46% 36%,rgba(255,255,255,.10),rgba(74,102,116,.13) 84%);
 }
 :root[data-night] .grid-bg::after{background:none}
+/* 그리드를 끄면 격자 무늬만 지운다 — 대각 광원·비네트는 그대로 둔다 */
+:root[data-no-grid] .grid-bg rect{display:none}
 
 /* ── 화면 전환 ─────────────────────────── */
 .screen{

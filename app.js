@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.41';
+const VER = '0.43';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const REGIONS = [
   {
@@ -19,7 +19,7 @@ let PM = null;   // 타이틀 픽셀맵 메타. 배경 격자를 비트 칸에 �
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
 const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-const DEF = { time: 120, night: false, sound: true, motion: true, hint: true };
+const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -33,6 +33,7 @@ const saveOpt = () => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
   document.documentElement.toggleAttribute('data-night', opt.night);
   document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
+  document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
   REDRAW.forEach(f => f());
   requestAnimationFrame(syncGrid);
   document.querySelectorAll('.toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));

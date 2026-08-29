@@ -5,11 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Regiontype</title>
 <meta name="description" content="지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구부터.">
+<!-- 파비콘은 기기 테마(prefers-color-scheme)만 따른다. 사이트의 야간 모드는
+     data-night 로 도는 별개의 것이라, 설정을 만져도 아이콘은 바뀌지 않는다.
+     media 를 못 읽는 브라우저를 위해 마지막에 기본값 하나를 남긴다. -->
+<link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="favicon/white.png">
+<link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="favicon/dark.png">
+<link rel="icon" type="image/png" href="favicon/dark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 아이콘: Material Symbols Rounded · FILL 0 · wght 300 · GRAD 200 · opsz 24 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300..700,0,200">
-<link rel="stylesheet" href="style.css?v=0.56">
+<link rel="stylesheet" href="style.css?v=0.57">
 </head>
 <body>
 
@@ -57,8 +63,10 @@
     <dd><button class="toggle" data-opt="sound" aria-label="효과음"></button></dd>
     <dt>애니메이션</dt>
     <dd><button class="toggle" data-opt="motion" aria-label="애니메이션"></button></dd>
+    <dt>그리드</dt>
+    <dd><button class="toggle" data-opt="grid" aria-label="그리드"></button></dd>
   </dl>
-  <p class="ver">regiontype v0.2 · 서울 자치구 경계 2013 기준</p>
+  <p class="ver">regiontype v0.3.43 · 서울 자치구 경계 2013 기준</p>
 </section>
 
 <!-- 플레이 -->
@@ -190,6 +198,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.41"></script>
+<script src="app.js?v=0.43"></script>
 </body>
 </html>
