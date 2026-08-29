@@ -7,10 +7,14 @@
 <meta name="description" content="지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구부터.">
 <!-- 파비콘은 기기 테마(prefers-color-scheme)만 따른다. 사이트의 야간 모드는
      data-night 로 도는 별개의 것이라, 설정을 만져도 아이콘은 바뀌지 않는다.
-     media 를 못 읽는 브라우저를 위해 마지막에 기본값 하나를 남긴다. -->
-<link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="favicon/white.png">
-<link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="favicon/dark.png">
-<link rel="icon" type="image/png" href="favicon/dark.png">
+     media 를 못 읽는 브라우저를 위해 마지막에 기본값 하나를 남긴다.
+     sizes 는 Safari 가 media 다른 두 아이콘 중 하나를 고르지 못하고
+     기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
+     데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
+     같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.44">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.44">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.44">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 아이콘: Material Symbols Rounded · FILL 0 · wght 300 · GRAD 200 · opsz 24 -->
@@ -66,7 +70,7 @@
     <dt>그리드</dt>
     <dd><button class="toggle" data-opt="grid" aria-label="그리드"></button></dd>
   </dl>
-  <p class="ver">regiontype v0.3.43 · 서울 자치구 경계 2013 기준</p>
+  <p class="ver">regiontype v0.3.44 · 서울 자치구 경계 2013 기준</p>
 </section>
 
 <!-- 플레이 -->
@@ -198,6 +202,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.43"></script>
+<script src="app.js?v=0.44"></script>
 </body>
 </html>
