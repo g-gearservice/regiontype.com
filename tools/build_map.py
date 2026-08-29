@@ -34,7 +34,8 @@ def px(lon, lat):
     return (lon * k - x0) * s, (max(lats) - lat) * s
 
 rings = [[px(*c) for c in outer(f)] for f in feats]
-names = [f["properties"]["name"] for f in feats]
+# 가운뎃점은 키보드로 치기 어렵다. 이름은 곧 타이핑 대상이라 콤마로 바꿔 둔다
+names = [f["properties"]["name"].replace("·", ",") for f in feats]
 
 cell = W / COLS
 ROWS = math.ceil(H / cell)
