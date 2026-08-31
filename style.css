@@ -559,10 +559,10 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
   font-weight:800; font-size:52px; letter-spacing:-.01em; line-height:1.15;
 }
 .typing b{
-  color:color-mix(in srgb,var(--ink-soft) 38%,transparent);
+  color:var(--ink);
   transition:color .12s var(--ease-out), transform .12s var(--ease-out);
 }
-.typing b.on{color:var(--accent-deep)}
+.typing b.on{color:var(--accent)}
 .typing.bad b:not(.on){color:var(--accent-text)}
 .typing.bad .q-letters{animation:shake .22s}
 
@@ -573,7 +573,7 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
 .fact b{display:none}
 
 /* 지금 치고 있는 자리 — 조합 중인 자모가 그대로 보인다 */
-.typing b.ing{color:var(--ink);transform:translateY(-1px)}
+.typing b.ing{color:var(--accent-deep);transform:translateY(-1px)}
 .typing.bad b.ing{color:var(--accent-text)}
 /* 목표보다 길게 친 글자. 지워야 할 것이라고 눈에 띄어야 한다 */
 .typing b.over{color:var(--accent-text)}
