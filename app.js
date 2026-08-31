@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.68';
+const VER = '0.69';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -930,10 +930,27 @@ $('#typein').addEventListener('blur', markFocus);
 
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
-  paintTyped(e.target.value, e.isComposing);
-  if (!/\s/.test(e.target.value)) return;        // 스페이스 전에는 판단하지 않는다
-  const answer = e.target.value.replace(/\s+/g, '');
-  e.target.value = '';
+  const inp = e.target;
+  let val = inp.value, composing = e.isComposing;
+  /* 제시된 글자 수를 넘겨서는 아예 안 써진다. 넘겨 친 찌꺼기가 남으면 같은
+     지명이라도 지워야 할 백스페이스 수가 달라진다. 자모는 한 칸 안에서 합쳐지므로
+     길이는 다음 음절을 시작할 때만 늘어난다 — 그 한 음절만 잘라 낸다.
+     확정하는 스페이스는 잘라 내지 않는다.
+     ponytail: 조합 중에 value 만 고치면 IME 가 제 버퍼를 도로 밀어 넣어 안 잘린다.
+     포커스를 한 번 끊어야 조합이 진짜로 끝난다. IME 를 취소하는 표준 방법이 생기면
+     blur/focus 는 지운다. */
+  const cap = G.seq && G.want ? G.want.length : 0;
+  if (cap && !/\s/.test(val) && val.length > cap) {
+    val = val.slice(0, cap);
+    composing = false;
+    inp.blur();
+    inp.value = val;
+    inp.focus();
+  }
+  paintTyped(val, composing);
+  if (!/\s/.test(val)) return;                   // 스페이스 전에는 판단하지 않는다
+  const answer = val.replace(/\s+/g, '');
+  inp.value = '';
   if (!answer) return;                            // 빈 스페이스는 그냥 넘긴다
   // 미점령 전체를 대상으로 판정한 뒤 목표인지 본다. 목표만 넘기면
   // 약칭의 경쟁 판정(중 → 중구/중랑구)이 무너진다.
