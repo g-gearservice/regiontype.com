@@ -12,14 +12,14 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.66">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.66">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.66">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.70">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.70">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.70">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 아이콘: Material Symbols Rounded · FILL 0 · wght 300 · GRAD 200 · opsz 24 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300..700,0,200">
-<link rel="stylesheet" href="style.css?v=0.66">
+<link rel="stylesheet" href="style.css?v=0.70">
 </head>
 <body>
 
@@ -49,7 +49,7 @@
 <!-- 지역 목록 -->
 <section id="regions" class="screen">
   <div class="screen-head">
-    <button class="back" data-go="title" aria-label="뒤로"><i class="ms">arrow_back</i></button>
+    <button class="back" data-go="title" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head">지역</h2>
   </div>
   <div class="course-stage">
@@ -60,7 +60,7 @@
 <!-- 설정 -->
 <section id="options" class="screen">
   <div class="screen-head">
-    <button class="back" data-go="title" aria-label="뒤로"><i class="ms">arrow_back</i></button>
+    <button class="back" data-go="title" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head">설정</h2>
   </div>
   <dl class="opts">
@@ -73,13 +73,13 @@
     <dt>그리드</dt>
     <dd><button class="toggle" data-opt="grid" aria-label="그리드"></button></dd>
   </dl>
-  <p class="ver">regiontype v0.3.6 (<span id="verBuild"></span>) · 서울 자치구 경계 2013 기준</p>
+  <p class="ver">regiontype v0.3.7 (<span id="verBuild"></span>) · 서울 자치구 경계 2013 기준</p>
 </section>
 
 <!-- 플레이 -->
 <section id="play" class="screen">
   <div class="hud">
-    <button class="back" data-go="regions" aria-label="그만두기"><i class="ms">arrow_back</i></button>
+    <button class="back" data-go="regions" aria-label="그만두기"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <div class="gauge"><i id="gaugeFill"></i></div>
     <div class="stat time" id="statTime"><b>0:00</b></div>
     <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
@@ -110,7 +110,7 @@
 <!-- 결과 -->
 <section id="result" class="screen">
   <div class="screen-head">
-    <button class="back" data-go="regions" aria-label="뒤로"><i class="ms">arrow_back</i></button>
+    <button class="back" data-go="regions" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
   </div>
   <div class="result-wrap">
     <canvas id="card" width="1600" height="900"></canvas>
@@ -173,7 +173,7 @@
 
 <div id="mobile">
   <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
-  <p>타이핑 게임이라 물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>
+  <p>물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>
 </div>
 
 
@@ -199,6 +199,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.66"></script>
+<script src="app.js?v=0.70"></script>
 </body>
 </html>
