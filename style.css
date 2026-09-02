@@ -2,6 +2,7 @@
   --bg:#e8edf0; --grid:#dae2e7; --ink:#3c464a; --ink-soft:#5b676e;
   --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
+  --bad:#c1362b;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s; --flip:.42s;
   --ease-out:cubic-bezier(.23,1,.32,1);
@@ -91,7 +92,7 @@ body{
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
 }
-.i-arrow-left{--i:url(assets/arrow-left.svg?v=0.16)}
+.i-arrow-left{--i:url(assets/arrow-back.svg?v=0.16)}
 .i-cancel{--i:url(assets/cancel.svg?v=0.16)}
 .i.flip{transform:scaleX(-1)}
 
@@ -114,7 +115,7 @@ body{
   display:grid;place-items:center;
   background:none;color:var(--ink);border:0;cursor:pointer;
 }
-.back .ms{font-size:34px}
+.back .ms,.back .i{font-size:34px}
 
 /* ── 코스 목록 — 레퍼런스: 색 블록 상단 + 크림 본문, 아래 중앙에 공용 Play ── */
 .course-stage{
@@ -562,9 +563,14 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
   color:var(--ink);
   transition:color .12s var(--ease-out), transform .12s var(--ease-out);
 }
-.typing b.on{color:var(--accent)}
-.typing.bad b:not(.on){color:var(--accent-text)}
+/* 라이트: 맞은 글자는 어두운 오렌지. 오타는 빨강, 투명도 20%. */
+.typing b.on,
+.typing b.ing{color:var(--accent-text)}
+.typing.bad b:not(.on),
+.typing b.over{color:color-mix(in srgb,var(--bad) 80%,transparent)}
 .typing.bad .q-letters{animation:shake .22s}
+:root[data-night] .typing b.on,
+:root[data-night] .typing b.ing{color:var(--accent)}
 
 /* 원래 입력창은 화면에서 뺀다. display:none 이면 포커스가 안 잡혀 IME 가 죽는다 */
 .typebar{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;padding:0}
@@ -573,10 +579,7 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
 .fact b{display:none}
 
 /* 지금 치고 있는 자리 — 조합 중인 자모가 그대로 보인다 */
-.typing b.ing{color:var(--accent-deep);transform:translateY(-1px)}
-.typing.bad b.ing{color:var(--accent-text)}
-/* 목표보다 길게 친 글자. 지워야 할 것이라고 눈에 띄어야 한다 */
-.typing b.over{color:var(--accent-text)}
+.typing b.ing{transform:translateY(-1px)}
 
 /* 타이핑 커서 — 방금 친 글자 바로 뒤에 선다 */
 .typing b.cur-l::before, .typing b.cur-r::after{
