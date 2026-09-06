@@ -23,3 +23,10 @@ namespace_id = "1002"
   [ratelimits.simple]
   limit = 3
   period = 60
+
+[[ratelimits]]
+name = "RL_AU"
+namespace_id = "1003"
+  [ratelimits.simple]
+  limit = 10
+  period = 60

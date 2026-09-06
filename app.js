@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.82';
+const VER = '0.83';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -558,7 +558,7 @@ function wireRank(card, back, courses, showPick, rail) {
     try {
       const play = { c: c.slug, t: opt.time };
       const [d, t] = await Promise.all([
-        boardAsk('/dist', { ...play, who: whoami() }),
+        boardAsk('/dist', { ...play }),
         boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`),
       ]);
       if (n !== gen) return;
@@ -629,7 +629,7 @@ function wireRank(card, back, courses, showPick, rail) {
     if (!FEEDBACK_URL) return say('순위표에 닿을 수 없습니다.', true);
     if (!confirm('순위표에 올린 내 기록을 전부 내립니다. 되돌릴 수 없습니다.')) return;
     try {
-      const d = await boardAsk('/forget', { who: whoami() });
+      const d = await boardAsk('/forget', {});
       localStorage.removeItem(NAME_KEY);
       say(d.gone ? `${d.gone}줄을 내렸습니다.` : '내릴 기록이 없었습니다.');
       draw();
@@ -1285,19 +1285,61 @@ const NAME_KEY = 'rt.name';
    적을 폼까지 함께 사라져 되돌릴 길이 없어진다. trim() 은 제로폭 공백을 안 턴다. */
 const plain = (v, n = 12) =>
   String(v ?? '').trim().slice(0, n).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
-/* 내 줄의 주인표. 이름이 아니라 이 난수가 줄을 갖는다 — 이름으로 주인을 삼으면
-   남이 내 이름에 높은 점수를 박아 나를 밀어낼 수 있다. 이 값은 화면에 안 보이고
-   이 브라우저 밖으로는 순위표 갱신에만 쓰인다.
-   화면에는 보이지 않는다 — 설정에 내보이던 '기록 코드' 칸은 걷어냈다.
-   순위표를 쓸 때 처음 만든다: 파일로 연 페이지처럼 crypto·localStorage 가 막힌
-   자리에서 통째로 죽지 않게, 켜지는 자리를 부르는 쪽의 try 안으로 미룬다. */
-const whoami = () => {
-  let v = localStorage.getItem('rt.who');
-  /* 64비트. 남이 찍어 맞힐 수는 없으면서 손으로 옮겨 적을 만한 길이다 */
-  if (!v) localStorage.setItem('rt.who', v = [...crypto.getRandomValues(new Uint8Array(8))]
-    .map(b => b.toString(16).padStart(2, '0')).join(''));
-  return v;
+/* ── 로그인 ───────────────────────────────────────────
+   순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
+
+   비밀번호를 안 받는다. 패스키는 비밀이 기기 밖으로 나오지 않아서, 우리가
+   털릴 것 자체가 없다 — 서버에는 공개키만 남는다.
+   토큰을 쿠키가 아니라 localStorage 에 두는 건 중계기가 사이트와 다른 곳
+   (workers.dev)에 있어서다. 사이트 밖 쿠키는 브라우저가 점점 더 막는다.
+   ponytail: 중계기를 api.regiontype.com 으로 옮기면 HttpOnly 쿠키로 올린다. */
+const TOKEN_KEY = 'rt.token';
+const token = () => { try { return localStorage.getItem(TOKEN_KEY) || '' } catch { return '' } };
+
+const toB64u = b => btoa(String.fromCharCode(...new Uint8Array(b)))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64u = s => {
+  const t = s.replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(t + '='.repeat((4 - t.length % 4) % 4)), c => c.charCodeAt(0));
 };
+
+/* 이 기기에 패스키를 하나 만든다. 이미 로그인해 있으면 기기를 더하는 것이 된다 */
+async function passkeyMake() {
+  const d = await boardAsk('/auth/new', {});
+  const name = 'regiontype · ' + d.user.slice(0, 6);
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: fromB64u(d.challenge),
+    rp: d.rp,
+    /* 사람 이름을 안 받는다 — 기기의 패스키 목록에도 난수만 남는다 */
+    user: { id: fromB64u(toB64u(new TextEncoder().encode(d.user))), name, displayName: name },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
+    attestation: 'none', timeout: 60000,
+  }});
+  const r = cred.response;
+  const out = await boardAsk('/auth/reg', {
+    challenge: d.challenge, id: toB64u(cred.rawId),
+    /* getPublicKey() 가 SPKI 를 그대로 준다 — 서버에 CBOR 파서를 들일 이유가 없다 */
+    key: toB64u(r.getPublicKey()), alg: r.getPublicKeyAlgorithm(),
+    clientDataJSON: toB64u(r.clientDataJSON), authData: toB64u(r.getAuthenticatorData()),
+  });
+  localStorage.setItem(TOKEN_KEY, out.token);
+}
+
+async function passkeyLogin() {
+  const d = await boardAsk('/auth/go', {});
+  const cred = await navigator.credentials.get({ publicKey: {
+    challenge: fromB64u(d.challenge), rpId: location.hostname,
+    userVerification: 'preferred', timeout: 60000,
+  }});
+  const r = cred.response;
+  const out = await boardAsk('/auth/log', {
+    challenge: d.challenge, id: toB64u(cred.rawId),
+    clientDataJSON: toB64u(r.clientDataJSON),
+    authData: toB64u(r.authenticatorData), sig: toB64u(r.signature),
+  });
+  localStorage.setItem(TOKEN_KEY, out.token);
+}
 
 const boardSay = (t, bad) => {
   const p = $('#boardSay'); p.textContent = t; p.classList.toggle('bad', !!bad);
@@ -1322,9 +1364,13 @@ function drawRanks(list, ol = $('#ranks')) {
 }
 
 const boardAsk = async (path, body) => {
+  const t = token();
+  const head = {};
+  if (body) head['content-type'] = 'application/json';
+  if (t) head.authorization = 'Bearer ' + t;
   const r = await fetch(FEEDBACK_URL + path, body
-    ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
-    : undefined);
+    ? { method: 'POST', headers: head, body: JSON.stringify(body) }
+    : { headers: head });
   if (!r.ok) throw new Error(r.status);
   return r.json();
 };
@@ -1335,20 +1381,23 @@ async function board() {
   sec.hidden = true;
   if (!FEEDBACK_URL) return;
   const me = localStorage.getItem(NAME_KEY) || '';
+  const inn = !!token();
   const play = { c: G.slug, t: G.total };
   try {
-    const d = me && G.score
-      ? await boardAsk('/score', { ...play, who: whoami(), name: me, score: G.score, hits: G.hits, tries: G.tries })
+    const d = inn && me && G.score
+      ? await boardAsk('/score', { ...play, name: me, score: G.score, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
     $('#boardWhere').textContent = `${G.course.title} · ${clock(G.total)}`;
     /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
        않으면 다음에 순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고,
        기능이 고장난 것으로 읽힌다. */
     boardSay(d.rank ? `${d.rank}위`
-      : !me && G.score ? `이번 판 ${G.score}점은 아직 순위표에 없습니다 — 이름을 적으면 올라갑니다`
+      : G.score ? `이번 판 ${G.score}점은 아직 순위표에 없습니다`
       : '');
+    /* 로그인 → 이름 → 올라감. 한 번에 하나씩만 묻는다 */
+    $('#boardIn').hidden = inn;
+    $('#boardJoin').hidden = !inn || !!me;
     drawRanks(d.top || []);
-    $('#boardJoin').hidden = !!me;
     sec.hidden = false;
   } catch (e) {
     /* 400 은 저장된 이름이 중계기 기준에 안 맞는다는 뜻이다. 그대로 두면 다음 판도
@@ -1360,6 +1409,30 @@ async function board() {
 }
 
 /* 이름은 이 브라우저에만 남는다. 한 번 적으면 다음 판부터는 묻지 않는다 */
+/* 패스키가 없는 브라우저·기기가 있다. 그때는 버튼을 내리고 왜 안 되는지 말한다 */
+const canPasskey = () => !!(window.PublicKeyCredential && navigator.credentials?.create);
+
+const tryAuth = async (btn, run, done) => {
+  if (!canPasskey()) return boardSay('이 브라우저는 패스키를 지원하지 않습니다.', true);
+  const all = [$('#inGo'), $('#inNew')];
+  all.forEach(b => b.disabled = true);
+  boardSay(done);
+  try {
+    await run();
+    boardSay('');
+    board();          // 로그인했으니 다시 그린다 — 이제 이름 칸이 열린다
+  } catch (e) {
+    /* 사용자가 창을 닫은 것과 진짜 실패는 다른 말이다 */
+    boardSay(e && e.name === 'NotAllowedError' ? '취소했습니다.'
+           : String(e.message) === '401' ? '이 기기의 패스키를 찾지 못했습니다. 먼저 만들어 주세요.'
+           : '로그인하지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true);
+  }
+  all.forEach(b => b.disabled = false);
+};
+
+$('#inGo').onclick = () => tryAuth(null, passkeyLogin, '기기에 물어보는 중…');
+$('#inNew').onclick = () => tryAuth(null, passkeyMake, '패스키를 만드는 중…');
+
 $('#boardJoin').onsubmit = e => {
   e.preventDefault();
   const name = plain($('#boardName').value);
