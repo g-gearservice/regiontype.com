@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.70';
+const VER = '0.80';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -500,8 +500,112 @@ function wireRegionBack(card, back, courses) {
     showPlay(courses.find(c => c.slug === b.dataset.slug),
              b.offsetParent === undefined ? b.closest('.pickmap') : b);
   };
+  wireRank(card, back, courses, showPick);
   card._showPick = showPick;
   card._resetPick = () => showPick(true);
+}
+
+/* ── 카드 옆 순위 칸 ──────────────────────────────────
+   결과 화면의 순위표는 판이 끝나야 보인다. 여기선 치기 전에 남들이 어디쯤
+   몰려 있는지를 먼저 본다 — 겨룰 상대가 보여야 겨룰 마음이 든다.
+   판은 (코스, 제한 시간) 이라 화살표로 코스를 넘기고 시간은 설정을 따른다. */
+function wireRank(card, back, courses, showPick) {
+  const pane = back.querySelector('.ov-rank');
+  const pick = back.querySelector('.ov-pick');
+  const list = pane.querySelector('.rank-list');
+  const say = (t, bad) => {
+    const p = pane.querySelector('.rank-say');
+    p.textContent = t; p.classList.toggle('bad', !!bad);
+  };
+  let at = Math.max(0, courses.findIndex(c => c.slug === 'seoul-gu'));
+  let gen = 0;
+
+  /* 막대는 그 판에서 나올 수 있는 최고 점수까지 그린다. 사람이 몰린 자리만
+     그리면 판마다 가로 눈금이 달라져 서로 견줄 수 없다. */
+  function plot(d) {
+    const box = pane.querySelector('.rank-plot');
+    const n = new Map(d.bins.map(b => [b.b, b.n]));
+    const last = Math.max(0, Math.ceil(d.cap / d.bucket) - 1);
+    const tall = Math.max(1, ...d.bins.map(b => b.n), 1);
+    const W = 300, H = 100, w = W / (last + 1);
+    let bars = '';
+    for (let i = 0; i <= last; i++) {
+      const h = (n.get(i) || 0) / tall * (H - 2);
+      bars += `<rect x="${(i * w).toFixed(2)}" y="${(H - h).toFixed(2)}" ` +
+              `width="${Math.max(.4, w - 1).toFixed(2)}" height="${h.toFixed(2)}"/>`;
+    }
+    const x = d.score === null ? null
+      : Math.min(W - .5, d.score / d.bucket * w + w / 2);
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">`
+      + `<g class="bars">${bars}</g>`
+      + (x === null ? '' : `<g class="me"><line x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="${H}"/></g>`)
+      + `</svg>`;
+  }
+
+  async function draw() {
+    const n = ++gen, c = courses[at];
+    pane.querySelector('.rank-title').textContent = c.title;
+    pane.querySelector('.rank-where').textContent = clock(opt.time);
+    pane.querySelector('.rank-score').textContent = '';
+    pane.querySelector('.rank-you').textContent = '';
+    pane.querySelector('.rank-plot').replaceChildren();
+    list.replaceChildren();
+    say('읽는 중…');
+    if (!FEEDBACK_URL) return say('순위표에 닿을 수 없습니다.', true);
+    try {
+      const play = { c: c.slug, t: opt.time };
+      const [d, t] = await Promise.all([
+        boardAsk('/dist', { ...play, who: whoami() }),
+        boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`),
+      ]);
+      if (n !== gen) return;
+      plot(d);
+      drawRanks(t.top || [], list);
+      /* 등수는 서버가 센 값으로만 적는다. 막대에서 눈대중한 자리를 숫자로 적으면
+         보이는 것과 실제가 어긋난다. */
+      pane.querySelector('.rank-you').textContent = d.score === null
+        ? (d.total ? `${d.total}명이 겨루는 중 — 아직 내 기록이 없습니다`
+                   : '아직 아무도 기록을 올리지 않았습니다')
+        : `상위 ${Math.max(1, Math.round((d.over + 1) / d.total * 100))}% · ` +
+          `${d.total}명 중 ${d.over + 1}위`;
+      if (d.score !== null) pane.querySelector('.rank-score').textContent = d.score + '점';
+      say('');
+    } catch { if (n === gen) say('순위를 읽지 못했습니다.', true); }
+  }
+
+  const open = on => {
+    back.querySelectorAll('.rail-b').forEach(b =>
+      b.setAttribute('aria-selected', (b.dataset.pane === 'rank') === on));
+    showPick(true);            // 미리보기가 열려 있었으면 먼저 접는다
+    pick.hidden = on;
+    pane.hidden = !on;
+    card.toggleAttribute('data-wide', on);
+    if (on) draw(); else gen++;
+  };
+  card._closeRank = () => { if (!pane.hidden) { open(false); return true } return false };
+
+  back.querySelector('.rail').onclick = e => {
+    const b = e.target.closest('.rail-b');
+    if (b) open(b.dataset.pane === 'rank');
+  };
+  pane.querySelector('.rank-head').onclick = e => {
+    const b = e.target.closest('[data-step]');
+    if (!b) return;
+    at = (at + Number(b.dataset.step) + courses.length) % courses.length;
+    draw();
+  };
+  /* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 —
+     설정의 기록 코드 칸을 걷어내면서 이 버튼도 같이 사라지면 철회 불가가 된다. */
+  pane.querySelector('.rank-drop').onclick = async () => {
+    if (!FEEDBACK_URL) return say('순위표에 닿을 수 없습니다.', true);
+    if (!confirm('순위표에 올린 내 기록을 전부 내립니다. 되돌릴 수 없습니다.')) return;
+    try {
+      const d = await boardAsk('/forget', { who: whoami() });
+      localStorage.removeItem(NAME_KEY);
+      say(d.gone ? `${d.gone}줄을 내렸습니다.` : '내릴 기록이 없었습니다.');
+      draw();
+    } catch { say('내리지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true); }
+  };
 }
 
 document.addEventListener('keydown', e => {
@@ -510,6 +614,7 @@ document.addEventListener('keydown', e => {
   if (drum) { closeWheel(drum); return; }
   const open = document.querySelector('.card[data-flip="true"]');
   if (!open) return;
+  if (open._closeRank && open._closeRank()) return;
   const play = open.querySelector('.ov-play');
   if (play && !play.hidden && open._showPick) { open._showPick(); return; }
   flip(open, false);
@@ -1018,6 +1123,7 @@ function finish() {
       $('#missed').append(li);
     });
     drawCard();
+    board();
     go('result');
   }, 1200);
 }
@@ -1127,6 +1233,96 @@ $('#fbForm').onsubmit = async e => {
     fbSay('보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true);
   }
   $('#fbSend').disabled = false;
+};
+
+/* ── 순위표 ───────────────────────────────────────────
+   기록은 피드백과 같은 중계기 뒤 D1 에 쌓인다. 코스와 제한 시간이 둘 다 같아야
+   한 판이다 — 5분과 1분을 한 줄에 세우면 점수에 뜻이 없다.
+   채점은 여기 브라우저가 하고 중계기는 앞뒤만 본다. 명예의 전당이지 판정 기록이 아니다. */
+const NAME_KEY = 'rt.name';
+/* worker.mjs 의 plain() 과 같은 자여야 한다. 클라이언트만 통과하는 이름을 저장하면
+   그 뒤 모든 판이 400 을 받고, board() 의 catch 가 순위표를 접으면서 이름을 다시
+   적을 폼까지 함께 사라져 되돌릴 길이 없어진다. trim() 은 제로폭 공백을 안 턴다. */
+const plain = (v, n = 12) =>
+  String(v ?? '').trim().slice(0, n).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
+/* 내 줄의 주인표. 이름이 아니라 이 난수가 줄을 갖는다 — 이름으로 주인을 삼으면
+   남이 내 이름에 높은 점수를 박아 나를 밀어낼 수 있다. 이 값은 화면에 안 보이고
+   이 브라우저 밖으로는 순위표 갱신에만 쓰인다.
+   화면에는 보이지 않는다 — 설정에 내보이던 '기록 코드' 칸은 걷어냈다.
+   순위표를 쓸 때 처음 만든다: 파일로 연 페이지처럼 crypto·localStorage 가 막힌
+   자리에서 통째로 죽지 않게, 켜지는 자리를 부르는 쪽의 try 안으로 미룬다. */
+const whoami = () => {
+  let v = localStorage.getItem('rt.who');
+  /* 64비트. 남이 찍어 맞힐 수는 없으면서 손으로 옮겨 적을 만한 길이다 */
+  if (!v) localStorage.setItem('rt.who', v = [...crypto.getRandomValues(new Uint8Array(8))]
+    .map(b => b.toString(16).padStart(2, '0')).join(''));
+  return v;
+};
+
+const boardSay = (t, bad) => {
+  const p = $('#boardSay'); p.textContent = t; p.classList.toggle('bad', !!bad);
+};
+
+function drawRanks(list, ol = $('#ranks')) {
+  ol.innerHTML = '';
+  list.forEach((r, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
+    li.querySelector('b').textContent = i + 1;
+    li.querySelector('.who').textContent = r.name;
+    li.querySelector('.pt').textContent = r.score + '점';
+    if (r.me) {
+      li.classList.add('me');
+      const tag = document.createElement('span');
+      tag.className = 'tag'; tag.textContent = '나';
+      li.querySelector('.who').after(tag);
+    }
+    ol.append(li);
+  });
+}
+
+const boardAsk = async (path, body) => {
+  const r = await fetch(FEEDBACK_URL + path, body
+    ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+    : undefined);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+};
+
+/* 순위표가 안 되어도 결과 화면은 그대로다 — 통째로 접고 만다 */
+async function board() {
+  const sec = $('#board');
+  sec.hidden = true;
+  if (!FEEDBACK_URL) return;
+  const me = localStorage.getItem(NAME_KEY) || '';
+  const play = { c: G.slug, t: G.total };
+  try {
+    const d = me && G.score
+      ? await boardAsk('/score', { ...play, who: whoami(), name: me, score: G.score, hits: G.hits, tries: G.tries })
+      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
+    $('#boardWhere').textContent = `${G.course.title} · ${clock(G.total)}`;
+    boardSay(d.rank ? `${d.rank}위` : '');
+    drawRanks(d.top || []);
+    $('#boardJoin').hidden = !!me;
+    sec.hidden = false;
+  } catch (e) {
+    /* 400 은 저장된 이름이 중계기 기준에 안 맞는다는 뜻이다. 그대로 두면 다음 판도
+       같은 400 을 받아 순위표가 영영 안 뜬다 — 지우고 다시 적을 자리를 내어준다.
+       이름이 있었을 때만 한 번 되돈다 — 안 그러면 /top 이 400 일 때 끝없이 돈다. */
+    if (String(e.message) === '400' && me) { localStorage.removeItem(NAME_KEY); return board(); }
+    sec.hidden = true;
+  }
+}
+
+/* 이름은 이 브라우저에만 남는다. 한 번 적으면 다음 판부터는 묻지 않는다 */
+$('#boardJoin').onsubmit = e => {
+  e.preventDefault();
+  const name = plain($('#boardName').value);
+  if (!name) return boardSay('쓸 수 있는 이름이 아닙니다.', true);
+  localStorage.setItem(NAME_KEY, name);
+  $('#boardJoin').hidden = true;
+  boardSay('올리는 중…');
+  board();
 };
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */

@@ -93,20 +93,16 @@ body{
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
 }
 .i-arrow-left{--i:url(assets/arrow-back.svg?v=0.16)}
-.i-cancel{--i:url(assets/cancel.svg?v=0.16)}
+.i-flag{--i:url(assets/flag.svg?v=0.16)}
+.i-close{--i:url(assets/close.svg?v=0.16)}
+.i-pin{--i:url(assets/pin.svg?v=0.16)}
+.i-chart{--i:url(assets/chart.svg?v=0.16)}
+.i.flip{transform:scaleX(-1)}
+/* 눈으로는 안 보이고 읽어주는 기계에는 남는 글자 */
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip-path:inset(50%);white-space:nowrap;border:0}
 .i.flip{transform:scaleX(-1)}
 
-/* 아이콘 — Material Symbols Rounded, 구글 폰트 설정 그대로 */
-.ms{
-  font-family:'Material Symbols Rounded',sans-serif;
-  font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 200,'opsz' 24;
-  font-size:24px; line-height:1; font-style:normal; font-weight:300;
-  letter-spacing:normal; white-space:nowrap; word-wrap:normal; direction:ltr;
-  -webkit-font-feature-settings:'liga'; font-feature-settings:'liga';
-  -webkit-font-smoothing:antialiased; user-select:none;
-  display:block; width:1em; height:1em; overflow:hidden;   /* 글자 상자 = 아이콘 상자 */
-  text-align:center;
-}
 /* 아이콘을 품은 버튼은 격자로 가운데 정렬한다 */
 .back,.step,.toggle,.ov-hint button{display:inline-grid;place-items:center;line-height:1}
 .back{
@@ -115,7 +111,7 @@ body{
   display:grid;place-items:center;
   background:none;color:var(--ink);border:0;cursor:pointer;
 }
-.back .ms,.back .i{font-size:34px}
+.back .i{font-size:34px}
 
 /* ── 코스 목록 — 레퍼런스: 색 블록 상단 + 크림 본문, 아래 중앙에 공용 Play ── */
 .course-stage{
@@ -201,6 +197,58 @@ body{
 .card-back .choice-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
 .card-back .menu{flex-direction:row;justify-content:center;gap:3px;margin-top:8px}
 .card-back .menu button{font-size:17px;padding:5px 15px 7px}
+/* 카드 옆 탭. 카드가 제 안쪽을 잘라내는(overflow:hidden) 판이라 참조 이미지처럼
+   바깥에 세우지 못한다 — 카드 위쪽에 한 줄로 앉힌다. */
+.rail{display:flex;gap:4px;justify-content:center;flex:0 0 auto;margin-bottom:6px}
+.rail-b{
+  width:34px;height:34px;display:grid;place-items:center;cursor:pointer;
+  border:0;border-radius:6px;background:var(--grid);color:var(--ink-soft);
+  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out);
+}
+.rail-b .i{width:19px;height:19px}
+.rail-b[aria-selected="true"]{background:var(--block);color:#fff}
+.rail-b:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* 코스 미리보기가 열리면 탭은 비킨다 — 그 판은 시작 화면이지 고르는 화면이 아니다 */
+.card[data-preview="1"] .rail{display:none}
+
+/* 순위 — 치기 전에 남들이 어디 몰려 있는지 본다 */
+.ov-rank{display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;text-align:center}
+.ov-rank[hidden]{display:none}
+.rank-head{display:flex;align-items:center;gap:8px}
+.rank-title{flex:1;font-size:17px;font-weight:800;letter-spacing:-.01em}
+.rank-arrow{
+  width:30px;height:30px;flex:0 0 auto;border:0;border-radius:50%;cursor:pointer;
+  background:var(--block);color:#fff;display:grid;place-items:center;
+}
+.rank-arrow .i{width:17px;height:17px}
+.rank-arrow:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.rank-you{font-size:13px;color:var(--ink-soft);min-height:19px}
+.rank-plot{flex:1;min-height:80px}
+.rank-plot svg{width:100%;height:100%;display:block}
+.rank-plot .bars rect{fill:var(--block);opacity:.55}
+/* 내 자리는 선 하나로 긋는다. 굵기는 가로로 늘여도 그대로여야 한다 */
+.rank-plot .me line{stroke:var(--accent-deep);stroke-width:2;vector-effect:non-scaling-stroke}
+.rank-foot{
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  background:var(--bg);border-radius:4px;padding:6px 10px;font-size:14px;
+}
+.rank-foot b{font-variant-numeric:tabular-nums}
+.rank-list{max-height:126px;overflow-y:auto;text-align:left;font-size:13px;
+  -webkit-mask:linear-gradient(180deg,#000 82%,transparent);
+  mask:linear-gradient(180deg,#000 82%,transparent)}
+.rank-list li{padding:6px 10px}
+.rank-say{font-size:13px;color:var(--ink-soft);min-height:18px}
+.rank-say.bad{color:var(--bad)}
+/* 되돌릴 수 없는 버튼이라 표시는 하되, 이 판의 주인공은 아니다 */
+.rank-drop{
+  font:inherit;font-size:12px;font-weight:700;color:var(--bad);background:none;
+  border:2px solid var(--bad);border-radius:4px;padding:5px 12px;
+  cursor:pointer;align-self:center;opacity:.75;
+  transition:opacity var(--fast) var(--ease-out);
+}
+@media (hover:hover) and (pointer:fine){ .rank-drop:hover{opacity:1} }
+.rank-drop:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
 .ov-pick,.ov-play{display:flex;flex-direction:column;justify-content:center;gap:2px;flex:1;min-height:0}
 .ov-pick{justify-content:stretch}
 .ov-pick[hidden],.ov-play[hidden]{display:none}
@@ -235,14 +283,13 @@ body{
   color:var(--ink);font-size:19px;cursor:pointer;line-height:1;
 }
 .step{border:0;font-size:24px;width:auto}
-.toggle::after{content:"close"}
-.toggle[aria-pressed="true"]::after{content:"check"}
 .toggle::after{
-  font-family:'Material Symbols Rounded',sans-serif;
-  font-variation-settings:'FILL' 0,'wght' 600,'GRAD' 200,'opsz' 24;
-  font-size:26px; line-height:1; font-weight:600;
-  display:block; width:1em; height:1em; text-align:center;
+  content:""; display:block; width:1em; height:1em; font-size:26px;
+  background:currentColor;
+  -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
+  --i:url(assets/close-600.svg?v=0.16);
 }
+.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=0.16)}
 .toggle[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .ver{margin-top:auto;color:var(--ink-soft);font-size:14px}
 
@@ -324,6 +371,39 @@ body{
 .missed{list-style:none;display:flex;flex-wrap:wrap;gap:12px}
 .missed li{background:var(--card);padding:12px 16px;max-width:330px;font-size:14px;color:var(--ink-soft)}
 .missed b{display:block;font-size:17px;color:var(--ink);margin-bottom:4px}
+
+/* 순위표 — 놓친 곳 목록과 같은 카드를 쓴다. 내 줄은 테두리와 '나' 라벨을
+   함께 붙인다: 색 하나로만 갈라 두면 못 보는 사람이 생긴다 */
+.ranks{list-style:none;display:flex;flex-direction:column;gap:6px;max-width:420px}
+.ranks li{
+  display:flex;align-items:baseline;gap:12px;background:var(--card);
+  padding:10px 14px;border:2px solid transparent;font-size:15px;
+}
+.ranks b{min-width:26px;font-size:17px;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.ranks .who{flex:1;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranks .pt{font-weight:700;font-variant-numeric:tabular-nums}
+.ranks li.me{border-color:var(--block)}
+.ranks .tag{
+  align-self:center;font-size:12px;font-weight:700;line-height:1;
+  color:#fff;background:var(--block);padding:3px 6px 4px;
+}
+.board-say{margin:-6px 0 12px;min-height:22px;color:var(--accent-text);font-weight:700}
+.board-say.bad{color:var(--bad)}
+.board-join{margin-top:16px;max-width:420px;font-size:14px;color:var(--ink-soft)}
+.board-join div{display:flex;gap:8px;margin-top:8px}
+.board-join input{
+  font:inherit;font-size:16px;flex:1;min-width:0;color:var(--ink);
+  background:var(--bg);border:2px solid var(--grid);
+  padding:8px 12px;transition:border-color var(--fast) var(--ease-out);
+}
+.board-join input:focus{outline:0;border-color:var(--block)}
+.board-join button{
+  font:inherit;font-weight:700;color:#fff;background:var(--block);border:0;
+  padding:8px 16px;cursor:pointer;white-space:nowrap;
+  transition:background var(--fast) var(--ease-out);
+}
+.board-join button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){ .board-join button:hover{background:var(--accent)} }
 
 /* ── 모바일 안내 ───────────────────────── */
 #mobile{display:none;position:fixed;inset:0;place-content:center;text-align:center;padding:32px;gap:20px}
@@ -417,6 +497,12 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
   width:var(--pv-w);height:var(--pv-h);
   transform:rotateY(180deg);z-index:2;
 }
+/* 순위 칸도 같은 크기로 편다 — 분포는 230px 안에서 읽히지 않는다.
+   미리보기와 같은 자리를 쓰되 깃발을 따로 둬야 탭 숨김 규칙과 다투지 않는다 */
+.card[data-flip="true"][data-wide]{
+  width:var(--pv-w);height:var(--pv-h);
+  transform:rotateY(180deg);z-index:2;
+}
 .card[data-flip="true"] .card-face{box-shadow:var(--shadow-lift)}
 .card-front:active{transform:scale(.98)}
 .card-front{transition:transform var(--fast) var(--ease-out)}
@@ -429,7 +515,8 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
   .card[data-flip="false"]:not([data-locking="1"]):hover .card-top{background:var(--accent)}
 }
 .card-back .menu{align-items:center}
-.missed li{border-radius:4px;box-shadow:var(--shadow)}
+.missed li,.ranks li{border-radius:4px;box-shadow:var(--shadow)}
+.board-join :is(input,button){border-radius:4px}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
 
@@ -475,7 +562,7 @@ body:has(#title.on, #options.on) #pixelmap{opacity:1}
 .opts dt{font-size:30px;padding:7px 20px 10px}
 .toggle{width:52px;height:52px;font-size:24px;border-width:4px}
 .step{font-size:30px;width:auto;padding:0 6px}
-.opts .step :is(.ms,.i){font-size:40px}
+.opts .step .i{font-size:40px}
 .opts dd{gap:22px}
 
 .menu button{font-size:30px;padding:7px 20px 10px}
@@ -767,13 +854,13 @@ button.dot{
 }
 /* 점은 14px 남짓이라 그대로는 겨눌 수 없다 — 보이지 않는 여유를 두른다 */
 button.dot::before{content:"";position:absolute;inset:-.14em;border-radius:50%}
-button.dot .ms{
+button.dot .i{
   position:absolute; left:50%; top:50%; font-size:.15em;
   transform:translate(-50%,-50%); opacity:0; pointer-events:none;
   transition:opacity var(--fast) var(--ease-out);
 }
 button.dot:is(:hover,:focus-visible){transform:scale(2.3);background:var(--accent-deep)}
-button.dot:is(:hover,:focus-visible) .ms{opacity:1}
+button.dot:is(:hover,:focus-visible) .i{opacity:1}
 button.dot:focus-visible{outline:3px solid transparent}
 
 #feedback{

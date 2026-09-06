@@ -3,8 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Regiontype</title>
+<title>regiontype · 서울 25개 자치구 타자로 외우기</title>
 <meta name="description" content="지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구부터.">
+<link rel="canonical" href="https://regiontype.com/">
+
+<!-- 링크 미리보기(카톡·DM·트위터). og:image 는 절대 URL 이어야 하고 미리보기
+     캐시가 오래 남아, 해시 없는 고정 경로 /og.png 로만 서빙한다. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://regiontype.com/">
+<meta property="og:title" content="regiontype — 서울, 얼마나 아세요?">
+<meta property="og:description" content="25개 자치구부터 423개 행정동까지. 타이핑으로 서울을 완성하세요.">
+<meta property="og:image" content="https://regiontype.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="regiontype">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="regiontype — 서울, 얼마나 아세요?">
+<meta name="twitter:description" content="25개 자치구부터 423개 행정동까지.">
+<meta name="twitter:image" content="https://regiontype.com/og.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "regiontype",
+  "url": "https://regiontype.com/",
+  "applicationCategory": "EducationalApplication",
+  "inLanguage": "ko",
+  "operatingSystem": "Web",
+  "description": "서울 25개 자치구와 423개 행정동을 타이핑으로 익히는 웹앱",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+}
+</script>
 <!-- 파비콘은 기기 테마(prefers-color-scheme)만 따른다. 사이트의 야간 모드는
      data-night 로 도는 별개의 것이라, 설정을 만져도 아이콘은 바뀌지 않는다.
      media 를 못 읽는 브라우저를 위해 마지막에 기본값 하나를 남긴다.
@@ -12,14 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.70">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.70">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.70">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- 아이콘: Material Symbols Rounded · FILL 0 · wght 300 · GRAD 200 · opsz 24 -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300..700,0,200">
-<link rel="stylesheet" href="style.css?v=0.70">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.80">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.80">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.80">
+<!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
+<link rel="stylesheet" href="style.css?v=0.80">
 </head>
 <body>
 
@@ -38,10 +66,11 @@
 
 <!-- 타이틀 -->
 <section id="title" class="screen on">
-  <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="ms">flag</i></button></h1>
+  <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="i i-flag" aria-hidden="true"></i></button></h1>
   <nav class="menu">
     <button data-go="regions">시작하기</button>
     <button data-go="options">설정</button>
+    <a href="about.html">소개</a>
     <a class="alt" href="mimi/">Mimi 스타일 보기</a>
   </nav>
 </section>
@@ -73,7 +102,9 @@
     <dt>그리드</dt>
     <dd><button class="toggle" data-opt="grid" aria-label="그리드"></button></dd>
   </dl>
-  <p class="ver">regiontype v0.3.7 (<span id="verBuild"></span>) · 서울 자치구 경계 2013 기준</p>
+
+
+  <p class="ver">regiontype v0.3.8 (<span id="verBuild"></span>) · 서울 자치구 경계 2013 기준</p>
 </section>
 
 <!-- 플레이 -->
@@ -127,11 +158,55 @@
   </div>
   <h3 class="missed-head">놓친 곳 <span id="missCount"></span></h3>
   <ul class="missed" id="missed"></ul>
+
+  <div id="board" hidden>
+    <h3 class="missed-head">순위표 <span id="boardWhere"></span></h3>
+    <p class="board-say" id="boardSay" aria-live="polite"></p>
+    <ol class="ranks" id="ranks"></ol>
+    <form class="board-join" id="boardJoin" hidden>
+      <label for="boardName">누구나 보는 순위표에 이 이름이 올라갑니다</label>
+      <div>
+        <input id="boardName" name="name" maxlength="12" autocomplete="off" spellcheck="false" placeholder="이름">
+        <button type="submit">기록 남기기</button>
+      </div>
+    </form>
+  </div>
 </section>
 
 <!-- 지역 카드 뒷면: 코스 고르기 → 시작 옵션 -->
 <template id="regionTpl">
   <div class="card-back">
+    <!-- 카드 옆 탭. 지금 내용이 있는 둘만 세운다 — 난이도·챌린지는 그 내용이
+         생길 때 이 자리에 끼운다. 빈 탭을 미리 세워두지 않는다. -->
+    <div class="rail" role="tablist" aria-label="카드 보기">
+      <button type="button" class="rail-b" data-pane="pick" role="tab"
+              aria-selected="true" title="코스 고르기">
+        <i class="i i-pin" aria-hidden="true"></i><span class="sr">코스 고르기</span>
+      </button>
+      <button type="button" class="rail-b" data-pane="rank" role="tab"
+              aria-selected="false" title="순위">
+        <i class="i i-chart" aria-hidden="true"></i><span class="sr">순위</span>
+      </button>
+    </div>
+
+    <div class="ov-rank" role="tabpanel" hidden>
+      <div class="rank-head">
+        <button type="button" class="rank-arrow" data-step="-1" aria-label="이전 코스">
+          <i class="i i-arrow-left" aria-hidden="true"></i></button>
+        <b class="rank-title"></b>
+        <button type="button" class="rank-arrow" data-step="1" aria-label="다음 코스">
+          <i class="i i-arrow-left flip" aria-hidden="true"></i></button>
+      </div>
+      <p class="rank-you" aria-live="polite"></p>
+      <div class="rank-plot"></div>
+      <div class="rank-foot">
+        <span class="rank-where"></span><b class="rank-score"></b>
+      </div>
+      <ol class="ranks rank-list"></ol>
+      <p class="rank-say"></p>
+      <button type="button" class="rank-drop">순위표에서 내 기록 내리기</button>
+    </div>
+
     <div class="ov-pick">
       <div class="pickmap"></div>
       <p class="pickname"></p>
@@ -172,7 +247,7 @@
 </template>
 
 <div id="mobile">
-  <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
+  <div class="logo">region<span>type</span><i class="dot"></i></div>
   <p>물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>
 </div>
 
@@ -182,7 +257,7 @@
   <form id="fbForm">
     <div class="fb-head">
       <h2 id="fbHead">피드백</h2>
-      <button type="button" class="back" id="fbClose" aria-label="닫기"><i class="ms">close</i></button>
+      <button type="button" class="back" id="fbClose" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
     </div>
     <p class="fb-lead">뭐가 이상했는지, 뭐가 있었으면 좋겠는지 적어주세요.</p>
     <div class="choice-b fb-kind" role="group" aria-label="피드백 종류">
@@ -199,6 +274,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.70"></script>
+<script src="app.js?v=0.80"></script>
 </body>
 </html>
