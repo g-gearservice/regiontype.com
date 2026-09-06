@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.80';
+const VER = '0.81';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -132,7 +132,10 @@ document.addEventListener('click', e => {
   const drum = document.querySelector('.wheel[data-on]');
   if (drum && !drum.closest('.stat.time').contains(e.target)) closeWheel(drum);
   const open = document.querySelector('.card[data-flip="true"]');
-  if (open && !open.contains(e.target)) flip(open, false);
+  /* 카드탭은 카드의 형제라 카드 안에 없다. 탭을 누른 것도 카드 안을 누른 것이다 —
+     이걸 빼먹으면 탭을 누를 때마다 '바깥을 눌렀다'로 읽혀 카드가 닫힌다. */
+  if (open && !open.contains(e.target) && !open.parentElement.contains(e.target))
+    flip(open, false);
   const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
   const t = e.target.closest('.toggle');
   if (t) { opt[t.dataset.opt] = !opt[t.dataset.opt]; saveOpt(); }
@@ -442,7 +445,7 @@ function wireDock(pane) {
   paint();
 }
 
-function wireRegionBack(card, back, courses) {
+function wireRegionBack(card, back, courses, rail) {
   const pick = back.querySelector('.ov-pick');
   const play = back.querySelector('.ov-play');
   let gen = 0;
@@ -500,7 +503,7 @@ function wireRegionBack(card, back, courses) {
     showPlay(courses.find(c => c.slug === b.dataset.slug),
              b.offsetParent === undefined ? b.closest('.pickmap') : b);
   };
-  wireRank(card, back, courses, showPick);
+  wireRank(card, back, courses, showPick, rail);
   card._showPick = showPick;
   card._resetPick = () => showPick(true);
 }
@@ -509,7 +512,7 @@ function wireRegionBack(card, back, courses) {
    결과 화면의 순위표는 판이 끝나야 보인다. 여기선 치기 전에 남들이 어디쯤
    몰려 있는지를 먼저 본다 — 겨룰 상대가 보여야 겨룰 마음이 든다.
    판은 (코스, 제한 시간) 이라 화살표로 코스를 넘기고 시간은 설정을 따른다. */
-function wireRank(card, back, courses, showPick) {
+function wireRank(card, back, courses, showPick, rail) {
   const pane = back.querySelector('.ov-rank');
   const pick = back.querySelector('.ov-pick');
   const list = pane.querySelector('.rank-list');
@@ -573,18 +576,39 @@ function wireRank(card, back, courses, showPick) {
     } catch { if (n === gen) say('순위를 읽지 못했습니다.', true); }
   }
 
-  const open = on => {
-    back.querySelectorAll('.rail-b').forEach(b =>
-      b.setAttribute('aria-selected', (b.dataset.pane === 'rank') === on));
+  /* 탭을 누르면 카드가 실제로 한 번 돈다. 칸을 제자리에서 갈아끼우면 같은 자리가
+     내용만 바뀐 것으로 읽히지만, 반 바퀴 돌려 모로 선 순간에 갈아끼우면 카드의
+     다른 면을 넘긴 것이 된다 — 탭이 책갈피인 이유가 그때 살아난다.
+     모션을 끈 사람에게는 --flip 이 0 이라 돌지 않고 그냥 바뀐다. */
+  const turn = (el, from, to, ms) => el.animate(
+    [{ transform: `rotateY(${from}deg)` }, { transform: `rotateY(${to}deg)` }],
+    { duration: ms, easing: 'cubic-bezier(.77,0,.175,1)', fill: 'both' });
+
+  const mark = on => rail.querySelectorAll('.rail-b').forEach(b =>
+    b.setAttribute('aria-selected', (b.dataset.pane === 'rank') === on));
+
+  let turning = false;
+  const open = async on => {
+    if (turning) return;
+    mark(on);
+    /* 이미 그 칸이면 돌지 않는다 — 같은 탭을 두 번 눌러 카드를 돌릴 이유가 없다.
+       순위 칸이 보이는 상태가 곧 on 이므로 pane.hidden 의 반대와 견준다. */
+    if (on !== pane.hidden) return;
+    const half = flipMs() / 2;
+    const from = pane.hidden ? pick : pane;
+    turning = true;
+    if (half > 0) await turn(from, 0, -90, half).finished;
     showPick(true);            // 미리보기가 열려 있었으면 먼저 접는다
     pick.hidden = on;
     pane.hidden = !on;
     card.toggleAttribute('data-wide', on);
     if (on) draw(); else gen++;
+    if (half > 0) turn(on ? pane : pick, 90, 0, half);
+    turning = false;
   };
   card._closeRank = () => { if (!pane.hidden) { open(false); return true } return false };
 
-  back.querySelector('.rail').onclick = e => {
+  rail.onclick = e => {
     const b = e.target.closest('.rail-b');
     if (b) open(b.dataset.pane === 'rank');
   };
@@ -638,10 +662,21 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
     ]);
 
     const li = document.createElement('li');
+    /* 카드탭은 카드 *밖*이다. 안에 두면 카드가 제 안쪽을 잘라내(overflow:hidden)
+       밖으로 못 나가고, 카드 안에 넣으면 카드와 함께 돌아 좌우가 뒤집힌다.
+       카드 뒤에 적어 형제 선택자(.card ~ .rail)로 열린 상태를 읽는다. */
     li.innerHTML = `<div class="card" data-flip="false">
         <button type="button" class="card-face card-front" aria-expanded="false">
           <span class="card-top"><span class="thumb"></span></span>
           <span class="card-body"><b></b><em></em><span class="desc"></span></span>
+        </button>
+      </div>
+      <div class="rail" role="tablist" aria-label="카드 보기">
+        <button type="button" class="rail-b" data-pane="pick" role="tab" aria-selected="true">
+          <i class="i i-pin" aria-hidden="true"></i><span class="sr">코스 고르기</span>
+        </button>
+        <button type="button" class="rail-b" data-pane="rank" role="tab" aria-selected="false">
+          <i class="i i-chart" aria-hidden="true"></i><span class="sr">순위</span>
         </button>
       </div>`;
     const thumb = li.querySelector('.thumb');
@@ -706,7 +741,7 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
     back.querySelector('.course.wide').textContent =
       `${bySlug.get('seoul-gu').title} · 25곳`;
 
-    wireRegionBack(card, back, courses);
+    wireRegionBack(card, back, courses, li.querySelector('.rail'));
     li.querySelector('.card-front').onclick = () => flip(card, true);
     regions.append(li);
     window.addEventListener('resize', () => measureCard(card));

@@ -125,7 +125,7 @@ body{
   width:100%;gap:26px;padding:0;perspective:1400px;
 }
 .course-list li{flex:0 0 auto}
-.course-list li{display:flex}
+.course-list li{display:flex;position:relative}
 .course-list li[hidden]{display:none}
 
 /* 고르는 판 — 카드 뒷면. 지도가 남는 높이를 다 갖는다 */
@@ -197,19 +197,37 @@ body{
 .card-back .choice-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
 .card-back .menu{flex-direction:row;justify-content:center;gap:3px;margin-top:8px}
 .card-back .menu button{font-size:17px;padding:5px 15px 7px}
-/* 카드 옆 탭. 카드가 제 안쪽을 잘라내는(overflow:hidden) 판이라 참조 이미지처럼
-   바깥에 세우지 못한다 — 카드 위쪽에 한 줄로 앉힌다. */
-.rail{display:flex;gap:4px;justify-content:center;flex:0 0 auto;margin-bottom:6px}
-.rail-b{
-  width:34px;height:34px;display:grid;place-items:center;cursor:pointer;
-  border:0;border-radius:6px;background:var(--grid);color:var(--ink-soft);
-  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out);
+/* 카드탭 — 카드 뒤에서 왼쪽으로 물려 나온 책갈피.
+   카드의 형제다: 카드 안에 두면 카드가 제 안쪽을 잘라내 밖으로 못 나가고,
+   카드와 함께 돌아 좌우까지 뒤집힌다. z-index 로 카드 밑에 깔아 물린 모양을 낸다. */
+.rail{
+  position:absolute;left:0;top:20%;z-index:0;
+  display:flex;flex-direction:column;gap:6px;
+  translate:calc(-100% + 15px) 0;
+  opacity:0;pointer-events:none;
+  transition:opacity var(--fast) var(--ease-out);
 }
-.rail-b .i{width:19px;height:19px}
-.rail-b[aria-selected="true"]{background:var(--block);color:#fff}
+/* 카드가 열려 있을 때만 나온다. 앞면일 때 책갈피가 비어져 나올 이유가 없다 */
+.card[data-flip="true"] ~ .rail{opacity:1;pointer-events:auto}
+/* 코스 미리보기가 열리면 비킨다 — 그 판은 시작 화면이지 고르는 화면이 아니다 */
+.card[data-preview="1"] ~ .rail{opacity:0;pointer-events:none}
+.rail-b{
+  width:58px;height:52px;box-sizing:border-box;padding-left:13px;
+  display:grid;align-items:center;justify-items:start;cursor:pointer;
+  border:0;border-radius:9px 0 0 9px;
+  background:var(--block-hi);color:#fff;
+  transition:background var(--fast) var(--ease-out),
+             color var(--fast) var(--ease-out),
+             translate var(--fast) var(--ease-out);
+}
+.rail-b .i{width:22px;height:22px}
+/* 고른 탭은 카드와 같은 색이 되어 카드에 이어 붙은 한 장으로 읽힌다.
+   색만으로 가르지 않도록 왼쪽으로 더 나와 모양으로도 갈린다 */
+.rail-b[aria-selected="true"]{background:var(--card);color:var(--ink);translate:-7px 0}
 .rail-b:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-/* 코스 미리보기가 열리면 탭은 비킨다 — 그 판은 시작 화면이지 고르는 화면이 아니다 */
-.card[data-preview="1"] .rail{display:none}
+/* 탭을 넘길 때 칸이 모로 섰다가 돌아온다 — 카드의 다른 면을 넘긴 것으로 읽히게 */
+.card-back{perspective:900px}
+.ov-pick,.ov-rank{backface-visibility:hidden}
 
 /* 순위 — 치기 전에 남들이 어디 몰려 있는지 본다 */
 .ov-rank{display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;text-align:center}
