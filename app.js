@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.81';
+const VER = '0.82';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -566,11 +566,16 @@ function wireRank(card, back, courses, showPick, rail) {
       drawRanks(t.top || [], list);
       /* 등수는 서버가 센 값으로만 적는다. 막대에서 눈대중한 자리를 숫자로 적으면
          보이는 것과 실제가 어긋난다. */
-      pane.querySelector('.rank-you').textContent = d.score === null
-        ? (d.total ? `${d.total}명이 겨루는 중 — 아직 내 기록이 없습니다`
-                   : '아직 아무도 기록을 올리지 않았습니다')
-        : `상위 ${Math.max(1, Math.round((d.over + 1) / d.total * 100))}% · ` +
-          `${d.total}명 중 ${d.over + 1}위`;
+      /* 판이 빈 것과 내가 안 올린 것은 다른 말이다. 이름을 안 적었으면 그 말을
+         해줘야 한다 — 안 그러면 한 판 치고 와서 "아직 아무도" 를 보고
+         순위표가 고장났다고 읽는다. */
+      const joined = !!localStorage.getItem(NAME_KEY);
+      pane.querySelector('.rank-you').textContent = d.score !== null
+        ? `상위 ${Math.max(1, Math.round((d.over + 1) / d.total * 100))}% · ` +
+          `${d.total}명 중 ${d.over + 1}위`
+        : !joined ? '결과 화면에서 이름을 적어야 내 기록이 순위표에 오릅니다'
+        : d.total ? `${d.total}명이 겨루는 중 — 이 판에는 아직 내 기록이 없습니다`
+        : '아직 아무도 기록을 올리지 않았습니다';
       if (d.score !== null) pane.querySelector('.rank-score').textContent = d.score + '점';
       say('');
     } catch { if (n === gen) say('순위를 읽지 못했습니다.', true); }
@@ -1336,7 +1341,12 @@ async function board() {
       ? await boardAsk('/score', { ...play, who: whoami(), name: me, score: G.score, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
     $('#boardWhere').textContent = `${G.course.title} · ${clock(G.total)}`;
-    boardSay(d.rank ? `${d.rank}위` : '');
+    /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
+       않으면 다음에 순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고,
+       기능이 고장난 것으로 읽힌다. */
+    boardSay(d.rank ? `${d.rank}위`
+      : !me && G.score ? `이번 판 ${G.score}점은 아직 순위표에 없습니다 — 이름을 적으면 올라갑니다`
+      : '');
     drawRanks(d.top || []);
     $('#boardJoin').hidden = !!me;
     sec.hidden = false;
