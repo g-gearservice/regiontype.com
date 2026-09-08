@@ -1,6 +1,15 @@
 # regiontype.com
 
-지역을 타이핑으로 알리는 타자연습. v0.3.8 — 서울 25개 자치구와 구별 행정동 / 순서형.
+지역을 타이핑으로 알리는 타자연습. v0.3.9 — 나라별 행정구역, 화면 한국어·영어·일본어.
+
+## 0.3.9에서 바뀐 점
+
+- 설정에서 나라와 언어를 고른다. 비우면 브라우저 언어와 중계기의 나라 코드
+  (`GET /where`)로 기본값을 잡는다
+- 46개국 행정구역 코스가 생긴다. 지명은 Natural Earth 의 현지 이름이고, 한 줄
+  소개는 비어 있다
+- 한국은 서울 코스 옆에 시도 코스가 붙는다. 일본은 도도부현, 미국은 50주와 워싱턴 DC
+- 이름에 띄어쓰기가 있으면 스페이스로 확정하지 않고 Enter 로 확정한다
 
 ## 0.3.8에서 바뀐 점
 
@@ -58,10 +67,14 @@
     mimi/        미니 모터웨이즈 스타일 보드 (개발용)
     data/*.course.json   항목·별칭·한 줄 정보 (mode: sequence)
     data/*.geom.json     비트맵 도트 격자
-    data/korea-pixels.json  타이틀 화면 픽셀맵 격자
+    data/world.json         나라 목록 (build_world.py)
+    data/i18n.json          화면 말 (ko / en / ja). 손으로 쓴다
+    data/*-pixels.json      타이틀 픽셀맵
     tools/build_map.py      GeoJSON → geom.json
     tools/build_dong.py     25개 구 행정동 코스를 한꺼번에
     tools/build_pixels.py   GeoJSON → 픽셀 격자
+    tools/build_world.py    Natural Earth admin-1 → 나라 코스
+    tools/build_size.py     코스 정원 → relay/size.mjs
 
 ## 지도 데이터 갱신
 
@@ -88,6 +101,19 @@
 마지막 인자는 가로 칸 수(여백을 잘라내므로 결과는 더 좁다). 울릉도·독도처럼
 이웃 없는 한 칸짜리 섬은 장식으로서 잡티라 지운다.
 
+## 나라 코스
+
+서울 말고 나라별 1단계 행정구역은 Natural Earth 10m 에서 찍는다. 한 줄 소개는
+짓지 않는다.
+
+    curl -sL -o /tmp/ne-admin1.geojson https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson
+    curl -sL -o /tmp/ne-admin0.geojson https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson
+    python3 tools/build_world.py /tmp/ne-admin1.geojson /tmp/ne-admin0.geojson data/
+    python3 tools/build_size.py
+
+`relay/size.mjs` 는 정원 표다. 코스가 늘면 중계기도 이 파일을 읽으므로, 찍은 뒤
+`node relay/test.mjs` 로 어긋남을 본다. `GET /where` 는 배포된 중계기에 있다.
+
 ## 정답 판정
 
 매 입력마다(한글 조합 중 포함) 검사한다. 약칭("강남")은 **그 약칭으로 이어질 수
@@ -100,7 +126,8 @@
 
 오답은 **조합이 끝난 시점에 어느 접미도 미점령 항목의 앞부분이 아닐 때** 자동
 확정된다(`강난` → 즉시 오답). 스페이스를 keydown 으로 가로채면 IME 조합 확정
-자체가 깨지므로 그렇게 하지 않는다. 감점은 없고 콤보만 끊긴다.
+자체가 깨지므로 그렇게 하지 않는다. 이름에 띄어쓰기가 있는 코스는 스페이스가
+글자라서, 그때만 Enter 로 확정한다. 감점은 없고 콤보만 끊긴다.
 
 ## 피드백
 

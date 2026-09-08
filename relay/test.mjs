@@ -1,7 +1,7 @@
 /* node relay/test.mjs — 이슈 한 장이 제대로 지어지는지만 본다 */
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import { compose, entry, where } from './worker.mjs';
+import { compose, entry, where, regionOf } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u } from './auth.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
@@ -98,6 +98,18 @@ for (const f of readdirSync(dir).filter(n => n.endsWith('.course.json'))) {
 }
 
 console.log('board self-check done');
+
+const loc = regionOf({ country: 'KR', timezone: 'Asia/Seoul' }, 'ko-KR,en;q=0.8');
+assert.equal(loc.country, 'KR');
+assert.equal(loc.timezone, 'Asia/Seoul');
+assert.equal(loc.lang, 'ko-KR');
+assert.equal(regionOf({ country: 'XX' }, '').country, '');
+assert.equal(regionOf({ country: 'T1' }, '').country, '');
+assert.equal(regionOf({ country: 'usa' }, '').country, '');
+assert.equal(regionOf({ country: 'KR<script>' }, '').country, '');
+assert.ok(!('city' in loc), '도시는 안 실어 보낸다');
+
+console.log('region self-check done');
 
 /* ── 로그인 ────────────────────────────────────────── */
 const KEY = 'test-key';

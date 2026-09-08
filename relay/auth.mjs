@@ -51,7 +51,7 @@ export async function open(key, token) {
    쿠키를 안 쓰는 이유는 중계기가 사이트와 다른 곳(workers.dev)에 있어서다 —
    사이트 밖 쿠키는 브라우저가 점점 더 막는다. 헤더로 들고 다니면 CSRF 도 없다.
    ponytail: 중계기를 api.regiontype.com 으로 옮기면 HttpOnly 쿠키로 올릴 수 있다. */
-export const bearer = req => (req.headers.get('authorization') || '').replace(/^Bearer /, '');
+const bearer = req => (req.headers.get('authorization') || '').replace(/^Bearer /, '');
 
 export const who = (env, req) => env.SESSION_KEY ? open(env.SESSION_KEY, bearer(req)) : null;
 

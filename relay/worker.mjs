@@ -10,7 +10,7 @@
      POST /auth/reg  패스키 만들기 끝  → 세션 토큰
      POST /auth/go   로그인 시작       → 챌린지
      POST /auth/log  로그인 끝         → 세션 토큰
-     GET  /auth/me   지금 누구인지
+     GET  /where    이 요청의 나라 코드 (cf.country). 도시는 안 보낸다
 
        wrangler secret put SESSION_KEY  // 아무 긴 난수. 갈면 모든 세션이 끊긴다
 
@@ -21,6 +21,7 @@
 
 import { sign, who as sessionWho, rand, hex, b64u, unb64u,
          readClientData, readAuthData, verify, sha, eq } from './auth.mjs';
+import { SIZE } from './size.mjs';
 
 const REPO = 'pistolinkr/regiontype.com';
 const SITE = ['https://regiontype.com', 'https://www.regiontype.com'];
@@ -29,18 +30,7 @@ const CAP = { body: 500, v: 16, href: 300, ua: 300, name: 12 };
 /* 제한 시간이 다르면 다른 판이다. app.js 의 TIMES 와 같아야 한다 */
 const TIMES = [60, 90, 120, 180, 300];
 const TOP = 10;
-/* 코스별 정원. data/*.course.json 에서 뽑은 값이고 relay/test.mjs 가 어긋나면 잡는다.
-   이게 없으면 25곳짜리 판에 500곳을 친 척한 25만점이 통과해 1위를 영구 점거한다.
-   여기 없는 코스 이름은 아예 받지 않는다 — 없는 판이 생기지 않게. */
-const SIZE = {
-  'dobong-dong': 14, 'dongdaemun-dong': 14, 'dongjak-dong': 15, 'eunpyeong-dong': 16,
-  'gangbuk-dong': 13, 'gangdong-dong': 18, 'gangnam-dong': 22, 'gangseo-dong': 20,
-  'geumcheon-dong': 10, 'guro-dong': 15, 'gwanak-dong': 21, 'gwangjin-dong': 15,
-  'jongno-dong': 17, 'jung-dong': 15, 'jungnang-dong': 16, 'mapo-dong': 16, 'nowon-dong': 19,
-  'seocho-dong': 18, 'seodaemun-dong': 14, 'seongbuk-dong': 20, 'seongdong-dong': 17,
-  'seoul-gu': 25, 'songpa-dong': 26, 'yangcheon-dong': 18, 'yeongdeungpo-dong': 18,
-  'yongsan-dong': 16,
-};
+/* SIZE 는 tools/build_size.py 가 data/*.course.json 에서 찍는다. */
 
 const cut = (s, n) => String(s ?? '').trim().slice(0, n);
 /* 메타 한 줄에 들어갈 값. 백틱과 줄바꿈을 빼야 코드 블록을 뚫고 나오지 못한다 */
@@ -347,13 +337,12 @@ async function authLog(req, env, o) {
   });
 }
 
-async function authMe(req, env, o) {
-  const me = await sessionWho(env, req);
-  if (!me) return send(200, { user: null }, o);
-  return safely(o, async () => {
-    const k = await env.DB.prepare('select count(*) as n from passkey where who = ?').bind(me).first('n');
-    return send(200, { user: me, keys: k ?? 0 }, o);
-  });
+export function regionOf(cf, accept) {
+  const c = String(cf?.country || '');
+  const country = /^[A-Z]{2}$/.test(c) && c !== 'XX' && c !== 'T1' ? c : '';
+  const timezone = String(cf?.timezone || '').replace(/[^\w/+\-]/g, '').slice(0, 64);
+  const lang = String(accept || '').split(',')[0].trim().slice(0, 35);
+  return { country, timezone, lang };
 }
 
 export default {
@@ -364,11 +353,13 @@ export default {
     if (!mine(o)) return reply(403, '허용된 곳이 아닙니다.', o);
 
     if (path === '/' && req.method === 'POST') return feedback(req, env, o);
+    if (path === '/where' && req.method === 'GET') {
+      return send(200, regionOf(req.cf, req.headers.get('accept-language')), o);
+    }
 
     if (path.startsWith('/auth/')) {
       if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);
       if (!env.SESSION_KEY) return nokey(o);
-      if (path === '/auth/me' && req.method === 'GET') return authMe(req, env, o);
       if (req.method === 'POST') {
         /* 로그인 시도도 창을 센다 — 패스키를 찍어 맞히려는 반복을 막는다.
            점수 창(분당 3)과 나눠 쓰면 등록 두 번에 다 써버려 정작 못 올린다 */

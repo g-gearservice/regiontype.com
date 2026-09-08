@@ -1,28 +1,123 @@
-/* regiontype — 서울 자치구 자유형. 코스 데이터는 data/*.json 에서 읽는다. */
+/* regiontype — 나라의 지명을 친다. 코스는 data/*.json, 화면 말은 data/i18n.json. */
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.83';
+const VER = '0.92';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
 $('#verBuild').textContent = VER;
-const REGIONS = [
-  {
-    id: 'seoul',
-    title: '서울',
-    description: '한강이 가로지르는 수도. 25개 자치구부터 423개 행정동까지.',
-    thumb: 'seoul-gu',
-    courses: ['seoul-gu', 'gangseo-dong', 'dobong-dong', 'dongdaemun-dong', 'dongjak-dong', 'eunpyeong-dong', 'gangbuk-dong', 'gangdong-dong', 'gangnam-dong', 'geumcheon-dong', 'guro-dong', 'gwanak-dong', 'gwangjin-dong', 'jongno-dong', 'jung-dong', 'jungnang-dong', 'mapo-dong', 'nowon-dong', 'seocho-dong', 'seodaemun-dong', 'seongbuk-dong', 'seongdong-dong', 'songpa-dong', 'yangcheon-dong', 'yeongdeungpo-dong', 'yongsan-dong']
+const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+  'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
+let UI_LANGS = ['ko', 'en', 'ja'];
+let I18N = { ko: {}, en: {}, ja: {} };
+let WORLD = { countries: [] };
+let LANG_COUNTRY = {};
+let HERE = { country: '', lang: '', timezone: '' };
+let LANG = 'ko', COUNTRY = 'KR';
+
+/* UI 언어 태그를 i18n 키로 맞춘다. zh-Hant·nb 처럼 두 글자만 자르면 어긋난다. */
+function normLangTag(tag) {
+  const t = String(tag || '').replace('_', '-').trim().toLowerCase();
+  if (!t) return '';
+  if (t.startsWith('zh-hant') || t === 'zh-tw' || /-tw$/.test(t)) return 'zh-hant';
+  if (t.startsWith('zh-hk') || /-hk$/.test(t)) return 'zh-hk';
+  if (t.startsWith('zh')) return 'zh';
+  if (t.startsWith('nb') || t === 'no' || t.startsWith('no-')) return 'nb';
+  return t.slice(0, 2);
+}
+function parseUiLang(tag) {
+  if (!tag) return null;
+  const raw = String(tag).replace('_', '-').trim();
+  if (UI_LANGS.includes(raw)) return raw;
+  const low = raw.toLowerCase();
+  if (UI_LANGS.includes(low)) return low;
+  const base = normLangTag(raw);
+  if (UI_LANGS.includes(base)) return base;
+  if ((base === 'zh-hant' || base === 'zh-hk') && UI_LANGS.includes('zh')) return 'zh';
+  return null;
+}
+function buildLangCountry(world) {
+  const map = { ko: 'KR', ja: 'JP', zh: 'CN', 'zh-hant': 'TW', 'zh-hk': 'HK' };
+  for (const c of world.countries) {
+    const base = normLangTag(c.lang);
+    if (!map[base]) map[base] = c.id;
   }
-];
-const SYM = '0123456789abcdefghijklmnopqrstuvwxyz';   // 도트 격자의 자치구 번호
-let PM = null;   // 타이틀 픽셀맵 메타. 배경 격자를 비트 칸에 맞출 때 쓴다.
+  return map;
+}
+function langLabel(code) {
+  /* 설정 언어 목록은 각 언어의 자기 이름(endonym)으로 보여준다 — UI 가 한국어여도
+     Deutsch·日本語·ไทย 로 읽히게. Intl 은 코드를 로케일로 쓰면 그 언어 이름을 돌려준다 */
+  try { return new Intl.DisplayNames([code], { type: 'language' }).of(code) || code; }
+  catch { return code; }
+}
+
+const t = (key, vars) => {
+  const tab = I18N[LANG] || I18N.en;
+  let s = (tab && tab[key]) || I18N.en[key] || I18N.ko[key] || key;
+  if (vars) s = String(s).replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+  return s;
+};
+const loc = obj => {
+  if (!obj || typeof obj === 'string') return obj || '';
+  return obj[LANG] || obj.en || obj.ko || Object.values(obj)[0] || '';
+};
+const courseLabel = c => {
+  if (!c) return '';
+  if (c.title && c.title !== String((c.items || []).length)) return c.title;
+  return t('places', { n: (c.items || []).length });
+};
+const countryName = id => {
+  try { return new Intl.DisplayNames([LANG], { type: 'region' }).of(id) || id; }
+  catch { return id; }
+};
+
+/* 설정 레일은 탭 글자에서 폭을 얻는다 — UI 언어를 바꾸면(지역/Region/Регіон) 그 폭이
+   순간 이동하고, flex:1 인 .opts-panels 가 통째로 딸려 흔들린다. 고른 탭만 굵어지는
+   것도 같은 이유로 탭을 옮길 때마다 몇 px 씩 튄다. 원인이 폭 하나라 폭 하나만 잇는다 —
+   레일이 이어지면 판과 셸은 flex 로 따라온다.
+   글자에서 나온 폭이라 transform 으로는 못 잇는다. 재서 WAAPI 로 넘기되 길이는
+   --slow 를 그대로 읽는다: prefers-reduced-motion 이거나 설정의 모션을 끄면 그
+   토큰이 0s 라 여기도 같이 즉시 전환이 된다. */
+function easeRail(mutate) {
+  const rail = $('.opts-tabs');
+  // 도중에 또 바뀌면 지금 화면에 보이는 폭에서 잇는다 — 목표 폭에서 시작하면 튄다
+  const from = rail ? rail.getBoundingClientRect().width : 0;
+  if (rail) rail.getAnimations().forEach(a => a.cancel());
+  mutate();
+  if (!from) return;                       // 설정이 닫혀 있으면(폭 0) 이을 것이 없다
+  const css = getComputedStyle(document.documentElement);
+  const ms = parseFloat(css.getPropertyValue('--slow')) * 1000;
+  const to = rail.getBoundingClientRect().width;
+  if (!(ms > 0) || Math.abs(to - from) < 1) return;
+  rail.animate({ width: [from + 'px', to + 'px'] },
+               { duration: ms, easing: css.getPropertyValue('--ease-in-out').trim() });
+}
+
+function applyI18n(root) {
+  root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  });
+  root.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+}
+
+function paintUI(then) {
+  document.documentElement.lang = LANG;
+  /* 탭 글자(i18n)와 언어 목록(endonym) 재그리기를 한 easeRail 안에서 — Cursor endonym +
+     Claude 레일 폭 WAAPI 를 한 번에 잇는다. then 은 fillLangPick 등 폭을 바꾸는 DOM */
+  easeRail(() => {
+    applyI18n(document);
+    document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
+    if (then) then();
+  });
+}
 
 /* ── 설정 ───────────────────────────────────────────── */
 const TIMES = [60, 90, 120, 180, 300];
 const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true };
+const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
+              lang: 'auto', country: 'auto' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -31,6 +126,8 @@ for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) || location.protocol === 'file:') {
   document.documentElement.dataset.dev = '';
 }
+/* 배포/개발 갈림은 이 속성 하나다. 검사에서 지웠다 붙였다 하므로 그때그때 읽는다 */
+const isDev = () => document.documentElement.hasAttribute('data-dev');
 
 const saveOpt = () => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
@@ -54,18 +151,26 @@ const dot = (x, y, cell, cls) => {
    인정한다. 그래서 "중"은 중구/중랑구 사이에서 확정되지 않고,
    "강남"은 즉시 확정된다. 앞에 붙은 오타는 접미 검사로 흘려보낸다. */
 function stripSuffix(name) {
-  const m = /^(.+?)(특별시|광역시|자치구|자치시|[시군구동읍면로가])$/.exec(name);
+  const m = /^(.+?)(특별자치시|특별자치도|특별시|광역시|자치구|자치시|자치도|自治区|特别行政区|特別行政區|[시군구동읍면로가]|[都道府県]|[省市縣县])$/.exec(String(name).normalize('NFC'));
   return m && m[1].length > 1 ? m[1] : null;
 }
-function matchInput(raw, items) {
-  const buf = raw.replace(/\s/g, '');
+function matchInput(raw, items, spacy = false) {
+  const key = s => {
+    let t = String(s).normalize('NFC');
+    if (!spacy) t = t.replace(/\s/g, '');
+    return t.toLowerCase();
+  };
+  const buf = key(raw);
   for (let i = 0; i < buf.length; i++) {
     const sub = buf.slice(i);
     const open = items.filter(it => !it.claimed);
-    const exact = open.find(it => it.name === sub);
+    const exact = open.find(it => key(it.name) === sub);
     if (exact) return exact;
-    const alias = open.find(it => it.aliases.includes(sub));
-    if (alias && open.every(it => it === alias || !it.name.startsWith(sub))) return alias;
+    const alias = open.find(it =>
+      it.aliases.some(a => key(a) === sub) &&
+      open.every(x => x === it ||
+        (!key(x.name).startsWith(sub) && !x.aliases.some(a => key(a) === sub))));
+    if (alias) return alias;
   }
   return null;
 }
@@ -107,7 +212,7 @@ function syncGrid() {
     root = $('#map'); space = G.cam; cell = G.cell;
   } else {
     const pm = $('#pixelmap');
-    if (!pm || !$('#title.on, #options.on')) return;
+    if (!pm || !$('#title.on')) return;
     root = space = pm; cell = 1;
   }
   const ctm = space.getScreenCTM();
@@ -128,6 +233,9 @@ function followGrid(ms) {
   requestAnimationFrame(step);
 }
 window.addEventListener('resize', syncGrid);
+window.addEventListener('resize', () => {
+  document.querySelectorAll('#regionList .card').forEach(measureCard);
+});
 document.addEventListener('click', e => {
   const drum = document.querySelector('.wheel[data-on]');
   if (drum && !drum.closest('.stat.time').contains(e.target)) closeWheel(drum);
@@ -137,39 +245,38 @@ document.addEventListener('click', e => {
   if (open && !open.contains(e.target) && !open.parentElement.contains(e.target))
     flip(open, false);
   const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
-  const t = e.target.closest('.toggle');
-  if (t) { opt[t.dataset.opt] = !opt[t.dataset.opt]; saveOpt(); }
+  const tog = e.target.closest('.toggle');
+  if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
 });
 
 /* ── 타이틀 픽셀맵 ──────────────────────────────────
-   대한민국을 격자로 찍고 서울만 다른 색으로 둔다. v1 이 서울에서
-   시작해 전국으로 넓어진다는 로드맵이 그림 하나로 보이게. */
-fetch(asset('data/korea-pixels.json')).then(r => r.json()).then(g => {
+   고른 나라의 격자를 찍고, 강조 칸(S)만 다른 색으로 둔다. */
+let pmDraw = null, pmBits = [];
+function loadPixels(file) {
+  return grab(file.endsWith('.json') ? file : `data/${file}.json`).then(g => {
+    const svg = $('#pixelmap');
+    svg.setAttribute('viewBox', `0 0 ${g.anchor + 1} ${g.h}`);
+    g.over = (g.w - g.anchor - 1) / g.h;
+    svg.style.setProperty('--pm-over', g.over);
+    const bindBits = () => {
+      pmBits = [...svg.querySelectorAll('circle')].map(el => ({
+        el, x: +el.getAttribute('cx'), y: +el.getAttribute('cy'),
+        hilite: el.classList.contains('hilite')
+      }));
+    };
+    const draw = () => {
+      svg.innerHTML = g.rows.flatMap((row, y) =>
+        [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'hilite' : ''))).join('');
+      bindBits();
+    };
+    if (pmDraw) REDRAW.splice(REDRAW.indexOf(pmDraw), 1);
+    pmDraw = draw;
+    REDRAW.push(draw); draw();
+    requestAnimationFrame(() => requestAnimationFrame(syncGrid));
+  }).catch(() => {});
+}
+{
   const svg = $('#pixelmap');
-  // 우측 여백은 부산·울산까지로 잰다 (g.anchor). 더 동쪽으로 튀어나온 해안은
-  // viewBox 밖으로 흘려보내되 지워지지는 않는다.
-  svg.setAttribute('viewBox', `0 0 ${g.anchor + 1} ${g.h}`);
-  // 기준선 밖(울릉도·독도)이 차지하는 폭을 높이 대비 비율로 넘겨 잘림을 막는다
-  g.over = (g.w - g.anchor - 1) / g.h;
-  svg.style.setProperty('--pm-over', g.over);
-  PM = g;
-  let bits = [];
-  const bindBits = () => {
-    bits = [...svg.querySelectorAll('circle')].map(el => ({
-      el, x: +el.getAttribute('cx'), y: +el.getAttribute('cy'),
-      seoul: el.classList.contains('seoul')
-    }));
-  };
-  const draw = () => {
-    svg.innerHTML = g.rows.flatMap((row, y) =>
-      [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'seoul' : ''))).join('');
-    bindBits();
-  };
-  REDRAW.push(draw); draw();
-  requestAnimationFrame(() => requestAnimationFrame(syncGrid));
-
-  /* 타이틀 맵 근접장. 포인터는 창에서 읽고 SVG 유저 좌표로 옮긴다.
-     #pixelmap 은 pointer-events:none 이라 클릭을 가로채지 않는다. */
   const R = 1.8, HOVER = 0.62;
   let mx = 0, my = 0, raf = 0;
   const fine = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
@@ -182,36 +289,36 @@ fetch(asset('data/korea-pixels.json')).then(r => r.json()).then(g => {
   };
   const paint = () => {
     raf = 0;
-    if (!fine() || !bits.length) return;
-    if (!$('#title.on, #options.on')) { bits.forEach(clearBit); return; }
+    if (!fine() || !pmBits.length) return;
+    if (!$('#title.on')) { pmBits.forEach(clearBit); return; }
     const ctm = svg.getScreenCTM();
     if (!ctm) return;
     const pt = svg.createSVGPoint();
     pt.x = mx; pt.y = my;
     const p = pt.matrixTransform(ctm.inverse());
     const noScale = skipScale();
-    for (const b of bits) {
+    for (const b of pmBits) {
       const d = Math.hypot(b.x - p.x, b.y - p.y);
       if (d >= R) { clearBit(b); continue; }
-      const t = 1 - d / R;
-      /* 서울은 이미 강조색에 불투명하다. 근접장의 색·투명도까지 씌우면 바닥을
-         0.38 로 잡은 식이 서울을 되레 흐리게 만든다 — 크기만 반응시킨다. */
-      if (!b.seoul) {
+      const k = 1 - d / R;
+      /* 강조 칸은 이미 불투명하다. 근접장의 색·투명도까지 씌우면 바닥을
+         0.38 로 잡은 식이 되레 흐리게 만든다 — 크기만 반응시킨다. */
+      if (!b.hilite) {
         b.el.style.fill = 'var(--accent)';
-        b.el.style.opacity = d < HOVER ? '1' : String(0.38 + 0.62 * t);
+        b.el.style.opacity = d < HOVER ? '1' : String(0.38 + 0.62 * k);
       }
       b.el.style.transform = noScale ? ''
-        : (d < HOVER ? 'scale(1)' : `scale(${1 - 0.5 * t * t})`);
+        : (d < HOVER ? 'scale(1)' : `scale(${1 - 0.5 * k * k})`);
     }
   };
   window.addEventListener('pointermove', e => {
     mx = e.clientX; my = e.clientY;
     if (!raf) raf = requestAnimationFrame(paint);
   }, { passive: true });
-});
+}
 
 /* 카드 상단은 흰 원 없이 도트만. 빈 칸을 잘라 초록 면을 채운다 */
-function thumbSvg(geom, fit = 'slice') {
+function thumbSvg(geom) {
   let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
   const dots = [];
   geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
@@ -224,7 +331,7 @@ function thumbSvg(geom, fit = 'slice') {
   }));
   const c = geom.cell;
   return `<svg viewBox="${minX * c} ${minY * c} ${(maxX - minX + 1) * c} ${(maxY - minY + 1) * c}"` +
-    ` preserveAspectRatio="xMidYMid ${fit}">${dots.join('')}</svg>`;
+    ` preserveAspectRatio="xMidYMid slice">${dots.join('')}</svg>`;
 }
 
 /* 고르는 지도 — 구마다 도트를 한 묶음으로 싸서 통째로 누를 수 있게 한다.
@@ -335,31 +442,6 @@ function flip(card, open) {
   const focus = (play && !play.hidden && card.querySelector('.ov-start'))
     || card.querySelector('.ov-start');
   if (focus) focus.focus();
-}
-
-/* 뒷면 하나에 배율 선택·시작·취소를 묶는다 */
-function previewCam(svg, geom, zoom, at) {
-  const W = geom.w, H = geom.h, z = zoom;
-  let tx = 0, ty = 0;
-  if (z > 1 && at) {
-    tx = Math.min(0, Math.max(W - z * W, W / 2 - z * at[0]));
-    ty = Math.min(0, Math.max(H - z * H, H / 2 - z * at[1]));
-  }
-  svg.style.setProperty('--z', z);
-  const cam = svg.querySelector('.cam');
-  if (cam) cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
-}
-
-function wireBack(card, back, slug, geom, items) {
-  const svg = back.querySelector('.ov-map');
-  const head = items[0] && geom.items.find(g => g.name === items[0].name);
-  const at = head && head.c;
-  previewCam(svg, geom, 1, at);
-  wireDock(back);
-  back.querySelector('.ov-start').onclick = () => {
-    flip(card, false);
-    start(slug, { zoom: 3 });
-  };
 }
 
 /* 미리보기 독 — 이름 보임·색. 제한 시간은 HUD 드럼에서 고른다 */
@@ -477,10 +559,9 @@ function wireRegionBack(card, back, courses, rail) {
     play.hidden = false;
     const pane = $('#ovTpl').content.firstElementChild.cloneNode(true);
     if (org) pane.style.transformOrigin = org;
-    pane.querySelector('.ov-title').textContent = c.title;
+    pane.querySelector('.ov-title').textContent = courseLabel(c);
     pane.querySelector('.ov-total').textContent = '/' + c.items.length;
-    pane.querySelector('.ov-time').textContent =
-      Math.floor(opt.time / 60) + ':' + String(opt.time % 60).padStart(2, '0');
+    pane.querySelector('.ov-time').textContent = clock(opt.time);
     play.append(pane);
     // 자리를 잡은 다음 프레임에 켠다 — 같은 프레임에 켜면 커지는 과정이 없다
     requestAnimationFrame(() => {
@@ -494,7 +575,9 @@ function wireRegionBack(card, back, courses, rail) {
     svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
     drawDots(svg, geom, items);
     if (c.mode === 'sequence' && items[0] && items[0].el) items[0].el.classList.add('target');
-    wireBack(card, pane, c.slug, geom, items);
+    /* 미리보기는 늘 1배라 카메라를 따로 놓지 않는다 */
+    wireDock(pane);
+    pane.querySelector('.ov-start').onclick = () => { flip(card, false); start(c.slug); };
   };
   pick.onclick = e => {
     const b = e.target.closest('[data-slug]');
@@ -520,7 +603,7 @@ function wireRank(card, back, courses, showPick, rail) {
     const p = pane.querySelector('.rank-say');
     p.textContent = t; p.classList.toggle('bad', !!bad);
   };
-  let at = Math.max(0, courses.findIndex(c => c.slug === 'seoul-gu'));
+  let at = Math.max(0, courses.findIndex(c => c.slug === (card.dataset.main || courses[0]?.slug)));
   let gen = 0;
 
   /* 막대는 그 판에서 나올 수 있는 최고 점수까지 그린다. 사람이 몰린 자리만
@@ -547,14 +630,14 @@ function wireRank(card, back, courses, showPick, rail) {
 
   async function draw() {
     const n = ++gen, c = courses[at];
-    pane.querySelector('.rank-title').textContent = c.title;
+    pane.querySelector('.rank-title').textContent = courseLabel(c);
     pane.querySelector('.rank-where').textContent = clock(opt.time);
     pane.querySelector('.rank-score').textContent = '';
     pane.querySelector('.rank-you').textContent = '';
     pane.querySelector('.rank-plot').replaceChildren();
     list.replaceChildren();
-    say('읽는 중…');
-    if (!FEEDBACK_URL) return say('순위표에 닿을 수 없습니다.', true);
+    say(t('reading'));
+    if (!FEEDBACK_URL) return say(t('noBoard'), true);
     try {
       const play = { c: c.slug, t: opt.time };
       const [d, t] = await Promise.all([
@@ -571,14 +654,14 @@ function wireRank(card, back, courses, showPick, rail) {
          순위표가 고장났다고 읽는다. */
       const joined = !!localStorage.getItem(NAME_KEY);
       pane.querySelector('.rank-you').textContent = d.score !== null
-        ? `상위 ${Math.max(1, Math.round((d.over + 1) / d.total * 100))}% · ` +
-          `${d.total}명 중 ${d.over + 1}위`
-        : !joined ? '결과 화면에서 이름을 적어야 내 기록이 순위표에 오릅니다'
-        : d.total ? `${d.total}명이 겨루는 중 — 이 판에는 아직 내 기록이 없습니다`
-        : '아직 아무도 기록을 올리지 않았습니다';
-      if (d.score !== null) pane.querySelector('.rank-score').textContent = d.score + '점';
+        ? t('rankYou', { pct: Math.max(1, Math.round((d.over + 1) / d.total * 100)),
+                         total: d.total, rank: d.over + 1 })
+        : !joined ? t('rankNeedName')
+        : d.total ? t('rankOthers', { n: d.total })
+        : t('rankEmpty');
+      if (d.score !== null) pane.querySelector('.rank-score').textContent = d.score + t('scoreUnit');
       say('');
-    } catch { if (n === gen) say('순위를 읽지 못했습니다.', true); }
+    } catch { if (n === gen) say(t('rankFail'), true); }
   }
 
   /* 탭을 누르면 카드가 실제로 한 번 돈다. 칸을 제자리에서 갈아끼우면 같은 자리가
@@ -606,7 +689,7 @@ function wireRank(card, back, courses, showPick, rail) {
     showPick(true);            // 미리보기가 열려 있었으면 먼저 접는다
     pick.hidden = on;
     pane.hidden = !on;
-    card.toggleAttribute('data-wide', on);
+    card.toggleAttribute('data-rank', on);
     if (on) draw(); else gen++;
     if (half > 0) turn(on ? pane : pick, 90, 0, half);
     turning = false;
@@ -626,14 +709,14 @@ function wireRank(card, back, courses, showPick, rail) {
   /* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 —
      설정의 기록 코드 칸을 걷어내면서 이 버튼도 같이 사라지면 철회 불가가 된다. */
   pane.querySelector('.rank-drop').onclick = async () => {
-    if (!FEEDBACK_URL) return say('순위표에 닿을 수 없습니다.', true);
-    if (!confirm('순위표에 올린 내 기록을 전부 내립니다. 되돌릴 수 없습니다.')) return;
+    if (!FEEDBACK_URL) return say(t('noBoard'), true);
+    if (!confirm(t('forgetAsk'))) return;
     try {
       const d = await boardAsk('/forget', {});
       localStorage.removeItem(NAME_KEY);
-      say(d.gone ? `${d.gone}줄을 내렸습니다.` : '내릴 기록이 없었습니다.');
+      say(d.gone ? t('forgot', { n: d.gone }) : t('forgotNone'));
       draw();
-    } catch { say('내리지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true); }
+    } catch { say(t('forgetFail'), true); }
   };
 }
 
@@ -655,12 +738,20 @@ const loadCourse = slug => grab(`data/${slug}.course.json`);
 const loadGeom = slug => grab(`data/${slug}.geom.json`);
 const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
 
-(async () => {
-  saveOpt();
+let regionRedraw = [];
+
+async function renderRegions() {
+  regionRedraw.forEach(f => {
+    const i = REDRAW.indexOf(f);
+    if (i >= 0) REDRAW.splice(i, 1);
+  });
+  regionRedraw = [];
   const regions = $('#regionList');
-  for (const r of REGIONS) {
-    /* 코스 26개를 줄줄이 기다리면 지역 화면이 그만큼 늦게 뜬다. 한꺼번에 받는다.
-       지형은 서울 지도 하나면 된다 — 구를 지도에서 짚으니 코스별 썸네일이 필요 없다. */
+  regions.replaceChildren();
+  const pack = WORLD.countries.find(c => c.id === COUNTRY) || WORLD.countries[0];
+  if (!pack) return;
+  for (const r of pack.regions) {
+    /* 코스를 줄줄이 기다리면 지역 화면이 그만큼 늦게 뜬다. 한꺼번에 받는다. */
     const [geom, courses] = await Promise.all([
       loadGeom(r.thumb),
       Promise.all(r.courses.map(loadCourse))
@@ -676,20 +767,21 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
           <span class="card-body"><b></b><em></em><span class="desc"></span></span>
         </button>
       </div>
-      <div class="rail" role="tablist" aria-label="카드 보기">
+      <div class="rail" role="tablist" aria-label="${t('cardView')}">
         <button type="button" class="rail-b" data-pane="pick" role="tab" aria-selected="true">
-          <i class="i i-pin" aria-hidden="true"></i><span class="sr">코스 고르기</span>
+          <i class="i i-pin" aria-hidden="true"></i><span class="sr">${t('pickCourse')}</span>
         </button>
         <button type="button" class="rail-b" data-pane="rank" role="tab" aria-selected="false">
-          <i class="i i-chart" aria-hidden="true"></i><span class="sr">순위</span>
+          <i class="i i-chart" aria-hidden="true"></i><span class="sr">${t('rankTab')}</span>
         </button>
       </div>`;
     const thumb = li.querySelector('.thumb');
     const drawThumb = () => thumb.innerHTML = thumbSvg(geom);
-    REDRAW.push(drawThumb); drawThumb();
-    li.querySelector('.card-body b').textContent = r.title;
-    li.querySelector('.card-body em').textContent = `${r.courses.length}개 코스`;
-    li.querySelector('.desc').textContent = r.description;
+    REDRAW.push(drawThumb); regionRedraw.push(drawThumb); drawThumb();
+    const title = loc(r.title) || countryName(pack.id);
+    li.querySelector('.card-body b').textContent = title;
+    li.querySelector('.card-body em').textContent = t('nCourses', { n: r.courses.length });
+    li.querySelector('.desc').textContent = loc(r.description) || t('places', { n: courses[0]?.items.length || 0 });
 
     const card = li.querySelector('.card');
     const back = $('#regionTpl').content.firstElementChild.cloneNode(true);
@@ -710,21 +802,26 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
     const drawPick = () => {
       pane.innerHTML = pickMapSvg(geom);
       pane.querySelectorAll('.gu').forEach(g => {
-        const slug = byGu.get(g.dataset.gu);
+        const slug = r.nested && byGu.get(g.dataset.gu);
         if (slug) g.dataset.slug = slug;
-        else { g.classList.add('off'); g.removeAttribute('tabindex'); g.removeAttribute('role') }
+        else if (r.nested) {
+          g.classList.add('off'); g.removeAttribute('tabindex'); g.removeAttribute('role');
+        }
       });
     };
-    REDRAW.push(drawPick); drawPick();
+    REDRAW.push(drawPick); regionRedraw.push(drawPick); drawPick();
 
     /* 이름 25개를 지도에 다 얹으면 서로 밟는다. 짚는 곳만 아래 한 줄로 읽는다. */
     const name = back.querySelector('.pickname');
-    const idle = '구를 눌러 행정동 코스로';
+    const idle = r.nested ? t('idleNested') : t('idleAdmin');
     name.dataset.idle = idle;
     name.textContent = idle;
     const tell = g => {
-      const c = g && g.dataset.slug && bySlug.get(g.dataset.slug);
-      name.textContent = c ? `${c.title} · ${c.items.length}곳` : idle;
+      if (!g) { name.textContent = idle; return; }
+      const c = g.dataset.slug && bySlug.get(g.dataset.slug);
+      if (c) name.textContent = `${c.title} · ${t('places', { n: c.items.length })}`;
+      else if (g.dataset.gu) name.textContent = g.dataset.gu;
+      else name.textContent = idle;
     };
     pane.addEventListener('pointerover', e => tell(e.target.closest('.gu')));
     pane.addEventListener('pointerout', () => tell(null));
@@ -743,21 +840,307 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
       g.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    back.querySelector('.course.wide').textContent =
-      `${bySlug.get('seoul-gu').title} · 25곳`;
+    const main = bySlug.get(r.main) || courses[0];
+    back.querySelector('.course.wide').dataset.slug = main.slug;
+    back.querySelector('.course.wide').textContent = courseLabel(main);
 
+    card.dataset.main = main.slug;
     wireRegionBack(card, back, courses, li.querySelector('.rail'));
     li.querySelector('.card-front').onclick = () => flip(card, true);
     regions.append(li);
-    window.addEventListener('resize', () => measureCard(card));
   }
-})();
+}
+
+const TZ_COUNTRY = {
+  'Asia/Seoul': 'KR', 'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Taipei': 'TW',
+  'Asia/Hong_Kong': 'HK', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN',
+  'Asia/Jakarta': 'ID', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Manila': 'PH',
+  'Asia/Kolkata': 'IN', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA',
+  'Europe/Berlin': 'DE', 'Europe/Paris': 'FR', 'Europe/Rome': 'IT', 'Europe/Madrid': 'ES',
+  'Europe/London': 'GB', 'Europe/Amsterdam': 'NL', 'Europe/Warsaw': 'PL',
+  'Europe/Brussels': 'BE', 'Europe/Vienna': 'AT', 'Europe/Zurich': 'CH',
+  'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO', 'Europe/Helsinki': 'FI',
+  'Europe/Athens': 'GR', 'Europe/Bucharest': 'RO', 'Europe/Budapest': 'HU',
+  'Europe/Sofia': 'BG', 'Europe/Prague': 'CZ', 'Europe/Lisbon': 'PT',
+  'Europe/Dublin': 'IE', 'Europe/Istanbul': 'TR', 'Europe/Kyiv': 'UA', 'Europe/Kiev': 'UA',
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US',
+  'America/Los_Angeles': 'US', 'America/Toronto': 'CA', 'America/Vancouver': 'CA',
+  'America/Mexico_City': 'MX', 'America/Sao_Paulo': 'BR', 'America/Buenos_Aires': 'AR',
+  'America/Santiago': 'CL', 'America/Bogota': 'CO',
+  'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Pacific/Auckland': 'NZ',
+  'Africa/Johannesburg': 'ZA', 'Africa/Cairo': 'EG',
+};
+const haveCountry = id => WORLD.countries.some(c => c.id === id);
+
+function countryFromLangTag(tag) {
+  const p = String(tag || '').replace('_', '-').split('-');
+  if (p[1] && haveCountry(p[1].toUpperCase())) return p[1].toUpperCase();
+  const base = normLangTag(tag);
+  if (base === 'zh-hant' && haveCountry('TW')) return 'TW';
+  if (base === 'zh-hk' && haveCountry('HK')) return 'HK';
+  if (base === 'zh' && /hk/i.test(tag) && haveCountry('HK')) return 'HK';
+  const hit = LANG_COUNTRY[base];
+  return hit && haveCountry(hit) ? hit : null;
+}
+
+async function sense() {
+  try {
+    const ac = new AbortController();
+    const to = setTimeout(() => ac.abort(), 1600);
+    const r = await fetch(FEEDBACK_URL + '/where', { signal: ac.signal });
+    clearTimeout(to);
+    if (r.ok) {
+      const d = await r.json();
+      HERE = { country: d.country || '', lang: d.lang || '', timezone: d.timezone || '' };
+      return HERE;
+    }
+  } catch {}
+  HERE = { country: '', lang: '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '' };
+  return HERE;
+}
+
+function resolveCountry() {
+  /* 배포는 아직 남한만 연다 — 자동 감지도, 저장해 둔 선택도 넘기지 않는다 */
+  if (!isDev() && haveCountry('KR')) return 'KR';
+  if (opt.country !== 'auto' && haveCountry(opt.country)) return opt.country;
+  if (HERE.country && haveCountry(HERE.country)) return HERE.country;
+  for (const tag of [HERE.lang, ...(navigator.languages || []), navigator.language]) {
+    const hit = countryFromLangTag(tag);
+    if (hit) return hit;
+  }
+  if (TZ_COUNTRY[HERE.timezone] && haveCountry(TZ_COUNTRY[HERE.timezone]))
+    return TZ_COUNTRY[HERE.timezone];
+  return haveCountry('KR') ? 'KR' : (WORLD.countries[0] && WORLD.countries[0].id);
+}
+
+function resolveLang() {
+  if (opt.lang !== 'auto' && UI_LANGS.includes(opt.lang)) return opt.lang;
+  for (const tag of [HERE.lang, ...(navigator.languages || []), navigator.language]) {
+    const hit = parseUiLang(tag);
+    if (hit) return hit;
+  }
+  const pack = WORLD.countries.find(c => c.id === COUNTRY);
+  const fromCountry = parseUiLang(pack && pack.lang);
+  if (fromCountry) return fromCountry;
+  return UI_LANGS.includes('en') ? 'en' : UI_LANGS[0];
+}
+
+/* 언어 고르기 — 지역 판(fillRegionPick)과 같은 대륙별 fieldset · 2열 라디오다 */
+const LANG_CONTINENTS = [
+  ['continentAsia',         ['ko', 'ja', 'zh', 'vi', 'th', 'id', 'ms']],
+  ['continentEurope',       ['de', 'fr', 'it', 'nl', 'pl', 'cs', 'sv', 'nb', 'fi', 'uk', 'ro', 'hu', 'bg', 'el', 'tr']],
+  ['continentNorthAmerica', ['en']],
+  ['continentSouthAmerica', ['es', 'pt']],
+  ['continentAfricaMena',   ['ar']],
+];
+
+function pickRow(name, value, label, cur) {
+  const l = document.createElement('label');
+  l.className = 'region-opt';
+  const i = document.createElement('input');
+  i.type = 'radio'; i.name = name; i.value = value; i.checked = value === cur;
+  const s = document.createElement('span');
+  s.textContent = label;
+  l.append(i, s);
+  return l;
+}
+
+function fillLangPick() {
+  const box = $('#optLang');
+  if (!box) return;
+  const held = document.activeElement;
+  const heldValue = held && held.name === 'rtLang' ? held.value : null;
+  const cur = opt.lang === 'auto' || UI_LANGS.includes(opt.lang) ? opt.lang : 'auto';
+  box.replaceChildren(pickRow('rtLang', 'auto', t('langAuto'), cur));
+  for (const [key, codes] of LANG_CONTINENTS) {
+    const have = codes.filter(c => UI_LANGS.includes(c))
+      .sort((a, b) => langLabel(a).localeCompare(langLabel(b)));
+    if (!have.length) continue;
+    const fs = document.createElement('fieldset');
+    fs.className = 'region-group';
+    const lg = document.createElement('legend');
+    lg.textContent = t(key);
+    const grid = document.createElement('div');
+    grid.className = 'region-grid';
+    have.forEach(code => grid.append(pickRow('rtLang', code, langLabel(code), cur)));
+    fs.append(lg, grid);
+    box.append(fs);
+  }
+  if (heldValue) {
+    const back = box.querySelector('input[name="rtLang"][value="' + heldValue + '"]');
+    if (back) back.focus();
+  }
+}
+
+/* 손으로 지은 코스(제목·한 줄 소개가 붙은 지역)를 가진 나라만 정식이다.
+   나머지는 tools 가 찍은 admin-1 뿐이라 미리보기. 데이터에 status 를 새로
+   심지 않고 이미 있는 것에서 읽는다 */
+const countryStage = id => {
+  const pack = WORLD.countries.find(c => c.id === id);
+  return pack && (pack.regions || []).some(r => r.title) ? 'available' : 'preview';
+};
+
+/* 대륙 나눔 — 나라를 한눈에 고르게 묶는 화면 순서일 뿐이라 data/ 에 새 파일을
+   만들지 않는다. world.json 에 없는 나라는 그리는 쪽에서 걸러진다 */
+const CONTINENTS = [
+  ['continentAsia',         'KR JP CN TW HK IN ID MY VN TH PH TR'],
+  ['continentEurope',       'DE FR IT ES GB NL BE PL PT AT CH CZ SE NO FI IE UA RO HU BG GR'],
+  ['continentNorthAmerica', 'US CA MX'],
+  ['continentSouthAmerica', 'BR AR CL CO'],
+  ['continentOceania',      'AU NZ'],
+  ['continentAfricaMena',   'ZA EG SA AE'],
+].map(([key, ids]) => [key, ids.split(' ')]);
+
+/* 지역 고르기 — 스크롤 목록 대신 대륙별 라디오 판이다. 화살표·스페이스 이동은
+   같은 name 을 쓰는 네이티브 라디오가 맡으므로 keydown 을 가로채지 않는다.
+   배포에서는 판이 CSS 로 숨고 resolveCountry 가 KR 을 강제하므로 그리지 않는다 */
+function fillRegionPick() {
+  const box = $('#optRegion');
+  if (!box || !isDev()) return;
+  // 다시 그리면 초점이 날아간다. 화살표로 고르는 중이던 칸을 값으로 기억한다
+  const held = document.activeElement;
+  const heldValue = held && held.name === 'rtCountry' ? held.value : null;
+  const cur = haveCountry(opt.country) ? opt.country : 'auto';
+  box.replaceChildren(pickRow('rtCountry', 'auto', t('langAuto'), cur));
+  for (const [key, ids] of CONTINENTS) {
+    const have = ids.filter(haveCountry)
+      .sort((a, b) => countryName(a).localeCompare(countryName(b), LANG));
+    if (!have.length) continue;
+    const fs = document.createElement('fieldset');
+    fs.className = 'region-group';
+    const lg = document.createElement('legend');
+    lg.textContent = t(key);
+    const grid = document.createElement('div');
+    grid.className = 'region-grid';
+    have.forEach(id => grid.append(pickRow('rtCountry', id, countryName(id), cur)));
+    fs.append(lg, grid);
+    box.append(fs);
+  }
+  if (heldValue) {
+    const back = box.querySelector('input[name="rtCountry"][value="' + heldValue + '"]');
+    if (back) back.focus();
+  }
+}
+
+/* 설정 탭 — MM 스타일 세로 레일. role="tab" 사이를 화살표/Home/End 로 옮기고,
+   고른 탭만 aria-selected="true" · tabindex="0" · 패널 hidden 해제로 남긴다.
+   탭 자체는 index.html 에 고정 마크업으로 있어 다시 그릴 필요가 없다. */
+function wireOptsTabs() {
+  const tabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')];
+  const rail = document.querySelector('.opts-tabs');
+  if (!rail || !tabs.length) return;
+  const select = tab => easeRail(() => {
+    tabs.forEach(tb => {
+      const on = tb === tab;
+      tb.setAttribute('aria-selected', String(on));
+      tb.tabIndex = on ? 0 : -1;
+      const panel = document.getElementById(tb.getAttribute('aria-controls'));
+      if (!panel) return;
+      panel.hidden = !on;
+      if (on && panel.id === 'optsLanguage') fillLangPick();
+      if (on && panel.id === 'optsRegion') fillRegionPick();
+    });
+  });
+  rail.addEventListener('click', e => {
+    const tab = e.target.closest('[role="tab"]');
+    if (tab) select(tab);
+  });
+  rail.addEventListener('keydown', e => {
+    const cur = tabs.indexOf(document.activeElement);
+    if (cur < 0) return;
+    let i = -1;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') i = (cur + 1) % tabs.length;
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') i = (cur - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') i = 0;
+    else if (e.key === 'End') i = tabs.length - 1;
+    else return;
+    e.preventDefault();
+    select(tabs[i]); tabs[i].focus();
+  });
+}
+
+/* 지금 무엇이 잡혔는지 읽어 준다. 개발이면 고른 나라의 단계까지, 배포면 남한
+   하나. 상태는 색만으로 가르지 않는다: 테두리 · 라벨 글자 · 나라 이름이 함께 선다 */
+function paintRegion() {
+  fillRegionPick();
+  const el = $('#regionStatus');
+  if (!el) return;
+  const dev = isDev();
+  const stage = countryStage(COUNTRY);
+  el.dataset.stage = dev ? stage : 'available';
+  el.replaceChildren();
+  const here = document.createElement('b');
+  here.textContent = countryName(COUNTRY);
+  const badge = document.createElement('span');
+  badge.className = 'badge';
+  badge.textContent = dev ? t(stage === 'available' ? 'devAvailable' : 'devPreview')
+                          : t('regionSupported');
+  el.append(here, badge);
+  if (dev) {
+    const world = document.createElement('small');
+    world.textContent = t('devWorld', { n: WORLD.countries.length });
+    el.append(world);
+  }
+}
+
+async function showCountry(id) {
+  COUNTRY = (isDev() && haveCountry(id)) ? id : resolveCountry();
+  const pack = WORLD.countries.find(c => c.id === COUNTRY) || WORLD.countries[0];
+  paintRegion();
+  if (pack) await loadPixels(pack.pixels);
+  await renderRegions();
+}
+
+async function boot() {
+  saveOpt();
+  const [i18n, world] = await Promise.all([
+    grab('data/i18n.json'),
+    grab('data/world.json'),
+    sense(),
+  ]);
+  I18N = i18n;
+  UI_LANGS = Object.keys(I18N);
+  WORLD = world;
+  LANG_COUNTRY = buildLangCountry(world);
+  // 개발에서 골라 둔 나라가 localStorage 에 남아 있어도 배포에서는 되돌린다
+  if (!isDev() && opt.country !== 'auto') { opt.country = 'auto'; saveOpt(); }
+  COUNTRY = resolveCountry();
+  LANG = resolveLang();
+  paintUI(fillLangPick);
+  fbPlaceholder();
+  paintRegion();
+  wireOptsTabs();
+  const langBox = $('#optLang');
+  if (langBox) {
+    langBox.addEventListener('change', e => {
+      const r = e.target.closest('input[name="rtLang"]');
+      if (!r) return;
+      opt.lang = r.value; saveOpt();
+      LANG = resolveLang();
+      paintUI(fillLangPick);
+      fbPlaceholder(); paintRegion(); renderRegions();
+    });
+  }
+  const regionBox = $('#optRegion');
+  if (regionBox) {
+    regionBox.addEventListener('change', e => {
+      const r = e.target.closest('input[name="rtCountry"]');
+      if (!r) return;
+      opt.country = r.value; saveOpt();
+      LANG = resolveLang();
+      paintUI(fillLangPick);
+      fbPlaceholder();
+      showCountry(resolveCountry());
+    });
+  }
+  await showCountry(COUNTRY);
+}
 
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
 
-async function start(slug, o = {}) {
-  const zoom = o.zoom || 3;   // 1배를 없앴다 — 코스는 3배로만 돈다
+async function start(slug) {
+  const zoom = 3;   // 1배를 없앴다 — 코스는 3배로만 돈다
   const [course, geom] = await load(slug);
   const items = course.items.map(it => {
     const a = stripSuffix(it.name);
@@ -768,7 +1151,8 @@ async function start(slug, o = {}) {
   });
   G = { slug, course, items, zoom, seq: course.mode === 'sequence', idx: 0,
        total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0,
-       cell: geom.cell };
+       cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)) };
+  $('#typein').lang = course.lang || document.documentElement.lang;
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
@@ -788,8 +1172,7 @@ async function start(slug, o = {}) {
   $('#statCombo').textContent = '';
   $('#typein').value = '';
   $('#gaugeFill').style.width = '100%';
-  $('#statTime').firstElementChild.textContent =
-    Math.floor(opt.time / 60) + ':' + String(opt.time % 60).padStart(2, '0');
+  $('#statTime').firstElementChild.textContent = clock(opt.time);
   $('.gauge').classList.remove('warn');
   $('#statTime').classList.remove('warn');
   go('play');
@@ -950,7 +1333,7 @@ function setTarget(name) {
 function paintTyped(raw, composing = false) {
   const box = $('#qLetters') || $('#typing');
   if (!G.want) return;
-  const buf = raw.replace(/\s/g, '');
+  const buf = (G.spacy ? raw.replace(/^\s+/, '') : raw.replace(/\s/g, ''));
   // 앞에 붙은 찌꺼기를 흘려보낸다. 스페이스로 확정할 때 IME 가 조합을 끝내며
   // 비운 입력창에 글자를 도로 넣는 일이 있어, 앞에서부터만 비교하면 그 뒤로
   // 영영 색이 안 찬다. 정답 판정이 접미를 훑는 것과 같은 방식이다.
@@ -993,7 +1376,6 @@ function paintTyped(raw, composing = false) {
     el.classList.toggle('cur-r', (!!typed && last) || (!rest.length && n >= need && i === need - 1));
   });
   $('#typing').classList.toggle('bad', bad);
-  return bad;
 }
 
 
@@ -1046,8 +1428,7 @@ function run() {
   tick = setInterval(() => {
     G.left--;
     $('#gaugeFill').style.width = (G.left / G.total * 100) + '%';
-    $('#statTime').firstElementChild.textContent =
-      Math.floor(G.left / 60) + ':' + String(G.left % 60).padStart(2, '0');
+    $('#statTime').firstElementChild.textContent = clock(G.left);
     $('.gauge').classList.toggle('warn', G.left <= 10);
     $('#statTime').classList.toggle('warn', G.left <= 10);
     if (G.left <= 0) finish();
@@ -1073,6 +1454,14 @@ const markFocus = () => $('#typing').classList.toggle('off', document.activeElem
 $('#typein').addEventListener('focus', markFocus);
 $('#typein').addEventListener('blur', markFocus);
 
+function judge(raw) {
+  const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');
+  if (!answer) return;
+  const hit = matchInput(answer, G.items, G.spacy);
+  if (!hit || (G.seq && hit !== target())) return miss();
+  claim(hit);
+}
+
 $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
   const inp = e.target;
@@ -1085,7 +1474,7 @@ $('#typein').addEventListener('input', e => {
      포커스를 한 번 끊어야 조합이 진짜로 끝난다. IME 를 취소하는 표준 방법이 생기면
      blur/focus 는 지운다. */
   const cap = G.seq && G.want ? G.want.length : 0;
-  if (cap && !/\s/.test(val) && val.length > cap) {
+  if (cap && !(G.spacy && /\s/.test(G.want)) && !/\s/.test(val) && val.length > cap) {
     val = val.slice(0, cap);
     composing = false;
     inp.blur();
@@ -1093,15 +1482,17 @@ $('#typein').addEventListener('input', e => {
     inp.focus();
   }
   paintTyped(val, composing);
+  if (G.spacy) return;                            // 공백이 이름에 있으면 Enter 로 확정
   if (!/\s/.test(val)) return;                   // 스페이스 전에는 판단하지 않는다
-  const answer = val.replace(/\s+/g, '');
   inp.value = '';
-  if (!answer) return;                            // 빈 스페이스는 그냥 넘긴다
-  // 미점령 전체를 대상으로 판정한 뒤 목표인지 본다. 목표만 넘기면
-  // 약칭의 경쟁 판정(중 → 중구/중랑구)이 무너진다.
-  const hit = matchInput(answer, G.items);
-  if (!hit || (G.seq && hit !== target())) return miss();
-  claim(hit);
+  judge(val);
+});
+$('#typein').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing || !G || !tick) return;
+  e.preventDefault();
+  const val = e.target.value;
+  e.target.value = '';
+  judge(val);
 });
 
 function miss() {
@@ -1149,11 +1540,11 @@ function finish() {
     $('#rScore').textContent = G.score;
     $('#rCount').textContent = G.hits;
     $('#rAcc').textContent = (G.tries ? Math.round(G.hits / G.tries * 100) : 0) + '%';
-    $('#rBest').textContent = G.score > prev ? '최고 기록 경신!' : prev ? `최고 기록 ${prev}점` : '';
+    $('#rBest').textContent = G.score > prev ? t('bestNew') : prev ? t('bestPrev', { n: prev }) : '';
     if (G.score > prev) localStorage.setItem(key, G.score);
 
     const miss = G.items.filter(i => !i.claimed);
-    $('#missCount').textContent = miss.length + '곳';
+    $('#missCount').textContent = t('places', { n: miss.length });
     $('#missed').innerHTML = '';
     miss.forEach(i => {
       const li = document.createElement('li');
@@ -1194,7 +1585,7 @@ function drawCard() {
     ctx.font = '800 54px system-ui,sans-serif';
     ctx.fillText('regiontype', 70, 100);
     ctx.font = '500 38px system-ui,sans-serif';
-    ctx.fillText(`${G.course.title} · ${G.zoom}배율 · ${G.score}점`, 70, cv.height - 136);
+    ctx.fillText(t('cardLine', { title: courseLabel(G.course), zoom: G.zoom, score: G.score }), 70, cv.height - 136);
     ctx.font = '800 76px system-ui,sans-serif';
     ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
     ctx.textAlign = 'right';
@@ -1213,7 +1604,7 @@ $('#save').onclick = async () => {
   a.href = $('#card').toDataURL('image/png');
   a.click();
 };
-$('#again').onclick = () => start(G.slug, { zoom: G.zoom });
+$('#again').onclick = () => start(G.slug);
 
 /* ── 피드백 ──────────────────────────────────────────
    정적 사이트에는 GitHub 토큰을 둘 수 없다. relay/ 의 중계기가 토큰을 쥐고
@@ -1236,7 +1627,8 @@ const fbNote = $('#fbNote');
 const fbSay = (msg, bad) => { fbNote.textContent = msg; fbNote.classList.toggle('bad', !!bad); };
 let fbKind = 'bug';
 const fbPlaceholder = () => {
-  $('#fbBody').placeholder = FB_KIND[fbKind] + '내용';
+  const key = { bug: 'kindBug', idea: 'kindIdea', data: 'kindData' }[fbKind];
+  $('#fbBody').placeholder = t(key);
 };
 fbPlaceholder();
 
@@ -1261,16 +1653,16 @@ $('#fbForm').onsubmit = async e => {
               v: VER, href: location.href, ua: navigator.userAgent };
   if (!FEEDBACK_URL) { window.open(fbIssue(c), '_blank', 'noopener'); $('#feedback').close(); return; }
   $('#fbSend').disabled = true;
-  fbSay('보내는 중…');
+  fbSay(t('fbSending'));
   try {
     const r = await fetch(FEEDBACK_URL, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(c) });
     if (!r.ok) throw new Error(r.status);
     $('#fbBody').value = '';
-    fbSay('보내주셔서 고맙습니다.');
+    fbSay(t('fbThanks'));
     setTimeout(() => $('#feedback').close(), 1200);
   } catch {
-    fbSay('보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true);
+    fbSay(t('fbFail'), true);
   }
   $('#fbSend').disabled = false;
 };
@@ -1352,11 +1744,11 @@ function drawRanks(list, ol = $('#ranks')) {
     li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
     li.querySelector('b').textContent = i + 1;
     li.querySelector('.who').textContent = r.name;
-    li.querySelector('.pt').textContent = r.score + '점';
+    li.querySelector('.pt').textContent = r.score + t('scoreUnit');
     if (r.me) {
       li.classList.add('me');
       const tag = document.createElement('span');
-      tag.className = 'tag'; tag.textContent = '나';
+      tag.className = 'tag'; tag.textContent = t('me');
       li.querySelector('.who').after(tag);
     }
     ol.append(li);
@@ -1387,12 +1779,12 @@ async function board() {
     const d = inn && me && G.score
       ? await boardAsk('/score', { ...play, name: me, score: G.score, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
-    $('#boardWhere').textContent = `${G.course.title} · ${clock(G.total)}`;
+    $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
     /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
        않으면 다음에 순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고,
        기능이 고장난 것으로 읽힌다. */
-    boardSay(d.rank ? `${d.rank}위`
-      : G.score ? `이번 판 ${G.score}점은 아직 순위표에 없습니다`
+    boardSay(d.rank ? t('nth', { n: d.rank })
+      : G.score ? t('notOnBoard', { n: G.score })
       : '');
     /* 로그인 → 이름 → 올라감. 한 번에 하나씩만 묻는다 */
     $('#boardIn').hidden = inn;
@@ -1412,8 +1804,8 @@ async function board() {
 /* 패스키가 없는 브라우저·기기가 있다. 그때는 버튼을 내리고 왜 안 되는지 말한다 */
 const canPasskey = () => !!(window.PublicKeyCredential && navigator.credentials?.create);
 
-const tryAuth = async (btn, run, done) => {
-  if (!canPasskey()) return boardSay('이 브라우저는 패스키를 지원하지 않습니다.', true);
+const tryAuth = async (run, done) => {
+  if (!canPasskey()) return boardSay(t('noPasskey'), true);
   const all = [$('#inGo'), $('#inNew')];
   all.forEach(b => b.disabled = true);
   boardSay(done);
@@ -1423,23 +1815,23 @@ const tryAuth = async (btn, run, done) => {
     board();          // 로그인했으니 다시 그린다 — 이제 이름 칸이 열린다
   } catch (e) {
     /* 사용자가 창을 닫은 것과 진짜 실패는 다른 말이다 */
-    boardSay(e && e.name === 'NotAllowedError' ? '취소했습니다.'
-           : String(e.message) === '401' ? '이 기기의 패스키를 찾지 못했습니다. 먼저 만들어 주세요.'
-           : '로그인하지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true);
+    boardSay(e && e.name === 'NotAllowedError' ? t('cancelled')
+           : String(e.message) === '401' ? t('noKey')
+           : t('loginFail'), true);
   }
   all.forEach(b => b.disabled = false);
 };
 
-$('#inGo').onclick = () => tryAuth(null, passkeyLogin, '기기에 물어보는 중…');
-$('#inNew').onclick = () => tryAuth(null, passkeyMake, '패스키를 만드는 중…');
+$('#inGo').onclick = () => tryAuth(passkeyLogin, t('askingDevice'));
+$('#inNew').onclick = () => tryAuth(passkeyMake, t('makingKey'));
 
 $('#boardJoin').onsubmit = e => {
   e.preventDefault();
   const name = plain($('#boardName').value);
-  if (!name) return boardSay('쓸 수 있는 이름이 아닙니다.', true);
+  if (!name) return boardSay(t('badName'), true);
   localStorage.setItem(NAME_KEY, name);
   $('#boardJoin').hidden = true;
-  boardSay('올리는 중…');
+  boardSay(t('uploading'));
   board();
 };
 
@@ -1463,10 +1855,72 @@ if (location.search.includes('rt=1')) {
   console.assert(m('역삼동', dong) === '역삼동', '정식 명칭 일치가 남의 별칭에 가려지면 안 된다');
   console.assert(m('역삼1', dong) === '역삼1동', '별칭은 후보가 자기 자신뿐일 때 확정');
 
+  const jp = mk(['東京都', '京都府']);
+  console.assert(m('東京', jp) === '東京都', '都 접미 약칭');
+  console.assert(m('京都', jp) === '京都府', '府 접미 약칭');
+  const us = [{ name: 'New York', aliases: ['NY'], claimed: false },
+              { name: 'New Mexico', aliases: ['NM'], claimed: false }];
+  const ms = (s, items) => { const r = matchInput(s, items, true); return r && r.name; };
+  console.assert(ms('New York', us) === 'New York', '띄어쓰기 이름 정확일치');
+  console.assert(ms('new york', us) === 'New York', '영문 대소문자');
+  console.assert(ms('NY', us) === 'New York', '우편 약칭');
+  console.assert(ms('ny', us) === 'New York', '우편 약칭 소문자');
+  const kj = mk(['전라남도', '광주광역시']);
+  kj[0].aliases.push('KJ'); kj[1].aliases.push('KJ');
+  console.assert(m('KJ', kj) === null, '겹치는 우편 약칭은 확정하지 않는다');
+  console.assert(m('광주', kj) === '광주광역시', '접미 약칭은 후보가 하나일 때');
+
   const fbu = fbIssue({ kind: 'bug', body: '가양1동이 오답으로 처리됨', v: '0.38',
                         href: 'https://regiontype.com/', ua: 'UA' });
   console.assert(fbu.includes(encodeURIComponent('[버그] 가양1동이 오답으로 처리됨')), '이슈 제목 = 종류 + 앞머리');
   console.assert(fbu.includes(encodeURIComponent('브라우저: UA')), '메타는 버전·주소·브라우저까지');
 
+  UI_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh'];
+  LANG_COUNTRY = buildLangCountry({
+    countries: [{ id: 'KR', lang: 'ko' }, { id: 'JP', lang: 'ja' }, { id: 'US', lang: 'en' },
+                { id: 'DE', lang: 'de' }, { id: 'FR', lang: 'fr' }, { id: 'TW', lang: 'zh' }],
+  });
+  WORLD = { countries: [
+    { id: 'KR' }, { id: 'JP' }, { id: 'US' }, { id: 'DE' }, { id: 'FR' }, { id: 'TW' },
+  ] };
+  const devWas = isDev();
+  document.documentElement.dataset.dev = '';        // 나라 감지는 개발 쪽 계약이다
+  HERE = { country: '', lang: 'de-DE', timezone: 'Europe/Berlin' };
+  opt.country = 'auto';
+  console.assert(resolveCountry() === 'DE', 'Accept-Language·타임존으로 독일');
+  HERE = { country: 'FR', lang: 'en-US', timezone: 'Europe/Paris' };
+  console.assert(resolveCountry() === 'FR', 'relay 나라 코드가 언어보다 우선');
+  opt.country = 'auto';
+  HERE = { country: '', lang: 'zh-TW', timezone: '' };
+  console.assert(resolveCountry() === 'TW', 'zh-TW → 대만');
+  opt.country = 'JP';
+  console.assert(resolveCountry() === 'JP', '개발에서는 고른 나라가 자동 감지를 이긴다');
+  document.documentElement.removeAttribute('data-dev');
+  console.assert(resolveCountry() === 'KR', '배포는 골라 둔 나라를 무시하고 남한');
+  HERE = { country: 'FR', lang: 'fr-FR', timezone: 'Europe/Paris' };
+  console.assert(resolveCountry() === 'KR', '배포는 자동 감지도 무시하고 남한');
+  document.documentElement.toggleAttribute('data-dev', devWas);
+  opt.country = 'auto';
+  HERE = { country: '', lang: 'zh-TW', timezone: '' };
+  opt.lang = 'auto';
+  console.assert(parseUiLang('zh-Hant-TW') === 'zh', '번체 UI 는 zh 로');
+  console.assert(parseUiLang('de-AT') === 'de', 'de-AT → de UI');
+  opt.lang = 'auto'; LANG = resolveLang();
+  HERE = { country: 'BR', lang: 'pt-BR', timezone: 'America/Sao_Paulo' };
+  COUNTRY = 'BR';
+  console.assert(resolveLang() === 'pt', 'pt-BR → pt UI');
+
+  WORLD = { countries: [
+    { id: 'KR', regions: [{ id: 'seoul', title: { ko: '서울' } }] },
+    { id: 'JP', regions: [{ id: 'jp-admin' }] },
+    { id: 'ZZ' },
+  ] };
+  console.assert(countryStage('KR') === 'available', '손으로 지은 코스가 있으면 정식');
+  console.assert(countryStage('JP') === 'preview', 'admin-1 뿐이면 미리보기');
+  console.assert(countryStage('XX') === 'preview', '모르는 나라도 미리보기로 떨어진다');
+  console.assert(countryStage('ZZ') === 'preview', 'regions 가 없어도 터지지 않는다');
+
   console.log('self-check done');
 }
+
+boot();
