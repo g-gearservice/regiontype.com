@@ -4,6 +4,10 @@
     python3 tools/build_pixels.py ne-admin0.geojson data/jp-pixels.json 34 JP
 """
 import json, math, sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from optimize_pixels import optimize_local, plain_rows
 
 src, dst = sys.argv[1], sys.argv[2]
 COLS = int(sys.argv[3]) if len(sys.argv) > 3 else 30
@@ -135,8 +139,9 @@ if not ANCHOR:
             break
 
 rows = [''.join(r) for r in grid]
-json.dump({'w': COLS, 'h': ROWS, 'anchor': anchor, 'rows': rows},
-          open(dst, 'w'), separators=(',', ':'))
-print('\n'.join(rows))
-print(f'anchor = 열 {anchor} / 전체 폭 {COLS}')
-print(f'{COLS}x{ROWS}, land={sum(r.count("x") for r in rows)}, seoul={sum(r.count("S") for r in rows)}')
+out = optimize_local({'w': COLS, 'h': ROWS, 'anchor': anchor, 'rows': rows})
+json.dump(out, open(dst, 'w'), separators=(',', ':'))
+show = plain_rows(out)
+print('\n'.join(show))
+print(f'anchor = 열 {out["anchor"]} / 전체 폭 {out["w"]}')
+print(f'{out["w"]}x{out["h"]}, land={sum(r.count("x") for r in show)}, seoul={sum(r.count("S") for r in show)}')

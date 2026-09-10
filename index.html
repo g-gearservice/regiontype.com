@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.91">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.91">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.91">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.95">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=0.91">
+<link rel="stylesheet" href="style.css?v=0.95">
 </head>
 <body>
 
@@ -98,6 +98,7 @@
       <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-i18n="region">지역</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
     </nav>
     <div class="opts-panels">
       <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
@@ -108,7 +109,6 @@
         <!-- 고르는 UI 는 개발용 문이다 — CSS 기본이 숨김이라 배포에 새지 않는다 -->
         <div id="optRegion" class="opts-region-pick" role="radiogroup"
              data-i18n-aria="region" aria-label="지역"></div>
-        <p class="devstat" id="regionStatus" role="status" aria-live="polite"></p>
         <p class="opts-region-pending" data-i18n="regionPending">지금은 대한민국(남한)만 지원합니다. 다른 지역도 곧 열립니다.</p>
       </div>
       <div id="optsVideo" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVideo" tabindex="0" hidden>
@@ -127,9 +127,11 @@
           <dd><button class="toggle" data-opt="sound" data-i18n-aria="sound" aria-label="효과음"></button></dd>
         </dl>
       </div>
+      <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
+        <p class="ver">regiontype v0.3.9 (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+      </div>
     </div>
   </div>
-  <p class="ver">regiontype v0.3.9 (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
 </section>
 
 <!-- 플레이 -->
@@ -295,6 +297,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.91"></script>
+<script src="app.js?v=0.95"></script>
 </body>
 </html>

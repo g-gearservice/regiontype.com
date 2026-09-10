@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.92';
+const VER = '0.96';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -72,28 +72,6 @@ const countryName = id => {
   catch { return id; }
 };
 
-/* 설정 레일은 탭 글자에서 폭을 얻는다 — UI 언어를 바꾸면(지역/Region/Регіон) 그 폭이
-   순간 이동하고, flex:1 인 .opts-panels 가 통째로 딸려 흔들린다. 고른 탭만 굵어지는
-   것도 같은 이유로 탭을 옮길 때마다 몇 px 씩 튄다. 원인이 폭 하나라 폭 하나만 잇는다 —
-   레일이 이어지면 판과 셸은 flex 로 따라온다.
-   글자에서 나온 폭이라 transform 으로는 못 잇는다. 재서 WAAPI 로 넘기되 길이는
-   --slow 를 그대로 읽는다: prefers-reduced-motion 이거나 설정의 모션을 끄면 그
-   토큰이 0s 라 여기도 같이 즉시 전환이 된다. */
-function easeRail(mutate) {
-  const rail = $('.opts-tabs');
-  // 도중에 또 바뀌면 지금 화면에 보이는 폭에서 잇는다 — 목표 폭에서 시작하면 튄다
-  const from = rail ? rail.getBoundingClientRect().width : 0;
-  if (rail) rail.getAnimations().forEach(a => a.cancel());
-  mutate();
-  if (!from) return;                       // 설정이 닫혀 있으면(폭 0) 이을 것이 없다
-  const css = getComputedStyle(document.documentElement);
-  const ms = parseFloat(css.getPropertyValue('--slow')) * 1000;
-  const to = rail.getBoundingClientRect().width;
-  if (!(ms > 0) || Math.abs(to - from) < 1) return;
-  rail.animate({ width: [from + 'px', to + 'px'] },
-               { duration: ms, easing: css.getPropertyValue('--ease-in-out').trim() });
-}
-
 function applyI18n(root) {
   root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   root.querySelectorAll('[data-i18n-aria]').forEach(el => {
@@ -104,13 +82,10 @@ function applyI18n(root) {
 
 function paintUI(then) {
   document.documentElement.lang = LANG;
-  /* 탭 글자(i18n)와 언어 목록(endonym) 재그리기를 한 easeRail 안에서 — Cursor endonym +
-     Claude 레일 폭 WAAPI 를 한 번에 잇는다. then 은 fillLangPick 등 폭을 바꾸는 DOM */
-  easeRail(() => {
-    applyI18n(document);
-    document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
-    if (then) then();
-  });
+  /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
+  applyI18n(document);
+  document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
+  if (then) then();
 }
 
 /* ── 설정 ───────────────────────────────────────────── */
@@ -206,14 +181,18 @@ function applyGrid(ox, oy, n) {
   p.querySelector('path').setAttribute('d', `M${n} 0 V${n} H0`);
 }
 /* SVG 유저 좌표 → 화면. 추정하지 않고 CTM 으로 격자 원점·칸을 읽는다. */
+const GRID_MIN = 120;   /* 장식 격자 칸의 화면 하한(px). about.html 의 152 와 같은 눈높이 */
 function syncGrid() {
-  let root, space, cell;
+  let root, space, cell, deco = false;
   if ($('#play').classList.contains('on') && G && G.cam) {
     root = $('#map'); space = G.cam; cell = G.cell;
   } else {
+    /* 타이틀 밖(설정 등)에서도 같은 격자를 다시 잰다. 픽셀맵은 화면 밖 fixed 라
+       화면이 바뀌어도 자리가 같다 — 여기서 return 하면 직전 칸 크기가 굳는다.
+       모바일에서는 display:none 이라 아래 CTM 이 null 로 걸러진다. */
     const pm = $('#pixelmap');
-    if (!pm || !$('#title.on')) return;
-    root = space = pm; cell = 1;
+    if (!pm) return;
+    root = space = pm; cell = 1; deco = true;
   }
   const ctm = space.getScreenCTM();
   if (!ctm) return;
@@ -222,7 +201,46 @@ function syncGrid() {
   const o = a.matrixTransform(ctm);
   a.x = cell;
   const x1 = a.matrixTransform(ctm);
-  applyGrid(o.x, o.y, Math.hypot(x1.x - o.x, x1.y - o.y));
+  let n = Math.hypot(x1.x - o.x, x1.y - o.y);
+  /* 픽셀맵 1칸은 20px 남짓이라 그대로 그으면 배경이 단색으로 뭉갠다.
+     격자와 점의 결을 유지하려고 N칸마다 긋는다 — 정수배라 원점이 안 어긋난다. */
+  if (deco && n > 0) n *= Math.max(1, Math.ceil(GRID_MIN / n));
+  applyGrid(o.x, o.y, n);
+  if (deco) syncOptShell();
+}
+/* .opts-shell 의 윗변을 장식 격자의 가로선에 앉힌다.
+   크기는 격자에서 얻지 않는다 — 칸은 나라마다 다르고(픽셀맵 행 수에서 나온다)
+   탭 글자는 언어마다 다르다. 둘 중 하나로 높이·폭을 재면 나라나 언어를 고를
+   때마다 통이 뛴다. 그래서 높이는 뷰포트에서만 얻되 레일(.opts-tabs) 자연 높이를
+   밑돌지 않게 하고(밑돌면 탭 다섯 칸이 잘린다), 격자에는 자리만 맞춘다.
+   shell.top 은 안 쓴다: #options 가 position:fixed;inset:0 라 셸은 늘 뷰포트
+   한가운데 뜬다 — 거기서 거꾸로 풀어야 계산이 자기 참조가 되지 않는다.
+   --opt-no-grid 여도 격자 값 자체는 그대로 잡히니 자리는 흔들리지 않는다 */
+function syncOptShell() {
+  const rail = $('.opts-tabs'), p = $('#bitgrid'), head = $('#options .screen-head');
+  if (!rail || !p || !rail.getClientRects().length) return;
+  const cell = Number(p.getAttribute('height'));
+  const railH = rail.getBoundingClientRect().height;
+  if (!(cell > 0) || !(railH > 0)) return;
+  const gridY = Number(p.getAttribute('y')) || 0;
+  const vh = window.innerHeight;
+  /* 자리는 뷰포트가 아니라 '머리글 아래'에서 잡는다 — 뒤로·제목이 절대배치라 흐름에서
+     빠져 있어, 뷰포트 한가운데로 재면 글자가 얹힌 위쪽이 늘 좁아 보인다 */
+  const pad = parseFloat(getComputedStyle(document.documentElement)
+                          .getPropertyValue('--screen-pad-y')) || 0;
+  const areaTop = (head ? head.getBoundingClientRect().bottom : pad) + pad / 2;
+  const areaBottom = vh - pad;
+  /* 높이는 그 자리에 한 칸 남는 만큼으로 죈다 — 남는 칸이 없으면 어느 가로선에도
+     앉지 못하고 가운데에 그대로 서 버린다 */
+  const h = Math.max(railH, vh * 0.56);
+  const mid = areaTop + (areaBottom - areaTop - h) / 2;   // 그 자리에 가운데 놓은 윗변
+  const k = Math.round((mid - gridY) / cell);
+  const fits = v => v >= areaTop - 1 && v + h <= areaBottom + 1;
+  // 가장 가까운 선부터, 안 되면 이웃 선, 그래도 안 되면 격자를 포기하고 가운데
+  const top = [k, k + 1, k - 1].map(i => gridY + i * cell).find(fits) ?? mid;
+  const st = document.documentElement.style;
+  st.setProperty('--opt-shell-h', h + 'px');
+  st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
 }
 function followGrid(ms) {
   const t0 = performance.now();
@@ -251,9 +269,22 @@ document.addEventListener('click', e => {
 
 /* ── 타이틀 픽셀맵 ──────────────────────────────────
    고른 나라의 격자를 찍고, 강조 칸(S)만 다른 색으로 둔다. */
+function expandPixelRow(row) {
+  if (!row || '.xSA'.includes(row[0])) return row;
+  let out = '', i = 0;
+  while (i < row.length) {
+    let n = 0;
+    /* 문자에서 48 을 그냥 빼면 '1' - 48 = -47 이 된다. 코드포인트로 읽는다 */
+    while (i < row.length && row[i] >= '0' && row[i] <= '9') n = n * 10 + (row.charCodeAt(i++) - 48);
+    if (!n || i >= row.length) break;
+    out += row[i++].repeat(n);
+  }
+  return out;
+}
 let pmDraw = null, pmBits = [];
 function loadPixels(file) {
   return grab(file.endsWith('.json') ? file : `data/${file}.json`).then(g => {
+    const rows = g.enc === 'rle' ? g.rows.map(expandPixelRow) : g.rows;
     const svg = $('#pixelmap');
     svg.setAttribute('viewBox', `0 0 ${g.anchor + 1} ${g.h}`);
     g.over = (g.w - g.anchor - 1) / g.h;
@@ -265,7 +296,7 @@ function loadPixels(file) {
       }));
     };
     const draw = () => {
-      svg.innerHTML = g.rows.flatMap((row, y) =>
+      svg.innerHTML = rows.flatMap((row, y) =>
         [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'hilite' : ''))).join('');
       bindBits();
     };
@@ -950,8 +981,11 @@ function fillLangPick() {
   if (!box) return;
   const held = document.activeElement;
   const heldValue = held && held.name === 'rtLang' ? held.value : null;
-  const cur = opt.lang === 'auto' || UI_LANGS.includes(opt.lang) ? opt.lang : 'auto';
-  box.replaceChildren(pickRow('rtLang', 'auto', t('langAuto'), cur));
+  /* '자동' 칸은 없다 — 사용자가 하나를 짚기 전까지 opt.lang 은 'auto' 로 남고
+     resolveLang() 의 i18n 리전 정책만 따른다. 지금 켜진 언어(LANG)를 체크로 보여
+     줄 뿐, 짚어야 opt.lang 이 그 값으로 굳는다 */
+  const cur = UI_LANGS.includes(opt.lang) ? opt.lang : LANG;
+  box.replaceChildren();
   for (const [key, codes] of LANG_CONTINENTS) {
     const have = codes.filter(c => UI_LANGS.includes(c))
       .sort((a, b) => langLabel(a).localeCompare(langLabel(b)));
@@ -1000,8 +1034,10 @@ function fillRegionPick() {
   // 다시 그리면 초점이 날아간다. 화살표로 고르는 중이던 칸을 값으로 기억한다
   const held = document.activeElement;
   const heldValue = held && held.name === 'rtCountry' ? held.value : null;
-  const cur = haveCountry(opt.country) ? opt.country : 'auto';
-  box.replaceChildren(pickRow('rtCountry', 'auto', t('langAuto'), cur));
+  /* '자동' 칸은 없다 — fillLangPick 과 같은 결. 지금 잡힌 나라(COUNTRY)를 체크로
+     보여줄 뿐, 짚어야 opt.country 가 그 값으로 굳는다 */
+  const cur = haveCountry(opt.country) ? opt.country : COUNTRY;
+  box.replaceChildren();
   for (const [key, ids] of CONTINENTS) {
     const have = ids.filter(haveCountry)
       .sort((a, b) => countryName(a).localeCompare(countryName(b), LANG));
@@ -1029,7 +1065,7 @@ function wireOptsTabs() {
   const tabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')];
   const rail = document.querySelector('.opts-tabs');
   if (!rail || !tabs.length) return;
-  const select = tab => easeRail(() => {
+  const select = tab => {
     tabs.forEach(tb => {
       const on = tb === tab;
       tb.setAttribute('aria-selected', String(on));
@@ -1040,7 +1076,7 @@ function wireOptsTabs() {
       if (on && panel.id === 'optsLanguage') fillLangPick();
       if (on && panel.id === 'optsRegion') fillRegionPick();
     });
-  });
+  };
   rail.addEventListener('click', e => {
     const tab = e.target.closest('[role="tab"]');
     if (tab) select(tab);
@@ -1059,28 +1095,17 @@ function wireOptsTabs() {
   });
 }
 
-/* 지금 무엇이 잡혔는지 읽어 준다. 개발이면 고른 나라의 단계까지, 배포면 남한
-   하나. 상태는 색만으로 가르지 않는다: 테두리 · 라벨 글자 · 나라 이름이 함께 선다 */
+/* 지금 무엇이 잡혔는지 읽어 준다. 화면에는 더 안 그리고 콘솔에만 남긴다 —
+   개발이면 고른 나라의 단계까지, 배포면 남한 하나 */
 function paintRegion() {
   fillRegionPick();
-  const el = $('#regionStatus');
-  if (!el) return;
   const dev = isDev();
   const stage = countryStage(COUNTRY);
-  el.dataset.stage = dev ? stage : 'available';
-  el.replaceChildren();
-  const here = document.createElement('b');
-  here.textContent = countryName(COUNTRY);
-  const badge = document.createElement('span');
-  badge.className = 'badge';
-  badge.textContent = dev ? t(stage === 'available' ? 'devAvailable' : 'devPreview')
-                          : t('regionSupported');
-  el.append(here, badge);
-  if (dev) {
-    const world = document.createElement('small');
-    world.textContent = t('devWorld', { n: WORLD.countries.length });
-    el.append(world);
-  }
+  const badge = dev ? t(stage === 'available' ? 'devAvailable' : 'devPreview')
+                    : t('regionSupported');
+  const parts = [countryName(COUNTRY), badge];
+  if (dev) parts.push(t('devWorld', { n: WORLD.countries.length }));
+  console.log('[region]', ...parts);
 }
 
 async function showCountry(id) {
@@ -1869,6 +1894,9 @@ if (location.search.includes('rt=1')) {
   kj[0].aliases.push('KJ'); kj[1].aliases.push('KJ');
   console.assert(m('KJ', kj) === null, '겹치는 우편 약칭은 확정하지 않는다');
   console.assert(m('광주', kj) === '광주광역시', '접미 약칭은 후보가 하나일 때');
+
+  console.assert(expandPixelRow('30.4x') === '.'.repeat(30) + 'xxxx', 'pixel RLE row');
+  console.assert(expandPixelRow('....') === '....', 'plain pixel row');
 
   const fbu = fbIssue({ kind: 'bug', body: '가양1동이 오답으로 처리됨', v: '0.38',
                         href: 'https://regiontype.com/', ua: 'UA' });

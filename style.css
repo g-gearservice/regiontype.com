@@ -10,6 +10,8 @@
   --shadow:0 12px 18px -14px rgba(58,78,88,.22), 0 2px 4px -2px rgba(58,78,88,.12);
   --shadow-lift:0 18px 24px -16px rgba(58,78,88,.28), 0 3px 6px -3px rgba(58,78,88,.16);
   --indent:min(14vw,220px);   /* 타이틀 좌측 여백. 픽셀맵 우측 여백과 같은 값을 쓴다 */
+  --screen-pad-y:56px;        /* .screen 안쪽 여백. 절대배치한 머리글도 이 모서리를 쓴다 */
+  --screen-pad-x:64px;
   --pm-h:min(76vh,720px);     /* 픽셀맵 높이 */
   --pm-over:0;                /* 기준선 밖으로 나간 폭 ÷ 높이. app.js 가 데이터에서 넣는다 */
   /* 미리보기 판은 늘 10:7 이다. 폭·높이를 따로 재면 창에 따라 세로로 길어져
@@ -17,6 +19,15 @@
   --pv-w:min(84vw, 1000px, 84vh * 10 / 7);
   --pv-h:calc(var(--pv-w) * .7);
   --pk-w:min(72vw, 460px);   /* 뒤집힌 카드 폭. 높이는 앞면을 따른다 */
+  --opt-col:300px;            /* 설정 한 열의 폭. 언어 판은 두 열, 화면·소리 판은 한 열 */
+  /* 설정 셸(.opts-shell)의 크기는 못 박은 값이다 — 탭 글자에서도, 나라마다 달라지는
+     장식 격자 칸에서도 얻지 않는다. 언어를 바꾸든 나라를 바꾸든 통은 그대로 있고,
+     격자에는 윗변만 --opt-shell-dy 로 밀어 앉힌다(app.js 의 syncOptShell). 아래 값은
+     app.js 가 뜨기 전까지 쓰는 어림 — 레일 다섯 칸(≒350px)이 잘리지 않을 만큼은 준다 */
+  --opt-shell-h:max(350px,56vh);
+  --opt-shell-dy:0px;
+  --opt-rail-w:14em;          /* 레일 폭. 가장 넓은 탭 글자(uk 'Зображення' ≒ 12.8em)에
+                                  여유를 얹은 고정값이다 */
 }
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
@@ -56,7 +67,7 @@ body{
 /* ── 화면 전환 ─────────────────────────── */
 .screen{
   position:fixed; inset:0; display:none; flex-direction:column;
-  padding:56px 64px; overflow:auto;
+  padding:var(--screen-pad-y) var(--screen-pad-x); overflow:auto;
 }
 .screen.on{display:flex}
 
@@ -78,9 +89,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   background:var(--block); border:0; padding:6px 18px 8px;
   transition:background var(--fast);
 }
-.menu a{text-decoration:none}
-.menu a.alt{display:none;font-size:20px;background:#4A3B31}
-:root[data-dev] .menu a.alt{display:inline-block}
+.menu a{text-decoration:none;text-align:center}
+.menu a.alt{display:none}
+:root[data-dev] .menu a.alt{display:block}
 .menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible,#save:focus-visible,#again:focus-visible{outline:3px solid transparent}
 /* 내려받은 심볼은 마스크로 쓴다 — 색을 글자색에 맞춰야 하기 때문이다.
    파일은 구글 폰트에서 받은 것 그대로 (FILL0 · wght300 · GRAD200 · opsz24) */
@@ -89,11 +100,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
 }
-.i-arrow-left{--i:url(assets/arrow-back.svg?v=0.91)}
-.i-flag{--i:url(assets/flag.svg?v=0.91)}
-.i-close{--i:url(assets/close.svg?v=0.91)}
-.i-pin{--i:url(assets/pin.svg?v=0.91)}
-.i-chart{--i:url(assets/chart.svg?v=0.91)}
+.i-arrow-left{--i:url(assets/arrow-back.svg?v=0.95)}
+.i-flag{--i:url(assets/flag.svg?v=0.95)}
+.i-close{--i:url(assets/close.svg?v=0.95)}
+.i-pin{--i:url(assets/pin.svg?v=0.95)}
+.i-chart{--i:url(assets/chart.svg?v=0.95)}
 .i.flip{transform:scaleX(-1)}
 /* 눈으로는 안 보이고 읽어주는 기계에는 남는 글자 */
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
@@ -298,56 +309,64 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .ov-dock .menu{margin:0;justify-self:end}
 
 /* ── 설정 ─────────────────────────────── */
-.opts{display:grid;grid-template-columns:auto auto;gap:18px 40px;align-items:center;font-size:24px;font-weight:700}
-.opts dd{display:flex;align-items:center;gap:16px;justify-self:end}
+/* 판은 어느 탭이든 한 문법이다 — 오른쪽 끝을 맞춘 라벨 + 그 옆의 원 하나.
+   라벨 pill 은 두지 않는다: MM 은 블록을 레일에만 쓰고 목록은 맨 글자다 */
+.opts{display:grid;grid-template-columns:auto auto;gap:20px 18px;align-items:center;font-size:30px;font-weight:700}
+.opts dt{justify-self:end;text-align:right}
+.opts dd{display:flex;align-items:center;gap:20px;justify-self:start}
+/* 켜짐은 색만으로 서지 않는다 — 굵어진 라벨 · 채운 원 · 체크 표가 함께 간다 */
+.opts dt:has(+ dd .toggle[aria-pressed="true"]){font-weight:900}
 .toggle,.step{
-  width:42px;height:42px;border-radius:50%;border:3px solid var(--ink);background:none;
+  width:36px;height:36px;border-radius:50%;border:3px solid var(--ink);background:none;
   color:var(--ink);font-size:19px;cursor:pointer;line-height:1;
 }
+/* 언어·지역 판(라디오)은 그대로 두고, 화면·소리 판의 토글만 참고 이미지만큼 키운다 */
+.toggle{width:56px;height:56px;border-width:4px}
 .step{border:0;font-size:24px;width:auto}
 .toggle::after{
-  content:""; display:block; width:1em; height:1em; font-size:26px;
+  content:""; display:block; width:1em; height:1em; font-size:34px;
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
-  --i:url(assets/close-600.svg?v=0.91);
+  --i:url(assets/close-600.svg?v=0.95);
 }
-.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=0.91)}
+.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=0.95)}
 .toggle[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 
-/* MM 처럼 왼쪽 세로 탭 레일 + 오른쪽 패널을 한 장의 흰 판이 감싼다. 상태는 색만이
-   아니라 글자 굵기 · 떠오른 그림자 · aria-selected 로 함께 갈린다 */
+/* 왼쪽 세로 탭 레일 + 오른쪽 판. 감싸는 흰 판은 두지 않는다 — MM 은 설정도
+   격자 배경 위에 그대로 얹는다. 상태는 색만이 아니라 글자 크기 · 굵기 ·
+   aria-selected 로 함께 갈린다 */
 /* min-height 를 0 으로 묶지 않는다 — 판이 길면 shell 이 같이 자라 버전 줄을
    밀어내고 .screen 의 overflow:auto 가 화면째 굴린다 */
+/* 뷰포트 중앙에 뜨는 한 덩어리 — 레일과 판이 서로의 content 폭만큼만 차지하고
+   (width:fit-content) margin:auto 로 옆으로, 부모의 justify-content:center 로
+   위아래로 몰린다. flex:1 을 걷어내야 판이 남는 폭을 다 먹지 않는다 */
 .opts-shell{
-  display:flex;align-items:flex-start;gap:30px;flex:1;
-  background:var(--card);border-radius:32px;padding:30px 36px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:clamp(28px,5vw,72px);
+  width:fit-content;max-width:100%;margin:0 auto;height:var(--opt-shell-h);
 }
-/* 레일 폭은 탭 글자에서 나온다 — 언어를 바꾸면 그 폭이 뛴다. app.js 의 easeRail 이
-   그 폭을 이어 주는데, 넓어지는 쪽은 다 자라기 전 몇 프레임이 글자보다 좁다.
-   그때 줄바꿈이 나면 이으나 마나라 넘치는 글자는 자른다. focus 윤곽선은
-   outline-offset 이 음수라 안쪽에 그려져 여기 걸리지 않는다 */
-/* MM 레일: 탭마다 글자만큼만 넓은 pill 이 오른쪽 끝에 맞춰 쌓인다 */
+/* 레일: 탭마다 글자만큼만 넓은 pill 이 오른쪽 끝에 맞춰 쌓인다. 폭은 글자에서
+   얻지 않고 못 박는다 — 언어마다 탭 글자가 길고 짧아 폭을 재면 셸이 통째로
+   흔들린다. 넘치는 글자는 자르지 않는다: 레일 왼쪽은 어차피 빈 자리다 */
 .opts-tabs{
-  display:flex;flex-direction:column;align-items:flex-end;gap:6px;
-  flex:0 0 auto;min-width:9em;overflow:hidden;
+  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+  flex:0 0 auto;width:var(--opt-rail-w);
 }
 .opts-tab{
-  font:inherit;font-weight:700;font-size:22px;text-align:center;white-space:nowrap;
+  font:inherit;font-weight:700;font-size:22px;text-align:right;white-space:nowrap;
   width:fit-content;align-self:flex-end;
-  /* 비활성은 반투명 teal 이라 흰 글자면 판 위에서 읽히지 않는다 — 글자는 잉크로 */
+  /* 비활성은 반투명 teal 이라 흰 글자면 배경 위에서 읽히지 않는다 — 글자는 잉크로 */
   color:var(--ink);background:color-mix(in srgb,var(--block) 34%,transparent);
-  /* 왼쪽 띠는 모두가 자리를 잡아 두고 고른 탭에서만 켜진다 — 켜고 꺼도 폭이
-     흔들리지 않는다. radius 를 따라 둥글게 말리므로 pill 모양도 그대로다 */
-  border:0;border-left:6px solid transparent;border-radius:14px;
-  padding:9px 20px 11px 14px;cursor:pointer;
+  border:0;border-radius:14px;padding:8px 18px 10px;cursor:pointer;
+  /* font-size 도 같이 잇는다 — font-weight 는 뺀다: 가변 폭이 아닌 폰트라
+     700→800 은 어차피 중간값 없이 그대로 튄다, 이어봤자 헛일이다 */
   transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out),
-             border-color var(--fast) var(--ease-out),box-shadow var(--fast) var(--ease-out);
+             box-shadow var(--fast) var(--ease-out),font-size var(--fast) var(--ease-out);
 }
-/* 고른 탭은 색만으로 서지 않는다 — 굵은 글자와 왼쪽 띠가 함께 켜진다.
-   야간에는 --shadow 가 none 이라 떠오름이 사라지므로 띠가 늘 남는 표식이다 */
+/* 고른 탭은 색만으로 서지 않는다 — 글자가 한 치수 커지고 굵어진다. 야간에는
+   --shadow 가 none 이라 떠오름이 사라지므로 크기·굵기가 늘 남는 표식이다 */
 .opts-tab[aria-selected="true"]{
-  background:var(--block-hi); color:#fff; font-weight:800;
-  border-left-color:var(--accent); box-shadow:var(--shadow);
+  background:var(--block-hi); color:#fff; font-weight:800; font-size:28px;
+  box-shadow:var(--shadow);
 }
 @media (hover:hover) and (pointer:fine){
   .opts-tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--block) 52%,transparent)}
@@ -355,17 +374,29 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 /* 판은 프레임 높이를 다 갖는다 — 탭을 바꿔도 흰 프레임 크기가 뛰지 않는다. [hidden] 은 건드리지 않는다: display 를 주면
    UA 의 display:none 을 이겨 숨은 판이 되살아난다 */
-.opts-panels{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column}
-.opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column}
+/* 판 통은 언어 판(두 열)의 봉투 폭으로 못 박는다 — min-width 로만 죄면 한 열짜리
+   화면·소리 판에서 셸이 좁아지고, 지역 판의 안내 문장은 언어마다 길이가 달라
+   셸을 도로 넓힌다. 폭 하나로 묶어야 탭도 언어도 셸 바깥을 못 건드린다
+   (flex-shrink 는 남긴다 — 좁은 창에서는 줄어야 한다) */
+.opts-panels{flex:0 1 auto;width:calc(var(--opt-col) * 2 + 24px);align-self:stretch;display:flex;flex-direction:column}
+.opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
 .opts-panel:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
 /* 언어·지역 고르기 — 대륙 fieldset + 2열 라디오. 지역 판과 같은 스크롤 통 */
 .opts-lang-pick,
 :root[data-dev] .opts-region-pick{
   /* 대륙 fieldset 은 통을 가로지르고, 홀로 선 '자동' 칸은 한 열만 차지한다 —
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,1fr));
-  gap:14px; align-content:start; max-width:620px; flex:0 1 auto;
-  max-height:56vh; overflow-y:auto; overscroll-behavior:contain; padding-right:10px;
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
+  gap:14px; align-content:start; max-width:calc(var(--opt-col) * 2 + 24px); flex:0 1 auto;
+  /* 셸 높이가 정해져 있으니 목록은 그 안에서 굴린다 — 판을 밀어 키우지 않는다 */
+  max-height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-right:10px;
+  /* 셸 아래변은 줄 높이와 무관해서 늘 한 줄을 반토막 낸다 — 통에 테두리가 없으니
+     그 반토막이 '격자 밖으로 샌 것'처럼 읽힌다. 잘린 자리를 흐려 '아래가 더
+     있다'로 바꾼다. padding 만큼 여백이 뒤에 남아 끝까지 굴리면 마지막 줄은
+     흐려지지 않고, scroll-padding 이 있어 키보드로 옮긴 초점 테두리도 안 흐려진다 */
+  padding-bottom:28px; scroll-padding-bottom:28px;
+  --pick-fade:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);
+  -webkit-mask:var(--pick-fade); mask:var(--pick-fade);
 }
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
@@ -376,44 +407,47 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */
 .region-group{border:0;margin:0;padding:0;min-inline-size:0}
 .region-group legend{
-  padding:0 0 4px; font-size:18px; font-weight:800; letter-spacing:.04em;
-  color:var(--ink-soft); text-transform:uppercase;
+  width:100%; padding:0 0 5px; margin-bottom:6px; font-size:18px; font-weight:800;
+  letter-spacing:.04em; color:var(--ink-soft); text-transform:uppercase;
+  border-bottom:3px solid var(--land);
 }
 /* 2열이 기본이다. 칸이 좁아지면 auto-fit 이 1열로 접으므로 화면 폭으로
    갈래를 나누지 않는다 — 200% 확대한 데스크톱도 같은 길로 접힌다 */
 .region-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(14em,1fr));gap:2px 14px}
-/* MM Language 탭: 라벨이 왼쪽, 원형 라디오가 오른쪽 끝에 선다 (input 은 order 로만
-   옮긴다 — DOM 순서를 뒤집으면 label 안 짝짓기와 초점 복원 계약이 흔들린다) */
+/* 라벨은 제 원 바로 옆에 붙어 오른쪽 끝을 맞춘다 — 판이 넓어져도 이름과 원이
+   갈라지지 않는다 (input 은 order 로만 옮긴다 — DOM 순서를 뒤집으면 label 안
+   짝짓기와 초점 복원 계약이 흔들린다) */
 .region-opt{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:6px 10px 7px 14px; border-radius:12px;
-  font-size:22px; font-weight:700; cursor:pointer; white-space:nowrap;
+  display:flex; align-items:center; justify-content:flex-end; gap:14px;
+  padding:5px 8px 6px; border-radius:12px;
+  font-size:24px; font-weight:700; cursor:pointer; white-space:nowrap;
 }
+.region-opt span{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 원형 체크. .toggle 과 같은 결이되 라디오라 화살표 이동은 네이티브가 맡는다 */
 .region-opt input{
   appearance:none; -webkit-appearance:none; margin:0; flex:0 0 auto; order:1; cursor:pointer;
   color:inherit;                      /* 폼 컨트롤은 color 를 물려받지 않는다 */
-  width:30px; height:30px; border-radius:50%; border:3px solid currentColor;
+  width:36px; height:36px; border-radius:50%; border:3px solid currentColor;
   background:none; display:grid; place-items:center;
 }
 .region-opt input::after{
-  content:""; width:1em; height:1em; font-size:19px; opacity:0;
-  background:var(--block-hi);
-  -webkit-mask:url(assets/check-600.svg?v=0.91) center / 100% no-repeat;
-          mask:url(assets/check-600.svg?v=0.91) center / 100% no-repeat;
+  content:""; width:1em; height:1em; font-size:22px; opacity:0;
+  background:var(--bg);
+  -webkit-mask:url(assets/check-600.svg?v=0.95) center / 100% no-repeat;
+          mask:url(assets/check-600.svg?v=0.95) center / 100% no-repeat;
 }
 /* 고른 칸은 색만으로 서지 않는다 — 채운 원 · 체크 표 · 굵은 글자가 함께 간다 */
 .region-opt input:checked{background:currentColor}
 .region-opt input:checked::after{opacity:1}
-.region-opt:has(input:checked){background:var(--block-hi);color:#fff;font-weight:900}
+.region-opt:has(input:checked){font-weight:900}
 .region-opt input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 @media (hover:hover) and (pointer:fine){
   .region-opt:hover:not(:has(input:checked)){background:var(--land)}
 }
 :root[data-dev] .opts-region-pending{display:none}
 .opts-region-pending{max-width:34em;margin-top:14px;color:var(--ink-soft);font-size:18px;line-height:1.6}
-.opts-region-pick + .devstat{margin-top:18px}
-.ver{margin-top:auto;color:var(--ink-soft);font-size:14px}
+/* 이제 셸 아래가 아니라 '버전' 탭의 판 안이다 — 다른 판처럼 왼쪽에서 시작한다 */
+.ver{color:var(--ink-soft);font-size:18px}
 
 /* ── 플레이 ───────────────────────────── */
 #play{padding:24px 40px 32px}
@@ -549,17 +583,30 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* 섹션은 뷰포트 전체라 맵을 덮는다. 빈 곳은 통과시키고, 글자·버튼만 비트 위에 둔다. */
 #title, #options{pointer-events:none}
 #title .logo, #title .menu,
-#options .screen-head, #options .opts-shell, #options .ver{
+#options .screen-head, #options .opts-shell{
   pointer-events:auto; position:relative; z-index:2;
 }
 #title .logo, #title .menu{align-self:flex-start;width:max-content}
+
+/* 설정 화면 — 뒤로·제목은 왼쪽 위에 고정해 두고(.screen 이 이미
+   position:fixed 라 그 패딩 모서리가 기준이 된다), 나머지(레일+판, 버전 줄)는
+   justify-content:center 로 남는 세로 공간 가운데로 몰린다 */
+#options{justify-content:center}
+/* 셸은 뷰포트 한가운데 뜬다. 거기서 가장 가까운 장식 격자 가로선까지의 차이만큼만
+   내려(올려) 윗변을 그 선에 앉힌다 — position:relative 는 위 규칙이 이미 준다 */
+#options .opts-shell{top:var(--opt-shell-dy)}
+#options .screen-head{
+  /* 절대배치의 기준은 .screen 의 패딩 박스가 아니라 그 안쪽 모서리다 —
+     top/left:0 이면 뷰포트 꼭짓점에 붙어 다른 화면의 머리글과 줄이 안 맞는다 */
+  position:absolute; top:var(--screen-pad-y); left:var(--screen-pad-x); margin-bottom:0; z-index:3;
+}
 
 /* 뒤로 버튼과 제목이 겹치지 않게 */
 /* 정보 줄이 지도를 가리지 않도록 바닥에 깔아준다 */
 .fact{padding:12px 0 10px}
 #play{padding-bottom:20px}
 .stage{margin-bottom:4px}
-.opts{max-width:620px;margin-left:56px}
+.opts{max-width:620px}
 
 /* ── 픽셀맵 (타이틀·설정 공용) ─────────── */
 #pixelmap{
@@ -587,17 +634,6 @@ body:has(#title.on) #pixelmap{opacity:1}
   transform-box:fill-box;transform-origin:center;
   transition:transform var(--fast) var(--ease-out), fill var(--fast) var(--ease-out), opacity var(--fast) var(--ease-out);
 }
-/* 개발 현황 — 읽기만 하는 줄. 상태는 색이 아니라 테두리 굵기와 라벨 글자가 나른다 */
-.devstat{display:flex;align-items:baseline;gap:3px 10px;flex-wrap:wrap;font-size:18px;line-height:1.3}
-.devstat b{font-weight:700}
-.devstat .badge{
-  font-size:14px;font-weight:700;letter-spacing:.02em;
-  padding:2px 9px 3px;border-radius:6px;
-  border:3px solid currentColor;color:var(--ink-soft);
-}
-.devstat[data-stage="available"] .badge{color:var(--accent-text);border-style:solid}
-.devstat[data-stage="preview"] .badge{color:var(--ink-soft);border-style:dashed}
-.devstat small{font-size:14px;font-weight:500;color:var(--ink-soft);flex-basis:100%}
 #pixelmap circle.hilite{fill:var(--accent);opacity:1}
 .thumb svg circle{fill:#fff}
 
@@ -618,17 +654,6 @@ body:has(#title.on) #pixelmap{opacity:1}
 }
 .step,.toggle{transition:color var(--fast) var(--ease-out),
                          border-color var(--fast) var(--ease-out)}
-
-/* 설정: 항목 이름을 오른쪽 정렬 pill 로. MM 의 Audio & Video 탭 문법 —
-   왼쪽 라벨 블록 + 오른쪽 원형 토글 */
-.opts{grid-template-columns:auto auto;gap:8px 34px}
-.opts dt{
-  background:var(--block); color:#fff; padding:5px 18px 7px; border-radius:14px;
-  justify-self:end; text-align:right; font-size:23px; width:fit-content;
-  transition:background var(--fast) var(--ease-out);
-}
-.opts dt:has(+ dd :is(.toggle[aria-pressed="true"],.step)){background:var(--block-hi)}
-.opts dd{justify-self:start;padding-left:4px}
 
 /* 긴 우하향 그림자 — MM 의 모든 입체물이 갖는 것 */
 .card-face{border-radius:6px;box-shadow:var(--shadow)}
@@ -698,23 +723,21 @@ body:has(#title.on) #pixelmap{opacity:1}
 
 /* 스케일 — 레퍼런스는 타이포가 크고 여백이 넉넉하다 */
 .opts{
-  max-width:none; margin-left:0; font-size:30px;
-  /* 라벨 pill 은 저희끼리 오른쪽 끝을 맞춰 레일의 결을 잇는다 — 자리는 판 왼쪽 */
-  grid-template-columns:auto auto; gap:8px 26px;
-  justify-content:start; align-content:center; flex:0 1 auto;
+  max-width:none; margin-left:0;
+  /* 언어 판과 같은 치수·같은 정렬이라 탭을 옮겨도 원의 열이 그 자리에 남는다 */
+  grid-template-columns:1fr auto; gap:12px 14px; width:min(var(--opt-col),100%);
+  justify-content:start; align-content:start; flex:0 1 auto;
 }
-.opts dt{font-size:30px;padding:7px 20px 10px}
-.toggle{width:52px;height:52px;font-size:24px;border-width:4px}
+/* 손가락 탭이라 데스크톱(56px)보다 한 치수 더 키운다 */
+.toggle{width:64px;height:64px;border-width:5px}
 .step{font-size:30px;width:auto;padding:0 6px}
 .opts .step .i{font-size:40px}
 .opts dd{gap:22px}
-.devstat{font-size:24px;gap:4px 12px}
-.devstat .badge{font-size:18px;padding:3px 12px 4px}
-.devstat small{font-size:18px}
 .opts-tab{font-size:26px;padding:11px 20px 13px}
 .opts-region-pending{font-size:22px}
 
-.menu button{font-size:30px;padding:7px 20px 10px}
+/* .menu a(소개·Mimi)도 button 과 같은 줄이다 — 여기서 빠지면 폰트 크기만 혼자 작게 남는다 */
+.menu button, .menu a{font-size:30px;padding:7px 20px 10px}
 .back{width:44px;height:44px}
 .head{font-size:40px}
 
