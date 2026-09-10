@@ -3,8 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Regiontype</title>
+<title>regiontype · 서울 25개 자치구 타자로 외우기</title>
 <meta name="description" content="지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구부터.">
+<link rel="canonical" href="https://regiontype.com/">
+
+<!-- 링크 미리보기(카톡·DM·트위터). og:image 는 절대 URL 이어야 하고 미리보기
+     캐시가 오래 남아, 해시 없는 고정 경로 /og.png 로만 서빙한다. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://regiontype.com/">
+<meta property="og:title" content="regiontype — 서울, 얼마나 아세요?">
+<meta property="og:description" content="25개 자치구부터 423개 행정동까지. 타이핑으로 서울을 완성하세요.">
+<meta property="og:image" content="https://regiontype.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="regiontype">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="regiontype — 서울, 얼마나 아세요?">
+<meta name="twitter:description" content="25개 자치구부터 423개 행정동까지.">
+<meta name="twitter:image" content="https://regiontype.com/og.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "regiontype",
+  "url": "https://regiontype.com/",
+  "applicationCategory": "EducationalApplication",
+  "inLanguage": "ko",
+  "operatingSystem": "Web",
+  "description": "지역을 타이핑으로 알리는 타자연습. 서울 25개 자치구와 423개 행정동을 타이핑으로 익히는 웹앱. 나라별 행정구역 코스.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+}
+</script>
 <!-- 파비콘은 기기 테마(prefers-color-scheme)만 따른다. 사이트의 야간 모드는
      data-night 로 도는 별개의 것이라, 설정을 만져도 아이콘은 바뀌지 않는다.
      media 를 못 읽는 브라우저를 위해 마지막에 기본값 하나를 남긴다.
@@ -12,14 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.70">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.70">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.70">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- 아이콘: Material Symbols Rounded · FILL 0 · wght 300 · GRAD 200 · opsz 24 -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300..700,0,200">
-<link rel="stylesheet" href="style.css?v=0.70">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.95">
+<!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
+<link rel="stylesheet" href="style.css?v=0.95">
 </head>
 <body>
 
@@ -38,10 +66,11 @@
 
 <!-- 타이틀 -->
 <section id="title" class="screen on">
-  <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="ms">flag</i></button></h1>
+  <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="i i-flag" aria-hidden="true"></i></button></h1>
   <nav class="menu">
-    <button data-go="regions">시작하기</button>
-    <button data-go="options">설정</button>
+    <button data-go="regions" data-i18n="start">시작하기</button>
+    <button data-go="options" data-i18n="options">설정</button>
+    <a href="about.html" data-i18n="about">소개</a>
     <a class="alt" href="mimi/">Mimi 스타일 보기</a>
   </nav>
 </section>
@@ -49,8 +78,8 @@
 <!-- 지역 목록 -->
 <section id="regions" class="screen">
   <div class="screen-head">
-    <button class="back" data-go="title" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
-    <h2 class="head">지역</h2>
+    <button class="back" data-go="title" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <h2 class="head" data-i18n="regions">지역</h2>
   </div>
   <div class="course-stage">
     <ul class="course-list" id="regionList"></ul>
@@ -60,34 +89,63 @@
 <!-- 설정 -->
 <section id="options" class="screen">
   <div class="screen-head">
-    <button class="back" data-go="title" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
-    <h2 class="head">설정</h2>
+    <button class="back" data-go="title" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <h2 class="head" data-i18n="options">설정</h2>
   </div>
-  <dl class="opts">
-    <dt>야간 모드</dt>
-    <dd><button class="toggle" data-opt="night" aria-label="야간 모드"></button></dd>
-    <dt>효과음</dt>
-    <dd><button class="toggle" data-opt="sound" aria-label="효과음"></button></dd>
-    <dt>애니메이션</dt>
-    <dd><button class="toggle" data-opt="motion" aria-label="애니메이션"></button></dd>
-    <dt>그리드</dt>
-    <dd><button class="toggle" data-opt="grid" aria-label="그리드"></button></dd>
-  </dl>
-  <p class="ver">regiontype v0.3.7 (<span id="verBuild"></span>) · 서울 자치구 경계 2013 기준</p>
+  <div class="opts-shell">
+    <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
+      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-i18n="language">언어</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-i18n="region">지역</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
+    </nav>
+    <div class="opts-panels">
+      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
+        <div id="optLang" class="opts-lang-pick" role="radiogroup"
+             data-i18n-aria="language" aria-label="언어"></div>
+      </div>
+      <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" hidden>
+        <!-- 고르는 UI 는 개발용 문이다 — CSS 기본이 숨김이라 배포에 새지 않는다 -->
+        <div id="optRegion" class="opts-region-pick" role="radiogroup"
+             data-i18n-aria="region" aria-label="지역"></div>
+        <p class="opts-region-pending" data-i18n="regionPending">지금은 대한민국(남한)만 지원합니다. 다른 지역도 곧 열립니다.</p>
+      </div>
+      <div id="optsVideo" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVideo" tabindex="0" hidden>
+        <dl class="opts">
+          <dt data-i18n="night">야간 모드</dt>
+          <dd><button class="toggle" data-opt="night" data-i18n-aria="night" aria-label="야간 모드"></button></dd>
+          <dt data-i18n="motion">애니메이션</dt>
+          <dd><button class="toggle" data-opt="motion" data-i18n-aria="motion" aria-label="애니메이션"></button></dd>
+          <dt data-i18n="grid">그리드</dt>
+          <dd><button class="toggle" data-opt="grid" data-i18n-aria="grid" aria-label="그리드"></button></dd>
+        </dl>
+      </div>
+      <div id="optsAudio" class="opts-panel" role="tabpanel" aria-labelledby="optsTabAudio" tabindex="0" hidden>
+        <dl class="opts">
+          <dt data-i18n="sound">효과음</dt>
+          <dd><button class="toggle" data-opt="sound" data-i18n-aria="sound" aria-label="효과음"></button></dd>
+        </dl>
+      </div>
+      <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
+        <p class="ver">regiontype v0.3.9 (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- 플레이 -->
 <section id="play" class="screen">
   <div class="hud">
-    <button class="back" data-go="regions" aria-label="그만두기"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <button class="back" data-go="regions" data-i18n-aria="quit" aria-label="그만두기"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <div class="gauge"><i id="gaugeFill"></i></div>
     <div class="stat time" id="statTime"><b>0:00</b></div>
     <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
-    <div class="stat"><b id="statScore">0</b><span>점</span></div>
+    <div class="stat"><b id="statScore">0</b><span data-i18n="scoreUnit">점</span></div>
     <div class="stat combo" id="statCombo"></div>
   </div>
   <div class="stage">
-    <svg id="map" class="rt-map" role="img" aria-label="서울 자치구 지도"></svg>
+    <svg id="map" class="rt-map" role="img" data-i18n-aria="mapLabel" aria-label="지역 지도"></svg>
   </div>
   <span class="backdrop-blur" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
@@ -102,7 +160,7 @@
   </div>
   <div class="fact" id="fact" aria-live="polite"></div>
   <div class="typebar">
-    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="지역 이름 입력">
+    <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-aria="typeName" aria-label="지역 이름 입력">
   </div>
   <div class="countdown" id="countdown" aria-live="assertive"></div>
 </section>
@@ -110,28 +168,68 @@
 <!-- 결과 -->
 <section id="result" class="screen">
   <div class="screen-head">
-    <button class="back" data-go="regions" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <button class="back" data-go="regions" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
   </div>
   <div class="result-wrap">
     <canvas id="card" width="1600" height="900"></canvas>
     <div class="scores">
-      <p><b id="rScore">0</b><span>점</span></p>
-      <p><b id="rCount">0</b><span>들른 곳</span></p>
-      <p><b id="rAcc">0%</b><span>정확도</span></p>
+      <p><b id="rScore">0</b><span data-i18n="scoreUnit">점</span></p>
+      <p><b id="rCount">0</b><span data-i18n="visited">들른 곳</span></p>
+      <p><b id="rAcc">0%</b><span data-i18n="accuracy">정확도</span></p>
       <p class="best" id="rBest"></p>
       <div class="menu">
-        <button id="again">다시 하기</button>
-        <button id="save">이미지 저장</button>
+        <button id="again" data-i18n="again">다시 하기</button>
+        <button id="save" data-i18n="save">이미지 저장</button>
       </div>
     </div>
   </div>
-  <h3 class="missed-head">놓친 곳 <span id="missCount"></span></h3>
+  <div id="board" hidden>
+    <h3 class="missed-head"><span data-i18n="board">순위표</span> <span id="boardWhere"></span></h3>
+    <p class="board-say" id="boardSay" aria-live="polite"></p>
+    <ol class="ranks" id="ranks"></ol>
+    <div class="board-in" id="boardIn" hidden>
+      <p><span data-i18n="needLogin">순위표에 올리려면 로그인이 필요합니다.</span> <b data-i18n="noSecret">비밀번호도 메일도 받지 않습니다</b> —
+        <span data-i18n="passkeyHow">이 기기의 지문·얼굴·PIN 으로 들어옵니다.</span></p>
+      <div>
+        <button type="button" id="inGo" data-i18n="passkeyGo">패스키로 로그인</button>
+        <button type="button" id="inNew" data-i18n="passkeyNew">패스키 만들기</button>
+      </div>
+    </div>
+    <form class="board-join" id="boardJoin" hidden>
+      <label for="boardName" data-i18n="nameLabel">누구나 보는 순위표에 이 이름이 올라갑니다</label>
+      <div>
+        <input id="boardName" name="name" maxlength="12" autocomplete="off" spellcheck="false" data-i18n-ph="namePh" placeholder="이름">
+        <button type="submit" data-i18n="submitScore">기록 남기기</button>
+      </div>
+
+  <h3 class="missed-head"><span data-i18n="missed">놓친 곳</span> <span id="missCount"></span></h3>
   <ul class="missed" id="missed"></ul>
+
+    </form>
+  </div>
 </section>
 
 <!-- 지역 카드 뒷면: 코스 고르기 → 시작 옵션 -->
 <template id="regionTpl">
   <div class="card-back">
+    <div class="ov-rank" role="tabpanel" hidden>
+      <div class="rank-head">
+        <button type="button" class="rank-arrow" data-step="-1" data-i18n-aria="prevCourse" aria-label="이전 코스">
+          <i class="i i-arrow-left" aria-hidden="true"></i></button>
+        <b class="rank-title"></b>
+        <button type="button" class="rank-arrow" data-step="1" data-i18n-aria="nextCourse" aria-label="다음 코스">
+          <i class="i i-arrow-left flip" aria-hidden="true"></i></button>
+      </div>
+      <p class="rank-you" aria-live="polite"></p>
+      <div class="rank-plot"></div>
+      <div class="rank-foot">
+        <span class="rank-where"></span><b class="rank-score"></b>
+      </div>
+      <ol class="ranks rank-list"></ol>
+      <p class="rank-say"></p>
+      <button type="button" class="rank-drop" data-i18n="forgetMine">순위표에서 내 기록 내리기</button>
+    </div>
+
     <div class="ov-pick">
       <div class="pickmap"></div>
       <p class="pickname"></p>
@@ -146,7 +244,7 @@
     <div class="hud ov-hud">
       <div class="gauge"><i></i></div>
       <div class="stat time">
-        <button type="button" class="ov-time" aria-haspopup="listbox" aria-expanded="false" aria-label="제한 시간">0:00</button>
+        <button type="button" class="ov-time" aria-haspopup="listbox" aria-expanded="false" data-i18n-aria="timeLimit" aria-label="제한 시간">0:00</button>
       </div>
       <div class="stat"><b>0</b><span class="ov-total">/0</span></div>
     </div>
@@ -157,23 +255,23 @@
     </div>
     <div class="ov-dock">
       <div class="choice" role="group">
-        <span class="choice-l">이름</span>
+        <span class="choice-l" data-i18n="hintName">이름</span>
         <div class="choice-b ov-hint">
-          <button type="button" data-v="1" aria-pressed="true">보임</button>
-          <button type="button" data-v="0" aria-pressed="false">숨김</button>
+          <button type="button" data-v="1" aria-pressed="true" data-i18n="hintOn">보임</button>
+          <button type="button" data-v="0" aria-pressed="false" data-i18n="hintOff">숨김</button>
         </div>
       </div>
       <b class="ov-title"></b>
       <div class="menu">
-        <button type="button" class="ov-start">시작</button>
+        <button type="button" class="ov-start" data-i18n="startPlay">시작</button>
       </div>
     </div>
   </div>
 </template>
 
 <div id="mobile">
-  <h1 class="logo">region<span>type</span><i class="dot"></i></h1>
-  <p>물리 키보드가 필요합니다.<br>PC에서 열어주세요.</p>
+  <div class="logo">region<span>type</span><i class="dot"></i></div>
+  <p><span data-i18n="mobileNeed">물리 키보드가 필요합니다.</span><br><span data-i18n="mobilePc">PC에서 열어주세요.</span></p>
 </div>
 
 
@@ -181,24 +279,24 @@
 <dialog id="feedback" aria-labelledby="fbHead">
   <form id="fbForm">
     <div class="fb-head">
-      <h2 id="fbHead">피드백</h2>
-      <button type="button" class="back" id="fbClose" aria-label="닫기"><i class="ms">close</i></button>
+      <h2 id="fbHead" data-i18n="feedback">피드백</h2>
+      <button type="button" class="back" id="fbClose" data-i18n-aria="close" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
     </div>
-    <p class="fb-lead">뭐가 이상했는지, 뭐가 있었으면 좋겠는지 적어주세요.</p>
-    <div class="choice-b fb-kind" role="group" aria-label="피드백 종류">
-      <button type="button" data-v="bug" aria-pressed="true">버그</button>
-      <button type="button" data-v="idea" aria-pressed="false">제안</button>
-      <button type="button" data-v="data" aria-pressed="false">지명·정보 오류</button>
+    <p class="fb-lead" data-i18n="fbLead">뭐가 이상했는지, 뭐가 있었으면 좋겠는지 적어주세요.</p>
+    <div class="choice-b fb-kind" role="group" data-i18n-aria="fbKind" aria-label="피드백 종류">
+      <button type="button" data-v="bug" aria-pressed="true" data-i18n="kindBug">버그</button>
+      <button type="button" data-v="idea" aria-pressed="false" data-i18n="kindIdea">제안</button>
+      <button type="button" data-v="data" aria-pressed="false" data-i18n="kindData">지명·정보 오류</button>
     </div>
-    <textarea id="fbBody" required autofocus maxlength="500" aria-label="내용"
+    <textarea id="fbBody" required autofocus maxlength="500" data-i18n-aria="fbBody" aria-label="내용"
       placeholder="버그내용"></textarea>
     <div class="fb-foot">
       <p class="fb-note" id="fbNote" aria-live="polite"></p>
-      <button type="submit" class="fb-send" id="fbSend">보내기</button>
+      <button type="submit" class="fb-send" id="fbSend" data-i18n="fbSend">보내기</button>
     </div>
   </form>
 </dialog>
 
-<script src="app.js?v=0.70"></script>
+<script src="app.js?v=0.95"></script>
 </body>
 </html>

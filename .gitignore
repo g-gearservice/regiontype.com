@@ -2,3 +2,5 @@
 gu.json
 \!!!! References & Sources !!!!/
 relay/.wrangler/
+.dev.vars
+tools/__pycache__/

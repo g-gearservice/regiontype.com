@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>서울 자치구와 행정동 — regiontype 소개</title>
+<meta name="description" content="서울 25개 자치구 이름과 423개 행정동을 타이핑으로 외우는 법. 행정동과 법정동이 어떻게 다른지도 함께.">
+<link rel="canonical" href="https://regiontype.com/about.html">
+
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://regiontype.com/about.html">
+<meta property="og:title" content="서울 자치구와 행정동 — regiontype 소개">
+<meta property="og:description" content="서울 25개 자치구 이름과 423개 행정동을 타이핑으로 외우는 법. 행정동과 법정동의 차이까지.">
+<meta property="og:image" content="https://regiontype.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="regiontype">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="서울 자치구와 행정동 — regiontype 소개">
+<meta name="twitter:description" content="서울 25개 자치구 이름과 423개 행정동을 타이핑으로 외우는 법.">
+<meta name="twitter:image" content="https://regiontype.com/og.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "서울 자치구와 행정동 — regiontype 소개",
+  "url": "https://regiontype.com/about.html",
+  "inLanguage": "ko",
+  "description": "서울 25개 자치구 이름과 423개 행정동을 타이핑으로 외우는 법. 행정동과 법정동의 차이까지.",
+  "mainEntity": {
+    "@type": "WebApplication",
+    "name": "regiontype",
+    "url": "https://regiontype.com/",
+    "applicationCategory": "EducationalApplication",
+    "inLanguage": "ko",
+    "operatingSystem": "Web",
+    "description": "서울 25개 자치구와 423개 행정동을 타이핑으로 익히는 웹앱",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+  }
+}
+</script>
+
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.95">
+<link rel="stylesheet" href="style.css?v=0.95">
+<!-- 이 페이지는 읽는 글이라 앱의 고정 화면 규칙(overflow:hidden, position:fixed)을
+     쓰지 않는다. 토큰과 글꼴은 style.css 것을 그대로 물려받고, 문서 배치만 덧쓴다.
+     app.js 는 부르지 않는다 — 지도도 게임 루프도 여기엔 없다. -->
+<style>
+  html,body{height:auto}
+  body{overflow:auto}
+  .doc{max-width:720px;margin:0 auto;padding:56px 24px 96px;position:relative;z-index:1}
+  .doc a{color:var(--accent-text)}
+  .doc .logo{font-size:clamp(30px,4vw,44px);display:inline-block;margin-bottom:40px;
+              color:var(--ink);text-decoration:none}
+  .doc h1{font-size:clamp(30px,4.4vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-bottom:28px}
+  .doc h2{font-size:clamp(22px,2.6vw,28px);font-weight:800;letter-spacing:-.01em;margin:52px 0 16px}
+  .doc p{line-height:1.85;margin-bottom:18px}
+  .doc h2 + p{margin-top:0}
+  .doc .lead{font-size:19px;color:var(--ink-soft)}
+  .doc ul{margin:0 0 18px 1.1em}
+  .doc li{line-height:1.85}
+  .gu-list{list-style:none;margin:0 0 22px;display:flex;flex-wrap:wrap;gap:8px}
+  .gu-list li{background:var(--card);border-radius:4px;padding:5px 12px;box-shadow:var(--shadow)}
+  .doc a.cta{display:inline-block;margin-top:12px;background:var(--accent-text);color:var(--bg);
+       text-decoration:none;font-weight:800;font-size:20px;padding:11px 24px;border-radius:6px}
+  .doc footer{margin-top:64px;color:var(--ink-soft);font-size:14px;line-height:1.8}
+</style>
+</head>
+<body>
+
+<svg class="grid-bg" aria-hidden="true">
+  <defs>
+    <pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152">
+      <path d="M152 0 V152 H0"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
+</svg>
+
+<main class="doc">
+  <a class="logo" href="/">region<span>type</span><i class="dot"></i></a>
+
+  <h1>서울 자치구와 행정동, 타이핑으로 외우기</h1>
+
+  <p class="lead">regiontype은 지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습입니다.
+  서울 25개 자치구에서 시작해, 구를 하나 고르면 그 안의 행정동으로 들어갑니다.
+  전부 합치면 423개입니다.</p>
+
+  <p>지명은 눈으로 훑을 때보다 손으로 칠 때 오래 남습니다. 읽기만 하면 "봤다"에서
+  끝나지만, 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 하기 때문입니다.
+  게다가 지도 위에서 치면 이름과 위치가 같이 붙습니다. 강서구를 칠 때 커서가
+  서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
+
+  <p>코스는 무작위가 아니라 이어진 길입니다. 자치구 코스는 서쪽 끝 강서구에서
+  출발해 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 구 안의 행정동 코스도
+  같은 방식으로 이웃한 동을 따라 이어집니다. 순서 자체가 지리를 외우는
+  뼈대가 되도록 짠 것입니다.</p>
+
+  <h2>서울 25개 자치구 이름</h2>
+
+  <p>서울특별시는 25개 자치구로 나뉩니다. 아래는 앱의 자치구 코스가 밟는 순서
+  그대로, 서쪽에서 시작해 시계 방향으로 한 바퀴 돈 목록입니다.</p>
+
+  <ul class="gu-list">
+    <li>강서구</li><li>양천구</li><li>구로구</li><li>금천구</li><li>영등포구</li>
+    <li>마포구</li><li>서대문구</li><li>은평구</li><li>종로구</li><li>중구</li>
+    <li>용산구</li><li>동작구</li><li>관악구</li><li>서초구</li><li>강남구</li>
+    <li>송파구</li><li>강동구</li><li>광진구</li><li>성동구</li><li>동대문구</li>
+    <li>중랑구</li><li>노원구</li><li>도봉구</li><li>강북구</li><li>성북구</li>
+  </ul>
+
+  <p>가나다순으로 외우면 강남·강동·강북·강서가 한꺼번에 몰려 서로 헷갈립니다.
+  같은 '강' 자를 쓰지만 강서구는 서쪽 끝, 강동구는 동쪽 끝입니다.
+  지도를 따라 도는 순서로 외우면 이름이 방향과 함께 남습니다.</p>
+
+  <h2>행정동과 법정동은 무엇이 다른가</h2>
+
+  <p>서울의 동은 두 갈래로 셉니다. 그래서 "서울에 동이 몇 개냐"는 질문에
+  답이 두 개 나옵니다.</p>
+
+  <p><strong>법정동</strong>은 땅에 붙은 이름입니다. 등기부와 지번 주소에 쓰이고,
+  대개 조선시대부터 내려온 마을 이름이 그대로 굳은 것입니다. 땅의 이름이라
+  웬만해선 바뀌지 않습니다.</p>
+
+  <p><strong>행정동</strong>은 사람을 나눈 단위입니다. 동주민센터 하나가 맡는
+  구역이 곧 행정동 하나입니다. 사람 수에 맞춰 그은 선이라, 인구가 늘면 쪼개지고
+  줄면 옆 동과 합쳐집니다. 전입신고를 하거나 주민센터를 찾아갈 때 기준이 되는
+  쪽이 이것입니다.</p>
+
+  <p>둘은 일대일로 겹치지 않습니다. 법정동 여럿을 행정동 하나가 묶기도 하고,
+  법정동 하나가 행정동 여럿으로 갈리기도 합니다. 종로구의
+  <strong>종로1,2,3,4가동</strong>은 앞엣것입니다 — 종로1가부터 4가까지 여러
+  법정동을 주민센터 한 곳이 맡습니다. 같은 종로구의 <strong>청운효자동</strong>도
+  청운동·효자동을 비롯한 여러 법정동을 한데 묶은 이름입니다.</p>
+
+  <p>regiontype이 다루는 <strong>423개</strong>는 행정동 쪽입니다. 사람이 실제로
+  드나드는 단위이고, 지도 위에서 경계가 분명하게 잡히기 때문입니다. 행정동은
+  개편으로 늘고 주는 만큼, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
+
+  <h2>사용법</h2>
+
+  <p>물리 키보드가 필요합니다. 이름을 직접 치는 방식이라 화면 키보드로는
+  제대로 돌아가지 않습니다. PC나 노트북에서 열어주세요.</p>
+
+  <ul>
+    <li><strong>코스 고르기</strong> — 서울 25개 자치구, 또는 구 하나를 골라
+    그 안의 행정동. 지역 목록에서 카드를 뒤집으면 고를 수 있습니다.</li>
+    <li><strong>이름 보임 · 숨김</strong> — '보임'은 지금 칠 이름을 화면에
+    띄워 두고, '숨김'은 지도만 보고 떠올리게 합니다. 처음이면 '보임'으로
+    한 바퀴 돌고 나서 '숨김'으로 넘어가는 편이 낫습니다.</li>
+    <li><strong>제한 시간</strong> — 1분부터 5분까지. 짧게 잡으면 속도 연습,
+    길게 잡으면 끝까지 다 채우는 연습이 됩니다.</li>
+  </ul>
+
+  <p>끝나면 점수·들른 곳·정확도와 함께 놓친 곳 목록이 나옵니다. 결과는
+  이미지로 저장할 수 있습니다.</p>
+
+  <p><a class="cta" href="/">타이핑으로 완성하기</a></p>
+
+  <footer>
+    <p>서울 자치구 경계는 2013년 통계청 자료 기준입니다.
+    지명이나 정보가 틀렸다면 앱 첫 화면 로고 옆의 점을 눌러 알려주세요.</p>
+    <p><a href="/">regiontype.com</a></p>
+  </footer>
+</main>
+
+</body>
+</html>
