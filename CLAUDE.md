@@ -32,6 +32,20 @@
 **VER 을 올릴 때마다 커밋 허가를 사용자에게 먼저 묻는다.** push·브랜치 삭제·
 `wrangler deploy` 도 마찬가지다.
 
+## 커밋과 README
+
+커밋 메시지는 **영어** 한 줄, 평서형. 한국어로 쓰지 않는다.
+
+    v0.97: Fade the settings language list with a top and bottom blur.
+
+README 는 영어·중국어·일본어·힌디어로 둔다. 고치면 네 장을 같이 고친다.
+
+    README.md       English
+    README.zh.md    中文
+    README.ja.md    日本語
+    README.hi.md    हिन्दी
+    README.ko.md    한국어 (원문, 선택)
+
 ## 서브에이전트
 
 `.claude/agents/` 에 있다. 두 갈래 이상을 건드리는 일은 `team-lead` 로 시작한다.

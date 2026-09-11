@@ -17,9 +17,9 @@ model: opus
 
 ## 커밋
 - **VER 을 올릴 때마다 사용자에게 커밋 허가를 먼저 묻는다.** 허가 없이 커밋하지 않는다.
-- 메시지는 한국어 한 줄, 평서형. 기존 이력의 결을 따른다:
-  `v0.3.7: 라이트 타이핑 색·뒤로가기 아이콘·모바일 문구를 고친다.`
-  `목표 글자 수를 넘겨서는 쳐지지 않게 한다.`
+- 메시지는 **영어** 한 줄, 평서형. 한국어로 쓰지 않는다:
+  `v0.97: Fade the settings language list with a top and bottom blur.`
+  `v0.3.7: Fix light-theme type colors, the back icon, and the mobile copy.`
 - 커밋 메시지 끝에 붙인다:
   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
 

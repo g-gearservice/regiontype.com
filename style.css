@@ -4,6 +4,7 @@
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
   --bad:#c1362b;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
+  --pick-scrim:#ffffff;       /* 고르기 판 위아래 블러 띠에 깔리는 색. 아래에서 10%로 쓴다 */
   --fast:.16s; --slow:.2s; --flip:.42s;
   --ease-out:cubic-bezier(.23,1,.32,1);
   --ease-in-out:cubic-bezier(.77,0,.175,1);
@@ -34,6 +35,7 @@
   --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f;
   --shadow:none;
   --shadow-lift:none; --land:#334047; --land-line:#232c31; --card:#2b353b;
+  --pick-scrim:#000000;
 }
 /* 모션을 줄이면 뒤집기도 즉시 전환된다 — 회전은 어지럼의 주 원인 */
 @media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s; --flip:0s } }
@@ -100,11 +102,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
 }
-.i-arrow-left{--i:url(assets/arrow-back.svg?v=0.95)}
-.i-flag{--i:url(assets/flag.svg?v=0.95)}
-.i-close{--i:url(assets/close.svg?v=0.95)}
-.i-pin{--i:url(assets/pin.svg?v=0.95)}
-.i-chart{--i:url(assets/chart.svg?v=0.95)}
+.i-arrow-left{--i:url(assets/arrow-back.svg?v=0.97)}
+.i-flag{--i:url(assets/flag.svg?v=0.97)}
+.i-close{--i:url(assets/close.svg?v=0.97)}
+.i-pin{--i:url(assets/pin.svg?v=0.97)}
+.i-chart{--i:url(assets/chart.svg?v=0.97)}
 .i.flip{transform:scaleX(-1)}
 /* 눈으로는 안 보이고 읽어주는 기계에는 남는 글자 */
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
@@ -327,9 +329,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   content:""; display:block; width:1em; height:1em; font-size:34px;
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
-  --i:url(assets/close-600.svg?v=0.95);
+  --i:url(assets/close-600.svg?v=0.97);
 }
-.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=0.95)}
+.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=0.97)}
 .toggle[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 
 /* 왼쪽 세로 탭 레일 + 오른쪽 판. 감싸는 흰 판은 두지 않는다 — MM 은 설정도
@@ -390,13 +392,24 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   gap:14px; align-content:start; max-width:calc(var(--opt-col) * 2 + 24px); flex:0 1 auto;
   /* 셸 높이가 정해져 있으니 목록은 그 안에서 굴린다 — 판을 밀어 키우지 않는다 */
   max-height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-right:10px;
-  /* 셸 아래변은 줄 높이와 무관해서 늘 한 줄을 반토막 낸다 — 통에 테두리가 없으니
-     그 반토막이 '격자 밖으로 샌 것'처럼 읽힌다. 잘린 자리를 흐려 '아래가 더
-     있다'로 바꾼다. padding 만큼 여백이 뒤에 남아 끝까지 굴리면 마지막 줄은
-     흐려지지 않고, scroll-padding 이 있어 키보드로 옮긴 초점 테두리도 안 흐려진다 */
-  padding-bottom:28px; scroll-padding-bottom:28px;
-  --pick-fade:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);
-  -webkit-mask:var(--pick-fade); mask:var(--pick-fade);
+  /* 셸 위아래변은 줄 높이와 무관해서 늘 한 줄을 반토막 낸다 — 통에 테두리가 없으니
+     그 반토막이 '격자 밖으로 샌 것'처럼 읽힌다. 판 위에 덮은 그라디언트 블러
+     (.backdrop-blur)가 그 자리를 흐려 '더 있다'로 바꾼다. 여기서는 여백만 준다 —
+     padding 만큼 뒤에 자리가 남아 끝까지 굴리면 마지막 줄은 안 흐려지고,
+     scroll-padding 이 있어 키보드로 옮긴 초점 테두리도 띠 밑에 안 깔린다 */
+  padding-block:36px; scroll-padding-block:36px;
+}
+/* 위아래 블러 띠는 굴러가는 통 안에 둘 수 없다(같이 굴러간다) — 판에 덮는다 */
+#optsLanguage{position:relative}
+/* 띠 높이 = 통의 위아래 padding — 맨 위·맨 아래로 굴리면 첫 줄·끝 줄은 안 흐려진다 */
+#optsLanguage .backdrop-blur{--blur-top:36px;--blur-bot:36px;z-index:2}
+/* .bot 의 가로 마스크(--fade-x)는 플레이 화면 지도용이다. 여기선 통 전체를 덮는다 */
+#optsLanguage .backdrop-blur.bot{--fade-x:linear-gradient(#000,#000)}
+#optsLanguage .backdrop-blur::after{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--pick-scrim) 10%,transparent) 60%,transparent);
+}
+#optsLanguage .backdrop-blur.bot::after{
+  background:linear-gradient(0deg,color-mix(in srgb,var(--pick-scrim) 10%,transparent) 60%,transparent);
 }
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
@@ -433,8 +446,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .region-opt input::after{
   content:""; width:1em; height:1em; font-size:22px; opacity:0;
   background:var(--bg);
-  -webkit-mask:url(assets/check-600.svg?v=0.95) center / 100% no-repeat;
-          mask:url(assets/check-600.svg?v=0.95) center / 100% no-repeat;
+  -webkit-mask:url(assets/check-600.svg?v=0.97) center / 100% no-repeat;
+          mask:url(assets/check-600.svg?v=0.97) center / 100% no-repeat;
 }
 /* 고른 칸은 색만으로 서지 않는다 — 채운 원 · 체크 표 · 굵은 글자가 함께 간다 */
 .region-opt input:checked{background:currentColor}

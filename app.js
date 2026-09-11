@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.96';
+const VER = '0.97';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -85,6 +85,14 @@ function paintUI(then) {
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
+  /* 소개 페이지는 언어마다 별도 파일이다(about.ko 는 접미 없이 about.html).
+     파일이 없는 언어(uk·th·ar)는 한국어 소개로 보낸다 — 없는 주소를 열지 않는다 */
+  const aboutLink = $('#aboutLink');
+  if (aboutLink) {
+    const have = 'bg,cs,de,el,en,es,fi,fr,hu,id,it,ja,ms,nb,nl,pl,pt,ro,sv,tr,vi,zh';
+    aboutLink.href = (LANG !== 'ko' && have.split(',').includes(LANG))
+      ? `about.${LANG}.html` : 'about.html';
+  }
   if (then) then();
 }
 

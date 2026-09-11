@@ -1,0 +1,33 @@
+---
+description: English commits, four-language README, VER bump rules
+alwaysApply: true
+---
+
+# Commits, README, version
+
+## Commits
+
+Write every commit message in **English**. One declarative line. Never Korean.
+
+```
+v0.97: Fade the settings language list with a top and bottom blur.
+```
+
+Prefix with `v{VER}` when `app.js` `const VER` moved. Ask before raising VER, committing, pushing, deleting a branch, or `wrangler deploy`.
+
+## README
+
+Keep all four in sync when docs change:
+
+| File | Language |
+|------|----------|
+| `README.md` | English |
+| `README.zh.md` | Chinese |
+| `README.ja.md` | Japanese |
+| `README.hi.md` | Hindi |
+
+`README.ko.md` is the Korean original. Optional to keep in sync.
+
+## Version
+
+`app.js` `VER` goes up by 1 on each change (`0.96 → 0.97`). The **first decimal digit** is the release patch: `VER=0.70` → `v0.3.7`. Never lower a `?v=` query. GitHub Pages source is `static-0.3.X`, not `main`.

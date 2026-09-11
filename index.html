@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.95">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.95">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.95">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.97">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.97">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.97">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=0.95">
+<link rel="stylesheet" href="style.css?v=0.97">
 </head>
 <body>
 
@@ -70,7 +70,7 @@
   <nav class="menu">
     <button data-go="regions" data-i18n="start">시작하기</button>
     <button data-go="options" data-i18n="options">설정</button>
-    <a href="about.html" data-i18n="about">소개</a>
+    <a href="about.html" id="aboutLink" data-i18n="about">소개</a>
     <a class="alt" href="mimi/">Mimi 스타일 보기</a>
   </nav>
 </section>
@@ -104,6 +104,12 @@
       <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
         <div id="optLang" class="opts-lang-pick" role="radiogroup"
              data-i18n-aria="language" aria-label="언어"></div>
+        <span class="backdrop-blur" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </span>
+        <span class="backdrop-blur bot" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </span>
       </div>
       <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" hidden>
         <!-- 고르는 UI 는 개발용 문이다 — CSS 기본이 숨김이라 배포에 새지 않는다 -->
@@ -297,6 +303,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.95"></script>
+<script src="app.js?v=0.97"></script>
 </body>
 </html>
