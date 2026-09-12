@@ -17,16 +17,7 @@ Prefix with `v{VER}` when `app.js` `const VER` moved. Ask before raising VER, co
 
 ## README
 
-Keep all four in sync when docs change:
-
-| File | Language |
-|------|----------|
-| `README.md` | English |
-| `README.zh.md` | Chinese |
-| `README.ja.md` | Japanese |
-| `README.hi.md` | Hindi |
-
-`README.ko.md` is the Korean original. Optional to keep in sync.
+One file: `README.md`. English, Chinese, Japanese, and Hindi live as consecutive sections in that file. Do not add `README.zh.md` / `README.ja.md` / `README.hi.md`. When docs change, update all four sections.
 
 ## Version
 

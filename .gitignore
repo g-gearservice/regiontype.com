@@ -4,3 +4,6 @@ gu.json
 relay/.wrangler/
 .dev.vars
 tools/__pycache__/
+.claude/worktrees/
+.claude/settings.local.json
+preview/

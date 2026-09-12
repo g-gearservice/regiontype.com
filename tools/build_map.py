@@ -19,6 +19,9 @@ W = 1000.0
 src, dst = sys.argv[1], sys.argv[2]
 COLS = int(sys.argv[3]) if len(sys.argv) > 3 else 32
 PREFIX = sys.argv[4] if len(sys.argv) > 4 else ""      # 코드 접두로 한 구만 뽑을 때
+# 대지 한 장에 여러 타일을 지리적으로 붙이려면 투영이 같아야 한다. 안 주면 예전 그대로
+# — 제 bbox 를 폭 1000 에 맞춰 혼자 선다. 주면 COLS 는 무시되고 cell 이 칸 크기다.
+FRAME = sys.argv[5] if len(sys.argv) > 5 else ""       # "k,x0,s,top,cell"
 
 feats = [f for f in json.load(open(src))["features"]
          if str(f["properties"].get("code", "")).startswith(PREFIX)]
@@ -34,13 +37,29 @@ def outers(f):
 
 lats = [c[1] for f in feats for r in outers(f) for c in r]
 lons = [c[0] for f in feats for r in outers(f) for c in r]
-k = math.cos(math.radians((min(lats) + max(lats)) / 2))   # 경도 1도의 실제 폭 보정
-x0 = min(lons) * k
-s = W / (max(lons) * k - x0)
-H = round((max(lats) - min(lats)) * s, 1)
 
-def px(lon, lat):
-    return (lon * k - x0) * s, (max(lats) - lat) * s
+if FRAME:
+    k, x0, s, top, cell = (float(v) for v in FRAME.split(','))
+    # 이 타일이 덮는 대지 칸 범위. 칸 경계에 맞춰 잘라야 이웃 타일과 이가 맞는다
+    c0 = math.floor((min(lons) * k - x0) * s / cell)
+    c1 = math.ceil((max(lons) * k - x0) * s / cell)
+    r0 = math.floor((top - max(lats)) * s / cell)
+    r1 = math.ceil((top - min(lats)) * s / cell)
+    COLS, ROWS = c1 - c0, r1 - r0
+    AT = [round(c0 * cell, 1), round(r0 * cell, 1)]      # 대지 위 왼쪽 위 모서리
+    W, H = round(COLS * cell, 1), round(ROWS * cell, 1)
+
+    def px(lon, lat):
+        return (lon * k - x0) * s - AT[0], (top - lat) * s - AT[1]
+else:
+    AT = None
+    k = math.cos(math.radians((min(lats) + max(lats)) / 2))   # 경도 1도의 실제 폭 보정
+    x0 = min(lons) * k
+    s = W / (max(lons) * k - x0)
+    H = round((max(lats) - min(lats)) * s, 1)
+
+    def px(lon, lat):
+        return (lon * k - x0) * s, (max(lats) - lat) * s
 
 def center(parts):
     """가장 큰 조각의 무게중심. 스캔라인이 비껴갔을 때 대신 짚을 자리다."""
@@ -52,8 +71,9 @@ rings = [[[px(*c) for c in ring] for ring in outers(f)] for f in feats]
 # 가운뎃점은 키보드로 치기 어렵다. 이름은 곧 타이핑 대상이라 콤마로 바꿔 둔다
 names = [f["properties"]["name"].replace("·", ",") for f in feats]
 
-cell = W / COLS
-ROWS = math.ceil(H / cell)
+if not FRAME:
+    cell = W / COLS
+    ROWS = math.ceil(H / cell)
 grid = [[None] * COLS for _ in range(ROWS)]
 
 def fill(ring, idx):
@@ -120,9 +140,11 @@ for i, name in enumerate(names):
                   "c": [round((sum(c for c, _ in cs) / len(cs) + .5) * cell, 1),
                         round((sum(r for _, r in cs) / len(cs) + .5) * cell, 1)]})
 
-json.dump({"w": W, "h": H, "cols": COLS, "rows_n": ROWS, "cell": round(cell, 3),
-           "grid": [''.join('.' if v is None else SYM[v] for v in row) for row in grid],
-           "items": items},
-          open(dst, "w"), ensure_ascii=False, separators=(",", ":"))
+out = {"w": W, "h": H, "cols": COLS, "rows_n": ROWS, "cell": round(cell, 3),
+       "grid": [''.join('.' if v is None else SYM[v] for v in row) for row in grid],
+       "items": items}
+if AT:
+    out["at"] = AT
+json.dump(out, open(dst, "w"), ensure_ascii=False, separators=(",", ":"))
 print(f"{len(items)} items, {COLS}x{ROWS} 격자, 도트 {sum(counts)}개, viewBox 0 0 {W} {H}")
 print('구별 도트:', ', '.join(f'{n}={c}' for n, c in zip(names, counts)))

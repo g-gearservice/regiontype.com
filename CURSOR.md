@@ -14,14 +14,7 @@ Ask the user before raising `VER`, committing, pushing, deleting a branch, or `w
 
 ## README languages
 
-When you touch the README, update all four:
-
-- `README.md` — English
-- `README.zh.md` — 中文
-- `README.ja.md` — 日本語
-- `README.hi.md` — हिन्दी
-
-`README.ko.md` is the Korean original.
+One file: `README.md`. Write English, Chinese, Japanese, and Hindi as consecutive sections in that file. Do not split into `README.zh.md` / `README.ja.md` / `README.hi.md`. When the docs change, update all four sections.
 
 ## Version
 

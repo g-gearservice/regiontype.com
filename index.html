@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=0.97">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=0.97">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=0.97">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=1.32">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.32">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.32">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=0.97">
+<link rel="stylesheet" href="style.css?v=1.32">
 </head>
 <body>
 
@@ -60,19 +60,24 @@
   <rect width="100%" height="100%" fill="url(#bitgrid)"/>
 </svg>
 
-<!-- 픽셀맵은 화면 밖에 둔다. 타이틀과 설정이 같은 것을 공유해야 좌표가
-     어긋나지 않는다 — 복제하면 두 벌을 따로 맞춰야 한다. -->
-<svg id="pixelmap" aria-hidden="true"></svg>
-
 <!-- 타이틀 -->
 <section id="title" class="screen on">
-  <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="i i-flag" aria-hidden="true"></i></button></h1>
-  <nav class="menu">
-    <button data-go="regions" data-i18n="start">시작하기</button>
-    <button data-go="options" data-i18n="options">설정</button>
-    <a href="about.html" id="aboutLink" data-i18n="about">소개</a>
-    <a class="alt" href="mimi/">Mimi 스타일 보기</a>
-  </nav>
+  <!-- 로고와 메뉴는 한 덩이다 — 덩이째 격자 선에 앉힌다(app.js 의 syncTitleBlock).
+       메뉴는 로고 아래 한 줄: 왼쪽 끝 소개, 가운데 설정, 오른쪽 끝 시작하기.
+       DOM 순서가 곧 보이는 순서이자 탭 순서다 -->
+  <div class="title-block">
+    <h1 class="logo">region<span>type</span><button type="button" class="dot" id="fbOpen" aria-label="피드백 보내기"><i class="i i-flag" aria-hidden="true"></i></button></h1>
+    <nav class="menu">
+      <a href="about.html" id="aboutLink" data-i18n="about">소개</a>
+      <button data-go="options" data-i18n="options">설정</button>
+      <button data-go="regions" data-i18n="start">시작하기</button>
+    </nav>
+  </div>
+  <a class="title-alt" href="mimi/">Mimi 스타일 보기</a>
+  <a class="title-gh" href="https://github.com/pistolinkr/regiontype.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+    <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span id="ghStars" hidden></span>
+  </a>
 </section>
 
 <!-- 지역 목록 -->
@@ -104,12 +109,6 @@
       <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
         <div id="optLang" class="opts-lang-pick" role="radiogroup"
              data-i18n-aria="language" aria-label="언어"></div>
-        <span class="backdrop-blur" aria-hidden="true">
-          <span></span><span></span><span></span><span></span><span></span><span></span>
-        </span>
-        <span class="backdrop-blur bot" aria-hidden="true">
-          <span></span><span></span><span></span><span></span><span></span><span></span>
-        </span>
       </div>
       <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" hidden>
         <!-- 고르는 UI 는 개발용 문이다 — CSS 기본이 숨김이라 배포에 새지 않는다 -->
@@ -134,10 +133,15 @@
         </dl>
       </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
-        <p class="ver">regiontype v0.3.9 (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+        <p class="ver">regiontype v0.4.0 (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
       </div>
     </div>
   </div>
+  <!-- 바닥 블러 띠는 페이지에 건다 — 어느 통에도 매이지 않게 position:fixed 로
+       화면 아래변에 붙인다 -->
+  <span class="backdrop-blur bot" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </span>
 </section>
 
 <!-- 플레이 -->
@@ -303,6 +307,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=0.97"></script>
+<script src="app.js?v=1.32"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '0.97';
+const VER = '1.32';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -86,10 +86,10 @@ function paintUI(then) {
   applyI18n(document);
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
   /* 소개 페이지는 언어마다 별도 파일이다(about.ko 는 접미 없이 about.html).
-     파일이 없는 언어(uk·th·ar)는 한국어 소개로 보낸다 — 없는 주소를 열지 않는다 */
+     파일이 없는 언어는 한국어 소개로 보낸다 — 없는 주소를 열지 않는다 */
   const aboutLink = $('#aboutLink');
   if (aboutLink) {
-    const have = 'bg,cs,de,el,en,es,fi,fr,hu,id,it,ja,ms,nb,nl,pl,pt,ro,sv,tr,vi,zh';
+    const have = 'ar,bg,cs,de,el,en,es,fi,fr,hu,id,it,ja,ms,nb,nl,pl,pt,ro,sv,th,tr,uk,vi,zh';
     aboutLink.href = (LANG !== 'ko' && have.split(',').includes(LANG))
       ? `about.${LANG}.html` : 'about.html';
   }
@@ -134,7 +134,7 @@ const dot = (x, y, cell, cls) => {
    인정한다. 그래서 "중"은 중구/중랑구 사이에서 확정되지 않고,
    "강남"은 즉시 확정된다. 앞에 붙은 오타는 접미 검사로 흘려보낸다. */
 function stripSuffix(name) {
-  const m = /^(.+?)(특별자치시|특별자치도|특별시|광역시|자치구|자치시|자치도|自治区|特别行政区|特別行政區|[시군구동읍면로가]|[都道府県]|[省市縣县])$/.exec(String(name).normalize('NFC'));
+  const m = /^(.+?)(특별자치시|특별자치도|특별시|광역시|자치구|자치시|자치도|自治区|特别行政区|特別行政區|[시군구동읍면로가도]|[都道府県]|[省市縣县])$/.exec(String(name).normalize('NFC'));
   return m && m[1].length > 1 ? m[1] : null;
 }
 function matchInput(raw, items, spacy = false) {
@@ -178,30 +178,40 @@ function go(id) {
   requestAnimationFrame(() => document.querySelectorAll('.course-list .card').forEach(measureCard));
 }
 
-function applyGrid(ox, oy, n) {
+function applyGrid(ox, oy, nx, ny = nx) {
   const svg = $('.grid-bg'), p = $('#bitgrid');
-  if (!p || !(n > 0)) return;
+  if (!p || !(nx > 0)) return;
   svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
-  p.setAttribute('width', n);
-  p.setAttribute('height', n);
+  p.setAttribute('width', nx);
+  p.setAttribute('height', ny);
   p.setAttribute('x', ox);
   p.setAttribute('y', oy);
-  p.querySelector('path').setAttribute('d', `M${n} 0 V${n} H0`);
+  p.querySelector('path').setAttribute('d', `M${nx} 0 V${ny} H0`);
 }
 /* SVG 유저 좌표 → 화면. 추정하지 않고 CTM 으로 격자 원점·칸을 읽는다. */
-const GRID_MIN = 120;   /* 장식 격자 칸의 화면 하한(px). about.html 의 152 와 같은 눈높이 */
+const DECO_CELL = 152;   /* 플레이 밖 장식 격자 칸(px). about.html 과 같은 값 */
 function syncGrid() {
-  let root, space, cell, deco = false;
-  if ($('#play').classList.contains('on') && G && G.cam) {
-    root = $('#map'); space = G.cam; cell = G.cell;
-  } else {
-    /* 타이틀 밖(설정 등)에서도 같은 격자를 다시 잰다. 픽셀맵은 화면 밖 fixed 라
-       화면이 바뀌어도 자리가 같다 — 여기서 return 하면 직전 칸 크기가 굳는다.
-       모바일에서는 display:none 이라 아래 CTM 이 null 로 걸러진다. */
-    const pm = $('#pixelmap');
-    if (!pm) return;
-    root = space = pm; cell = 1; deco = true;
+  /* 플레이 밖에서는 맞출 지도가 없다 — 못 박은 칸으로 되돌리고 셸만 다시 앉힌다.
+     되돌리지 않으면 플레이에서 나올 때 그 판의 칸 크기가 배경에 굳어 남는다 */
+  if (!($('#play').classList.contains('on') && G && G.cam)) {
+    /* 화면 폭·높이가 DECO_CELL 의 배수가 아니면 우측·하단에 짜투리 칸이 남는다.
+       칸을 화면에 딱 맞는 배수로 살짝 늘리거나 줄여 경계를 딱 맞춘다 */
+    const w = window.innerWidth, h = window.innerHeight;
+    const cols = Math.max(1, Math.round(w / DECO_CELL));
+    const rows = Math.max(1, Math.round(h / DECO_CELL));
+    const cw = w / cols, ch = h / rows;
+    /* 칸 크기와 '몇 번째 칸'을 CSS 로 넘긴다 — 타이틀은 자리를 재지 않고 칸에 앉는다.
+       로고가 가운데 세 칸, 그 아래 한 줄이 버튼 세 칸이라 덩이는 세 칸 × 두 줄이다 */
+    const st = document.documentElement.style;
+    st.setProperty('--deco-cw', cw + 'px');
+    st.setProperty('--deco-ch', ch + 'px');
+    st.setProperty('--title-col', String(Math.max(0, Math.floor((cols - 3) / 2))));
+    st.setProperty('--title-row', String(Math.max(0, Math.round((rows - 2) / 2))));
+    applyGrid(0, 0, cw, ch);
+    syncOptShell();
+    return;
   }
+  const root = $('#map'), space = G.cam, cell = G.cell;
   const ctm = space.getScreenCTM();
   if (!ctm) return;
   const a = root.createSVGPoint();
@@ -209,18 +219,17 @@ function syncGrid() {
   const o = a.matrixTransform(ctm);
   a.x = cell;
   const x1 = a.matrixTransform(ctm);
-  let n = Math.hypot(x1.x - o.x, x1.y - o.y);
-  /* 픽셀맵 1칸은 20px 남짓이라 그대로 그으면 배경이 단색으로 뭉갠다.
-     격자와 점의 결을 유지하려고 N칸마다 긋는다 — 정수배라 원점이 안 어긋난다. */
-  if (deco && n > 0) n *= Math.max(1, Math.ceil(GRID_MIN / n));
-  applyGrid(o.x, o.y, n);
-  if (deco) syncOptShell();
+  applyGrid(o.x, o.y, Math.hypot(x1.x - o.x, x1.y - o.y));
 }
-/* .opts-shell 의 윗변을 장식 격자의 가로선에 앉힌다.
-   크기는 격자에서 얻지 않는다 — 칸은 나라마다 다르고(픽셀맵 행 수에서 나온다)
-   탭 글자는 언어마다 다르다. 둘 중 하나로 높이·폭을 재면 나라나 언어를 고를
-   때마다 통이 뛴다. 그래서 높이는 뷰포트에서만 얻되 레일(.opts-tabs) 자연 높이를
-   밑돌지 않게 하고(밑돌면 탭 다섯 칸이 잘린다), 격자에는 자리만 맞춘다.
+/* .opts-shell 의 위아래 변을 둘 다 장식 격자의 가로선에 앉힌다.
+   윗변만 앉히고 높이를 아무 값이나 쓰면 아랫변은 칸의 중간 어디쯤에서 끊긴다 —
+   테두리도 배경도 없는 통이라 그 끊김이 '내용이 격자 밖으로 샜다'로 읽힌다.
+   그래서 높이 자체를 칸의 정수배로 죈다: 윗변이 선 위에 서면 그로부터 정수 칸
+   내려간 아랫변도 저절로 선 위에 선다. 칸 수는 뷰포트 56% 근방에서 고르되
+   레일(.opts-tabs) 자연 높이를 밑돌지 않는다(밑돌면 탭 다섯 칸이 잘린다) —
+   탭 글자로 재지 않는 건 언어마다 글자 길이가 달라 통이 뛰는 걸 막기 위해서다.
+   그 칸 수로 자리가 안 나면(뷰포트가 아주 좁으면) 한 칸씩 줄여 다시 찾고,
+   그래도 없으면 격자 정렬을 포기하고 자리 한가운데 그대로 선다.
    shell.top 은 안 쓴다: #options 가 position:fixed;inset:0 라 셸은 늘 뷰포트
    한가운데 뜬다 — 거기서 거꾸로 풀어야 계산이 자기 참조가 되지 않는다.
    --opt-no-grid 여도 격자 값 자체는 그대로 잡히니 자리는 흔들리지 않는다 */
@@ -238,18 +247,56 @@ function syncOptShell() {
                           .getPropertyValue('--screen-pad-y')) || 0;
   const areaTop = (head ? head.getBoundingClientRect().bottom : pad) + pad / 2;
   const areaBottom = vh - pad;
-  /* 높이는 그 자리에 한 칸 남는 만큼으로 죈다 — 남는 칸이 없으면 어느 가로선에도
-     앉지 못하고 가운데에 그대로 서 버린다 */
-  const h = Math.max(railH, vh * 0.56);
-  const mid = areaTop + (areaBottom - areaTop - h) / 2;   // 그 자리에 가운데 놓은 윗변
-  const k = Math.round((mid - gridY) / cell);
-  const fits = v => v >= areaTop - 1 && v + h <= areaBottom + 1;
-  // 가장 가까운 선부터, 안 되면 이웃 선, 그래도 안 되면 격자를 포기하고 가운데
-  const top = [k, k + 1, k - 1].map(i => gridY + i * cell).find(fits) ?? mid;
+  const fits = (v, h) => v >= areaTop - 1 && v + h <= areaBottom + 1;
+  const minCells = Math.max(1, Math.ceil(railH / cell));
+  const wantCells = Math.max(minCells, Math.round(vh * 0.56 / cell));
+  let h = wantCells * cell, top;
+  for (let n = wantCells; n >= minCells; n--) {
+    h = n * cell;
+    const mid = areaTop + (areaBottom - areaTop - h) / 2;   // 그 자리에 가운데 놓은 윗변
+    const k = Math.round((mid - gridY) / cell);
+    // 가장 가까운 선부터, 안 되면 이웃 선
+    top = [k, k + 1, k - 1].map(i => gridY + i * cell).find(v => fits(v, h));
+    if (top !== undefined) break;
+  }
+  if (top === undefined) { h = minCells * cell; top = areaTop + (areaBottom - areaTop - h) / 2; }
   const st = document.documentElement.style;
   st.setProperty('--opt-shell-h', h + 'px');
   st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
 }
+/* GitHub 별 개수. 공개 저장소 정보라 토큰을 안 쓴다 — 토큰은 Worker 안에만 둔다.
+   IP당 시간당 60회 제한이 있어 10분은 재워두고, 실패하면 숫자 없이 링크만 남긴다 */
+const GH_REPO = 'pistolinkr/regiontype.com';
+async function ghStars() {
+  const el = $('#ghStars');
+  if (!el) return;
+  const show = n => { el.textContent = '\u2606 ' + n; el.hidden = false; };
+  /* 별 개수는 하루에 몇 개 움직인다. 10분마다 물어볼 값이 아니고, 물어볼 때마다
+     보는 사람의 IP 와 어디서 왔는지가 GitHub 로 간다 — 간격을 벌리고, 실패도
+     기억하고(안 그러면 막힌 망에서 매 페이지마다 다시 두드린다), 주소는 안 보낸다.
+     ponytail: IP 를 아예 안 보내려면 relay 에 /stars 를 두고 거기서 캐시해야 한다 */
+  const KEY = 'rt.gh', TTL = 432e5, FAIL_TTL = 36e5;
+  const save = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} };
+  try {
+    const c = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (c && Date.now() - c.t < (c.n == null ? FAIL_TTL : TTL)) {
+      if (c.n != null) show(c.n);
+      return;
+    }
+  } catch {}
+  try {
+    const ac = new AbortController();
+    const to = setTimeout(() => ac.abort(), 1600);
+    const r = await fetch('https://api.github.com/repos/' + GH_REPO,
+                          { signal: ac.signal, referrerPolicy: 'no-referrer' });
+    clearTimeout(to);
+    const n = r.ok ? (await r.json()).stargazers_count : null;
+    if (typeof n !== 'number') { save({ n: null, t: Date.now() }); return; }
+    save({ n, t: Date.now() });
+    show(n);
+  } catch { save({ n: null, t: Date.now() }); }
+}
+
 function followGrid(ms) {
   const t0 = performance.now();
   const step = () => {
@@ -258,6 +305,19 @@ function followGrid(ms) {
   };
   requestAnimationFrame(step);
 }
+/* 데스크톱 확대는 125% 까지만 레이아웃에 반영한다 — 그 위로는 설정 셸을 같은 비율로
+   되돌려(--zc) 고르기 판 두 열이 한 열로 접히지 않게 한다. 확대 자체는 페이지가 막을
+   수 없다. 확대율은 창 바깥/안쪽 폭의 비로 재고 5% 눈금으로 반올림한다 —
+   창틀·스크롤바 몇 px 이 100% 를 101% 로 읽게 만드는 걸 지운다 */
+const ZOOM_CAP = 1.25;
+function capZoom() {
+  const z = Math.round((window.outerWidth / window.innerWidth) * 20) / 20;
+  const fine = matchMedia('(pointer:fine)').matches;
+  const k = (fine && z > ZOOM_CAP) ? ZOOM_CAP / z : 1;
+  document.documentElement.style.setProperty('--zc', String(k));
+}
+capZoom();
+window.addEventListener('resize', capZoom);
 window.addEventListener('resize', syncGrid);
 window.addEventListener('resize', () => {
   document.querySelectorAll('#regionList .card').forEach(measureCard);
@@ -274,87 +334,6 @@ document.addEventListener('click', e => {
   const tog = e.target.closest('.toggle');
   if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
 });
-
-/* ── 타이틀 픽셀맵 ──────────────────────────────────
-   고른 나라의 격자를 찍고, 강조 칸(S)만 다른 색으로 둔다. */
-function expandPixelRow(row) {
-  if (!row || '.xSA'.includes(row[0])) return row;
-  let out = '', i = 0;
-  while (i < row.length) {
-    let n = 0;
-    /* 문자에서 48 을 그냥 빼면 '1' - 48 = -47 이 된다. 코드포인트로 읽는다 */
-    while (i < row.length && row[i] >= '0' && row[i] <= '9') n = n * 10 + (row.charCodeAt(i++) - 48);
-    if (!n || i >= row.length) break;
-    out += row[i++].repeat(n);
-  }
-  return out;
-}
-let pmDraw = null, pmBits = [];
-function loadPixels(file) {
-  return grab(file.endsWith('.json') ? file : `data/${file}.json`).then(g => {
-    const rows = g.enc === 'rle' ? g.rows.map(expandPixelRow) : g.rows;
-    const svg = $('#pixelmap');
-    svg.setAttribute('viewBox', `0 0 ${g.anchor + 1} ${g.h}`);
-    g.over = (g.w - g.anchor - 1) / g.h;
-    svg.style.setProperty('--pm-over', g.over);
-    const bindBits = () => {
-      pmBits = [...svg.querySelectorAll('circle')].map(el => ({
-        el, x: +el.getAttribute('cx'), y: +el.getAttribute('cy'),
-        hilite: el.classList.contains('hilite')
-      }));
-    };
-    const draw = () => {
-      svg.innerHTML = rows.flatMap((row, y) =>
-        [...row].map((ch, x) => ch === '.' ? '' : dot(x, y, 1, ch === 'S' ? 'hilite' : ''))).join('');
-      bindBits();
-    };
-    if (pmDraw) REDRAW.splice(REDRAW.indexOf(pmDraw), 1);
-    pmDraw = draw;
-    REDRAW.push(draw); draw();
-    requestAnimationFrame(() => requestAnimationFrame(syncGrid));
-  }).catch(() => {});
-}
-{
-  const svg = $('#pixelmap');
-  const R = 1.8, HOVER = 0.62;
-  let mx = 0, my = 0, raf = 0;
-  const fine = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
-  const skipScale = () => document.documentElement.dataset.motion === 'off'
-    || matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const clearBit = b => {
-    b.el.style.transform = '';
-    b.el.style.fill = '';
-    b.el.style.opacity = '';
-  };
-  const paint = () => {
-    raf = 0;
-    if (!fine() || !pmBits.length) return;
-    if (!$('#title.on')) { pmBits.forEach(clearBit); return; }
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    const pt = svg.createSVGPoint();
-    pt.x = mx; pt.y = my;
-    const p = pt.matrixTransform(ctm.inverse());
-    const noScale = skipScale();
-    for (const b of pmBits) {
-      const d = Math.hypot(b.x - p.x, b.y - p.y);
-      if (d >= R) { clearBit(b); continue; }
-      const k = 1 - d / R;
-      /* 강조 칸은 이미 불투명하다. 근접장의 색·투명도까지 씌우면 바닥을
-         0.38 로 잡은 식이 되레 흐리게 만든다 — 크기만 반응시킨다. */
-      if (!b.hilite) {
-        b.el.style.fill = 'var(--accent)';
-        b.el.style.opacity = d < HOVER ? '1' : String(0.38 + 0.62 * k);
-      }
-      b.el.style.transform = noScale ? ''
-        : (d < HOVER ? 'scale(1)' : `scale(${1 - 0.5 * k * k})`);
-    }
-  };
-  window.addEventListener('pointermove', e => {
-    mx = e.clientX; my = e.clientY;
-    if (!raf) raf = requestAnimationFrame(paint);
-  }, { passive: true });
-}
 
 /* 카드 상단은 흰 원 없이 도트만. 빈 칸을 잘라 초록 면을 채운다 */
 function thumbSvg(geom) {
@@ -1120,7 +1099,6 @@ async function showCountry(id) {
   COUNTRY = (isDev() && haveCountry(id)) ? id : resolveCountry();
   const pack = WORLD.countries.find(c => c.id === COUNTRY) || WORLD.countries[0];
   paintRegion();
-  if (pack) await loadPixels(pack.pixels);
   await renderRegions();
 }
 
@@ -1143,6 +1121,7 @@ async function boot() {
   fbPlaceholder();
   paintRegion();
   wireOptsTabs();
+  ghStars();
   const langBox = $('#optLang');
   if (langBox) {
     langBox.addEventListener('change', e => {
@@ -1868,6 +1847,7 @@ $('#boardJoin').onsubmit = e => {
   board();
 };
 
+
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
   const mk = names => names.map(n => ({ name: n, aliases: [stripSuffix(n)].filter(Boolean), claimed: false }));
@@ -1903,8 +1883,16 @@ if (location.search.includes('rt=1')) {
   console.assert(m('KJ', kj) === null, '겹치는 우편 약칭은 확정하지 않는다');
   console.assert(m('광주', kj) === '광주광역시', '접미 약칭은 후보가 하나일 때');
 
-  console.assert(expandPixelRow('30.4x') === '.'.repeat(30) + 'xxxx', 'pixel RLE row');
-  console.assert(expandPixelRow('....') === '....', 'plain pixel row');
+  /* 시·도. 홑 '도' 가 접미 문자류에 없으면 경기도는 약칭이 아예 안 생긴다 */
+  const sido = mk(['경기도', '강원도', '충청북도', '충청남도', '제주특별자치도']);
+  console.assert(m('경기', sido) === '경기도', '도 접미 약칭');
+  console.assert(m('제주', sido) === '제주특별자치도', '특별자치도가 홑 도보다 먼저 걸린다');
+  console.assert(m('충청', sido) === null, '충청북도/충청남도 사이에서 미확정');
+  sido[2].aliases.push('충북'); sido[3].aliases.push('충남');
+  console.assert(m('충북', sido) === '충청북도', '통용 약칭은 별칭으로 박는다');
+  const seom = mk(['울릉도', '독도']);
+  console.assert(m('울릉', seom) === '울릉도', '섬 이름도 도 접미를 탄다');
+  console.assert(m('독', seom) === null, '한 글자 어간은 약칭으로 인정하지 않는다');
 
   const fbu = fbIssue({ kind: 'bug', body: '가양1동이 오답으로 처리됨', v: '0.38',
                         href: 'https://regiontype.com/', ua: 'UA' });
