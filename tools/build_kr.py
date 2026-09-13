@@ -3,7 +3,8 @@
 지형은 build_map.py 를 시·도 코드로 필터해 그대로 돌린다 — 같은 격자, 같은 형식이다.
 
 서울은 건너뛴다. seoul-gu 는 손으로 쓴 한 줄 소개와 순위표 기록이 걸려 있어
-슬러그를 바꾸지도, 덮어쓰지도 않는다. 세종은 시군구가 자기 하나뿐이라 빠진다.
+슬러그를 바꾸지도, 덮어쓰지도 않는다. 세종은 시군구가 자기 하나뿐이라
+읍면동 GeoJSON 이 오면 sejong-emd 를 찍고, 없으면 이미 있는 파일만 잇는다.
 
 한 줄 소개(items[].meta.description)는 비워 둔다 — 250곳을 지어낼 수는 없다.
 시·도 약칭(충북·전남 …)은 지어내는 값이 아니라 통용되는 것이라 별칭으로 박는다.
@@ -11,6 +12,8 @@
     curl -sL -o prov.json .../skorea-provinces-2018-geo.json
     curl -sL -o muni.json .../skorea-municipalities-2018-geo.json
     python3 tools/build_kr.py prov.json muni.json data/
+    python3 tools/build_kr.py prov.json muni.json data/ emd.json
+    python3 tools/build_kr.py prov.json muni.json data/ 37 emd.json
 """
 import json, re, subprocess, sys, tempfile, unicodedata
 from collections import Counter
@@ -20,13 +23,20 @@ prov_src, muni_src, out_dir = sys.argv[1], sys.argv[2], Path(sys.argv[3])
 # build_dong.py 와 같은 이유로 칸 수를 훑는다 — 폭이 1000 으로 고정이라 세로로 긴
 # 구역은 같은 칸 수에서 줄이 늘어 도트가 폭발한다. 목표 도트에 닿는 첫 칸 수를 쓴다.
 DOTS = 700
-# 네 번째 인자로 시·도 코드를 주면 그것만 다시 찍는다 (쉼표로 여럿). 없으면 전부.
-ONLY = set(sys.argv[4].split(',')) if len(sys.argv) > 4 else None
-TOP_DOTS = 700
+# 네 번째부터: 시·도 코드(쉼표로 여럿) 또는 읍면동 GeoJSON. 순서는 상관없다.
+ONLY = None
+emd_src = None
+for a in sys.argv[4:]:
+    if Path(a).is_file():
+        emd_src = a
+    else:
+        ONLY = set(a.split(','))
+TOP_DOTS = 1400
 COLS_MIN, COLS_MAX = 24, 56
 # 본토로부터 이 거리(도) 밖의 섬은 뺀다. 강화(0.35)·영흥(0.45)은 남고
 # 백령(1.75)은 빠진다. 나라 기준인 build_pixels.py 의 ±25 도와 같은 규칙이다.
 NEAR = 0.8
+EAST_ISLAND = 130.5
 
 HERE = Path(__file__).parent
 SEOUL, TOP = '11', 'kr-admin'
@@ -97,10 +107,24 @@ def keep_near(by_feat):
     out, cut = [], 0
     for rs in by_feat:
         near = [r for r in rs
-                if abs(centroid(r)[0] - hx) < NEAR and abs(centroid(r)[1] - hy) < NEAR]
+                if (abs(centroid(r)[0] - hx) < NEAR and abs(centroid(r)[1] - hy) < NEAR)
+                or centroid(r)[0] > EAST_ISLAND]
         cut += len(rs) - len(near)
         out.append(near or [max(rs, key=area)])      # 울릉군처럼 언저리가 없는 곳
     return out, cut
+
+
+def park_east_islands(kept):
+    """울릉·독도를 본토 동쪽 바로 옆에 앉힌다. 상대 위치(독도가 울릉 남동)는 유지한다."""
+    east = [r for rs in kept for r in rs if centroid(r)[0] > EAST_ISLAND]
+    main = [p for rs in kept for r in rs if centroid(r)[0] <= EAST_ISLAND for p in r]
+    if not east or not main:
+        return kept
+    dx = max(p[0] for p in main) + .38 - min(p[0] for r in east for p in r)
+    for r in east:
+        for p in r:
+            p[0] += dx
+    return kept
 
 
 def thin_ring(ring, eps):
@@ -126,6 +150,7 @@ def prep(src, code):
     # 먼 섬을 먼저 걷어내야 eps 가 제 크기로 잡힌다 — 상자가 벌어진 채로 재면
     # 반 칸이 실제보다 커져 본토 해안선까지 뭉개진다
     kept, cut = keep_near([outers(f) for f in feats])
+    park_east_islands(kept)
     lons = [c[0] for rs in kept for r in rs for c in r]
     eps = (max(lons) - min(lons)) / COLS_MAX / 2
     before = after = 0
@@ -202,18 +227,38 @@ for f in sorted(prov, key=lambda f: f['properties']['code']):
     if code == SEOUL:                       # 서울은 이미 seoul-gu 가 있다
         children[f'{TOP}/{name}'] = 'seoul-gu'
         continue
-    if n_by_code[code] < 2:                 # 세종 — 자기 자신 하나뿐
-        print(f'건너뜀 {name}: 시군구 {n_by_code[code]}개')
-        children[f'{TOP}/{name}'] = None
+    if n_by_code[code] < 2:                 # 세종 — 시군구 대신 읍면동 코스
+        if not emd_src:
+            emd = 'sejong-emd' if (out_dir / 'sejong-emd.course.json').exists() else None
+            print(f'건너뜀 {name}: 시군구 {n_by_code[code]}개' + (f' → {emd}' if emd else ''))
+            children[f'{TOP}/{name}'] = emd
+            continue
+        s = 'sejong-emd'
+        geom, dots = sweep(emd_src, out_dir / f'{s}.geom.json', code, DOTS)
+        names = [it['name'] for it in order(geom['items'])]
+        write_course(out_dir / f'{s}.course.json', s,
+                     f'{name} {len(names)}개 읍면동',
+                     f'{name}의 읍면동 {len(names)}곳을 서쪽 끝에서 이웃한 곳으로 이어 밟는다.',
+                     names)
+        children[f'{TOP}/{name}'] = s
+        for n in names:
+            children.setdefault(f'{s}/{n}', None)
+        made.append((s, name, len(names)))
+        print(f'{name}: {len(names)}개 읍면동 → {s} '
+              f"({geom['cols']}x{geom['rows_n']}, 도트 {dots})")
         continue
 
     s = f'{slug(p.get("name_eng"), code)}-sgg'
     geom, dots = sweep(muni_src, out_dir / f'{s}.geom.json', code, DOTS)
     names = [it['name'] for it in order(geom['items'])]
-    write_course(out_dir / f'{s}.course.json', s,
-                 f'{name} {len(names)}개 시군구',
-                 f'{name}의 시군구 {len(names)}곳을 서쪽 끝에서 이웃한 곳으로 이어 밟는다.',
-                 names)
+    extra = {'울릉군': '울릉도'} if '울릉군' in names else {}
+    if '독도' in names:
+        title = f'{name} {len(names) - 1}개 시군구와 독도'
+        desc = f'{name}의 시군구와 독도를 서쪽 끝에서 이웃한 곳으로 이어 밟는다.'
+    else:
+        title = f'{name} {len(names)}개 시군구'
+        desc = f'{name}의 시군구 {len(names)}곳을 서쪽 끝에서 이웃한 곳으로 이어 밟는다.'
+    write_course(out_dir / f'{s}.course.json', s, title, desc, names, extra)
     children[f'{TOP}/{name}'] = s
     for n in names:
         children.setdefault(f'{s}/{n}', None)   # 시군구 아래는 아직 없다

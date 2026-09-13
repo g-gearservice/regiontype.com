@@ -74,6 +74,13 @@ body{
 :root[data-night] .grid-bg::after{background:none}
 /* 그리드를 끄면 격자 무늬만 지운다 — 대각 광원·비네트는 그대로 둔다 */
 :root[data-no-grid] .grid-bg rect{display:none}
+/* 아틀라스는 판 위에 칸을 그린다. 뷰포트 격자를 겹치면 원근에서 어긋난다 */
+body:has(#regions.on) .grid-bg rect{display:none}
+.atlas-plane .atlas-grid{
+  fill:none;stroke:var(--grid);stroke-width:1;
+  vector-effect:non-scaling-stroke;pointer-events:none;
+}
+:root[data-no-grid] .atlas-plane .atlas-grid{display:none}
 
 /* ── 화면 전환 ─────────────────────────── */
 .screen{
@@ -147,6 +154,122 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .course-list li{display:flex;position:relative}
 .course-list li[hidden]{display:none}
 .course-list[hidden]{display:none}
+
+/* ── 지역 고르기 — 뒤로 눕힌 비트맵 판 ─────────────────
+   카드를 걷어낸 자리다. 판은 화면보다 크게 깔고 커서가 간 쪽으로 민다 —
+   커서가 곧 카메라다. 따라오는 맛은 transition 이 낸다(rAF 루프 없음). */
+#regions{overflow:hidden}
+/* 판이 절대배치라 머리글 위를 덮는다 — 머리글을 한 층 올린다 */
+#regions .screen-head{position:relative;z-index:2}
+.atlas{position:absolute;inset:0;overflow:hidden;perspective:900px;--mx:0;--my:0}
+/* 리그는 기울기와 커서 따라가기만 맡는다. 배율·밀기는 판이 rAF 로 찍는다 */
+.atlas-rig{
+  position:absolute;left:50%;top:50%;
+  width:0;height:0;
+  --atlas-tilt:56deg;
+  transform:translate(-50%,-50%) rotateX(var(--atlas-tilt))
+            translate3d(calc(var(--mx) * 30%), calc(var(--my) * 34%), 0);
+  transform-style:preserve-3d;
+  transition:transform 1.1s var(--ease-out);
+  will-change:transform;
+}
+/* 휠로 세우는 동안 1.1s 는 끈적하다 — 기울기는 손끝에 붙인다 */
+.atlas-rig.live{transition:none}
+.atlas-plane{
+  position:absolute;left:50%;top:50%;
+  /* 판은 제 비율을 지킨다 — 폭·높이 둘 중 먼저 걸리는 쪽이 크기를 정한다.
+     한 축만 못 박으면 가로로 긴 나라가 letterbox 되어 쪼그라든다 */
+  --h:clamp(70vh, var(--atlas-rows-h, 120vh), 165vh);
+  --atlas-w:min(130vw, calc(var(--h) * var(--atlas-ar,.52)));
+  --atlas-z:1; --pan-x:0; --pan-y:0; --atlas-o:1;
+  width:var(--atlas-w);
+  aspect-ratio:var(--atlas-ar,.52);
+  transform:translate(-50%,-50%)
+            translate3d(calc(var(--pan-x, 0) * 1%), calc(var(--pan-y, 0) * 1%), 0)
+            scale(var(--atlas-z, 1));
+  transform-style:preserve-3d;
+  opacity:var(--atlas-o, 1);
+  will-change:transform,opacity;
+  transition:none;
+}
+.atlas-ghost{pointer-events:none;z-index:1}
+#atlasPlane{z-index:2}
+.atlas-plane svg{width:100%;height:100%;display:block;overflow:visible}
+.atlas-plane circle{fill:var(--block);transition:fill var(--fast) var(--ease-out)}
+.atlas-plane .gu:hover:not(.pick) circle{fill:var(--accent)}
+.atlas-plane .gu.pick circle{
+  fill:var(--accent);
+  filter:drop-shadow(0 0 8px color-mix(in srgb,var(--accent) 65%, transparent));
+}
+.atlas-plane .hit{fill:none;pointer-events:all}
+/* 글자는 판에서 떼어 카메라를 보게 세운다. 평소엔 숨기고 짚거나 고른 곳만 켠다 */
+.ar-name{
+  position:absolute;left:var(--x);top:var(--y);
+  /* 판이 눕혀 있을 때만 카메라를 보게 세운다. translateZ 는 원근에 납작해진다 */
+  transform:translate(-50%,-50%) rotateX(calc(-1 * var(--atlas-tilt)));
+  transform-origin:center center;
+  transform-style:flat;
+  font-weight:800;letter-spacing:-.02em;line-height:1.05;white-space:nowrap;text-align:center;
+  color:var(--ink);pointer-events:none;user-select:none;
+  font-size:calc(var(--ns) / var(--atlas-bw) * var(--atlas-w));
+  -webkit-text-stroke:.22em var(--bg);
+  paint-order:stroke fill;
+  opacity:0;
+  transition:opacity var(--fast) var(--ease-out);
+}
+.ar-name.off{color:var(--ink-soft)}
+.ar-name.dim{opacity:0}
+.ar-name.on,.ar-name.pick{opacity:1;color:var(--accent-text)}
+.atlas-name{
+  position:absolute;left:var(--screen-pad-x);bottom:var(--screen-pad-y);
+  margin:0;z-index:2;color:var(--ink-soft);font-weight:700;
+}
+.atlas-now{
+  margin-left:auto;
+  font:inherit;font-weight:700;font-size:18px;color:#fff;
+  background:var(--block);border:0;padding:6px 16px 7px;cursor:pointer;
+}
+.atlas-now:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){ .atlas-now:hover{background:var(--accent)} }
+/* 미리보기 판은 아틀라스 위에 얹는다. 카드 시절 ov-game 은 접힌 채로 시작하므로
+   여기서는 바로 펴 둔다 */
+.atlas-ov{
+  position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;
+  padding:var(--screen-pad-y) var(--screen-pad-x);background:var(--bg);
+}
+.atlas-ov[hidden]{display:none}
+.atlas-ov .ov-game{flex:1;opacity:1;transform:none}
+#regions:has(.atlas-ov:not([hidden])) .atlas-now{visibility:hidden}
+#regions:has(.atlas-ov:not([hidden])) .atlas-name{visibility:hidden}
+/* 커서를 따라 판이 흐르는 것 자체가 어지럼의 원인이다 — 줄이면 판을 눕히지도
+   밀지도 않고 그냥 펴서 보여준다 */
+@media (prefers-reduced-motion:reduce){
+  .ar-name{transition:none}
+  .atlas-rig{
+    --atlas-tilt:0deg;
+    transform:translate(-50%,-50%);
+    transition:none;
+  }
+  .atlas-plane{
+    --atlas-w:min(92vw,92vh * var(--atlas-ar,.52));
+    width:var(--atlas-w);
+  }
+}
+:root[data-motion="off"] .atlas-rig{
+  --atlas-tilt:0deg;
+  transform:translate(-50%,-50%);
+  transition:none;
+}
+:root[data-motion="off"] .atlas-plane{
+  --atlas-w:min(92vw,92vh * var(--atlas-ar,.52));
+  width:var(--atlas-w);
+}
+#atlasStart{position:fixed;z-index:4}
+#regions:not(.on) #atlasStart{pointer-events:none}
+@media (hover:hover) and (pointer:fine){
+  #atlasStart:hover{background:var(--accent)}
+}
+#atlasStart:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 
 /* 고르는 판 — 카드 뒷면. 지도가 남는 높이를 다 갖는다 */
 .pickmap{flex:1;min-height:0;display:grid;place-items:center;margin:8px 0 2px}
@@ -670,37 +793,35 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   height:var(--deco-ch); display:flex; align-items:center; justify-content:center;
   text-align:center;
 }
-/* 세 칸이 곧 세 버튼이다 — 칸을 꽉 채우고 서로 붙는다 */
-#title .menu{
-  display:grid; grid-template-columns:repeat(3,1fr); gap:0;
-  width:100%; min-width:0; margin:0;
-}
-#title .menu > *{
-  height:var(--deco-ch); padding:0;
-  display:flex; align-items:center; justify-content:center;
-}
-/* 구석 두 칸도 버튼이다 — 화면 왼쪽 아래, 오른쪽 아래 한 칸씩 */
-#title .title-alt, #title .title-gh{
-  position:absolute; bottom:0;
+/* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
+   잡고, 끌어다 놓으면 그 칸에 남는다. position:relative 를 여기서 주지 않는다 —
+   주면 left/top 칸 계산이 흐름 기준이 되어 구석에 앉지 못한다 */
+.grid-btn{
+  position:absolute;
+  left:calc(var(--deco-cw) * var(--btn-col, 0));
+  top:calc(var(--deco-ch) * var(--btn-row, 0));
   width:var(--deco-cw); height:var(--deco-ch);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-  padding:8px; text-align:center; text-decoration:none;
-  font-weight:700; line-height:1.2; color:#fff; background:var(--block);
+  padding:8px; border:0; text-align:center; text-decoration:none;
+  font:inherit; font-size:30px; font-weight:700; line-height:1.2; color:#fff; background:var(--block);
+  cursor:grab; user-select:none; touch-action:none;
   transition:background var(--fast);
 }
-#title .title-alt{left:0; font-size:16px; display:none}
+.grid-btn[data-drag]{cursor:grabbing; z-index:5}
+#title .title-alt{font-size:16px; display:none}
 :root[data-dev] #title .title-alt{display:flex}
-#title .title-gh{right:0; font-size:17px; font-variant-numeric:tabular-nums}
+#title .title-gh{font-size:17px; font-variant-numeric:tabular-nums}
 #title .title-gh svg{fill:currentColor;display:block}
 @media (hover:hover) and (pointer:fine){
-  #title .title-alt:hover, #title .title-gh:hover{background:var(--accent)}
+  #title .grid-btn:hover{background:var(--accent)}
 }
-#title .title-alt:focus-visible, #title .title-gh:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+#title .grid-btn:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 #title, #options{pointer-events:none}
-#title .title-block, #title .title-alt, #title .title-gh,
+#title .title-block, #title .grid-btn,
 #options .screen-head, #options .opts-shell{
-  pointer-events:auto; position:relative; z-index:2;
+  pointer-events:auto; z-index:2;
 }
+#title .title-block{position:absolute}
 
 /* 설정 화면 — 뒤로·제목은 왼쪽 위에 고정해 두고(.screen 이 이미
    position:fixed 라 그 패딩 모서리가 기준이 된다), 나머지(레일+판, 버전 줄)는
@@ -709,7 +830,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* 셸은 뷰포트 한가운데 뜬다. 거기서 가장 가까운 장식 격자 가로선까지의 차이만큼만
    내려(올려) 윗변을 그 선에 앉힌다 — position:relative 는 위 규칙이 이미 준다 */
 /* dy 도 셸 자신의 길이라 zoom 에 같이 줄어든다 — 도로 나눠야 윗변이 격자 선에 앉는다 */
-#options .opts-shell{top:calc(var(--opt-shell-dy) / var(--zc))}
+#options .opts-shell{position:relative;top:calc(var(--opt-shell-dy) / var(--zc))}
 #options .screen-head{
   /* 절대배치의 기준은 .screen 의 패딩 박스가 아니라 그 안쪽 모서리다 —
      top/left:0 이면 뷰포트 꼭짓점에 붙어 다른 화면의 머리글과 줄이 안 맞는다 */

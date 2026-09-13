@@ -92,23 +92,6 @@ def fill(ring, idx):
                     hit = True
     return hit
 
-for i, parts in enumerate(rings):
-    hit = False
-    for ring in parts:
-        if fill(ring, i):
-            hit = True
-    if hit:
-        continue
-    # 셀보다 작은 구는 스캔라인이 통째로 비껴간다 — 중심 칸을 준다
-    cx, cy = center(parts)
-    grid[min(ROWS - 1, int(cy / cell))][min(COLS - 1, int(cx / cell))] = i
-
-counts = [0] * len(feats)
-for row in grid:
-    for v in row:
-        if v is not None:
-            counts[v] += 1
-
 def nearest_empty(cx, cy):
     """스캔라인이 전부 남의 칸이면 가장 가까운 빈 칸을 준다."""
     tr, tc = cy / cell, cx / cell
@@ -121,6 +104,50 @@ def nearest_empty(cx, cy):
             if d < bd:
                 bd, best = d, (r, c)
     return best
+
+
+def stamp(cx, cy, idx):
+    """고리 중심이 빈 칸이면 그 칸, 남이 있으면 가장 가까운 빈 칸."""
+    r = min(ROWS - 1, max(0, int(cy / cell)))
+    c = min(COLS - 1, max(0, int(cx / cell)))
+    if grid[r][c] is None or grid[r][c] == idx:
+        grid[r][c] = idx
+        return
+    at = nearest_empty(cx, cy)
+    if at:
+        grid[at[0]][at[1]] = idx
+
+
+def isolated(cx, cy, idx, gap=2.5):
+    """이 항목의 기존 칸에서 gap 칸 이상 떨어졌으면 떨어진 섬이다."""
+    tr, tc = cy / cell, cx / cell
+    owned = [(cc, rr) for rr in range(ROWS) for cc in range(COLS) if grid[rr][cc] == idx]
+    if not owned:
+        return True
+    return min((rr - tr) ** 2 + (cc - tc) ** 2 for cc, rr in owned) >= gap ** 2
+
+
+for i, parts in enumerate(rings):
+    hit = False
+    for ring in parts:
+        if fill(ring, i):
+            hit = True
+            continue
+        # 셀보다 작은 섬은 본토가 이미 칸을 가진 뒤라 예전에 통째로 버려졌다.
+        # 고리 중심이 본토 칸에서 떨어져 있을 때만 찍는다 — 해안 잔가지는 건너뛴다.
+        cx = sum(p[0] for p in ring) / len(ring)
+        cy = sum(p[1] for p in ring) / len(ring)
+        if isolated(cx, cy, i):
+            stamp(cx, cy, i)
+            hit = True
+    if not hit:
+        stamp(*center(parts), i)
+
+counts = [0] * len(feats)
+for row in grid:
+    for v in row:
+        if v is not None:
+            counts[v] += 1
 
 for i, c in enumerate(counts):
     if c:
