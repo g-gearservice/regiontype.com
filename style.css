@@ -9,11 +9,9 @@
   --ease-in-out:cubic-bezier(.77,0,.175,1);
   --shadow:0 12px 18px -14px rgba(58,78,88,.22), 0 2px 4px -2px rgba(58,78,88,.12);
   --shadow-lift:0 18px 24px -16px rgba(58,78,88,.28), 0 3px 6px -3px rgba(58,78,88,.16);
-  --indent:min(14vw,220px);   /* 타이틀 좌측 여백. 픽셀맵 우측 여백과 같은 값을 쓴다 */
+  --indent:min(14vw,220px);   /* 타이틀 좌측 여백 */
   --screen-pad-y:56px;        /* .screen 안쪽 여백. 절대배치한 머리글도 이 모서리를 쓴다 */
   --screen-pad-x:64px;
-  --pm-h:min(76vh,720px);     /* 픽셀맵 높이 */
-  --pm-over:0;                /* 기준선 밖으로 나간 폭 ÷ 높이. app.js 가 데이터에서 넣는다 */
   /* 미리보기 판은 늘 10:7 이다. 폭·높이를 따로 재면 창에 따라 세로로 길어져
      지도는 쪼그라들고 독은 눌린다 — 한 변에서 다른 변을 만든다 */
   --pv-w:min(84vw, 1000px, 84vh * 10 / 7);
@@ -26,6 +24,15 @@
      app.js 가 뜨기 전까지 쓰는 어림 — 레일 다섯 칸(≒350px)이 잘리지 않을 만큼은 준다 */
   --opt-shell-h:max(350px,56vh);
   --opt-shell-dy:0px;
+  /* 장식 격자 한 칸. app.js 가 화면에 딱 떨어지게 늘린 값을 다시 넣는다 */
+  --deco-cw:152px; --deco-ch:152px;
+  --title-col:0; --title-row:0;   /* 타이틀 덩이가 앉을 격자 칸 번호. app.js 가 넣는다 */
+  /* 확대 되돌림 비율. 데스크톱 확대가 125% 를 넘으면 app.js 의 capZoom 이 1 미만을
+     넣어 설정 셸만 그 비율로 되돌린다 — 확대 자체는 막지 않는다(막을 수도 없다) */
+  --zc:1;
+  /* 셸 아래변에서 화면 맨 아래까지. 셸은 뷰포트 한가운데에서 dy 만큼 밀려 앉으므로
+     그 둘로 되푼다 — 고르기 통이 이만큼 아래로 더 자란다 */
+  --opt-shell-bot:max(0px, calc((100vh - var(--opt-shell-h)) / 2 - var(--opt-shell-dy)));
   --opt-rail-w:14em;          /* 레일 폭. 가장 넓은 탭 글자(uk 'Зображення' ≒ 12.8em)에
                                   여유를 얹은 고정값이다 */
 }
@@ -43,6 +50,10 @@
 ::selection{background:var(--accent);color:var(--ink)}
 ::-moz-selection{background:var(--accent);color:var(--ink)}
 html,body{height:100%}
+/* 스크롤바는 안 보이게 둔다 — 굴리는 건 그대로다. 색만 지운다: ::-webkit-scrollbar 를
+   건드리면 웹킷이 겹침(overlay) 스크롤바를 포기하고 자리를 차지하는 옛 스크롤바로
+   돌아가, 고르기 통의 두 열이 한 열로 접힌다. scrollbar-color 는 상속되니 여기 한 번 */
+:root{scrollbar-color:transparent transparent}
 body{
   background:var(--bg); color:var(--ink); overflow:hidden;
   font:500 16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
@@ -90,8 +101,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   transition:background var(--fast);
 }
 .menu a{text-decoration:none;text-align:center}
-.menu a.alt{display:none}
-:root[data-dev] .menu a.alt{display:block}
 .menu button:focus-visible,.back:focus-visible,.toggle:focus-visible,.step:focus-visible,#save:focus-visible,#again:focus-visible{outline:3px solid transparent}
 /* 내려받은 심볼은 마스크로 쓴다 — 색을 글자색에 맞춰야 하기 때문이다.
    파일은 구글 폰트에서 받은 것 그대로 (FILL0 · wght300 · GRAD200 · opsz24) */
@@ -100,11 +109,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
 }
-.i-arrow-left{--i:url(assets/arrow-back.svg?v=0.95)}
-.i-flag{--i:url(assets/flag.svg?v=0.95)}
-.i-close{--i:url(assets/close.svg?v=0.95)}
-.i-pin{--i:url(assets/pin.svg?v=0.95)}
-.i-chart{--i:url(assets/chart.svg?v=0.95)}
+.i-arrow-left{--i:url(assets/arrow-back.svg?v=1.31)}
+.i-flag{--i:url(assets/flag.svg?v=1.31)}
+.i-close{--i:url(assets/close.svg?v=1.31)}
+.i-pin{--i:url(assets/pin.svg?v=1.31)}
+.i-chart{--i:url(assets/chart.svg?v=1.31)}
 .i.flip{transform:scaleX(-1)}
 /* 눈으로는 안 보이고 읽어주는 기계에는 남는 글자 */
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
@@ -120,7 +129,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   background:none;color:var(--ink);border:0;cursor:pointer;
 }
 .back .i{font-size:34px}
-
+.gu{cursor:pointer}
+.gu:focus{outline:none}
+.gu:focus-visible circle,.gu:hover:not(.off) circle{fill:var(--accent)}
 /* ── 코스 목록 — 레퍼런스: 색 블록 상단 + 크림 본문, 아래 중앙에 공용 Play ── */
 .course-stage{
   flex:1;display:flex;flex-direction:column;align-items:center;
@@ -135,31 +146,36 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .course-list li{flex:0 0 auto}
 .course-list li{display:flex;position:relative}
 .course-list li[hidden]{display:none}
+.course-list[hidden]{display:none}
+
+/* ── 코스 고르기 — 홈과 같은 격자 한 칸 버튼 ─────────── */
+#regions{overflow:hidden}
+#regions .screen-head{position:relative;z-index:2}
+.course-name{
+  position:absolute;left:var(--screen-pad-x);bottom:var(--screen-pad-y);
+  margin:0;z-index:2;color:var(--ink-soft);font-weight:700;
+}
+/* 자리는 app.js 가 transform 으로 찍는다(스프링). left/top 은 원점에 못 박는다 */
+#courseBtns .grid-btn{left:0;top:0;transform-origin:0 0;font-size:30px;cursor:pointer;z-index:1}
+/* 접히는 구역은 시·도 칸 뒤로 들어가며 모인다 — 앞에서 모이면 큰 칸을 덮는다 */
+#courseBtns .grid-btn.gone{z-index:0}
+/* 한국어 이름은 글자 사이에서 끊지 않는다 — 넘치면 app.js 가 칸 폭에 맞춰 줄인다 */
+#courseBtns .grid-btn > span{display:inline-block;max-width:100%;word-break:keep-all}
+/* 펼친 칸은 점선 테두리로도 드러내고, 거기서 번져 나오는 구역 칸보다 한 층 위에 둔다 */
+#courseBtns .grid-btn[aria-expanded="true"]{z-index:2}
+#courseBtns .grid-btn[aria-expanded="true"]::after{
+  content:"";position:absolute;inset:10px;border:3px dashed currentColor;pointer-events:none;
+}
+/* 고른 칸은 색에 더해 안쪽 테두리로도 드러낸다 */
+#courseBtns .grid-btn[aria-pressed="true"]{background:var(--accent);box-shadow:inset 0 0 0 5px var(--ink)}
 
 /* 고르는 판 — 카드 뒷면. 지도가 남는 높이를 다 갖는다 */
 .pickmap{flex:1;min-height:0;display:grid;place-items:center;margin:8px 0 2px}
 .pickmap svg{width:100%;height:100%;display:block}
 .pickmap circle{fill:var(--block);transition:fill var(--fast) var(--ease-out)}
 .pickmap .hit{fill:none;pointer-events:all}
-.gu{cursor:pointer}
 .gu.off{cursor:default}
 .gu.off circle{fill:var(--land)}
-.gu:focus{outline:none}
-.gu:focus-visible circle,.gu:hover:not(.off) circle{fill:var(--accent)}
-.pickname{
-  font-size:12px;font-weight:700;color:var(--ink-soft);text-align:center;
-  min-height:1.4em;word-break:keep-all;margin-bottom:6px;
-}
-.course{
-  font:inherit;color:inherit;border:0;cursor:pointer;
-  background:var(--bg);border-radius:5px;
-  font-size:12px;font-weight:800;padding:8px 10px;text-align:center;
-  transition:background var(--fast) var(--ease-out);
-}
-.course:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover) and (pointer:fine){
-  .course:hover{background:var(--grid)}
-}
 /* 코스마다 다른 색조 — 레퍼런스의 도시별 색. 기존 팔레트만 쓴다 */
 .course-list li:nth-child(2n) .card{--tint:var(--accent)}
 /* 앞면·뒷면을 겹쳐두고 카드를 통째로 돌린다 */
@@ -197,13 +213,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .card-body em{display:block;font-style:normal;color:var(--accent-text);
   font-weight:700;font-size:13px;margin:6px 0 12px}
 .card-body .desc{display:block;color:var(--ink-soft);font-size:14px;line-height:1.55}
-
-/* 뒷면 — 시작 옵션 */
-.card-back .ov-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
-.card-back .choice{display:grid;gap:7px;margin-top:20px;justify-items:center}
-.card-back .choice-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
-.card-back .menu{flex-direction:row;justify-content:center;gap:3px;margin-top:8px}
-.card-back .menu button{font-size:17px;padding:5px 15px 7px}
 /* 카드탭 — 카드 뒤에서 왼쪽으로 물려 나온 책갈피.
    카드의 형제다: 카드 안에 두면 카드가 제 안쪽을 잘라내 밖으로 못 나가고,
    카드와 함께 돌아 좌우까지 뒤집힌다. z-index 로 카드 밑에 깔아 물린 모양을 낸다. */
@@ -271,7 +280,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   cursor:pointer;align-self:center;opacity:.75;
   transition:opacity var(--fast) var(--ease-out);
 }
-@media (hover:hover) and (pointer:fine){ .rank-drop:hover{opacity:1} }
+@media (hover:hover) and (pointer:fine){ .rank-drop:hover{opacity:1}}
 .rank-drop:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 /* 순위 탭 — 카드가 230px 일 때 plot·목록이 안에 맞게 */
 .card[data-rank] .rank-title{font-size:14px}
@@ -285,6 +294,75 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .ov-pick,.ov-play{display:flex;flex-direction:column;justify-content:center;gap:2px;flex:1;min-height:0}
 .ov-pick{justify-content:stretch}
 .ov-pick[hidden],.ov-play[hidden]{display:none}
+.card[data-preview="1"] .ov-game{opacity:1;transform:none}
+:root[data-night] .card,
+:root[data-night] #card,
+:root[data-night] #typein{box-shadow:none}
+
+.thumb svg circle{fill:#fff}
+
+/* 긴 우하향 그림자 — MM 의 모든 입체물이 갖는 것 */
+.card-face{border-radius:6px;box-shadow:var(--shadow)}
+/* 뒤집기 — 화면 안에서 모양이 바뀌는 동작이라 ease-in-out */
+.card{transition:transform var(--flip) var(--ease-in-out),
+               width var(--flip) var(--ease-in-out),
+               height var(--flip) var(--ease-in-out),
+               translate var(--fast) var(--ease-out)}
+/* 돌면서 가로로만 넓어진다. 높이는 앞면 그대로라 카드가 제자리에서 펴지는 걸로 읽힌다 —
+   width 트랜지션이 회전과 같은 시간·같은 곡선이라 한 동작으로 붙는다. */
+/* 돌면서 가로로만 넓어진다. 순위 탭(data-rank)은 앞면과 같은 230px */
+.card[data-flip="true"]:not([data-rank]){width:var(--pk-w);transform:rotateY(180deg);z-index:1}
+.card[data-flip="true"][data-rank]{width:230px;height:var(--card-h);transform:rotateY(180deg);z-index:1}
+.card[data-flip="true"][data-preview="1"]{
+  width:var(--pv-w);height:var(--pv-h);
+  transform:rotateY(180deg);z-index:2;
+}
+.card[data-flip="true"] .card-face{box-shadow:var(--shadow-lift)}
+.card-front:active{transform:scale(.98)}
+.card-front{transition:transform var(--fast) var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  /* 살짝 뜨는 건 transform 이 아니라 translate 로 준다. 같은 transform 을 두고
+     회전과 다투면, 앞면으로 돌아올 때 rotateY(180deg) → translateY(-3px) 로
+     보간되면서 회전이 뭉개진다 — 커서가 카드 안에 있을 때만 그랬다.
+     locking 동안에는 아예 안 띄운다. 도는 중에 3px 씩 오르내릴 이유가 없다. */
+  .card[data-flip="false"]:not([data-locking="1"]):hover{translate:0 -3px}
+  .card[data-flip="false"]:not([data-locking="1"]):hover .card-top{background:var(--accent)}}
+.screen.on .course-list li,
+.screen.on .missed li,
+.screen.on .menu button,
+.screen.on .opts > *{animation:rise .34s var(--ease-out) backwards}
+.screen.on .course-list li:nth-child(n+2){animation-delay:60ms}
+.screen.on .course-list li:nth-child(n+3){animation-delay:120ms}
+
+@media (prefers-reduced-motion:reduce){
+  .screen.on :is(.course-list li,.missed li,.menu button,.opts > *),
+  .countdown b{animation:none}}
+.card-face:focus-visible{outline:3px solid transparent}
+.pickname{margin:0}
+
+.pickname{
+  font-size:12px;font-weight:700;color:var(--ink-soft);text-align:center;
+  min-height:1.4em;word-break:keep-all;margin-bottom:6px;
+}
+.course{
+  font:inherit;color:inherit;border:0;cursor:pointer;
+  background:var(--bg);border-radius:5px;
+  font-size:12px;font-weight:800;padding:8px 10px;text-align:center;
+  transition:background var(--fast) var(--ease-out);
+}
+.course:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){
+  .course:hover{background:var(--grid)}
+}
+
+/* 뒷면 — 시작 옵션 */
+
+.card-back .ov-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.card-back .choice{display:grid;gap:7px;margin-top:20px;justify-items:center}
+.card-back .choice-l{font-weight:700;font-size:13px;color:var(--ink-soft)}
+.card-back .menu{flex-direction:row;justify-content:center;gap:3px;margin-top:8px}
+.card-back .menu button{font-size:17px;padding:5px 15px 7px}
+@media (hover:hover) and (pointer:fine){ }
 .ov-play{justify-content:stretch}
 /* 열림·닫힘을 한 상태로 묶는다 — 같은 속성·같은 시간·같은 곡선이라
    접히는 길이 펼쳐진 길을 그대로 되짚는다. 원점은 누른 코스 버튼이다 */
@@ -293,7 +371,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   transition:opacity var(--flip) var(--ease-in-out),
              transform var(--flip) var(--ease-in-out);
 }
-.card[data-preview="1"] .ov-game{opacity:1;transform:none}
 .ov-game{flex:1;min-height:0;display:flex;flex-direction:column;text-align:left}
 .ov-hud{margin-bottom:4px;gap:14px;position:relative;z-index:3}
 .ov-body{flex:1;min-height:0;display:flex;align-items:stretch}
@@ -327,9 +404,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   content:""; display:block; width:1em; height:1em; font-size:34px;
   background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
-  --i:url(assets/close-600.svg?v=0.95);
+  --i:url(assets/close-600.svg?v=1.31);
 }
-.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=0.95)}
+.toggle[aria-pressed="true"]::after{--i:url(assets/check-600.svg?v=1.31)}
 .toggle[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 
 /* 왼쪽 세로 탭 레일 + 오른쪽 판. 감싸는 흰 판은 두지 않는다 — MM 은 설정도
@@ -342,7 +419,13 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    위아래로 몰린다. flex:1 을 걷어내야 판이 남는 폭을 다 먹지 않는다 */
 .opts-shell{
   display:flex;align-items:center;gap:clamp(28px,5vw,72px);
-  width:fit-content;max-width:100%;margin:0 auto;height:var(--opt-shell-h);
+  /* zoom 은 제 상자의 길이도 같이 줄인다 — max-width 를 --zc 로 도로 나누지 않으면
+     확대할수록 셸이 더 좁아져, 막으려던 '두 열이 한 열로 접힘'이 오히려 빨리 온다 */
+  width:fit-content;max-width:calc(100% / var(--zc));margin:0 auto;
+  /* 125% 넘게 확대해도 셸은 125% 때 크기로 선다 — 판이 좁아져 두 열이 한 열로
+     접히는 걸 막는다. 높이는 --zc 로 도로 나눠, 그려지는 높이가 JS 가 잡은
+     --opt-shell-h 와 같게 맞춘다(격자 선 정렬이 --zc 에 흔들리지 않는다) */
+  zoom:var(--zc); height:calc(var(--opt-shell-h) / var(--zc));
 }
 /* 레일: 탭마다 글자만큼만 넓은 pill 이 오른쪽 끝에 맞춰 쌓인다. 폭은 글자에서
    얻지 않고 못 박는다 — 언어마다 탭 글자가 길고 짧아 폭을 재면 셸이 통째로
@@ -388,16 +471,35 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
   display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
   gap:14px; align-content:start; max-width:calc(var(--opt-col) * 2 + 24px); flex:0 1 auto;
-  /* 셸 높이가 정해져 있으니 목록은 그 안에서 굴린다 — 판을 밀어 키우지 않는다 */
-  max-height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-right:10px;
-  /* 셸 아래변은 줄 높이와 무관해서 늘 한 줄을 반토막 낸다 — 통에 테두리가 없으니
-     그 반토막이 '격자 밖으로 샌 것'처럼 읽힌다. 잘린 자리를 흐려 '아래가 더
-     있다'로 바꾼다. padding 만큼 여백이 뒤에 남아 끝까지 굴리면 마지막 줄은
-     흐려지지 않고, scroll-padding 이 있어 키보드로 옮긴 초점 테두리도 안 흐려진다 */
-  padding-bottom:28px; scroll-padding-bottom:28px;
+  /* 위로는 셸 안에서 굴리고, 아래로는 셸 밖으로 나가 화면 바닥까지 닿는다. max-height 를 같이 키우지 않으면
+     음수 margin 이 판의 가운데맞춤에 그대로 먹혀 통이 도로 셸 크기로 주저앉는다 */
+  max-height:calc(100% + var(--opt-shell-bot) / var(--zc));
+  margin-bottom:calc(0px - var(--opt-shell-bot) / var(--zc));
+  min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-right:10px;
+  /* 스크롤 중에는 위아래 둘 다 줄 높이와 무관하게 한 줄을 반토막 낸다 — 통에
+     테두리가 없으니 그 반토막이 '격자 밖으로 샌 것'처럼 읽힌다. 잘린 자리를
+     흐려 '더 있다'로 바꾼다. 위아래 padding 만큼 빈 여백이 있어, 맨 위·맨 아래로
+     끝까지 굴리면 첫 줄·마지막 줄은 그 빈 여백 뒤에 서서 흐려지지 않는다 —
+     마스크의 불투명 구간이 정확히 padding 이 끝나는 자리에서 시작·끝나기 때문.
+     scroll-padding 도 같이 줘서 키보드로 옮긴 초점 테두리가 흐린 띠 밑에 안 깔린다 */
+  padding-block:28px; scroll-padding-block:28px;
+  /* 위쪽은 안 흐린다 — 첫 줄이 희끄무레해 보이던 자리다. 아래쪽만 페이드 */
   --pick-fade:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);
   -webkit-mask:var(--pick-fade); mask:var(--pick-fade);
 }
+/* 바닥 블러 띠 — 페이지에 건다. 어느 통에도 매이지 않게 position:fixed 로 화면
+   아래변에 붙이고 좌우 끝까지 편다.
+   높이를 제 height 로 박지 않는 이유: 플레이 화면용 .backdrop-blur.bot 규칙이 같은
+   특이도에 파일 뒤쪽이라 그쪽 height 가 이긴다 — 함께 읽는 --blur-bot 에 값을 준다 */
+#options > .backdrop-blur.bot{
+  display:none; position:fixed; left:0; right:0; bottom:0; z-index:3;
+  --blur-bot:56px;   /* 띠 높이. 격자 한 행(152px)은 너무 두꺼웠다 */
+  /* .bot 의 가로 마스크(--fade-x)는 플레이 화면 지도용이다. 여기선 화면 폭을 다 쓴다 */
+  --fade-x:linear-gradient(#000,#000);
+}
+/* 굴러가는 통이 있는 판에서만 띠가 선다 — 토글·버전 판은 흐릴 것이 없다 */
+#options:has(#optsLanguage:not([hidden])) > .backdrop-blur.bot,
+:root[data-dev] #options:has(#optsRegion:not([hidden])) > .backdrop-blur.bot{display:grid}
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
 /* 지역 고르기는 아직 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다
@@ -433,8 +535,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .region-opt input::after{
   content:""; width:1em; height:1em; font-size:22px; opacity:0;
   background:var(--bg);
-  -webkit-mask:url(assets/check-600.svg?v=0.95) center / 100% no-repeat;
-          mask:url(assets/check-600.svg?v=0.95) center / 100% no-repeat;
+  -webkit-mask:url(assets/check-600.svg?v=1.31) center / 100% no-repeat;
+          mask:url(assets/check-600.svg?v=1.31) center / 100% no-repeat;
 }
 /* 고른 칸은 색만으로 서지 않는다 — 채운 원 · 체크 표 · 굵은 글자가 함께 간다 */
 .region-opt input:checked{background:currentColor}
@@ -507,9 +609,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   font-size:180px;font-weight:800;color:var(--accent);background:rgba(232,237,240,.85);
 }
 :root[data-night] .countdown{background:rgba(35,44,49,.85)}
-:root[data-night] .card,
-:root[data-night] #card,
-:root[data-night] #typein{box-shadow:none}
 .countdown.on{display:grid}
 
 /* ── 결과 ─────────────────────────────── */
@@ -579,14 +678,48 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   #mobile{display:grid}
 }
 
-#title{justify-content:center;padding-left:var(--indent)}
-/* 섹션은 뷰포트 전체라 맵을 덮는다. 빈 곳은 통과시키고, 글자·버튼만 비트 위에 둔다. */
-#title, #options{pointer-events:none}
-#title .logo, #title .menu,
-#options .screen-head, #options .opts-shell{
-  pointer-events:auto; position:relative; z-index:2;
+/* 타이틀 — 칸이 곧 자리다. 로고는 가운데 세 칸 한 줄, 그 아래 줄의 세 칸이 각각
+   소개·설정·시작하기 버튼이다. 몇 번째 칸인지는 app.js 가 --title-col/row 로 준다 */
+#title{padding:0}
+.title-block{
+  position:absolute;
+  left:calc(var(--deco-cw) * var(--title-col));
+  top:calc(var(--deco-ch) * var(--title-row));
+  width:calc(var(--deco-cw) * 3); max-width:100vw;
 }
-#title .logo, #title .menu{align-self:flex-start;width:max-content}
+#title .logo{
+  height:var(--deco-ch); display:flex; align-items:center; justify-content:center;
+  text-align:center;
+}
+/* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
+   잡고, 끌어다 놓으면 그 칸에 남는다. position:relative 를 여기서 주지 않는다 —
+   주면 left/top 칸 계산이 흐름 기준이 되어 구석에 앉지 못한다 */
+.grid-btn{
+  position:absolute;
+  left:calc(var(--deco-cw) * var(--btn-col, 0));
+  top:calc(var(--deco-ch) * var(--btn-row, 0));
+  width:var(--deco-cw); height:var(--deco-ch);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:8px; border:0; text-align:center; text-decoration:none;
+  font:inherit; font-size:30px; font-weight:700; line-height:1.2; color:#fff; background:var(--block);
+  cursor:grab; user-select:none; touch-action:none;
+  transition:background var(--fast);
+}
+.grid-btn[data-drag]{cursor:grabbing; z-index:5}
+#title .title-alt{font-size:16px; display:none}
+:root[data-dev] #title .title-alt{display:flex}
+#title .title-gh{font-size:17px; font-variant-numeric:tabular-nums}
+#title .title-gh svg{fill:currentColor;display:block}
+@media (hover:hover) and (pointer:fine){
+  .grid-btn:hover{background:var(--accent)}
+}
+.grid-btn:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+#title, #options{pointer-events:none}
+#title .title-block, #title .grid-btn,
+#options .screen-head, #options .opts-shell{
+  pointer-events:auto; z-index:2;
+}
+#title .title-block{position:absolute}
 
 /* 설정 화면 — 뒤로·제목은 왼쪽 위에 고정해 두고(.screen 이 이미
    position:fixed 라 그 패딩 모서리가 기준이 된다), 나머지(레일+판, 버전 줄)는
@@ -594,7 +727,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 #options{justify-content:center}
 /* 셸은 뷰포트 한가운데 뜬다. 거기서 가장 가까운 장식 격자 가로선까지의 차이만큼만
    내려(올려) 윗변을 그 선에 앉힌다 — position:relative 는 위 규칙이 이미 준다 */
-#options .opts-shell{top:var(--opt-shell-dy)}
+/* dy 도 셸 자신의 길이라 zoom 에 같이 줄어든다 — 도로 나눠야 윗변이 격자 선에 앉는다 */
+#options .opts-shell{position:relative;top:calc(var(--opt-shell-dy) / var(--zc))}
 #options .screen-head{
   /* 절대배치의 기준은 .screen 의 패딩 박스가 아니라 그 안쪽 모서리다 —
      top/left:0 이면 뷰포트 꼭짓점에 붙어 다른 화면의 머리글과 줄이 안 맞는다 */
@@ -607,35 +741,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 #play{padding-bottom:20px}
 .stage{margin-bottom:4px}
 .opts{max-width:620px}
-
-/* ── 픽셀맵 (타이틀·설정 공용) ─────────── */
-#pixelmap{
-  /* viewBox 를 부산·울산이 있는 열에서 끊었으므로 right 가 곧 그 지점까지의 여백이다.
-     동해안(포항 쪽)이 더 튀어나와도 overflow 로 흘려보내 기준이 흔들리지 않는다. */
-  /* 화면 밖에 사는 한 장이라 뷰포트 기준으로 고정한다 — 타이틀에서 설정으로
-     넘어가도 같은 자리에 그대로 남는다. */
-  position:fixed; top:50%; transform:translateY(-50%);
-  display:block; height:var(--pm-h); width:auto; overflow:visible; pointer-events:none;
-  /* 여백 기준은 부산·울산이되, 그 밖의 울릉도·독도가 잘리지 않을 만큼은 보장한다 */
-  right:max(var(--indent), calc(var(--pm-h) * var(--pm-over) + 12px));
-  /* .screen 이 position:fixed 라 그 자체로 쌓임 맥락을 만든다 — 안쪽 .opts 의
-     z-index:2 는 밖으로 나오지 못한다. 여기서 1 을 주면 설정·타이틀 글자 위에
-     점이 얹힌다. 화면은 배경이 없으니 격자(-3) 위, 모든 화면 아래로 내린다. */
-  z-index:-2;
-  opacity:0; transition:opacity var(--slow) var(--ease-out);
-}
-/* 타이틀과 설정에서만 보인다. 나머지 화면에서는 조용히 빠진다 */
-body:has(#title.on) #pixelmap{opacity:1}
-/* 모바일 안내 화면에서는 .screen 을 숨겨도 픽셀맵은 화면 밖이라 따라 숨지
-   않는다. 위 display:block 보다 뒤에 와야 이긴다 — 같은 특이도라 순서가 정한다 */
-@media (pointer:coarse),(max-width:640px){ #pixelmap{display:none} }
-#pixelmap circle{
-  fill:var(--block);opacity:.38;
-  transform-box:fill-box;transform-origin:center;
-  transition:transform var(--fast) var(--ease-out), fill var(--fast) var(--ease-out), opacity var(--fast) var(--ease-out);
-}
-#pixelmap circle.hilite{fill:var(--accent);opacity:1}
-.thumb svg circle{fill:#fff}
 
 /* ═══ UI 질감 ═══════════════════════════════════════════
    블록 메뉴 · 긴 그림자 · 눌림 피드백 · 등장 모션 */
@@ -654,33 +759,7 @@ body:has(#title.on) #pixelmap{opacity:1}
 }
 .step,.toggle{transition:color var(--fast) var(--ease-out),
                          border-color var(--fast) var(--ease-out)}
-
-/* 긴 우하향 그림자 — MM 의 모든 입체물이 갖는 것 */
-.card-face{border-radius:6px;box-shadow:var(--shadow)}
-/* 뒤집기 — 화면 안에서 모양이 바뀌는 동작이라 ease-in-out */
-.card{transition:transform var(--flip) var(--ease-in-out),
-               width var(--flip) var(--ease-in-out),
-               height var(--flip) var(--ease-in-out),
-               translate var(--fast) var(--ease-out)}
-/* 돌면서 가로로만 넓어진다. 높이는 앞면 그대로라 카드가 제자리에서 펴지는 걸로 읽힌다 —
-   width 트랜지션이 회전과 같은 시간·같은 곡선이라 한 동작으로 붙는다. */
-/* 돌면서 가로로만 넓어진다. 순위 탭(data-rank)은 앞면과 같은 230px */
-.card[data-flip="true"]:not([data-rank]){width:var(--pk-w);transform:rotateY(180deg);z-index:1}
-.card[data-flip="true"][data-rank]{width:230px;height:var(--card-h);transform:rotateY(180deg);z-index:1}
-.card[data-flip="true"][data-preview="1"]{
-  width:var(--pv-w);height:var(--pv-h);
-  transform:rotateY(180deg);z-index:2;
-}
-.card[data-flip="true"] .card-face{box-shadow:var(--shadow-lift)}
-.card-front:active{transform:scale(.98)}
-.card-front{transition:transform var(--fast) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
-  /* 살짝 뜨는 건 transform 이 아니라 translate 로 준다. 같은 transform 을 두고
-     회전과 다투면, 앞면으로 돌아올 때 rotateY(180deg) → translateY(-3px) 로
-     보간되면서 회전이 뭉개진다 — 커서가 카드 안에 있을 때만 그랬다.
-     locking 동안에는 아예 안 띄운다. 도는 중에 3px 씩 오르내릴 이유가 없다. */
-  .card[data-flip="false"]:not([data-locking="1"]):hover{translate:0 -3px}
-  .card[data-flip="false"]:not([data-locking="1"]):hover .card-top{background:var(--accent)}
 }
 .card-back .menu{align-items:center}
 .missed li,.ranks li{border-radius:4px;box-shadow:var(--shadow)}
@@ -688,15 +767,8 @@ body:has(#title.on) #pixelmap{opacity:1}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
 
-
 /* 등장 모션 — 무에서 나타나지 않고, 순서대로 */
 @keyframes rise{from{opacity:0;transform:translateY(10px) scale(.98)}}
-.screen.on .course-list li,
-.screen.on .missed li,
-.screen.on .menu button,
-.screen.on .opts > *{animation:rise .34s var(--ease-out) backwards}
-.screen.on .course-list li:nth-child(n+2){animation-delay:60ms}
-.screen.on .course-list li:nth-child(n+3){animation-delay:120ms}
 .screen.on .menu button:nth-child(2){animation-delay:60ms}
 .screen.on .menu button:nth-child(3){animation-delay:120ms}
 .missed li:nth-child(3n+2){animation-delay:50ms}
@@ -717,8 +789,6 @@ body:has(#title.on) #pixelmap{opacity:1}
 .combo.bump{transform:scale(1.16)}
 
 @media (prefers-reduced-motion:reduce){
-  .screen.on :is(.course-list li,.missed li,.menu button,.opts > *),
-  .countdown b{animation:none}
 }
 
 /* 스케일 — 레퍼런스는 타이포가 크고 여백이 넉넉하다 */
@@ -759,7 +829,6 @@ body:has(#title.on) #pixelmap{opacity:1}
 }
 .choice-b button[aria-pressed="true"]{opacity:1;background:var(--block-hi)}
 .choice-b button:focus-visible{outline:3px solid transparent}
-.card-face:focus-visible{outline:3px solid transparent}
 @media (hover:hover) and (pointer:fine){
   .choice-b button:hover{opacity:1;background:var(--accent)}
 }
@@ -777,7 +846,6 @@ body:has(#title.on) #pixelmap{opacity:1}
 }
 @keyframes aimpulse{50%{stroke-opacity:.25}}
 @media (prefers-reduced-motion:reduce){ #map g.target circle,.ov-map g.target circle{animation:none} }
-
 
 /* ── 이름 타일 — 비트맵 위에 얹는다 ────────────────────── */
 #map .tiles > g,.ov-map .tiles > g{
@@ -1014,7 +1082,6 @@ body:has(#title.on) #pixelmap{opacity:1}
 }
 @keyframes tilepop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){ .rt-map .tiles > g.pop{animation:none} }
-
 
 /* ── 피드백 ────────────────────────────────────────────
    로고의 점이 그대로 버튼이다. 평소엔 점, 손을 얹으면 깃발이 뜬다 —

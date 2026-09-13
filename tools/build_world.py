@@ -234,6 +234,11 @@ def pick_feats(all_feats, iso, spec):
 admin1 = json.load(open(admin1_src))['features']
 world = {'countries': []}
 
+# 층 구조는 build_kr.py 가 data/kr-tree.json 에 찍어 둔다. 키가 '부모슬러그/이름' 인
+# 평평한 사전이다 — 중구·동구가 서울·부산·대구·인천에 다 있어 이름만으로는 못 가른다.
+_tree_path = out_dir / 'kr-tree.json'
+_tree = json.loads(_tree_path.read_text()) if _tree_path.exists() else {}
+
 seoul = {
     'id': 'KR',
     'lang': 'ko',
@@ -241,6 +246,8 @@ seoul = {
     'regions': [
         {
             'id': 'seoul',
+            'root': _tree.get('root', 'seoul-gu'),
+            'children': _tree.get('children', {}),
             'title': {'ko': '서울', 'en': 'Seoul', 'ja': 'ソウル'},
             'description': {
                 'ko': '한강이 가로지르는 수도. 25개 자치구부터 423개 행정동까지.',
@@ -326,6 +333,8 @@ for iso, spec in PACKS.items():
 
     region = {
         'id': slug,
+        'root': slug,          # 한 층짜리 나라는 children 이 빈 지도일 뿐이다
+        'children': {},
         'thumb': slug,
         'main': slug,
         'nested': False,

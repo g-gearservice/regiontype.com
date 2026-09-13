@@ -134,7 +134,13 @@ async function feedback(req, env, o) {
     },
     body: JSON.stringify({ title: issue.title, body: issue.body, labels: issue.labels }),
   });
-  if (!r.ok) return reply(502, 'GitHub 이 받지 않았습니다. 잠시 뒤 다시 시도해 주세요.', o);
+  /* 왜 막혔는지는 wrangler tail 로만 본다 — 사용자 화면엔 토큰 사정을 내보이지 않는다 */
+  if (!r.ok) {
+    /* 상태와 남은 호출량이면 원인이 갈린다(401·403 토큰, 404 저장소, 422 서식).
+       본문은 남기지 않는다 — 남이 보낸 내용이 그대로 되비칠 수 있다. */
+    console.log('github', r.status, r.headers.get('x-ratelimit-remaining') ?? '?');
+    return reply(502, 'GitHub 이 받지 않았습니다. 잠시 뒤 다시 시도해 주세요.', o);
+  }
   return reply(201, '고맙습니다', o);
 }
 
