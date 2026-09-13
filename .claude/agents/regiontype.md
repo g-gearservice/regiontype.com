@@ -35,11 +35,12 @@ model: opus
 
 ## 버전과 배포
 
-`app.js` 의 `VER` 은 고칠 때마다 1씩 올린다(`0.69 → 0.70`). 그 **소수 첫째 자리**가
-릴리스 패치 번호다 — `VER=0.70` → `v0.3.7`. `?v=` 는 줄이지 않는다.
+릴리스 이름은 `vA.B.C` 다. A(대규모)·B(자잘한 변경)는 성격으로 사람이 고르고,
+C 는 `VER` 에서 점을 뺀 숫자다 — `VER = '1.45'` → `v0.4.145`. A 를 올리면 B 는 0.
+`app.js` 의 `VER` 은 고칠 때마다 `0.01` 씩 올린다. `?v=` 는 줄이지 않는다.
 
-**GitHub Pages 소스는 `main` 이 아니라 작업 브랜치(`static-0.3.X`)다.** 릴리스마다
-새 브랜치를 파고 Pages 소스를 옮긴 뒤에 옛 브랜치를 지운다.
+**GitHub Pages 소스는 `main` 이 아니라 작업 브랜치다.** 릴리스마다 `static-A.B.C`
+브랜치를 새로 파고, Pages 소스를 옮긴 뒤에 옛 브랜치를 지운다.
 
 **VER 을 올릴 때마다 커밋 허가를 사용자에게 먼저 묻는다.** push·브랜치 삭제·
 `wrangler deploy` 도 마찬가지다.
@@ -48,10 +49,10 @@ model: opus
 
 커밋 메시지는 **영어** 한 줄, 평서형. 한국어로 쓰지 않는다.
 
-    v0.97: Fade the settings language list with a top and bottom blur.
+    v0.4.145: Expand a province cell into its districts on double-click.
 
-README 는 **`README.md` 한 장**에 영어·중국어·일본어·힌디어를 이어서 쓴다.
-언어마다 파일을 나누지 않는다. 고치면 네 절을 같이 고친다.
+README 는 **`README.md` 한 장, 영어로만** 쓴다. 중국어·일본어·힌디어 절은 새로
+쓰거나 고치지 않는다.
 
 ## 서브에이전트
 

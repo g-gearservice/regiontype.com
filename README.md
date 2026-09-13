@@ -8,7 +8,16 @@
 
 # English
 
-A typing drill for place names. v0.4.0 (`VER=1.32`) — first-level admin courses by country, UI in 26 languages.
+A typing drill for place names. v0.4.145 (`VER=1.45`) — first-level admin courses by country, UI in 26 languages.
+
+## What's new in 0.4.145
+
+- The tilted atlas bitmap on the Places screen is gone. Courses are grid-cell buttons on the same background grid as the title screen, and South Korea is laid out as a map-shaped block
+- Click a cell to select it. Double-click (or press Enter on the selected cell) to expand a province into its districts on the same screen: the districts spread out one by one, the grid tightens, and the other provinces shrink and scatter into the free space. Esc folds it back
+- Motion is a critically damped spring and can be interrupted mid-flight. With reduced motion, cells jump into place and only fade
+- District cells are as large as the Start cell whenever the block fits the screen, and shrink a step only when it does not
+- In Korean, pushed-aside provinces use short names (서울, 경기, 충북) and district cells drop 시·군 (파주, 고양일산서구). Screen readers still read the full name
+- Outside the Korean UI, Korean place names show in romanization from `data/kr-names.json` (`tools/build_names.py`). The names you type stay Korean
 
 ## What's new in 0.4.0
 
@@ -59,15 +68,19 @@ Carried from earlier patches: the logo-dot feedback dialog, the settings grid to
 
 ## Version
 
-A release is `vA.B.C`. Each digit is chosen by what changed, not read back out of `VER`.
+A release is `vA.B.C`.
 
-- **A** — a large change: the structure is redrawn, or a new mode appears
-- **B** — a small change: an ordinary addition or fix, visible to a player but not on the scale of A
-- **C** — security, policy, and rules: what a player never sees (`relay/` tokens, rate limits, CLAUDE.md and the commit rules)
+- **A** — a large change: the structure is redrawn, or a new mode appears. Chosen by hand
+- **B** — a small change: an ordinary addition or fix, visible to a player but not on the scale of A. Chosen by hand
+- **C** — `VER` from `app.js` without the dot (`VER = '1.45'` → `v0.4.145`). Never chosen, only copied
 
-Raising a digit resets the ones below it to zero.
+Raising A resets B to zero. C always follows `VER`, so it never resets.
 
-`VER` in `app.js` — the number in parentheses on the settings version line — is separate. It is an internal build counter for cache busting and goes up by `0.01` on every change (`0.69 → 0.70`).
+`VER` — the number in parentheses on the settings version line — goes up by `0.01` on every change (`1.45 → 1.46`). The settings line reads C from it.
+
+Each release gets its own branch, `static-A.B.C` (`static-0.4.145`).
+
+This README is written in English only.
 
 The changelog lists **only this release**. Stacking older bullets hides what actually landed.
 
@@ -94,6 +107,7 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
     data/world.json          country list (build_world.py)
     data/i18n.json           UI copy (26 languages). Hand-edited
     data/kr-tree.json        Korea layer tree (build_kr.py). Not served yet
+    data/kr-names.json       romanized Korean place names shown outside the Korean UI (build_names.py)
     data/board/              board tiles on one shared projection (build_board.py). Not served yet
     tools/build_map.py       GeoJSON → geom.json
     tools/build_dong.py      all 25-district dong courses at once
@@ -101,6 +115,7 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
     tools/build_board.py     one sheet, all of South Korea, tiles by layer
     tools/build_world.py     Natural Earth admin-1 → country courses
     tools/build_size.py      course sizes → relay/size.mjs
+    tools/build_names.py     southkorea-maps name_eng → kr-names.json
 
 ## Refreshing map data
 
@@ -337,6 +352,7 @@ Legal-dong / same-name mapping, location mode, server-side ranking, a course edi
     data/world.json          国家列表（build_world.py）
     data/i18n.json           界面文案（26 种语言）。手写
     data/kr-tree.json        韩国层级树（build_kr.py）。尚未上线
+    data/kr-names.json       非韩语界面显示的韩国地名罗马字（build_names.py）
     data/board/              共用一套投影的大地瓦片（build_board.py）。尚未上线
     tools/build_map.py       GeoJSON → geom.json
     tools/build_dong.py      一次生成 25 区行政洞课程
@@ -344,6 +360,7 @@ Legal-dong / same-name mapping, location mode, server-side ranking, a course edi
     tools/build_board.py     一张大地铺满南韩，按层出瓦片
     tools/build_world.py     Natural Earth admin-1 → 国家课程
     tools/build_size.py      课程容量 → relay/size.mjs
+    tools/build_names.py     southkorea-maps name_eng → kr-names.json
 
 ## 更新地图数据
 
@@ -580,6 +597,7 @@ IP 只用于限速窗口，不存储。D1 里只留课程、时间、`who`、名
     data/world.json          国一覧（build_world.py）
     data/i18n.json           画面の言葉（26 UI 言語）。手で書く
     data/kr-tree.json        韓国の階層ツリー（build_kr.py）。まだ配信しない
+    data/kr-names.json       韓国語以外の画面で出す韓国地名のローマ字（build_names.py）
     data/board/              投影を共有する大地タイル（build_board.py）。まだ配信しない
     tools/build_map.py       GeoJSON → geom.json
     tools/build_dong.py      25 区の行政洞コースを一度に
@@ -587,6 +605,7 @@ IP 只用于限速窗口，不存储。D1 里只留课程、时间、`who`、名
     tools/build_board.py     一枚の大地に韓国全土、層ごとのタイル
     tools/build_world.py     Natural Earth admin-1 → 国コース
     tools/build_size.py      コース定員 → relay/size.mjs
+    tools/build_names.py     southkorea-maps name_eng → kr-names.json
 
 ## 地図データの更新
 
@@ -823,6 +842,7 @@ IP はレート制限の窓にだけ使い、保存しない。D1 に残るの�
     data/world.json          देश सूची (build_world.py)
     data/i18n.json           UI पाठ (26 भाषाएँ)। हाथ से लिखा
     data/kr-tree.json        कोरिया का स्तर-वृक्ष (build_kr.py)। अभी परोसा नहीं जाता
+    data/kr-names.json       कोरियाई के अलावा UI में दिखने वाले कोरियाई स्थान-नामों का रोमन रूप (build_names.py)
     data/board/              एक ही प्रक्षेप की बोर्ड टाइलें (build_board.py)। अभी परोसा नहीं जाता
     tools/build_map.py       GeoJSON → geom.json
     tools/build_dong.py      25 ज़िले के दोंग पाठ्यक्रम एक साथ
@@ -830,6 +850,7 @@ IP はレート制限の窓にだけ使い、保存しない。D1 に残るの�
     tools/build_board.py     एक चादर पर पूरा दक्षिण कोरिया, स्तर-वार टाइलें
     tools/build_world.py     Natural Earth admin-1 → देश पाठ्यक्रम
     tools/build_size.py      पाठ्यक्रम आकार → relay/size.mjs
+    tools/build_names.py     southkorea-maps name_eng → kr-names.json
 
 ## मानचित्र डेटा ताज़ा करना
 

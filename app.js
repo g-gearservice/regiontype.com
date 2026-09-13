@@ -2,11 +2,12 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.36';
+const VER = '1.45';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
 $('#verBuild').textContent = VER;
+$('#verPatch').textContent = VER.replace('.', '');   // 릴리스 C 자리는 VER 에서 점을 뺀 숫자
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
 let UI_LANGS = ['ko', 'en', 'ja'];
@@ -207,24 +208,6 @@ const DECO_CELL = 152;   /* 플레이 밖 장식 격자 칸(px). about.html 과 
 function syncGrid() {
   /* 플레이 밖에서는 맞출 지도가 없다 — 못 박은 칸으로 되돌리고 셸만 다시 앉힌다.
      되돌리지 않으면 플레이에서 나올 때 그 판의 칸 크기가 배경에 굳어 남는다 */
-  if ($('#regions').classList.contains('on') && ATLAS && ATLAS.geom && ATLAS.box) {
-    const svg = $('#atlasPlane svg');
-    const ctm = svg && svg.getScreenCTM();
-    if (ctm) {
-      const cell = ATLAS.geom.cell, box = ATLAS.box;
-      const a = svg.createSVGPoint();
-      a.x = box.x; a.y = box.y;
-      const o = a.matrixTransform(ctm);
-      a.x = box.x + cell; a.y = box.y;
-      const x1 = a.matrixTransform(ctm);
-      a.x = box.x; a.y = box.y + cell;
-      const y1 = a.matrixTransform(ctm);
-      applyGrid(o.x, o.y,
-        Math.hypot(x1.x - o.x, x1.y - o.y),
-        Math.hypot(y1.x - o.x, y1.y - o.y));
-      return;
-    }
-  }
   if (!($('#play').classList.contains('on') && G && G.cam)) {
     /* 화면 폭·높이가 DECO_CELL 의 배수가 아니면 우측·하단에 짜투리 칸이 남는다.
        칸을 화면에 딱 맞는 배수로 살짝 늘리거나 줄여 경계를 딱 맞춘다 */
@@ -239,9 +222,10 @@ function syncGrid() {
     st.setProperty('--deco-ch', ch + 'px');
     st.setProperty('--title-col', String(Math.max(0, Math.floor((cols - 3) / 2))));
     st.setProperty('--title-row', String(Math.max(0, Math.round((rows - 2) / 2))));
-    applyGrid(0, 0, cw, ch);
+    applyGrid(...courseGridArgs(cw, ch));
     syncOptShell();
     placeGridBtns();
+    planCourses();
     return;
   }
   const root = $('#map'), space = G.cam, cell = G.cell;
@@ -337,7 +321,7 @@ const GRID_BTN_KEY = 'rt.gridBtn';
 const GRID_BTN_DEF = {
   gh: { c: -1, r: -1 }, alt: { c: 0, r: -1 },
   about: { slot: 0 }, options: { slot: 1 }, play: { slot: 2 },
-  atlasStart: { c: -1, r: -1 },
+  courseStart: { c: -1, r: -1 },
 };
 function loadGridBtns() {
   try { return Object.assign({}, GRID_BTN_DEF, JSON.parse(localStorage.getItem(GRID_BTN_KEY) || '{}')); }
@@ -365,6 +349,26 @@ function titleMenuCell(slot, cols, rows) {
   const tr = Number(s.getPropertyValue('--title-row')) || 0;
   return resolveCell(tc + slot, tr + 1, cols, rows);
 }
+/* 대한민국 코스 칸의 기본 자리. 지도 모양을 본뜬 5×5 덩이 안의 [열, 줄] */
+const KR_CELLS = {
+  'seoul-gu': [0, 0], 'gyeonggi-sgg': [1, 0], 'gangwon-sgg': [3, 0], 'kr-admin': [4, 0],
+  'incheon-sgg': [0, 1], 'sejong-emd': [1, 1], 'chungcheongbuk-sgg': [2, 1], 'gyeongsangbuk-sgg': [3, 1],
+  'chungcheongnam-sgg': [0, 2], 'daejeon-sgg': [1, 2], 'daegu-sgg': [3, 2], 'ulsan-sgg': [4, 2],
+  'gwangju-sgg': [0, 3], 'jeollabuk-sgg': [1, 3], 'jeollanam-sgg': [2, 3], 'gyeongsangnam-sgg': [3, 3],
+  'busan-sgg': [4, 3],
+  'jeju-sgg': [0, 4],
+};
+/* 코스 칸은 화면 가운데 덩이로 선다. 자리표(at)가 없으면 한 줄 여섯 칸까지 줄짓는다.
+   머리글 줄(0)은 비운다.
+   ponytail: 칸이 모자라는 좁은 화면에서는 끝 칸에 겹친다 — 넘치면 페이지를 나눈다 */
+function courseCell(k, n, cols, rows, at) {
+  const w = at ? 5 : Math.max(1, Math.min(n, cols - 2, 6));
+  const h = at ? 5 : Math.ceil(n / w);
+  const c0 = Math.floor((cols - w) / 2);
+  const r0 = Math.max(1, Math.floor((rows - h) / 2));
+  const [dc, dr] = at || [k % w, Math.floor(k / w)];
+  return resolveCell(c0 + dc, r0 + dr, cols, rows);
+}
 function placeGridBtns() {
   const { cols, rows } = decoGrid();
   const pos = loadGridBtns();
@@ -382,62 +386,63 @@ function placeGridBtns() {
 }
 function wireGridBtns() {
   placeGridBtns();
-  document.querySelectorAll('[data-grid-btn]').forEach(el => {
-    let drag = false, held = false, sx = 0, sy = 0, sc = 0, sr = 0;
-    const move = e => {
-      if (!held) return;
-      const { cw, ch, cols, rows } = decoGrid();
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (!drag && dx * dx + dy * dy < 25) return;
-      drag = true;
-      el.dataset.drag = '';
-      el.style.setProperty('--btn-col', Math.max(0, Math.min(cols - 1, Math.round(sc + dx / cw))));
-      el.style.setProperty('--btn-row', Math.max(0, Math.min(rows - 1, Math.round(sr + dy / ch))));
+  document.querySelectorAll('[data-grid-btn]').forEach(wireGridBtn);
+}
+function wireGridBtn(el) {
+  let drag = false, held = false, sx = 0, sy = 0, sc = 0, sr = 0;
+  const move = e => {
+    if (!held) return;
+    const { cw, ch, cols, rows } = decoGrid();
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!drag && dx * dx + dy * dy < 25) return;
+    drag = true;
+    el.dataset.drag = '';
+    el.style.setProperty('--btn-col', Math.max(0, Math.min(cols - 1, Math.round(sc + dx / cw))));
+    el.style.setProperty('--btn-row', Math.max(0, Math.min(rows - 1, Math.round(sr + dy / ch))));
+  };
+  const up = () => {
+    if (!held) return;
+    held = false;
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    el.removeAttribute('data-drag');
+    if (!drag) return;
+    const pos = loadGridBtns();
+    pos[el.dataset.gridBtn] = {
+      c: Number(el.style.getPropertyValue('--btn-col')),
+      r: Number(el.style.getPropertyValue('--btn-row')),
     };
-    const up = () => {
-      if (!held) return;
-      held = false;
-      document.removeEventListener('pointermove', move);
-      document.removeEventListener('pointerup', up);
-      el.removeAttribute('data-drag');
-      if (!drag) return;
-      const pos = loadGridBtns();
-      pos[el.dataset.gridBtn] = {
-        c: Number(el.style.getPropertyValue('--btn-col')),
-        r: Number(el.style.getPropertyValue('--btn-row')),
-      };
-      saveGridBtns(pos);
-    };
-    el.addEventListener('dragstart', e => e.preventDefault());
-    el.addEventListener('pointerdown', e => {
-      if (e.button) return;
-      sx = e.clientX; sy = e.clientY;
-      sc = Number(el.style.getPropertyValue('--btn-col'));
-      sr = Number(el.style.getPropertyValue('--btn-row'));
-      drag = false; held = true;
-      document.addEventListener('pointermove', move);
-      document.addEventListener('pointerup', up);
-    });
-    el.addEventListener('click', e => {
-      if (!drag) return;
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    el.addEventListener('keydown', e => {
-      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
-      if (!step) return;
-      e.preventDefault();
-      const { cols, rows } = decoGrid();
-      let c = Number(el.style.getPropertyValue('--btn-col'));
-      let r = Number(el.style.getPropertyValue('--btn-row'));
-      c = Math.max(0, Math.min(cols - 1, c + step[0]));
-      r = Math.max(0, Math.min(rows - 1, r + step[1]));
-      el.style.setProperty('--btn-col', c);
-      el.style.setProperty('--btn-row', r);
-      const pos = loadGridBtns();
-      pos[el.dataset.gridBtn] = { c, r };
-      saveGridBtns(pos);
-    });
+    saveGridBtns(pos);
+  };
+  el.addEventListener('dragstart', e => e.preventDefault());
+  el.addEventListener('pointerdown', e => {
+    if (e.button) return;
+    sx = e.clientX; sy = e.clientY;
+    sc = Number(el.style.getPropertyValue('--btn-col'));
+    sr = Number(el.style.getPropertyValue('--btn-row'));
+    drag = false; held = true;
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  });
+  el.addEventListener('click', e => {
+    if (!drag) return;
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  el.addEventListener('keydown', e => {
+    const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const { cols, rows } = decoGrid();
+    let c = Number(el.style.getPropertyValue('--btn-col'));
+    let r = Number(el.style.getPropertyValue('--btn-row'));
+    c = Math.max(0, Math.min(cols - 1, c + step[0]));
+    r = Math.max(0, Math.min(rows - 1, r + step[1]));
+    el.style.setProperty('--btn-col', c);
+    el.style.setProperty('--btn-row', r);
+    const pos = loadGridBtns();
+    pos[el.dataset.gridBtn] = { c, r };
+    saveGridBtns(pos);
   });
 }
 
@@ -886,7 +891,6 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   const drum = document.querySelector('.wheel[data-on]');
   if (drum) { closeWheel(drum); return; }
-  if (closeAtlas()) return;
   const open = document.querySelector('.card[data-flip="true"]');
   if (!open) return;
   if (open._closeRank && open._closeRank()) return;
@@ -903,773 +907,398 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
 
 let regionRedraw = [];
 
-/* ── 지역 고르기 — 눕힌 비트맵 ─────────────────────────
-   카드를 걷어냈다. 나라의 행정구역 비트맵을 뒤로 눕혀 깔고, 커서가 간 쪽으로
-   판이 밀린다 — 커서가 곧 카메라다.
-   한국은 시·도 아래에 또 판이 있다. 서울처럼 구 아래 동 코스가 있으면 한 단
-   내려가고, 부산처럼 구 코스가 끝이면 그 코스의 시작 판을 연다. 나라를
-   누르면 바로 치지 않는다 — 제한 시간·이름 힌트를 고를 자리가 있어야 한다. */
-let ATLAS = null;
-let atlasRedraw = [];
-let atlasGen = 0;
+/* ── 코스 고르기 — 격자 한 칸 버튼 ─────────────────────
+   홈의 장식 격자와 격자 한 칸 버튼을 그대로 쓴다. 나라 전체 코스 한 칸에,
+   kr-tree 가 있으면 그 뿌리 바로 아래 코스(시·도)를 한 칸씩 늘어놓는다.
+   한 번 누르면 고르고, 두 번 누르면 그 안의 구역(시·군·구)이 그 칸에서 하나씩
+   번져 나온다 — 화면은 그대로다. 격자는 그 칸을 붙잡고 촘촘해지고, 둘레의
+   시·도는 작아진 채 밖으로 밀린다. 치는 건 시작 칸이 한다. */
+let COURSE = { tiles: [], tree: null, root: '' };
+let PICK = null;      // 고른 칸
+let OPEN = null;      // 펼친 칸 { tile, bw, bh, kids }
+let openGen = 0;
+const TILE = new WeakMap();
 
-const esc = s => String(s).replace(/[&<>"']/g, ch =>
-  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
-
-/* tree 가 없으면 구역마다 코스가 없다 — 판 전체가 그 나라 한 코스다.
-   값이 null 인 자리(세종)는 코스가 아직 없다. */
-function atlasChild(tree, slug, name) {
-  return tree ? (tree.children[`${slug}/${name}`] || null) : null;
-}
-/* 자식 슬러그가 있으면 그 판으로 내려간다. 서울만 동이 있고 부산 이하는
-   시군구가 잎이지만, 판은 있어야 전 지역을 고를 수 있다. */
-function atlasDeeper(tree, child) {
-  return !!child;
+/* 값이 null 인 자리(코스가 아직 없는 곳)는 칸을 만들지 않는다 */
+function courseList(root, tree) {
+  const list = [{ slug: root, name: '' }];
+  if (tree) for (const [k, slug] of Object.entries(tree.children)) {
+    const [parent, name] = k.split('/');
+    if (parent === root && slug) list.push({ slug, name });
+  }
+  return list;
 }
 
-/* 이름 크기는 그 구역의 넓이를 따른다 — 광역시는 칸 몇 개뿐이라 같은 크기로
-   찍으면 옆 도(道) 이름을 밟는다. 넓을수록 크게, 좁을수록 작게.
-   거기에 제 폭에 맞춰 한 번 더 줄인다: 한 칸짜리 주에 'South Carolina' 를
-   같은 크기로 찍으면 다섯 칸을 가로지른다. 너무 작아질 이름은 아예 접는다 —
-   아래 한 줄 읽기가 대신 알려준다. */
-const CJK = /[\u3000-\u9fff\uac00-\ud7af\u3040-\u30ff]/;
-function nameSize(label, cellsN, boxW) {
-  const per = CJK.test(label) ? 1 : .58;
-  const fit = boxW / Math.max(1, label.length * per);
-  /* 구가 많은 판은 넓이에 맞춘다. 나라 판 크기는 atlasSvg 에서 도(道)와 같게 맞춘다 */
-  const by = .62 + .62 * Math.min(1, Math.sqrt(cellsN) / 11);
-  const s = Math.min(by, fit * 1.9);
-  return s < .22 ? 0 : s;
-}
-
-function atlasSvg(geom) {
-  const cells = geom.items.map(() => []);
-  /* 격자에는 빈 가장자리가 붙어 있다(us-admin 은 40칸 중 14칸만 쓴다) — 쓰는 데까지
-     잘라야 판이 제 비율을 갖는다. 안 자르면 가로로 납작해져 글자만 겹친다. */
-  let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
-  geom.grid.forEach((row, y) => [...row].forEach((ch, x) => {
-    if (ch === '.') return;
-    const i = SYM.indexOf(ch);
-    if (i < 0) return;
-    cells[i].push([x, y]);
-    if (x < minX) minX = x;
-    if (y < minY) minY = y;
-    if (x > maxX) maxX = x;
-    if (y > maxY) maxY = y;
-  }));
-  const c = geom.cell;
-  const box = { x: minX * c, y: minY * c, w: (maxX - minX + 1) * c, h: (maxY - minY + 1) * c };
-  /* 도트 사이 빈틈에서도 그 구역이 잡혀야 한다 — 칸을 통째로 이은 판을 밑에 깐다 */
-  const skin = i => cells[i].map(([x, y]) =>
-    `M${(x * c).toFixed(1)} ${(y * c).toFixed(1)}h${c.toFixed(1)}v${c.toFixed(1)}h-${c.toFixed(1)}z`
-  ).join('');
-  /* 특별시·광역시·특별자치시·도는 접미를 둘째 줄에 둔다.
-     한 줄로 붙이면 서울·인천·경기가 서로 밟고, 글자를 키울 수도 없다. */
-  const splitAdmin = name => {
-    const m = /^(.*?)(특별자치시|특별자치도|특별시|광역시)$/.exec(String(name));
-    return m ? [m[1], m[2]] : [name];
-  };
-  /* 한국 시·도 판: 글자 크기는 도(道)와 같게 두고, 겹치는 이름은 옆으로 민다.
-     좌표는 판 비율(%). 손댄 값은 충남·세종·대전·수도권처럼 서로 밟는 자리뿐이다. */
-  const krBoard = geom.items.some(g => /특별시|광역시|특별자치/.test(g.name));
-  const NUDGE = {
-    '서울특별시': [-6, -4],
-    '인천광역시': [-8, 1],
-    '경기도': [8, -1],
-    '충청남도': [-9, 2],
-    '세종특별자치시': [-1, 2],
-    '대전광역시': [5, 7],
-    '충청북도': [5, 0],
-    '광주광역시': [-10, -5],
-    '대구광역시': [-5, 1],
-    '부산광역시': [7, 3],
-    '울산광역시': [7, -2],
-    '제주특별자치도': [5, 0],
-  };
-  const names = [];
-  const doSize = 1.85;
-  geom.items.forEach((g, i) => {
-    const xs = cells[i].map(p => p[0]);
-    if (!xs.length) return;
-    const lines = splitAdmin(g.name);
-    const wide = lines.reduce((a, b) => a.length >= b.length ? a : b);
-    const s = krBoard
-      ? doSize
-      : nameSize(wide, cells[i].length, Math.max(...xs) - Math.min(...xs) + 1);
-    if (!s) return;
-    const [dx, dy] = NUDGE[g.name] || (lines.length > 1
-      ? [(g.c[0] - box.x) / box.w < .4 ? -6 : (g.c[0] - box.x) / box.w > .55 ? 6 : 0, 0]
-      : [0, 0]);
-    names.push({
-      i, lines,
-      x: (g.c[0] - box.x) / box.w * 100 + dx,
-      y: (g.c[1] - box.y) / box.h * 100 + dy,
-      ns: c * s,
-    });
-  });
-  /* 장식 격자를 판 유저 좌표에 그린다. 뷰포트 격자는 원근에서 칸이 어긋난다.
-     점은 (x+.5, y+.5)*cell — 선은 정수 칸에 서서 점이 칸 한가운데 앉는다 */
-  let gridD = '';
-  const x1 = box.x + box.w, y1 = box.y + box.h;
-  for (let x = box.x; x <= x1 + .05; x += c) {
-    gridD += `M${x.toFixed(1)} ${box.y.toFixed(1)}V${y1.toFixed(1)}`;
-  }
-  for (let y = box.y; y <= y1 + .05; y += c) {
-    gridD += `M${box.x.toFixed(1)} ${y.toFixed(1)}H${x1.toFixed(1)}`;
-  }
-  const svg = `<svg viewBox="${box.x.toFixed(1)} ${box.y.toFixed(1)} ${box.w.toFixed(1)} ${box.h.toFixed(1)}"` +
-    ` preserveAspectRatio="xMidYMid meet">` +
-    `<path class="atlas-grid" d="${gridD}"/>` +
-    geom.items.map((g, i) =>
-      `<g class="gu" role="button" tabindex="0" data-area="${i}" aria-label="${esc(g.name)}">` +
-      `<path class="hit" d="${skin(i)}"/>` +
-      cells[i].map(([x, y]) => dot(x, y, c, '')).join('') +
-      '</g>'
-    ).join('') + '</svg>';
-  return { svg, box, names };
-}
-
-function hideAtlasOv() {
-  const ov = $('#atlasOv');
-  if (!ov) return;
-  ov.hidden = true;
-  ov.replaceChildren();
-}
-
-function unitRank(name) {
-  const n = String(name).normalize('NFC');
-  if (/읍$/.test(n)) return 5;
-  if (/면$/.test(n)) return 4;
-  if (/동$/.test(n)) return 3;
-  if (/군$/.test(n)) return 2;
-  if (/구$/.test(n)) return 1;
-  return 0;
-}
-function atlasPlaySlug(a) {
-  const at = a || ATLAS;
-  return (at && at.pick && at.pick.slug) || (at && at.slug) || null;
-}
-function atlasMotionOff() {
-  return !opt.motion || matchMedia('(prefers-reduced-motion:reduce)').matches;
-}
-/* --ease-in-out: cubic-bezier(.77, 0, .175, 1) 를 프레임마다 푼다 */
-function atlasEase(t) {
-  const p1x = .77, p1y = 0, p2x = .175, p2y = 1;
-  const cx = 3 * p1x, bx = 3 * (p2x - p1x) - cx, ax = 1 - cx - bx;
-  const cy = 3 * p1y, by = 3 * (p2y - p1y) - cy, ay = 1 - cy - by;
-  const samp = (x, a, b, c) => ((a * x + b) * x + c) * x;
-  const der = (x, a, b, c) => (3 * a * x + 2 * b) * x + c;
-  let x = t;
-  for (let i = 0; i < 8; i++) {
-    const z = samp(x, ax, bx, cx) - t;
-    const d = der(x, ax, bx, cx);
-    if (Math.abs(z) < 1e-5 || Math.abs(d) < 1e-6) break;
-    x -= z / d;
-  }
-  return samp(x, ay, by, cy);
-}
-const atlasLerp = (a, b, k) => a + (b - a) * k;
-function atlasTiltOf(z) {
-  if (atlasMotionOff()) return 0;
-  const t = Math.min(1, Math.max(0, (z - 1) / .22));
-  return 56 * (1 - t * t);
-}
-/* 판 변환은 scale 뒤에 pan 이다. 커서 아래 점(판 중심 기준 -0.5~0.5)이
-   같은 화면에 남으려면 pan 을 z 차만큼 반대로 민다 */
-function atlasZoomPan(pan, local, z0, z1) {
-  return pan + local * 100 * (z0 - z1);
-}
-function atlasPreviewCam(z, x, y) {
-  const plane = $('#atlasPlane'), rig = $('#atlasRig');
-  if (plane) {
-    plane.style.setProperty('--atlas-z', Number(z).toFixed(3));
-    plane.style.setProperty('--pan-x', Number(x).toFixed(2));
-    plane.style.setProperty('--pan-y', Number(y).toFixed(2));
-  }
-  if (rig) {
-    rig.classList.add('live');
-    rig.style.setProperty('--atlas-tilt', atlasTiltOf(z).toFixed(2) + 'deg');
-  }
-}
-function atlasUserFromClient(cx, cy) {
-  const svg = $('#atlasPlane svg');
-  const ctm = svg && svg.getScreenCTM();
-  if (!svg || !ctm) return null;
-  const p = svg.createSVGPoint();
-  p.x = cx; p.y = cy;
-  return p.matrixTransform(ctm.inverse());
-}
-function atlasClientFromUser(ux, uy) {
-  const svg = $('#atlasPlane svg');
-  const ctm = svg && svg.getScreenCTM();
-  if (!svg || !ctm) return null;
-  const p = svg.createSVGPoint();
-  p.x = ux; p.y = uy;
-  return p.matrixTransform(ctm);
-}
-/* 기울기가 바뀌면 세로가 원근으로 뛴다. 추정 식 대신 CTM 으로
-   같은 유저 점이 같은 화면에 남게 pan 을 몇 번 푼다 */
-function atlasPanToKeep(cx, cy, z1) {
-  const plane = $('#atlasPlane');
-  if (!plane || !ATLAS) return { x: ATLAS.panX || 0, y: ATLAS.panY || 0 };
-  const user = atlasUserFromClient(cx, cy);
-  if (!user) return { x: ATLAS.panX || 0, y: ATLAS.panY || 0 };
-  let px = ATLAS.panX || 0, py = ATLAS.panY || 0;
-  const w = plane.offsetWidth || 1, h = plane.offsetHeight || 1;
-  for (let i = 0; i < 5; i++) {
-    atlasPreviewCam(z1, px, py);
-    void plane.offsetWidth;
-    const now = atlasClientFromUser(user.x, user.y);
-    if (!now) break;
-    const tilt = atlasTiltOf(z1) * Math.PI / 180;
-    const cos = Math.max(.38, Math.cos(tilt));
-    px += (cx - now.x) / w * 100;
-    py += (cy - now.y) / (h * cos) * 100;
-  }
-  return { x: px, y: py };
-}
-function atlasLocalFromClient(cx, cy) {
-  const plane = $('#atlasPlane'), box = $('#atlas');
-  if (!plane || !box || !ATLAS) return { lx: 0, ly: 0 };
-  const w = plane.offsetWidth || 1, h = plane.offsetHeight || 1;
-  const z = (ATLAS.aim && ATLAS.aim.z) || ATLAS.z || 1;
-  const px = (ATLAS.aim && ATLAS.aim.x) || ATLAS.panX || 0;
-  const py = (ATLAS.aim && ATLAS.aim.y) || ATLAS.panY || 0;
-  const b = box.getBoundingClientRect();
-  const tilt = atlasTiltOf(z) * Math.PI / 180;
-  const cos = Math.max(.38, Math.cos(tilt));
-  const sx = cx - (b.left + b.width / 2);
-  const sy = (cy - (b.top + b.height / 2)) / cos;
-  return {
-    lx: sx / (w * z) - px / (100 * z),
-    ly: sy / (h * z) - py / (100 * z),
-  };
-}
-function atlasClampXY(z, x, y) {
-  const zz = Math.max(1, z || 1);
-  const maxX = 52 * zz, maxY = 58 * zz;
-  return [Math.max(-maxX, Math.min(maxX, x)), Math.max(-maxY, Math.min(maxY, y))];
-}
-function atlasClampCam() {
-  if (!ATLAS) return;
-  if (ATLAS.z == null) ATLAS.z = 1;
-  if (ATLAS.panX == null) ATLAS.panX = 0;
-  if (ATLAS.panY == null) ATLAS.panY = 0;
-  const [x, y] = atlasClampXY(ATLAS.z, ATLAS.panX, ATLAS.panY);
-  ATLAS.panX = x; ATLAS.panY = y;
-  if (ATLAS.aim) {
-    const [ax, ay] = atlasClampXY(ATLAS.aim.z || ATLAS.z, ATLAS.aim.x, ATLAS.aim.y);
-    ATLAS.aim.x = ax; ATLAS.aim.y = ay;
-  }
-}
-function atlasApplyCam(el) {
-  const plane = el || $('#atlasPlane');
-  if (!plane || !ATLAS) return;
-  atlasClampCam();
-  plane.style.setProperty('--atlas-z', ATLAS.z.toFixed(3));
-  plane.style.setProperty('--pan-x', ATLAS.panX.toFixed(2));
-  plane.style.setProperty('--pan-y', ATLAS.panY.toFixed(2));
-  const rig = $('#atlasRig');
-  if (rig && !el) {
-    rig.style.setProperty('--atlas-tilt', atlasTiltOf(ATLAS.z).toFixed(2) + 'deg');
-    rig.classList.toggle('live', (ATLAS.z || 1) > 1.02);
-  }
-  if (!el) { atlasApplyLod(); requestAnimationFrame(syncGrid); }
-}
-function atlasSetO(el, o) {
-  if (el) el.style.setProperty('--atlas-o', o.toFixed(3));
-}
-function atlasCopyPlane(from, to) {
-  if (!from || !to) return;
-  to.innerHTML = from.innerHTML;
-  ['--atlas-ar', '--atlas-rows-h', '--atlas-bw', '--atlas-z', '--pan-x', '--pan-y', '--atlas-o']
-    .forEach(k => to.style.setProperty(k, from.style.getPropertyValue(k) || ''));
-}
-function atlasResetCam(z) {
-  if (!ATLAS) return;
-  ATLAS.z = z == null ? 1 : z;
-  ATLAS.panX = 0; ATLAS.panY = 0;
-  ATLAS.aim = { z: ATLAS.z, x: 0, y: 0 };
-  atlasApplyCam();
-}
-function atlasSyncAim() {
-  if (!ATLAS) return;
-  ATLAS.aim = { z: ATLAS.z, x: ATLAS.panX, y: ATLAS.panY };
-}
-function atlasChase() {
-  if (!ATLAS || ATLAS.busy || ATLAS.camRaf) return;
-  if (atlasMotionOff()) {
-    ATLAS.z = ATLAS.aim.z; ATLAS.panX = ATLAS.aim.x; ATLAS.panY = ATLAS.aim.y;
-    atlasApplyCam();
-    atlasMaybeDive();
-    return;
-  }
-  const step = () => {
-    if (!ATLAS || ATLAS.busy) { ATLAS.camRaf = 0; return; }
-    const a = ATLAS.aim, k = .62;
-    ATLAS.z += (a.z - ATLAS.z) * k;
-    ATLAS.panX += (a.x - ATLAS.panX) * k;
-    ATLAS.panY += (a.y - ATLAS.panY) * k;
-    atlasApplyCam();
-    const done = Math.abs(a.z - ATLAS.z) < .003
-      && Math.abs(a.x - ATLAS.panX) < .12
-      && Math.abs(a.y - ATLAS.panY) < .12;
-    if (done) {
-      ATLAS.z = a.z; ATLAS.panX = a.x; ATLAS.panY = a.y;
-      atlasApplyCam();
-      ATLAS.camRaf = 0;
-    } else {
-      ATLAS.camRaf = requestAnimationFrame(step);
-    }
-    atlasMaybeDive();
-  };
-  ATLAS.camRaf = requestAnimationFrame(step);
-}
-function atlasTween(ms, tick) {
-  return new Promise(resolve => {
-    if (ATLAS && ATLAS.tweenRaf) cancelAnimationFrame(ATLAS.tweenRaf);
-    if (atlasMotionOff() || ms <= 0) { tick(1); resolve(); return; }
-    const t0 = performance.now();
-    const step = now => {
-      const u = Math.min(1, (now - t0) / ms);
-      tick(atlasEase(u));
-      if (u < 1) ATLAS.tweenRaf = requestAnimationFrame(step);
-      else { ATLAS.tweenRaf = 0; resolve(); }
-    };
-    ATLAS.tweenRaf = requestAnimationFrame(step);
-  });
-}
-function atlasItemFrame(i) {
-  const geom = ATLAS.geom, box = ATLAS.box, it = geom.items[i], cell = geom.cell;
-  let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
-  geom.grid.forEach((row, y) => {
-    const s = String(row);
-    for (let x = 0; x < s.length; x++) {
-      if (SYM.indexOf(s[x]) !== i) continue;
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    }
-  });
-  const cx = it && it.c ? it.c[0] : (minX + maxX + 1) / 2 * cell;
-  const cy = it && it.c ? it.c[1] : (minY + maxY + 1) / 2 * cell;
-  const nx = (cx - box.x) / box.w, ny = (cy - box.y) / box.h;
-  const rw = Number.isFinite(minX) ? (maxX - minX + 1) * cell / box.w : .12;
-  const rh = Number.isFinite(minY) ? (maxY - minY + 1) * cell / box.h : .12;
-  const z = Math.min(4.2, Math.max(2.35, .78 / Math.max(rw, rh, .08)));
-  return { z, panX: -(nx - .5) * 100, panY: -(ny - .5) * 100 };
-}
-function atlasClearGhost() {
-  const ghost = $('#atlasGhost');
-  if (!ghost) return;
-  ghost.hidden = true;
-  ghost.replaceChildren();
-  atlasSetO(ghost, 1);
-}
-function atlasShowGhost(from) {
-  const ghost = $('#atlasGhost');
-  if (!ghost || !from) return null;
-  atlasCopyPlane(from, ghost);
-  ghost.hidden = false;
-  atlasSetO(ghost, 1);
-  return ghost;
-}
-function atlasMaybeDive() {
-  if (!ATLAS || ATLAS.busy) return;
-  const i = ATLAS.hotI;
-  if (i == null || i < 0 || !ATLAS.geom || !ATLAS.geom.items[i]) return;
-  if ((ATLAS.aim && ATLAS.aim.z || ATLAS.z || 1) < 2.2) return;
-  if (!atlasChild(ATLAS.tree, ATLAS.slug, ATLAS.geom.items[i].name)) return;
-  atlasDive(i);
-}
-function atlasApplyLod() {
-  if (!ATLAS || !ATLAS.geom) return;
-  const plane = $('#atlasPlane');
-  if (!plane) return;
-  const ranks = ATLAS.geom.items.map(it => unitRank(it.name));
-  const coarse = ranks.length ? Math.min.apply(null, ranks) : 0;
-  const steps = [0, .4, .65, 1.1, 1.35, 1.7];
-  const z = ATLAS.z || 1;
-  plane.querySelectorAll('.ar-name').forEach(el => {
-    const i = +el.dataset.area;
-    const need = 1 + (steps[Math.max(0, (ranks[i] || 0) - coarse)] || 0);
-    const keep = ATLAS.pick && ATLAS.pick.i === i;
-    el.classList.toggle('dim', !keep && z < need - .02);
-  });
-}
-function atlasPaintPick() {
-  const plane = $('#atlasPlane');
-  if (!plane) return;
-  plane.querySelectorAll('.gu.pick').forEach(g => g.classList.remove('pick'));
-  plane.querySelectorAll('.ar-name.pick').forEach(el => el.classList.remove('pick'));
-  if (!ATLAS || !ATLAS.pick) return;
-  const g = plane.querySelector(`.gu[data-area="${ATLAS.pick.i}"]`);
-  if (g) g.classList.add('pick');
-  const tag = plane.querySelector(`.ar-name[data-area="${ATLAS.pick.i}"]`);
-  if (tag) tag.classList.add('pick');
-}
-async function atlasTellCourse() {
-  const name = $('#atlasName');
-  if (!name || !ATLAS) return;
-  const slug = atlasPlaySlug();
-  if (!slug) { name.textContent = ATLAS.idle || ''; return; }
-  try {
-    const course = await loadCourse(slug);
-    name.textContent = courseLabel(course);
-  } catch { name.textContent = ATLAS.pick ? adminLabel(ATLAS.pick.name) : ATLAS.idle; }
-}
-function atlasPick(i) {
-  if (!ATLAS || !ATLAS.geom || !ATLAS.geom.items[i]) return;
-  const name = ATLAS.geom.items[i].name;
-  const child = atlasChild(ATLAS.tree, ATLAS.slug, name);
-  ATLAS.pick = { i, name, slug: child || ATLAS.slug };
-  atlasPaintPick();
-  atlasTellCourse();
-}
-async function atlasDive(i) {
-  if (!ATLAS || ATLAS.busy || !ATLAS.geom || !ATLAS.geom.items[i]) return;
-  const name = ATLAS.geom.items[i].name;
-  const child = atlasChild(ATLAS.tree, ATLAS.slug, name);
-  if (!child) return;
-  ATLAS.busy = true;
-  ATLAS.want = null;
-  const fly = ++ATLAS.flyGen;
-  const plane = $('#atlasPlane');
-  const dest = atlasItemFrame(i);
-  const zS = ATLAS.z, xS = ATLAS.panX, yS = ATLAS.panY;
-  loadGeom(child);
-  await atlasTween(520, k => {
-    if (fly !== ATLAS.flyGen) return;
-    ATLAS.z = atlasLerp(zS, dest.z, k);
-    ATLAS.panX = atlasLerp(xS, dest.panX, k);
-    ATLAS.panY = atlasLerp(yS, dest.panY, k);
-    atlasSyncAim();
-    atlasApplyCam();
-  });
-  if (!ATLAS || fly !== ATLAS.flyGen) return;
-  if (ATLAS.want === 'out') {
-    ATLAS.busy = false;
-    atlasRise();
-    return;
-  }
-  const ghost = atlasShowGhost(plane);
-  ATLAS.pick = null;
-  ATLAS.stack.push({ slug: child, name });
-  ATLAS.z = .92; ATLAS.panX = 0; ATLAS.panY = 0;
-  atlasSyncAim();
-  await paintAtlas();
-  if (!ATLAS || fly !== ATLAS.flyGen) return;
-  atlasSetO(plane, 0);
-  const gz0 = dest.z, gz1 = dest.z * 1.16;
-  await atlasTween(420, k => {
-    if (fly !== ATLAS.flyGen) return;
-    ATLAS.z = atlasLerp(.92, 1, k);
-    ATLAS.panX = 0; ATLAS.panY = 0;
-    atlasSyncAim();
-    atlasApplyCam();
-    atlasSetO(plane, k);
-    if (ghost) {
-      ghost.style.setProperty('--atlas-z', atlasLerp(gz0, gz1, k).toFixed(3));
-      ghost.style.setProperty('--pan-x', dest.panX.toFixed(2));
-      ghost.style.setProperty('--pan-y', dest.panY.toFixed(2));
-      atlasSetO(ghost, 1 - k);
-    }
-  });
-  if (fly !== ATLAS.flyGen) return;
-  atlasClearGhost();
-  atlasSetO(plane, 1);
-  ATLAS.z = 1; ATLAS.panX = 0; ATLAS.panY = 0;
-  atlasSyncAim();
-  atlasApplyCam();
-  ATLAS.busy = false;
-  ATLAS.hotI = -1;
-  if (ATLAS.want === 'out') atlasRise();
-}
-function atlasEnter(i) { atlasDive(i); }
-async function atlasRise() {
-  if (!ATLAS || ATLAS.stack.length < 2 || ATLAS.busy) return false;
-  ATLAS.busy = true;
-  ATLAS.want = null;
-  const fly = ++ATLAS.flyGen;
-  const left = ATLAS.stack[ATLAS.stack.length - 1];
-  const plane = $('#atlasPlane');
-  const childZ0 = ATLAS.z, childX0 = ATLAS.panX, childY0 = ATLAS.panY;
-  const ghost = atlasShowGhost(plane);
-  ATLAS.pick = null;
-  ATLAS.stack.pop();
-  await paintAtlas();
-  if (!ATLAS || fly !== ATLAS.flyGen) return true;
-  const idx = ATLAS.geom.items.findIndex(it => it.name === left.name);
-  const framed = idx >= 0 ? atlasItemFrame(idx) : { z: 2.2, panX: 0, panY: 0 };
-  ATLAS.z = framed.z; ATLAS.panX = framed.panX; ATLAS.panY = framed.panY;
-  atlasSyncAim();
-  atlasApplyCam();
-  atlasSetO(plane, 0);
-  if (ghost) {
-    ghost.style.setProperty('--atlas-z', childZ0.toFixed(3));
-    ghost.style.setProperty('--pan-x', childX0.toFixed(2));
-    ghost.style.setProperty('--pan-y', childY0.toFixed(2));
-    atlasSetO(ghost, 1);
-  }
-  await atlasTween(520, k => {
-    if (fly !== ATLAS.flyGen) return;
-    ATLAS.z = atlasLerp(framed.z, 1, k);
-    ATLAS.panX = atlasLerp(framed.panX, 0, k);
-    ATLAS.panY = atlasLerp(framed.panY, 0, k);
-    atlasSyncAim();
-    atlasApplyCam();
-    atlasSetO(plane, k);
-    if (ghost) {
-      ghost.style.setProperty('--atlas-z', atlasLerp(childZ0, Math.max(.72, childZ0 * .72), k).toFixed(3));
-      atlasSetO(ghost, 1 - k);
-    }
-  });
-  if (fly !== ATLAS.flyGen) return true;
-  atlasClearGhost();
-  atlasSetO(plane, 1);
-  ATLAS.z = 1; ATLAS.panX = 0; ATLAS.panY = 0;
-  atlasSyncAim();
-  atlasApplyCam();
-  ATLAS.busy = false;
-  ATLAS.hotI = -1;
+/* 임계 감쇠 스프링 — Apple 이 이동·재배치에 쓰는 damping 1, response .42.
+   목표만 바꾸면 지금 값과 속도에서 이어 가므로, 펼치는 도중에 접어도 튀지 않는다 */
+const RESPONSE = .42;
+const sp = (x, eps) => ({ x, v: 0, to: x, eps });
+function spStep(p, dt) {
+  if (p.x === p.to && !p.v) return false;
+  const w = 2 * Math.PI / RESPONSE;
+  p.v += (w * w * (p.to - p.x) - 2 * w * p.v) * dt;
+  p.x += p.v * dt;
+  if (Math.abs(p.to - p.x) < p.eps && Math.abs(p.v) < p.eps * 10) { p.x = p.to; p.v = 0; return false; }
   return true;
 }
-function atlasLeave() { return atlasRise(); }
+const calm = () => !opt.motion || matchMedia('(prefers-reduced-motion:reduce)').matches;
+const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05) };   // 격자 배율과 붙잡은 점(px)
 
-async function showAtlasPlay(slug) {
-  const ov = $('#atlasOv');
-  if (!ov) return;
-  const n = ++atlasGen;
-  const course = await loadCourse(slug);
-  if (n !== atlasGen) return;
-  const pane = $('#ovTpl').content.firstElementChild.cloneNode(true);
-  pane.querySelector('.ov-title').textContent = courseLabel(course);
-  pane.querySelector('.ov-total').textContent = '/' + course.items.length;
-  pane.querySelector('.ov-time').textContent = clock(opt.time);
-  ov.replaceChildren(pane);
-  ov.hidden = false;
-  requestAnimationFrame(() => pane.querySelector('.ov-start').focus());
-  wireDock(pane);
-  pane.querySelector('.ov-start').onclick = () => { hideAtlasOv(); start(slug); };
-  const [, geom] = await load(slug);
-  if (n !== atlasGen) return;
-  const items = course.items.map(it => ({ ...it }));
-  const svg = pane.querySelector('.ov-map');
-  svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
-  drawDots(svg, geom, items);
-  if (course.mode === 'sequence' && items[0] && items[0].el) items[0].el.classList.add('target');
+function makeTile(label, slug, kid) {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'grid-btn';
+  /* 글자는 안쪽 span 에 둔다 — 칸과 따로 키워야 밀려나 작아진 칸에서도 읽힌다 */
+  el.append(document.createElement('span'));
+  el.firstChild.textContent = label;
+  el.setAttribute('aria-label', label);
+  el.setAttribute('aria-pressed', 'false');
+  const tile = { el, label, short: label, slug, kid, x: sp(0, .05), y: sp(0, .05), s: sp(1, .0005),
+                 o: sp(1, .0005), f: sp(1, .0005), wait: 0, order: 0 };
+  TILE.set(el, tile);
+  return tile;
 }
-
-async function paintAtlas() {
-  if (!ATLAS) return;
-  hideAtlasOv();
-  atlasRedraw.forEach(f => {
-    const i = REDRAW.indexOf(f);
-    if (i >= 0) REDRAW.splice(i, 1);
+/* 밀려나 작아진 시·도 칸의 이름. 남북으로 갈린 도는 첫 글자와 방위(충청북도 → 충북),
+   나머지는 접미를 뗀 어간(서울특별시 → 서울, 경기도 → 경기) */
+function shortAdmin(name) {
+  const m = /^(.).(남|북)도$/.exec(String(name).normalize('NFC'));
+  return m ? m[1] + m[2] : stripSuffix(name) || name;
+}
+/* 펼친 구역 칸의 한국어 이름. 시·군 접미를 떼고(파주시 → 파주), 시 안의 구는 시 글자만
+   뗀다(고양시일산서구 → 고양일산서구). 구·읍·면·동은 떼면 중구·동구가 한 글자라 둔다 */
+function kidName(name) {
+  const n = String(name).normalize('NFC');
+  const m = /^(.+?)시(.+구)$/.exec(n);
+  if (m) return m[1] + m[2];
+  return /^.{2,}[시군]$/.test(n) ? n.slice(0, -1) : n;
+}
+/* 칸에 보이는 지명. 화면 말이 한국어가 아니면 로마자 표(kr-names.json)에서 꺼낸다 —
+   치는 이름은 그대로 한국어다. short 면 밀려난 칸에 쓸 짧은 이름 */
+function placeName(names, parent, name, short = false) {
+  const en = LANG !== 'ko' && names && names[`${parent}/${name}`];
+  if (!en) return short ? shortAdmin(name) : adminLabel(name);
+  return short ? en.replace(/-(do|si)$/, '') : en;
+}
+/* 칸 글자 크기. 밀려난 칸은 짧은 이름으로 바꾸고 k 배로 키운다 — 칸이 1/d 로 줄어도
+   화면 글자는 k/d 배인 구역 칸 글자와 같아진다. 어느 칸이든 폭을 넘으면 폭에 맞춰 줄인다.
+   처음 재는 칸은 바로 맞춘다 — 화면에 들어서자마자 글자가 줄어드는 게 보이지 않게 */
+function asideTile(tile, on, k = 1) {
+  const span = tile.el.firstChild, text = on ? tile.short : tile.label;
+  if (span.textContent !== text) span.textContent = text;
+  if (!span.scrollWidth) return;   // 숨은 화면에서는 잴 수 없다
+  const f = Math.min(on ? k : 1, tile.el.clientWidth * .86 / span.scrollWidth);
+  const first = !tile.fitted;
+  tile.fitted = true;
+  if (tile.f.to === f && !first) return;
+  tile.f.to = f;
+  if (calm() || first) { tile.f.x = f; tile.f.v = 0; }
+}
+function paintTile(tile) {
+  tile.el.firstChild.style.transform = `scale(${tile.f.x.toFixed(4)})`;
+  tile.el.style.transform =
+    `translate3d(${tile.x.x.toFixed(2)}px,${tile.y.x.toFixed(2)}px,0) scale(${tile.s.x.toFixed(4)})`;
+  tile.el.style.opacity = tile.o.x.toFixed(3);
+}
+/* 줄인 움직임에서는 자리를 바로 옮기고 나타남·사라짐만 스민다 */
+function aimTile(tile, x, y, s, o, wait = 0, snap = false) {
+  if (!snap && tile.x.to === x && tile.y.to === y && tile.s.to === s && tile.o.to === o) return;
+  const still = snap || calm();
+  tile.el.inert = o === 0;
+  tile.o.to = o;
+  if (snap) { tile.o.x = o; tile.o.v = 0; }
+  tile.wait = still ? 0 : wait;
+  if (still && tile.gone) return;
+  [[tile.x, x], [tile.y, y], [tile.s, s]].forEach(([p, v]) => {
+    p.to = v;
+    if (still) { p.x = v; p.v = 0; }
   });
-  atlasRedraw = [];
-  const n = ++atlasGen;
-  const slug = ATLAS.stack[ATLAS.stack.length - 1].slug;
-  const geom = await loadGeom(slug);
-  if (n !== atlasGen) return;
-  ATLAS.slug = slug;
-  ATLAS.geom = geom;
-  ATLAS.idle = ATLAS.slug === 'seoul-gu' ? t('idleNested') : t('idleAdmin');
-  const plane = $('#atlasPlane'), name = $('#atlasName');
-  const head = $('#regions .head');
-  const here = ATLAS.stack[ATLAS.stack.length - 1];
-  head.textContent = here.name ? adminLabel(here.name) : t('regions');
-  const draw = () => {
-    const { svg, box, names } = atlasSvg(geom);
-    ATLAS.box = box;
-    plane.style.setProperty('--atlas-ar', (box.w / box.h).toFixed(3));
-    /* 판 크기는 격자 촘촘함에서 딴다 — 한 칸을 늘 비슷한 크기로 찍는다.
-       한국은 53줄이라 판이 화면을 넘어(밀 데가 생기고), 미국은 9줄짜리
-       그림글자라 한 화면에 다 들어온다. 못 박은 vh 로는 이 둘이 안 맞는다. */
-    plane.style.setProperty('--atlas-rows-h', Math.round(box.h / geom.cell * 44) + 'px');
-    plane.style.setProperty('--atlas-bw', box.w.toFixed(2));
-    plane.innerHTML = svg;
-    names.forEach(n => {
-      const el = document.createElement('span');
-      el.className = 'ar-name';
-      el.dataset.area = String(n.i);
-      n.lines.forEach((line, k) => {
-        if (k) el.append(document.createElement('br'));
-        el.append(line);
-      });
-      el.style.setProperty('--x', n.x.toFixed(2) + '%');
-      el.style.setProperty('--y', n.y.toFixed(2) + '%');
-      el.style.setProperty('--ns', n.ns.toFixed(2));
-      plane.appendChild(el);
-    });
-    atlasApplyCam();
-    atlasPaintPick();
-  };
-  REDRAW.push(draw); atlasRedraw.push(draw); draw();
-  if (ATLAS.pick) atlasTellCourse();
-  else name.textContent = ATLAS.idle;
+}
+function aimGrid(z, ax, ay) {
+  const still = calm(), flat = Math.abs(GZ.z.x - 1) < 1e-3;
+  [[GZ.z, z, still], [GZ.ax, ax, still || flat], [GZ.ay, ay, still || flat]].forEach(([p, v, now]) => {
+    p.to = v;
+    if (now) { p.x = v; p.v = 0; }
+  });
+}
+/* 무늬 원점을 붙잡은 점 A 에 두고 칸을 z 배로 — 선이 A 쪽으로 모인다.
+   A 는 늘 큰 칸의 모서리라 z = 1/d 에서 선이 작은 칸 격자와 딱 겹친다 */
+function courseGridArgs(cw, ch) {
+  const z = $('#regions').classList.contains('on') ? GZ.z.x : 1;
+  return [GZ.ax.x * (1 - z), GZ.ay.x * (1 - z), cw * z, ch * z];
 }
 
-async function renderAtlas() {
+let courseRaf = 0, courseT = 0;
+function courseKick() {
+  if (courseRaf) return;
+  courseT = performance.now();
+  courseRaf = requestAnimationFrame(courseFrame);
+}
+function courseFrame(now) {
+  /* rAF 시각은 그 프레임의 시작이라 방금 잰 courseT 보다 앞설 수 있다 — 뒤로 감지 않게 0 에서 자른다 */
+  const dt = Math.max(0, Math.min(.034, (now - courseT) / 1000));
+  courseT = now;
+  let busy = false;
+  for (const p of Object.values(GZ)) busy = spStep(p, dt) || busy;
+  COURSE.tiles = COURSE.tiles.filter(tile => {
+    if (tile.wait > 0) {
+      tile.wait -= dt;
+      busy = true;
+      /* 차례를 기다리는 구역은 움직이는 부모 칸에 붙어 있다가 거기서 떠난다 */
+      if (!tile.gone) ['x', 'y', 's'].forEach(k => { tile[k].x = tile.parent[k].x; tile[k].v = 0; });
+    } else {
+      for (const p of [tile.x, tile.y, tile.s, tile.o, tile.f]) busy = spStep(p, dt) || busy;
+    }
+    if (tile.gone && tile.o.to === 0 && tile.o.x === 0) { tile.el.remove(); return false; }
+    paintTile(tile);
+    return true;
+  });
+  if ($('#regions').classList.contains('on')) {
+    const { cw, ch } = decoGrid();
+    applyGrid(...courseGridArgs(cw, ch));
+  }
+  courseRaf = busy ? requestAnimationFrame(courseFrame) : 0;
+}
+
+/* 칸마다 목표 자리를 새로 잡는다. 목표가 그대로면 스프링은 건드리지 않는다 */
+function planCourses(snap = false) {
+  const tops = COURSE.tiles.filter(tile => !tile.kid);
+  if (!tops.length) return;
+  const { cw, ch, cols, rows } = decoGrid();
+  const coarse = tile => courseCell(tops.indexOf(tile), tops.length, cols, rows, KR_CELLS[tile.slug]);
+  const fold = (list, stepMax) => {
+    const step = Math.min(stepMax, .3 / Math.max(1, list.length));
+    list.sort((a, b) => b.order - a.order).forEach((tile, i) =>
+      aimTile(tile, tile.parent.x.to, tile.parent.y.to, tile.parent.s.to, 0, i * step));
+  };
+  if (!OPEN) {
+    tops.forEach(tile => {
+      const [c, r] = coarse(tile);
+      aimTile(tile, c * cw, r * ch, 1, 1, 0, snap);
+      asideTile(tile, false);
+    });
+    fold(COURSE.tiles.filter(tile => tile.gone), .02);
+    aimGrid(1, GZ.ax.to, GZ.ay.to);
+    courseKick();
+    return;
+  }
+  const { tile: host, ar, kids } = OPEN;
+  /* 구역 칸은 시작 칸과 같은 큰 칸이 기본이다(k = d). 덩이가 화면에 안 들면 한 단씩 줄인다.
+     d 는 격자를 몇 배 촘촘히 할지, k 는 구역 칸이 작은 칸 몇 개 폭인지. 둘레 시·도는 작은 칸 하나 */
+  const n = kids.length + 1, area = Math.ceil(n * 1.15);
+  let d, k, bw, bh;
+  for ([d, k] of [[2, 2], [3, 2], [2, 1], [3, 1], [4, 1]]) {
+    const maxW = Math.floor((cols * d - 2 * d) / k);   // 양옆에 시·도 자리를 큰 칸 하나씩 남긴다
+    const maxH = Math.floor((rows - 1) * d / k);
+    bh = Math.min(maxH, Math.max(2, Math.round(Math.sqrt(area / ar))));
+    bw = Math.max(2, Math.ceil(area / bh));
+    if (bw <= maxW) break;
+  }
+  const F = cols * d, R = rows * d, fw = cw / d, fh = ch / d;
+  const taken = new Set();
+  const id = (c, r) => c + ',' + r;
+  const block = (c0, r0, w, h) => {
+    for (let c = c0; c < c0 + w; c++) for (let r = r0; r < r0 + h; r++) taken.add(id(c, r));
+  };
+  const free = (c, r, size) => {
+    for (let dc = 0; dc < size; dc++) for (let dr = 0; dr < size; dr++) {
+      const x = c + dc, y = r + dr;
+      if (x < 0 || y < 0 || x >= F || y >= R || taken.has(id(x, y))) return false;
+    }
+    return true;
+  };
+  /* 머리글 줄, 시작 칸, 아래 왼쪽 이름 줄은 비워 둔다 */
+  block(0, 0, F, d);
+  const sb = $('#courseStart').style;
+  block(Number(sb.getPropertyValue('--btn-col')) * d, Number(sb.getPropertyValue('--btn-row')) * d, d, d);
+  block(0, (rows - 1) * d, 2 * d, d);
+  /* (c, r) 에서 가장 가까운 빈자리를 size 칸 걸음으로 찾는다 — 구역 칸끼리 줄이 맞는다.
+     away 가 있으면 같은 거리에서 그 점에서 먼 쪽을 고른다.
+     ponytail: 자리마다 고리를 넓혀 가며 훑는다 — 칸이 수천 개가 되면 빈칸 목록을 따로 둔다 */
+  const near = (c, r, away, size = 1) => {
+    for (let ring = 0; ring * size < F + R; ring++) {
+      let best = null, score = Infinity;
+      for (let i = -ring; i <= ring; i++) for (let j = -ring; j <= ring; j++) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+        const x = c + i * size, y = r + j * size;
+        if (!free(x, y, size)) continue;
+        const sc = i * i + j * j - (away ? .01 * Math.hypot(x - away[0], y - away[1]) : 0);
+        if (sc < score) { score = sc; best = [x, y]; }
+      }
+      if (best) { block(best[0], best[1], size, size); return best; }
+    }
+    return [c, r];
+  };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const [hc, hr] = coarse(host);
+  const x0 = clamp(hc * d - (bw >> 1) * k, 0, F - bw * k);
+  const y0 = clamp(hr * d - (bh >> 1) * k, d, R - bh * k);
+  const cx = x0 + (bw >> 1) * k, cy = y0 + (bh >> 1) * k;
+  /* 부모 칸이 가운데, 구역은 지도에서 제 쪽 칸으로. 가운데 가까운 구역이 먼저 자리를 잡는다 */
+  const place = new Map([[host, near(cx, cy, null, k)]]);
+  kids.map(tile => [tile, x0 + Math.round(tile.u * (bw - 1)) * k, y0 + Math.round(tile.v * (bh - 1)) * k])
+    .sort((p, q) => Math.hypot(p[1] - cx, p[2] - cy) - Math.hypot(q[1] - cx, q[2] - cy))
+    .forEach(([tile, c, r]) => place.set(tile, near(c, r, null, k)));
+  const cells = [...place.values()];
+  const zx0 = Math.min(...cells.map(p => p[0])) - 1, zx1 = Math.max(...cells.map(p => p[0])) + k;
+  const zy0 = Math.min(...cells.map(p => p[1])) - 1, zy1 = Math.max(...cells.map(p => p[1])) + k;
+  block(zx0, zy0, zx1 - zx0 + 1, zy1 - zy0 + 1);
+  const mx = (zx0 + zx1) / 2, my = (zy0 + zy1) / 2;
+  /* 둘레 시·도는 남는 칸에 골고루 흩는다. 덩이에서도, 이미 고른 자리에서도 가장 먼 칸을
+     하나씩 고르고(maximin), 원래 지도 자리에 가까운 짝끼리 먼저 잇는다 */
+  const others = tops.filter(tile => tile !== host);
+  const open = [];
+  for (let r = 0; r < R; r++) for (let c = 0; c < F; c++) if (free(c, r, 1)) open.push([c, r]);
+  const gap = open.map(([c, r]) => Math.hypot(Math.max(zx0 - c, 0, c - zx1), Math.max(zy0 - r, 0, r - zy1)));
+  const spots = [];
+  while (spots.length < Math.min(others.length, open.length)) {
+    let best = 0;
+    gap.forEach((g, i) => { if (g > gap[best]) best = i; });
+    const [sc, sr] = open[best];
+    spots.push(open[best]);
+    open.forEach(([c, r], i) => { gap[i] = Math.min(gap[i], Math.hypot(c - sc, r - sr)); });
+  }
+  spots.forEach(([c, r]) => block(c, r, 1, 1));
+  const pairs = [];
+  others.forEach(tile => {
+    const [c, r] = coarse(tile);
+    spots.forEach((p, j) => pairs.push([Math.hypot(c * d - p[0], r * d - p[1]), tile, j]));
+  });
+  pairs.sort((p, q) => p[0] - q[0]);
+  const at = new Map(), used = new Set();
+  for (const [, tile, j] of pairs) {
+    if (at.has(tile) || used.has(j)) continue;
+    at.set(tile, spots[j]);
+    used.add(j);
+  }
+  others.forEach(tile => {
+    const [c, r] = at.get(tile) || near(...coarse(tile).map(v => v * d), [mx, my]);   // 칸이 모자랄 때만
+    aimTile(tile, c * fw, r * fh, 1 / d, 1);
+    asideTile(tile, true, k);
+  });
+  const [pc, pr] = place.get(host);
+  aimTile(host, pc * fw, pr * fh, k / d, 1);
+  asideTile(host, false);
+  /* 하나씩 번진다 — 부모 칸에서 가까운 구역부터. 전체가 .6초를 넘지 않게 간격을 죈다 */
+  const step = Math.min(.035, .6 / kids.length);
+  kids.map(tile => [tile, place.get(tile)])
+    .sort((p, q) => Math.hypot(p[1][0] - pc, p[1][1] - pr) - Math.hypot(q[1][0] - pc, q[1][1] - pr))
+    .forEach(([tile, [c, r]], i) => {
+      tile.order = i;
+      aimTile(tile, c * fw, r * fh, k / d, 1, i * step);
+      asideTile(tile, false);
+    });
+  fold(COURSE.tiles.filter(tile => tile.gone), .02);
+  aimGrid(1 / d, hc * cw, hr * ch);
+  courseKick();
+}
+
+async function tellPick() {
+  const name = $('#courseName'), tile = PICK;
+  if (!tile) { name.textContent = t('pickCourse'); return; }
+  try {
+    const course = await loadCourse(tile.slug);
+    /* 제 코스가 없는 구역은 부모 코스를 친다 — 무엇을 치게 되는지 같이 적는다.
+       코스 제목은 한국어로만 적혀 있어, 다른 화면 말에서는 칸 이름과 곳 수로 짓는다 */
+    const owner = tile.kid && tile.slug === tile.parent.slug ? tile.parent : tile;
+    const label = LANG === 'ko' ? courseLabel(course)
+      : `${owner.label} · ${t('places', { n: course.items.length })}`;
+    if (PICK === tile) name.textContent = owner === tile ? label : `${tile.label} · ${label}`;
+  } catch {}
+}
+function pickTile(tile) {
+  PICK = tile;
+  COURSE.tiles.forEach(x => x.el.setAttribute('aria-pressed', String(x === tile)));
+  tellPick();
+}
+/* 접히는 구역을 고르고 있었거나 초점이 거기 있었으면 부모 칸으로 돌린다 */
+function foldKids() {
+  COURSE.tiles.forEach(tile => {
+    if (tile.kid && !tile.gone) { tile.gone = true; tile.el.classList.add('gone'); }
+  });
+  if (!OPEN) return;
+  OPEN.tile.el.setAttribute('aria-expanded', 'false');
+  if (PICK && PICK.gone) pickTile(OPEN.tile);
+  if (OPEN.kids.some(tile => tile.el.contains(document.activeElement))) OPEN.tile.el.focus();
+}
+function closeCourse() {
+  openGen++;
+  if (!OPEN) return false;
+  foldKids();
+  OPEN = null;
+  planCourses();
+  return true;
+}
+async function openCourse(host) {
+  if (host.kid || host.gone) return;
+  if (!host.el.hasAttribute('aria-expanded') || (OPEN && OPEN.tile === host)) { closeCourse(); return; }
+  const n = ++openGen;
+  let geom;
+  try { geom = await loadGeom(host.slug); } catch { return; }
+  if (n !== openGen) return;
+  foldKids();
+  const its = geom.items, xs = its.map(it => it.c[0]), ys = its.map(it => it.c[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  const w = Math.max(...xs) - x0 || 1, h = Math.max(...ys) - y0 || 1;
+  const kids = its.map(it => {
+    const own = COURSE.tree && COURSE.tree.children[`${host.slug}/${it.name}`];
+    const tile = makeTile(LANG === 'ko' ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name),
+                          own || host.slug, true);
+    tile.el.setAttribute('aria-label', placeName(COURSE.names, host.slug, it.name));   // 읽을 때는 온 이름
+    Object.assign(tile, { parent: host, u: (it.c[0] - x0) / w, v: (it.c[1] - y0) / h });
+    ['x', 'y', 's'].forEach(k => { tile[k].x = tile[k].to = host[k].x; });
+    tile.o.x = tile.o.to = 0;
+    tile.el.inert = true;
+    paintTile(tile);
+    return tile;
+  });
+  host.el.after(...kids.map(tile => tile.el));
+  COURSE.tiles.push(...kids);
+  host.el.setAttribute('aria-expanded', 'true');
+  OPEN = { tile: host, ar: w / h, kids };   // 덩이 크기는 화면에 맞춰 planCourses 가 잡는다
+  planCourses();
+}
+
+async function renderCourses() {
   const pack = WORLD.countries.find(c => c.id === COUNTRY) || WORLD.countries[0];
   if (!pack) return;
-  const slug = `${pack.id.toLowerCase()}-admin`;
-  /* 한국만 시·도 아래에 또 판이 있다(kr-tree). 나머지 나라는 행정구역 한 벌로 끝난다 */
-  const tree = pack.id === 'KR' ? await grab('data/kr-tree.json') : null;
-  ATLAS = { tree, stack: [{ slug, name: '' }], idle: t('idleAdmin'),
-    z: 1, panX: 0, panY: 0, aim: { z: 1, x: 0, y: 0 },
-    pick: null, busy: false, flyGen: 0, hotI: -1, camRaf: 0, tweenRaf: 0, want: null };
-  await paintAtlas();
-  wireAtlas();
+  /* 한국만 층 표와 로마자 표가 있다 */
+  const [tree, names] = pack.id === 'KR'
+    ? await Promise.all([grab('data/kr-tree.json'), grab('data/kr-names.json')]) : [null, null];
+  const root = `${pack.id.toLowerCase()}-admin`;
+  openGen++;
+  OPEN = null;
+  const was = PICK && PICK.slug;
+  COURSE = { tree, names, root, tiles: courseList(root, tree).map(it => {
+    const tile = makeTile(it.name ? placeName(names, root, it.name) : countryName(pack.id), it.slug, false);
+    if (it.name) tile.short = placeName(names, root, it.name, true);
+    if (tree && it.slug !== root) tile.el.setAttribute('aria-expanded', 'false');
+    return tile;
+  }) };
+  $('#courseBtns').replaceChildren(...COURSE.tiles.map(tile => tile.el));
+  pickTile(COURSE.tiles.find(tile => tile.slug === was) || null);
+  placeGridBtns();
+  planCourses(true);
+  COURSE.tiles.forEach(paintTile);
 }
-
-function atlasBack() {
-  if ($('#atlasOv') && !$('#atlasOv').hidden) { hideAtlasOv(); return; }
-  if (ATLAS && ATLAS.stack.length > 1) { atlasLeave(); return; }
-  go('title');
-}
-
-function closeAtlas() {
-  if (!$('#regions').classList.contains('on')) return false;
-  if ($('#atlasOv') && !$('#atlasOv').hidden) { hideAtlasOv(); return true; }
-  if (ATLAS && ATLAS.stack.length > 1) { atlasLeave(); return true; }
-  return false;
-}
-
-function wireAtlas() {
-  const atlas = $('#atlas'), plane = $('#atlasPlane'), name = $('#atlasName');
-  if (atlas.dataset.wired) return;
-  atlas.dataset.wired = '1';
-  /* 구역 이름 17개를 다 띄우면 서로 밟는다 — 짚는 곳만 아래 한 줄로 읽는다 */
-  const hot = i => {
-    plane.querySelectorAll('.ar-name.on').forEach(el => el.classList.remove('on'));
-    if (i == null) return;
-    const el = plane.querySelector(`.ar-name[data-area="${i}"]`);
-    if (el) el.classList.add('on');
-  };
-  const tell = g => {
-    if (g) {
-      name.textContent = adminLabel(g.getAttribute('aria-label') || '');
-      hot(g.dataset.area);
-      return;
-    }
-    hot(null);
-    if (ATLAS && ATLAS.pick) atlasTellCourse();
-    else name.textContent = (ATLAS && ATLAS.idle) || '';
-  };
-  /* 커서가 카메라다 — 커서가 간 쪽 땅이 앞으로 오도록 판을 반대로 민다.
-     따라오는 맛은 CSS transition 이 낸다. rAF 루프를 따로 돌리지 않는다. */
-  const aim = (mx, my) => {
-    atlas.style.setProperty('--mx', mx.toFixed(3));
-    atlas.style.setProperty('--my', my.toFixed(3));
-  };
-  let drag = null, pinch = 0;
-  const zoomAt = (factor, cx, cy) => {
-    if (!ATLAS) return;
-    if (ATLAS.busy) {
-      ATLAS.want = factor < 1 ? 'out' : 'in';
-      return;
-    }
-    if (!ATLAS.aim) ATLAS.aim = { z: ATLAS.z || 1, x: ATLAS.panX || 0, y: ATLAS.panY || 0 };
-    const z0 = ATLAS.aim.z || 1;
-    let z1 = Math.min(4.8, Math.max(.98, z0 * factor));
-    if (z1 < 1) {
-      atlasRise();
-      return;
-    }
-    const keep = atlasPanToKeep(cx, cy, z1);
-    const [ax, ay] = atlasClampXY(z1, keep.x, keep.y);
-    ATLAS.aim.x = ax; ATLAS.aim.y = ay;
-    ATLAS.aim.z = z1;
-    ATLAS.z = z1; ATLAS.panX = ax; ATLAS.panY = ay;
-    if (z1 > 1.02) aim(0, 0);
-    atlasApplyCam();
-    const hit = document.elementFromPoint(cx, cy);
-    const g = hit && hit.closest ? hit.closest('.gu') : null;
-    ATLAS.hotI = g ? +g.dataset.area : -1;
-    if (ATLAS.hotI >= 0 && ATLAS.geom && ATLAS.geom.items[ATLAS.hotI]) {
-      const sl = atlasChild(ATLAS.tree, ATLAS.slug, ATLAS.geom.items[ATLAS.hotI].name);
-      if (sl && z1 > 1.55) loadGeom(sl);
-    }
-    atlasMaybeDive();
-  };
-  atlas.addEventListener('wheel', e => {
-    e.preventDefault();
-    zoomAt(Math.exp(-e.deltaY * .0018), e.clientX, e.clientY);
-  }, { passive: false });
-  atlas.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-      const a = e.touches[0], b = e.touches[1];
-      pinch = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    }
-  }, { passive: true });
-  atlas.addEventListener('touchmove', e => {
-    if (e.touches.length !== 2 || !pinch) return;
-    e.preventDefault();
-    const a = e.touches[0], b = e.touches[1];
-    const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    const mx = (a.clientX + b.clientX) / 2, my = (a.clientY + b.clientY) / 2;
-    zoomAt(d / pinch, mx, my);
-    pinch = d;
-  }, { passive: false });
-  atlas.addEventListener('touchend', () => { pinch = 0; });
-  atlas.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'touch' && pinch) return;
-    drag = { x: e.clientX, y: e.clientY, px: ATLAS.panX || 0, py: ATLAS.panY || 0, moved: false, id: e.pointerId };
-  });
-  atlas.addEventListener('pointermove', e => {
-    if (drag) {
-      const w = plane.offsetWidth || 1, h = plane.offsetHeight || 1;
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (dx * dx + dy * dy > 25) drag.moved = true;
-      const tilt = atlasTiltOf(ATLAS.z || 1) * Math.PI / 180;
-      const cos = Math.max(.38, Math.cos(tilt));
-      ATLAS.panX = ATLAS.aim.x = drag.px + dx / w * 100;
-      ATLAS.panY = ATLAS.aim.y = drag.py + dy / (h * cos) * 100;
-      atlasApplyCam();
-      return;
-    }
-    if ((ATLAS.z || 1) > 1.06) return;
-    const b = atlas.getBoundingClientRect();
-    aim(.5 - (e.clientX - b.left) / b.width, .5 - (e.clientY - b.top) / b.height);
-  });
-  atlas.addEventListener('pointerup', () => { drag = null; });
-  atlas.addEventListener('pointercancel', () => { drag = null; });
-  atlas.addEventListener('pointerleave', () => { if ((ATLAS.z || 1) <= 1.06) aim(0, 0); });
-  plane.addEventListener('pointerover', e => tell(e.target.closest('.gu')));
-  plane.addEventListener('pointerout', () => tell(null));
-  /* SVG 묶음은 초점을 받아도 focus 를 안 쏜다. focusin 은 위로 올라오므로 그걸 쓴다 —
-     키보드로 옮긴 초점도 카메라가 따라가야 마우스와 같은 화면을 본다 */
-  plane.addEventListener('focusin', e => {
-    const g = e.target.closest && e.target.closest('.gu');
-    if (!g || !ATLAS) return;
-    const [cx, cy] = ATLAS.geom.items[+g.dataset.area].c;
-    const b = ATLAS.box;
-    aim(.5 - (cx - b.x) / b.w, .5 - (cy - b.y) / b.h);
-    tell(g);
-  });
-  plane.addEventListener('click', e => {
-    if (drag && drag.moved) return;
-    const g = e.target.closest('.gu');
-    if (!g || !ATLAS) return;
-    atlasPick(+g.dataset.area);
-  });
-  /* SVG 묶음은 버튼이 아니라 Enter·Space 가 저절로 눌리지 않는다 */
-  plane.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const g = e.target.closest && e.target.closest('.gu');
-    if (!g) return;
-    e.preventDefault();
-    atlasPick(+g.dataset.area);
-  });
-  $('#atlasBack').onclick = atlasBack;
-  const goPlay = $('#atlasStart');
-  if (goPlay) goPlay.onclick = () => {
-    const slug = atlasPlaySlug();
-    if (slug) start(slug);
-  };
-}
+/* 시작 칸을 끌어 옮긴 뒤의 click 은 wireGridBtn 이 위로 못 올라가게 막는다 —
+   그래서 버튼에 직접 걸지 않고 문서에서 받는다 */
+document.addEventListener('click', e => {
+  const b = e.target.closest('#courseBtns .grid-btn');
+  const tile = b && TILE.get(b);
+  if (tile) {
+    /* 키보드로 누른 click 은 detail 이 0 이다 — 고른 칸을 한 번 더 누르면 펴고 접는다 */
+    if (e.detail === 0 && PICK === tile) openCourse(tile);
+    else pickTile(tile);
+  }
+  if (e.target.closest('#courseStart') && PICK) start(PICK.slug);
+});
+document.addEventListener('dblclick', e => {
+  const b = e.target.closest('#courseBtns .grid-btn');
+  if (b && TILE.get(b)) openCourse(TILE.get(b));
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#regions').classList.contains('on')) closeCourse();
+});
 
 async function renderRegions() {
   regionRedraw.forEach(f => {
@@ -2012,7 +1641,7 @@ async function showCountry(id) {
   COUNTRY = (isDev() && haveCountry(id)) ? id : resolveCountry();
   const pack = WORLD.countries.find(c => c.id === COUNTRY) || WORLD.countries[0];
   paintRegion();
-  await renderAtlas();
+  await renderCourses();
 }
 
 async function boot() {
@@ -2044,7 +1673,7 @@ async function boot() {
       opt.lang = r.value; saveOpt();
       LANG = resolveLang();
       paintUI(fillLangPick);
-      fbPlaceholder(); paintRegion(); renderAtlas();
+      fbPlaceholder(); paintRegion(); renderCourses();
     });
   }
   const regionBox = $('#optRegion');
@@ -2841,25 +2470,33 @@ if (location.search.includes('rt=1')) {
 
   const tree = { children: {
     'kr-admin/서울특별시': 'seoul-gu', 'kr-admin/세종특별자치시': null,
-    'seoul-gu/강서구': 'gangseo-dong', 'busan-sgg/강서구': null,
+    'seoul-gu/강서구': 'gangseo-dong',
   } };
-  console.assert(atlasChild(tree, 'kr-admin', '서울특별시') === 'seoul-gu', '서울은 구 판으로');
-  console.assert(atlasChild(tree, 'kr-admin', '세종특별자치시') === null, '세종은 코스가 없다');
-  console.assert(atlasDeeper(tree, 'seoul-gu') === true, '서울은 구 판으로 내려간다');
-  console.assert(atlasDeeper(tree, 'busan-sgg') === true, '부산도 시군구 판으로 내려간다');
-  console.assert(atlasDeeper(tree, null) === false, '세종처럼 자식이 없으면 내려가지 않는다');
-  console.assert(atlasChild(null, 'us-admin', 'California') === null, 'tree 없으면 구역 코스 없음');
-  console.assert(unitRank('경기도') === 0 && unitRank('강남구') === 1, '도<구');
-  console.assert(unitRank('울릉군') === 2 && unitRank('한솔동') === 3, '군<동');
-  console.assert(unitRank('금남면') === 4 && unitRank('조치원읍') === 5, '면<읍');
-  console.assert(atlasPlaySlug({ pick: { slug: 'sejong-emd' }, slug: 'kr-admin' }) === 'sejong-emd', '고른 코스');
-  console.assert(atlasPlaySlug({ pick: null, slug: 'kr-admin' }) === 'kr-admin', '안 고르면 지금 판');
-  console.assert(Math.abs(atlasEase(0)) < 1e-5, 'ease 시작은 0');
-  console.assert(Math.abs(atlasEase(1) - 1) < 1e-3, 'ease 끝은 1');
-  console.assert(atlasEase(.5) > .15 && atlasEase(.5) < .85, 'ease 중간은 가운데');
-  console.assert(Math.abs(atlasZoomPan(0, -.3, 1, 2) - 30) < 1e-6, '왼쪽을 키우면 판이 오른쪽으로 간다');
-  console.assert(Math.abs(atlasZoomPan(0, .25, 1, 2) + 25) < 1e-6, '오른쪽을 키우면 판이 왼쪽으로 간다');
-  console.assert(Math.abs(atlasZoomPan(10, 0, 1, 2) - 10) < 1e-6, '한가운데는 pan 이 그대로다');
+  console.assert(courseList('kr-admin', tree).map(c => c.slug).join() === 'kr-admin,seoul-gu',
+    '나라 코스와 뿌리 바로 아래 코스만, 빈 자리는 뺀다');
+  console.assert(courseList('us-admin', null).length === 1, 'tree 없으면 나라 코스 하나');
+  console.assert(courseCell(0, 18, 9, 6).join() === '1,1', '코스 덩이는 가운데서 시작');
+  console.assert(courseCell(17, 18, 9, 6).join() === '6,3', '한 줄 여섯 칸씩 내려간다');
+  console.assert(courseCell(0, 18, 9, 6, KR_CELLS['kr-admin']).join() === '6,1', '자리표가 있으면 그 자리');
+  console.assert(courseCell(0, 18, 9, 6, KR_CELLS['jeju-sgg']).join() === '2,5', '제주는 덩이 맨 아래');
+  console.assert(['서울특별시', '세종특별자치시', '경기도', '강원도', '제주특별자치도'].map(shortAdmin).join()
+    === '서울,세종,경기,강원,제주', '밀려난 칸 이름은 시·도 접미를 뗀다');
+  console.assert(['충청북도', '충청남도', '전라북도', '경상남도'].map(shortAdmin).join()
+    === '충북,충남,전북,경남', '남북으로 갈린 도는 첫 글자와 방위');
+  console.assert(['고양시일산서구', '시흥시', '연천군', '의정부시', '포항시남구', '중구', '조치원읍'].map(kidName).join()
+    === '고양일산서구,시흥,연천,의정부,포항남구,중구,조치원읍', '구역 칸은 시·군을 떼고 구·읍·면·동은 둔다');
+  const langWas = LANG, roman = { 'kr-admin/충청북도': 'Chungcheongbuk-do' };
+  LANG = 'vi';
+  console.assert(placeName(roman, 'kr-admin', '충청북도') === 'Chungcheongbuk-do', '한국어 밖에서는 로마자 표');
+  console.assert(placeName(roman, 'kr-admin', '충청북도', true) === 'Chungcheongbuk', '짧은 로마자는 -do 를 뗀다');
+  console.assert(placeName(null, 'kr-admin', '경기도') === '경기도', '표가 없으면 한국어로 떨어진다');
+  LANG = 'ko';
+  console.assert(placeName(roman, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');
+  LANG = langWas;
+  const spr = sp(0, .05); spr.to = 100;
+  let peak = 0;
+  for (let i = 0; i < 90; i++) { spStep(spr, 1 / 60); peak = Math.max(peak, spr.x); }
+  console.assert(spr.x === 100 && peak <= 100, '임계 감쇠 스프링은 넘치지 않고 1.5초 안에 멈춘다');
 
   const fbu = fbIssue({ kind: 'bug', body: '가양1동이 오답으로 처리됨', v: '0.38',
                         href: 'https://regiontype.com/', ua: 'UA' });

@@ -8,25 +8,25 @@ model: opus
 너는 릴리스를 닫는다. **기능 코드를 고치지 않는다.** `VER` 한 줄과 git 만 만진다.
 
 ## 버전 규칙 (이 저장소의 약속)
-`app.js` 의 `const VER` 은 캐시 무효화용이다. 고칠 때마다 **1씩 올린다** — `0.69 → 0.70`.
-그 **소수 첫째 자리**가 곧 릴리스의 패치 번호다. `VER=0.70` → `v0.3.7`.
+릴리스 이름은 `vA.B.C` 다. A(대규모)·B(자잘한 변경)는 바뀐 것의 성격으로 사람이 고르고,
+**C 는 `VER` 에서 점을 뺀 숫자다** — `VER = '1.45'` → `v0.4.145`. A 를 올리면 B 는 0.
+`app.js` 의 `const VER` 은 고칠 때마다 `0.01` 씩 올린다(`1.45 → 1.46`).
 
 - `?v=` 쿼리스트링은 줄이지 않는다. 줄이면 예전 번호와 겹쳐 캐시가 안 갈린다.
-- 설정 화면의 빌드 번호는 `VER` 에서 직접 읽으므로 따로 손댈 곳이 없다.
+- 설정 화면의 빌드 번호와 C 자리는 `VER` 에서 직접 읽으므로 따로 손댈 곳이 없다.
 - README 의 버전 표기와 `VER` 이 어긋나지 않는지 확인한다.
 
 ## 커밋
 - **VER 을 올릴 때마다 사용자에게 커밋 허가를 먼저 묻는다.** 허가 없이 커밋하지 않는다.
 - 메시지는 **영어** 한 줄, 평서형. 한국어로 쓰지 않는다:
-  `v0.97: Fade the settings language list with a top and bottom blur.`
-  `v0.3.7: Fix light-theme type colors, the back icon, and the mobile copy.`
+  `v0.4.145: Expand a province cell into its districts on double-click.`
 - 커밋 메시지 끝에 붙인다:
   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
 
 ## 배포 (틀리기 쉬운 곳이다)
-**GitHub Pages 소스는 `main` 이 아니라 작업 브랜치다.** 지금은 `static-0.3.7` 계열.
-릴리스마다 새 브랜치(`static-0.3.X`)를 파고 Pages 소스도 거기로 옮긴 다음,
-**소스를 옮긴 뒤에** 옛 브랜치를 지운다. 순서를 바꾸면 사이트가 잠깐 죽는다.
+**GitHub Pages 소스는 `main` 이 아니라 작업 브랜치다.**
+릴리스마다 새 브랜치 `static-A.B.C`(`static-0.4.145`)를 파서 `origin` 에 푸시하고,
+Pages 소스를 옮긴 **뒤에** 옛 브랜치를 지운다. 순서를 바꾸면 사이트가 잠깐 죽는다.
 
 `push`, 브랜치 삭제, Pages 설정 변경은 **전부 사용자 허가를 받고 한다.**
 Pages 소스 변경은 GitHub 웹 설정이라 네가 못 한다 — 사용자에게 무엇을 눌러야 하는지 알려준다.
