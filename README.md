@@ -158,7 +158,7 @@ The yellow dot on the title logo is the feedback button. Hover or tab to it and 
 The destination is a single constant at the top of `app.js`.
 
     const FEEDBACK_URL = ''       // if set, POST JSON here
-    const FEEDBACK_REPO = 'pistolinkr/regiontype.com'
+    const FEEDBACK_REPO = 'g-gearservice/regiontype.com'
 
 The body is
 
@@ -178,6 +178,8 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
     wrangler deploy
 
 Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
+
+**Do not put Cloudflare Access in front of this Worker.** If `rt-feedback.*.workers.dev` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
 
     node relay/test.mjs      checks that one issue and one score row are filtered correctly
 
@@ -403,7 +405,7 @@ Legal-dong / same-name mapping, location mode, server-side ranking, a course edi
 去向由 `app.js` 顶部一个常量决定。
 
     const FEEDBACK_URL = ''       // 填了就 POST JSON 到这里
-    const FEEDBACK_REPO = 'pistolinkr/regiontype.com'
+    const FEEDBACK_REPO = 'g-gearservice/regiontype.com'
 
 正文是
 
@@ -648,7 +650,7 @@ IP 只用于限速窗口，不存储。D1 里只留课程、时间、`who`、名
 送り先は `app.js` 先頭の定数ひとつ。
 
     const FEEDBACK_URL = ''       // 入れるとここに JSON を POST
-    const FEEDBACK_REPO = 'pistolinkr/regiontype.com'
+    const FEEDBACK_REPO = 'g-gearservice/regiontype.com'
 
 本体は
 
@@ -893,7 +895,7 @@ IP はレート制限の窓にだけ使い、保存しない。D1 に残るの�
 गंतव्य `app.js` के ऊपर एक स्थिरांक है।
 
     const FEEDBACK_URL = ''       // सेट हो तो JSON यहाँ POST
-    const FEEDBACK_REPO = 'pistolinkr/regiontype.com'
+    const FEEDBACK_REPO = 'g-gearservice/regiontype.com'
 
 शरीर है
 
