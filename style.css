@@ -151,6 +151,15 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* ── 코스 고르기 — 홈과 같은 격자 한 칸 버튼 ─────────── */
 #regions{overflow:hidden}
 #regions .screen-head{position:relative;z-index:2}
+/* 머리글은 나라 코스 버튼이다. 아무 칸도 안 고른 동안(시작하면 나라 코스) 브랜드 색과
+   밑줄로 켜 둔다 — 색만으로 가르지 않는다. 큰 글자라도 --accent 는 바탕과 대비가 모자라
+   글자용 --accent-text 를 쓴다 */
+#coursePick{font:inherit;letter-spacing:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+#coursePick[aria-pressed="true"]{
+  color:var(--accent-text);
+  text-decoration:underline;text-decoration-thickness:.08em;text-underline-offset:.14em;
+}
+#coursePick:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
 .course-name{
   position:absolute;left:var(--screen-pad-x);bottom:var(--screen-pad-y);
   margin:0;z-index:2;color:var(--ink-soft);font-weight:700;

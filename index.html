@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=1.45">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.45">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.45">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=1.50">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.50">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.50">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=1.45">
+<link rel="stylesheet" href="style.css?v=1.50">
 </head>
 <body>
 
@@ -81,7 +81,7 @@
 <section id="regions" class="screen">
   <div class="screen-head">
     <button class="back" data-go="title" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
-    <h2 class="head" data-i18n="regions">지역</h2>
+    <h2 class="head"><button type="button" id="coursePick" aria-pressed="true">대한민국</button></h2>
   </div>
   <!-- 코스마다 격자 한 칸 버튼. 칸은 app.js 의 renderCourses 가 채운다 -->
   <div id="courseBtns" role="group" data-i18n-aria="pickCourse" aria-label="코스 고르기"></div>
@@ -305,6 +305,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=1.45"></script>
+<script src="app.js?v=1.50"></script>
 </body>
 </html>

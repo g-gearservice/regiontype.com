@@ -1,6 +1,8 @@
 name = "rt-feedback"
 main = "worker.mjs"
 compatibility_date = "2026-08-01"
+# Public API — Cloudflare Access on workers.dev breaks browser preflight (OPTIONS 403).
+# Remove rt-feedback.*.workers.dev from Zero Trust or add a Bypass policy for /.
 
 # wrangler d1 create rt-board 가 찍어주는 id 를 여기 적는다
 [[d1_databases]]
@@ -30,3 +32,14 @@ namespace_id = "1003"
   [ratelimits.simple]
   limit = 10
   period = 60
+
+[[routes]]
+pattern = "feedback.regiontype.com"
+zone_name = "regiontype.com"
+custom_domain = true
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true

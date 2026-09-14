@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.45';
+const VER = '1.50';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -351,7 +351,7 @@ function titleMenuCell(slot, cols, rows) {
 }
 /* 대한민국 코스 칸의 기본 자리. 지도 모양을 본뜬 5×5 덩이 안의 [열, 줄] */
 const KR_CELLS = {
-  'seoul-gu': [0, 0], 'gyeonggi-sgg': [1, 0], 'gangwon-sgg': [3, 0], 'kr-admin': [4, 0],
+  'seoul-gu': [0, 0], 'gyeonggi-sgg': [1, 0], 'gangwon-sgg': [3, 0],
   'incheon-sgg': [0, 1], 'sejong-emd': [1, 1], 'chungcheongbuk-sgg': [2, 1], 'gyeongsangbuk-sgg': [3, 1],
   'chungcheongnam-sgg': [0, 2], 'daejeon-sgg': [1, 2], 'daegu-sgg': [3, 2], 'ulsan-sgg': [4, 2],
   'gwangju-sgg': [0, 3], 'jeollabuk-sgg': [1, 3], 'jeollanam-sgg': [2, 3], 'gyeongsangnam-sgg': [3, 3],
@@ -908,7 +908,7 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
 let regionRedraw = [];
 
 /* ── 코스 고르기 — 격자 한 칸 버튼 ─────────────────────
-   홈의 장식 격자와 격자 한 칸 버튼을 그대로 쓴다. 나라 전체 코스 한 칸에,
+   홈의 장식 격자와 격자 한 칸 버튼을 그대로 쓴다. 나라 전체 코스는 머리글이고,
    kr-tree 가 있으면 그 뿌리 바로 아래 코스(시·도)를 한 칸씩 늘어놓는다.
    한 번 누르면 고르고, 두 번 누르면 그 안의 구역(시·군·구)이 그 칸에서 하나씩
    번져 나온다 — 화면은 그대로다. 격자는 그 칸을 붙잡고 촘촘해지고, 둘레의
@@ -919,9 +919,10 @@ let OPEN = null;      // 펼친 칸 { tile, bw, bh, kids }
 let openGen = 0;
 const TILE = new WeakMap();
 
-/* 값이 null 인 자리(코스가 아직 없는 곳)는 칸을 만들지 않는다 */
+/* 나라 코스는 칸이 아니라 머리글이다. 칸은 뿌리 바로 아래 코스만 —
+   값이 null 인 자리(코스가 아직 없는 곳)는 칸을 만들지 않는다 */
 function courseList(root, tree) {
-  const list = [{ slug: root, name: '' }];
+  const list = [];
   if (tree) for (const [k, slug] of Object.entries(tree.children)) {
     const [parent, name] = k.split('/');
     if (parent === root && slug) list.push({ slug, name });
@@ -1194,20 +1195,24 @@ function planCourses(snap = false) {
 
 async function tellPick() {
   const name = $('#courseName'), tile = PICK;
-  if (!tile) { name.textContent = t('pickCourse'); return; }
+  /* 아무 칸도 안 고르면 나라 코스다 — 머리글이 그걸 브랜드 색으로 알린다 */
+  const slug = tile ? tile.slug : COURSE.root;
+  if (!slug) return;
   try {
-    const course = await loadCourse(tile.slug);
+    const course = await loadCourse(slug);
     /* 제 코스가 없는 구역은 부모 코스를 친다 — 무엇을 치게 되는지 같이 적는다.
        코스 제목은 한국어로만 적혀 있어, 다른 화면 말에서는 칸 이름과 곳 수로 짓는다 */
-    const owner = tile.kid && tile.slug === tile.parent.slug ? tile.parent : tile;
+    const owner = !tile ? null : tile.kid && tile.slug === tile.parent.slug ? tile.parent : tile;
     const label = LANG === 'ko' ? courseLabel(course)
-      : `${owner.label} · ${t('places', { n: course.items.length })}`;
-    if (PICK === tile) name.textContent = owner === tile ? label : `${tile.label} · ${label}`;
+      : `${owner ? owner.label : countryName(COUNTRY)} · ${t('places', { n: course.items.length })}`;
+    if (PICK === tile) name.textContent = !owner || owner === tile ? label : `${tile.label} · ${label}`;
   } catch {}
 }
+/* tile 이 null 이면 나라 코스를 고른 것이다 */
 function pickTile(tile) {
   PICK = tile;
   COURSE.tiles.forEach(x => x.el.setAttribute('aria-pressed', String(x === tile)));
+  $('#coursePick').setAttribute('aria-pressed', String(!tile));
   tellPick();
 }
 /* 접히는 구역을 고르고 있었거나 초점이 거기 있었으면 부모 칸으로 돌린다 */
@@ -1269,12 +1274,13 @@ async function renderCourses() {
   OPEN = null;
   const was = PICK && PICK.slug;
   COURSE = { tree, names, root, tiles: courseList(root, tree).map(it => {
-    const tile = makeTile(it.name ? placeName(names, root, it.name) : countryName(pack.id), it.slug, false);
-    if (it.name) tile.short = placeName(names, root, it.name, true);
-    if (tree && it.slug !== root) tile.el.setAttribute('aria-expanded', 'false');
+    const tile = makeTile(placeName(names, root, it.name), it.slug, false);
+    tile.short = placeName(names, root, it.name, true);
+    tile.el.setAttribute('aria-expanded', 'false');
     return tile;
   }) };
   $('#courseBtns').replaceChildren(...COURSE.tiles.map(tile => tile.el));
+  $('#coursePick').textContent = countryName(pack.id);
   pickTile(COURSE.tiles.find(tile => tile.slug === was) || null);
   placeGridBtns();
   planCourses(true);
@@ -1290,14 +1296,18 @@ document.addEventListener('click', e => {
     if (e.detail === 0 && PICK === tile) openCourse(tile);
     else pickTile(tile);
   }
-  if (e.target.closest('#courseStart') && PICK) start(PICK.slug);
+  if (e.target.closest('#coursePick')) pickTile(null);
+  if (e.target.closest('#courseStart') && COURSE.root) start(PICK ? PICK.slug : COURSE.root);
 });
 document.addEventListener('dblclick', e => {
   const b = e.target.closest('#courseBtns .grid-btn');
   if (b && TILE.get(b)) openCourse(TILE.get(b));
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && $('#regions').classList.contains('on')) closeCourse();
+  if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
+  /* 고른 칸이 있으면 먼저 고르기를 멈춰 나라 코스로 돌아가고, 없을 때 펼친 곳을 접는다 */
+  if (PICK) pickTile(null);
+  else closeCourse();
 });
 
 async function renderRegions() {
@@ -2175,8 +2185,8 @@ $('#again').onclick = () => start(G.slug);
    이슈를 대신 만든다 — FEEDBACK_URL 이 그 주소다. 비어 있으면 이슈 초안을
    새 탭으로 열어, 중계기가 서기 전에도 피드백이 쌓이도록 한다.
    글만으로는 재현할 수 없어 버전·주소·브라우저를 함께 싣는다. */
-const FEEDBACK_URL = 'https://rt-feedback.g-gearservice.workers.dev';
-const FEEDBACK_REPO = 'pistolinkr/regiontype.com';   // 코드는 없고 이슈만 받는 곳
+const FEEDBACK_URL = 'https://feedback.regiontype.com';
+const FEEDBACK_REPO = 'g-gearservice/regiontype.com';   // 코드는 없고 이슈만 받는 곳
 const FB_KIND = { bug: '버그', idea: '제안', data: '지명·정보 오류' };
 
 const fbIssue = c => {
@@ -2221,12 +2231,14 @@ $('#fbForm').onsubmit = async e => {
   try {
     const r = await fetch(FEEDBACK_URL, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(c) });
-    if (!r.ok) throw new Error(r.status);
+    let msg = '';
+    try { msg = (await r.json()).msg || ''; } catch { /* Access/HTML 차단 */ }
+    if (!r.ok) throw new Error(msg || String(r.status));
     $('#fbBody').value = '';
     fbSay(t('fbThanks'));
     setTimeout(() => $('#feedback').close(), 1200);
-  } catch {
-    fbSay(t('fbFail'), true);
+  } catch (e) {
+    fbSay(e.message && e.message !== 'Failed to fetch' ? e.message : t('fbFail'), true);
   }
   $('#fbSend').disabled = false;
 };
@@ -2472,12 +2484,12 @@ if (location.search.includes('rt=1')) {
     'kr-admin/서울특별시': 'seoul-gu', 'kr-admin/세종특별자치시': null,
     'seoul-gu/강서구': 'gangseo-dong',
   } };
-  console.assert(courseList('kr-admin', tree).map(c => c.slug).join() === 'kr-admin,seoul-gu',
-    '나라 코스와 뿌리 바로 아래 코스만, 빈 자리는 뺀다');
-  console.assert(courseList('us-admin', null).length === 1, 'tree 없으면 나라 코스 하나');
+  console.assert(courseList('kr-admin', tree).map(c => c.slug).join() === 'seoul-gu',
+    '칸은 뿌리 바로 아래 코스만, 빈 자리는 뺀다 — 나라 코스는 머리글');
+  console.assert(courseList('us-admin', null).length === 0, 'tree 없으면 칸 없이 머리글만');
   console.assert(courseCell(0, 18, 9, 6).join() === '1,1', '코스 덩이는 가운데서 시작');
   console.assert(courseCell(17, 18, 9, 6).join() === '6,3', '한 줄 여섯 칸씩 내려간다');
-  console.assert(courseCell(0, 18, 9, 6, KR_CELLS['kr-admin']).join() === '6,1', '자리표가 있으면 그 자리');
+  console.assert(courseCell(0, 18, 9, 6, KR_CELLS['gangwon-sgg']).join() === '5,1', '자리표가 있으면 그 자리');
   console.assert(courseCell(0, 18, 9, 6, KR_CELLS['jeju-sgg']).join() === '2,5', '제주는 덩이 맨 아래');
   console.assert(['서울특별시', '세종특별자치시', '경기도', '강원도', '제주특별자치도'].map(shortAdmin).join()
     === '서울,세종,경기,강원,제주', '밀려난 칸 이름은 시·도 접미를 뗀다');

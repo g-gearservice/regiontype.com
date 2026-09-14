@@ -23,9 +23,11 @@ import { sign, who as sessionWho, rand, hex, b64u, unb64u,
          readClientData, readAuthData, verify, sha, eq } from './auth.mjs';
 import { SIZE } from './size.mjs';
 
-const REPO = 'pistolinkr/regiontype.com';
+const REPO = 'g-gearservice/regiontype.com';
 const SITE = ['https://regiontype.com', 'https://www.regiontype.com'];
 const KIND = { bug: '버그', idea: '제안', data: '지명·정보 오류' };
+/* GitHub 저장소 라벨은 영어다. 한글 이름을 넣으면 422 → 브라우저엔 502 로 보인다. */
+const GH_LABEL = { bug: 'bug', idea: 'enhancement', data: 'bug' };
 const CAP = { body: 500, v: 16, href: 300, ua: 300, name: 12 };
 /* 제한 시간이 다르면 다른 판이다. app.js 의 TIMES 와 같아야 한다 */
 const TIMES = [60, 90, 120, 180, 300];
@@ -40,7 +42,20 @@ const plain = (s, n) => cut(s, n).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, 
 /* Origin 은 curl 로 얼마든 꾸며낼 수 있다 — 문지기가 아니라 CORS 예의일 뿐이라
    로컬도 그냥 통과시킨다. 실제로 막는 건 아래 IP 창이다. */
 const ip = req => req.headers.get('cf-connecting-ip') || '?';
-const mine = o => SITE.includes(o) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
+export const allowedOrigin = o => {
+  if (!o) return false;
+  if (SITE.includes(o)) return true;
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o)) return true;
+  /* GitHub Pages 미리보기·작업 브랜치 */
+  if (/^https:\/\/g-gearservice\.github\.io\/regiontype\.com\/?$/i.test(o)) return true;
+  return false;
+};
+const mine = allowedOrigin;
+const refererOrigin = req => {
+  const ref = req.headers.get('referer');
+  if (!ref) return '';
+  try { return new URL(ref).origin; } catch { return ''; }
+};
 
 /* 이슈 한 장을 짓는다. 사이트의 GitHub 초안 경로와 같은 모양이라
    중계기를 켜기 전후로 이슈가 달라 보이지 않는다. */
@@ -55,7 +70,7 @@ export function compose(c) {
     title: `[${KIND[kind]}] ${body.split('\n')[0].slice(0, 60)}`,
     /* 메타는 코드 블록에 가둔다 — 남이 보낸 값이 이슈 마크다운으로 살아나지 않게 */
     body: `${body}\n\n---\n\`\`\`\n${meta.join('\n')}\n\`\`\``,
-    labels: [KIND[kind]],
+    labels: [GH_LABEL[kind] || 'bug'],
     ok: !!body,
   };
 }
@@ -88,12 +103,13 @@ export function entry(c, who = '') {
            acc: tries ? Math.round(hits / tries * 100) : 0 };
 }
 
-const head = o => ({
-  'access-control-allow-origin': mine(o) ? o : SITE[0],
+const head = o => mine(o) ? {
+  'access-control-allow-origin': o,
   'access-control-allow-methods': 'GET,POST,OPTIONS',
   'access-control-allow-headers': 'content-type,authorization',
   'access-control-max-age': '86400',
-});
+  vary: 'Origin',
+} : { vary: 'Origin' };
 const send = (status, data, o) =>
   new Response(JSON.stringify({ ok: status < 300, ...data }),
     { status, headers: { 'content-type': 'application/json', ...head(o) } });
@@ -353,9 +369,12 @@ export function regionOf(cf, accept) {
 
 export default {
   async fetch(req, env) {
-    const o = req.headers.get('origin') || '';
+    const o = req.headers.get('origin') || refererOrigin(req);
     const path = new URL(req.url).pathname;
-    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: head(o) });
+    if (req.method === 'OPTIONS') {
+      if (!mine(o)) return new Response(null, { status: 403, headers: head(o) });
+      return new Response(null, { status: 204, headers: head(o) });
+    }
     if (!mine(o)) return reply(403, '허용된 곳이 아닙니다.', o);
 
     if (path === '/' && req.method === 'POST') return feedback(req, env, o);
