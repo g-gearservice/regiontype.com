@@ -8,7 +8,17 @@
 
 # English
 
-A typing drill for place names. v0.4.145 (`VER=1.45`) — first-level admin courses by country, UI in 26 languages.
+A typing drill for place names. v0.4.150 (`VER=1.50`) — first-level admin courses by country, UI in 26 languages.
+
+## What's new in 0.4.150
+
+- The Places headline *is* the whole-country course. It is a button: while it is the pick it stands in the brand color with an underline, and the grid below holds only the first-level courses — the country no longer takes a cell of its own
+- Start runs the country course when no cell is picked. Esc first drops a cell pick back to the country, and folds an expanded cell only when nothing is picked
+- Feedback issue labels are the English ones GitHub actually has (`bug`, `enhancement`). Korean label names made the API answer 422, which reached the browser as a bare failure. Issue title and the metadata block stay Korean
+- The relay repo is `g-gearservice/regiontype.com`, and the site posts to `feedback.regiontype.com` — a custom domain declared in `relay/wrangler.toml` instead of the `workers.dev` hostname
+- The relay answers only its own origins: the site, localhost, and the GitHub Pages preview. Anything else is 403 on preflight too, CORS headers carry `Vary: Origin`, and a missing `Origin` falls back to the `Referer` origin
+- When a send fails, the dialog shows the relay's own message instead of the generic line
+- `relay/ACCESS.md` writes down why Cloudflare Access must not sit in front of the relay and how to verify it is gone; `relay/unprotect-access.mjs` removes it through the Zero Trust API
 
 ## What's new in 0.4.145
 
@@ -177,9 +187,9 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
     wrangler secret put GH_TOKEN     # fine-grained token with Issues write on that repo
     wrangler deploy
 
-Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
+Put the URL in `FEEDBACK_URL`. The token never leaves the Worker. `relay/wrangler.toml` binds the custom domain `feedback.regiontype.com`, so the site does not depend on the `workers.dev` hostname.
 
-**Do not put Cloudflare Access in front of this Worker.** If `rt-feedback.*.workers.dev` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
+**Do not put Cloudflare Access in front of this Worker.** If `rt-feedback.*.workers.dev` or `feedback.regiontype.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code. Remove the hostname from Zero Trust, or add a public Bypass policy for `/` — `relay/ACCESS.md` has the steps and the curl checks, and `node relay/unprotect-access.mjs` does it through the API. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
 
     node relay/test.mjs      checks that one issue and one score row are filtered correctly
 
