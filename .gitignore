@@ -1,7 +1,7 @@
 .DS_Store
 gu.json
 \!!!! References & Sources !!!!/
-relay/.wrangler/
+.wrangler/
 .dev.vars
 tools/__pycache__/
 .claude/worktrees/

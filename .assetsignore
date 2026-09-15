@@ -1,0 +1,23 @@
+# The repo root is the asset directory — only the site ships.
+.assetsignore
+.git
+.gitignore
+.nojekyll
+.claude
+.cursor
+.verify
+.wrangler
+.dev.vars
+gu.json
+**/.DS_Store
+\!!!! References & Sources !!!!/
+CLAUDE.md
+CURSOR.md
+README.md
+CNAME
+wrangler.toml
+design
+maps
+preview
+relay
+tools

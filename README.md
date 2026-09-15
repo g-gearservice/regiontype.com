@@ -97,6 +97,9 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
 
     index.html               screens (title / regions / settings / play / result)
     about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
+    wrangler.toml            the site as a Cloudflare Worker with static assets (no script, no build)
+    _headers / _redirects    security headers and folder-index rewrites, applied by Cloudflare
+    .assetsignore            files that never ship (relay/, tools/, maps/, docs)
     style.css
     app.js                   matching engine + game loop + result card
     design/                  play/queue design (`design.pen`)
