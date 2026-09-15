@@ -156,7 +156,7 @@ A miss commits **when composition has ended and no suffix is still a prefix of a
 
 ## Feedback
 
-The yellow dot on the title logo is the feedback button. Hover or tab to it and it grows a flag; click opens a modal `<dialog>`. There is no extra screen — one dot next to the logo is the whole "you can talk to us here".
+Feedback is a grid-cell button in the bottom-left corner of the title screen. Like the other title buttons it can be dragged to another cell; clicking it opens a modal `<dialog>`. There is no extra screen.
 
 The destination is a single constant at the top of `app.js`.
 
