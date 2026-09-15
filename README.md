@@ -96,7 +96,7 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
 ## Files
 
     index.html               screens (title / regions / settings / play / result)
-    about.html / about.*.html  about page — one file per UI language; inherits style.css tokens, does not load app.js
+    about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
     style.css
     app.js                   matching engine + game loop + result card
     design/                  play/queue design (`design.pen`)

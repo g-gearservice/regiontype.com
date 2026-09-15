@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.50';
+const VER = '1.51';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -86,13 +86,13 @@ function paintUI(then) {
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
-  /* 소개 페이지는 언어마다 별도 파일이다(about.ko 는 접미 없이 about.html).
+  /* 소개 페이지는 언어마다 별도 파일이다(about/ 폴더 안, ko 는 접미 없이 about/index.html).
      파일이 없는 언어는 한국어 소개로 보낸다 — 없는 주소를 열지 않는다 */
   const aboutLink = $('#aboutLink');
   if (aboutLink) {
     const have = 'ar,bg,cs,de,el,en,es,fi,fr,hu,id,it,ja,ms,nb,nl,pl,pt,ro,sv,th,tr,uk,vi,zh';
     aboutLink.href = (LANG !== 'ko' && have.split(',').includes(LANG))
-      ? `about.${LANG}.html` : 'about.html';
+      ? `about/${LANG}.html` : 'about/';
   }
   if (then) then();
 }
@@ -283,7 +283,7 @@ function syncOptShell() {
 }
 /* GitHub 별 개수. 공개 저장소 정보라 토큰을 안 쓴다 — 토큰은 Worker 안에만 둔다.
    IP당 시간당 60회 제한이 있어 10분은 재워두고, 실패하면 숫자 없이 링크만 남긴다 */
-const GH_REPO = 'pistolinkr/regiontype.com';
+const GH_REPO = 'g-gearservice/regiontype.com';
 async function ghStars() {
   const el = $('#ghStars');
   if (!el) return;
