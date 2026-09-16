@@ -1,0 +1,9 @@
+# The site as a Worker with static assets — no script, no build step.
+# Workers Builds deploys this on push; relay/ has its own wrangler.toml.
+name = "regiontype-com"
+compatibility_date = "2026-09-15"
+
+[assets]
+directory = "."
+# Keep URLs exactly as the files are named — hreflang and canonical links use .html
+html_handling = "none"

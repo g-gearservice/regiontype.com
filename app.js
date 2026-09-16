@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.50';
+const VER = '1.53';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -86,13 +86,13 @@ function paintUI(then) {
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
-  /* 소개 페이지는 언어마다 별도 파일이다(about.ko 는 접미 없이 about.html).
+  /* 소개 페이지는 언어마다 별도 파일이다(about/ 폴더 안, ko 는 접미 없이 about/index.html).
      파일이 없는 언어는 한국어 소개로 보낸다 — 없는 주소를 열지 않는다 */
   const aboutLink = $('#aboutLink');
   if (aboutLink) {
     const have = 'ar,bg,cs,de,el,en,es,fi,fr,hu,id,it,ja,ms,nb,nl,pl,pt,ro,sv,th,tr,uk,vi,zh';
     aboutLink.href = (LANG !== 'ko' && have.split(',').includes(LANG))
-      ? `about.${LANG}.html` : 'about.html';
+      ? `about/${LANG}.html` : 'about/';
   }
   if (then) then();
 }
@@ -283,7 +283,7 @@ function syncOptShell() {
 }
 /* GitHub 별 개수. 공개 저장소 정보라 토큰을 안 쓴다 — 토큰은 Worker 안에만 둔다.
    IP당 시간당 60회 제한이 있어 10분은 재워두고, 실패하면 숫자 없이 링크만 남긴다 */
-const GH_REPO = 'pistolinkr/regiontype.com';
+const GH_REPO = 'g-gearservice/regiontype.com';
 async function ghStars() {
   const el = $('#ghStars');
   if (!el) return;
@@ -316,10 +316,10 @@ async function ghStars() {
 
 /* 홈의 격자 한 칸 버튼. 자리만 localStorage 에 둔다 — 설정(opt) 과 섞지 않는다.
    c/r 이 음수면 끝에서 센다(-1 = 마지막 칸). slot 은 로고 아래 줄의 몇 번째 칸.
-   한 번도 안 끌면 깃허브는 오른쪽 아래, 소개·설정·시작은 로고 아래 세 칸에 남는다 */
+   한 번도 안 끌면 피드백은 왼쪽 아래, 깃허브는 오른쪽 아래, 소개·설정·시작은 로고 아래 세 칸에 남는다 */
 const GRID_BTN_KEY = 'rt.gridBtn';
 const GRID_BTN_DEF = {
-  gh: { c: -1, r: -1 }, alt: { c: 0, r: -1 },
+  fb: { c: 0, r: -1 }, gh: { c: -1, r: -1 }, alt: { c: 1, r: -1 },
   about: { slot: 0 }, options: { slot: 1 }, play: { slot: 2 },
   courseStart: { c: -1, r: -1 },
 };

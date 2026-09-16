@@ -84,7 +84,7 @@ body{
 
 .logo{font-size:clamp(38px,5vw,64px);font-weight:800;letter-spacing:-.03em;line-height:1}
 .logo span{font-weight:400}
-/* e 의 오른쪽 위 점 — about·카드용 `<i class="dot">`. 피드백은 button.dot */
+/* e 의 오른쪽 위 점 — 장식이다. 피드백은 홈 왼쪽 아래 격자 칸 버튼(.title-fb) */
 i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);vertical-align:.6em;margin-left:.03em}
 .head{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin:0}
 
@@ -718,6 +718,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 #title .title-alt{font-size:16px; display:none}
 :root[data-dev] #title .title-alt{display:flex}
 #title .title-gh{font-size:17px; font-variant-numeric:tabular-nums}
+/* 다른 말의 '피드백'은 한 칸 폭을 넘게 길다 — 깃허브 칸과 같은 크기로 줄인다 */
+#title .title-fb{font-size:17px}
+#title .title-fb .i{font-size:22px}
 #title .title-gh svg{fill:currentColor;display:block}
 @media (hover:hover) and (pointer:fine){
   .grid-btn:hover{background:var(--accent)}
@@ -1092,30 +1095,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @keyframes tilepop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){ .rt-map .tiles > g.pop{animation:none} }
 
-/* ── 피드백 ────────────────────────────────────────────
-   로고의 점이 그대로 버튼이다. 평소엔 점, 손을 얹으면 깃발이 뜬다 —
-   타이틀에 버튼을 하나 더 놓지 않고도 "여기서 말을 걸 수 있다"가 보인다. */
-button.dot{
-  display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);
-  vertical-align:.6em;margin-left:.03em;
-  font:inherit; border:0; padding:0; cursor:pointer; color:#fff;
-  position:relative; z-index:1;
-  transition:transform var(--fast) var(--ease-out);
-}
-/* 점은 14px 남짓이라 그대로는 겨눌 수 없다 — 보이지 않는 여유를 두른다 */
-button.dot::before{content:"";position:absolute;inset:-.14em;border-radius:50%}
-button.dot .i{
-  position:absolute; left:50%; top:50%;
-  width:1em; height:1em; font-size:0; line-height:0; overflow:hidden;
-  transform:translate(-50%,-50%); opacity:0; pointer-events:none;
-  transition:opacity var(--fast) var(--ease-out);
-}
-button.dot:is(:hover,:focus-visible) .i{
-  font-size:14px; opacity:1;
-}
-button.dot:is(:hover,:focus-visible){transform:scale(2.3);background:var(--accent-deep)}
-button.dot:focus-visible{outline:3px solid transparent}
-
+/* ── 피드백 ──────────────────────────────────────────── */
 #feedback{
   border:0; padding:0; background:none; color:var(--ink);
   width:min(92vw,520px); max-width:none;
