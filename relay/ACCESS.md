@@ -2,10 +2,12 @@
 
 The feedback relay must be **anonymous** (no login). If Zero Trust protects these hostnames, browsers fail with **OPTIONS 403** or redirect to `cloudflareaccess.com` before the Worker runs.
 
-Protected hostnames today (remove or Bypass):
+Hostname to keep clear of Access:
 
-- `rt-feedback.g-gearservice.workers.dev`
 - `feedback.regiontype.com`
+
+That custom domain is the only door. The `rt-feedback.*.workers.dev` address answered the
+same calls until `workers_dev = false` in `relay/wrangler.toml` closed it.
 
 ## Fix (Cloudflare dashboard)
 
