@@ -102,8 +102,11 @@ const RATE_RULE = {
   action: 'block',
   ratelimit: {
     characteristics: ['ip.src', 'cf.colo.id'],
-    period: 60,
-    requests_per_period: 60,
+    /* Free plan offers one window: 10 seconds. The course has a time limit, so a room that
+       starts together finishes together — dozens of score writes land in the same few
+       seconds from one public IP. 100 rides over that and still cuts a real flood. */
+    period: 10,
+    requests_per_period: 100,
     mitigation_timeout: 60,
   },
 };
