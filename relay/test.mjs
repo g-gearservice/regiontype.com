@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { compose, entry, where, regionOf, allowedOrigin } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u } from './auth.mjs';
+import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
 
@@ -161,3 +162,94 @@ assert.equal(back.length, 64, '원시형은 64바이트다');
 assert.deepEqual([...back], [...raw], 'DER 을 풀면 원래 값이 나온다');
 
 console.log('auth self-check done');
+
+/* ── 보안 룰 ──────────────────────────────────────────
+   룰이 통과만 시키는 룰이 되는 게 제일 무섭다. 그래서 여기서는 맞는 값 한 번,
+   틀린 값 한 번을 같이 먹인다 — 틀린 값에 조용히 통과하는 룰이 있으면 여기서 걸린다. */
+const only = id => RULES.filter(r => r.id === id);
+const one = (id, fact) => check({ [only(id)[0].need]: fact }, only(id))[0];
+const good = (id, fact, why) => assert.equal(one(id, fact).state, 'pass', why ?? `${id} 가 맞는 값을 거른다`);
+const bad = (id, fact, why) => assert.equal(one(id, fact).state, 'fail', why ?? `${id} 가 틀린 값을 통과시킨다`);
+
+const HEAD = {
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'content-security-policy':
+    "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+  'x-frame-options': 'DENY',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  'cross-origin-opener-policy': 'same-origin',
+};
+const page = (over = {}) => ({ status: 200, headers: { ...HEAD, ...over } });
+const drop = name => { const { [name]: _, ...rest } = HEAD; return { status: 200, headers: rest }; };
+
+good('site-hsts', page());
+bad('site-hsts', drop('strict-transport-security'));
+bad('site-hsts', page({ 'strict-transport-security': 'max-age=600; includeSubDomains' }),
+    '짧은 max-age 는 걸러야 한다');
+bad('site-hsts', page({ 'strict-transport-security': 'max-age=31536000' }),
+    'includeSubDomains 가 빠지면 걸러야 한다');
+
+good('site-csp', page());
+bad('site-csp', page({ 'content-security-policy': "base-uri 'self'" }), '한 지시어만으로는 부족하다');
+good('site-frame', page());
+bad('site-frame', page({ 'x-frame-options': 'SAMEORIGIN' }));
+good('site-nosniff', page());
+bad('site-nosniff', drop('x-content-type-options'));
+good('site-permissions', page());
+bad('site-permissions', page({ 'permissions-policy': 'camera=(), microphone=()' }),
+    '남은 기능이 열려 있으면 걸러야 한다');
+/* www 는 같은 룰을 다른 자리에 건 것이다 — 한쪽만 고쳐도 다른 쪽이 남게 */
+assert.equal(only('www-hsts')[0].need, 'probe:www', 'www 룰은 www 응답을 본다');
+
+good('https-only', { status: 301, headers: { location: 'https://regiontype.com/' } });
+bad('https-only', { status: 200, headers: {} }, '평문이 그대로 답하면 걸러야 한다');
+bad('https-only', { status: 301, headers: { location: 'http://regiontype.com/' } },
+    '평문으로 보내는 이동은 이동이 아니다');
+
+/* Access 가 중계기를 덮는 사고 — 이 검사의 출발점이다 */
+good('relay-open', { status: 200, headers: { 'content-type': 'application/json' } });
+bad('relay-open', { status: 302, headers: { location: 'https://x.cloudflareaccess.com/' } },
+    'Access 로그인으로 넘기면 걸러야 한다');
+bad('relay-open', { status: 403, headers: {} });
+
+good('relay-preflight', { status: 204, headers: { 'access-control-allow-origin': 'https://regiontype.com' } });
+bad('relay-preflight', { status: 403, headers: {} });
+bad('relay-preflight', { status: 204, headers: { 'access-control-allow-origin': '*' } });
+good('relay-stranger', { status: 403, headers: {} });
+bad('relay-stranger', { status: 204, headers: { 'access-control-allow-origin': 'https://evil.example' } });
+bad('relay-stranger', { status: 204, headers: { 'access-control-allow-origin': '*' } });
+good('relay-no-credentials', { status: 204, headers: {} });
+bad('relay-no-credentials', { status: 204, headers: { 'access-control-allow-credentials': 'true' } });
+
+bad('no-secret-literal', "const t = 'ghp_0123456789abcdefghijklmnopqrstuvwxyz';",
+    '토큰처럼 생긴 값을 놓치면 안 된다');
+bad('no-secret-literal', "const GH_TOKEN = 'x-very-secret-value';");
+good('no-secret-literal', 'authorization: `Bearer ${env.GH_TOKEN}`,',
+     '바인딩에서 읽는 건 비밀이 박힌 게 아니다');
+bad('secret-not-in-vars', '[vars]\nGH_TOKEN = "abc"\n');
+good('secret-not-in-vars', '[vars]\nSITE = "regiontype.com"\n');
+bad('ratelimits', '[[ratelimits]]\nname = "RL_FB"\n', '창 하나로는 부족하다');
+bad('assets-exclude', '.git\nCLAUDE.md\n', 'relay 가 빠지면 소스가 나간다');
+bad('origin-allowlist', "const SITE = ['https://regiontype.com', 'https://evil.example'];");
+bad('origin-allowlist', "const SITE = ['https://regiontype.com'];\nexport const allowedOrigin = o => true;");
+good('origin-allowlist', "const SITE = ['https://regiontype.com', 'https://www.regiontype.com'];");
+bad('token-stays-server', 'const t = env.GH_TOKEN;', '브라우저 코드에 토큰이 보이면 안 된다');
+
+/* Cloudflare MCP 가 떠다 주는 값 — 판정은 그래도 여기 표가 한다 */
+good('workers-known', ['regiontype-com', 'rt-feedback']);
+good('workers-known', ['rt-feedback', 'regiontype-com'], '순서는 상관없다');
+bad('workers-known', ['regiontype-com', 'rt-feedback', 'crypto-miner'], '모르는 워커를 놓치면 안 된다');
+bad('workers-known', ['regiontype-com'], '워커가 사라진 것도 사고다');
+
+/* 값을 못 떠 온 룰은 통과가 아니라 skip 이다 — 꺼진 검사가 초록으로 보이면 안 된다 */
+const blind = check({}, only('site-hsts'))[0];
+assert.equal(blind.state, 'skip', '값이 없으면 skip');
+assert.deepEqual(tally([blind]), { pass: 0, fail: 0, skip: 1, high: 0 }, 'skip 은 통과로 세지 않는다');
+assert.equal(tally(check({ 'probe:site': drop('strict-transport-security') }, only('site-hsts'))).high, 1,
+             'high 가 깨지면 성적에 남는다');
+/* 룰 이름이 겹치면 리포트에서 두 줄이 한 줄로 보인다 */
+assert.equal(new Set(RULES.map(r => r.id)).size, RULES.length, '룰 이름은 겹치지 않는다');
+
+console.log('security rule self-check done');
