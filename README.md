@@ -8,7 +8,7 @@
 
 # English
 
-A typing drill for place names. v0.4.145 (`VER=1.45`) — first-level admin courses by country, UI in 26 languages.
+A typing drill for place names. v0.4.154 (`VER=1.54`) — first-level admin courses by country. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
 ## What's new in 0.4.145
 

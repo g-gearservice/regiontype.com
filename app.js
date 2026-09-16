@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.53';
+const VER = '1.54';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -1662,11 +1662,14 @@ async function boot() {
     sense(),
   ]);
   I18N = i18n;
-  UI_LANGS = Object.keys(I18N);
+  /* 한국어 말고는 아직 덜 됐다 — 지명이 플레이 화면에서 한국어로 남고, 로마자는
+     칸을 넘쳐 잘린다. 다 될 때까지 개발에서만 연다 */
+  UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
   WORLD = world;
   LANG_COUNTRY = buildLangCountry(world);
-  // 개발에서 골라 둔 나라가 localStorage 에 남아 있어도 배포에서는 되돌린다
+  // 개발에서 골라 둔 나라·언어가 localStorage 에 남아 있어도 배포에서는 되돌린다
   if (!isDev() && opt.country !== 'auto') { opt.country = 'auto'; saveOpt(); }
+  if (!isDev() && opt.lang !== 'auto') { opt.lang = 'auto'; saveOpt(); }
   COUNTRY = resolveCountry();
   LANG = resolveLang();
   paintUI(fillLangPick);
