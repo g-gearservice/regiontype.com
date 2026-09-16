@@ -2,7 +2,7 @@
 /* Harden the regiontype.com zone: TLS, HSTS, security headers, anti-spoofing DNS.
  *
  * Wrangler OAuth is zone:read only, so this needs an API token scoped to the zone:
- *   Zone: Read · Zone Settings: Edit · DNS: Edit · Transform Rules: Edit
+ *   Zone: Read · Zone Settings: Edit · DNS: Edit · Transform Rules: Edit · WAF: Edit
  *
  *   export CLOUDFLARE_API_TOKEN='…'
  *   node relay/harden-zone.mjs            dry run — prints current state and the plan
@@ -16,7 +16,7 @@ const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const APPLY = process.argv.includes('--apply');
 
 if (!TOKEN) {
-  console.error('Set CLOUDFLARE_API_TOKEN (Zone Read, Zone Settings Edit, DNS Edit, Transform Rules Edit).');
+  console.error('Set CLOUDFLARE_API_TOKEN (Zone Read, Zone Settings Edit, DNS Edit, Transform Rules Edit, WAF Edit).');
   process.exit(2);
 }
 
@@ -71,6 +71,40 @@ const MAIL_RECORDS = [
 ];
 const CAA = ['letsencrypt.org', 'pki.goog', 'ssl.com'];
 
+/* The repo is public, so serving its files leaks nothing — but the site has no reason to
+   hand out relay source, build tools, or dotfiles. Pages has no .assetsignore; this is the
+   edge standing in for it until the site moves to the Worker. */
+const INTERNALS = ['/wrangler.toml', '/_headers', '/_redirects', '/.assetsignore',
+                   '/CLAUDE.md', '/CURSOR.md', '/.gitignore', '/README.md'];
+const WAF_RULE = {
+  ref: 'rt-block-internals',
+  description: 'regiontype: the repo is not part of the site',
+  expression: `(http.host in {${SITE_HOSTS.map(h => `"${h}"`).join(' ')}} and (`
+    + 'starts_with(http.request.uri.path, "/relay/") or '
+    + 'starts_with(http.request.uri.path, "/tools/") or '
+    /* 점으로 시작하는 건 다 막되 /.well-known/ 은 연다 — 거기로 ACME 챌린지가 와서
+       막으면 인증서 갱신이 조용히 깨진다 */
+    + '(starts_with(http.request.uri.path, "/.") and '
+    + 'not starts_with(http.request.uri.path, "/.well-known/")) or '
+    + `http.request.uri.path in {${INTERNALS.map(p => `"${p}"`).join(' ')}}))`,
+  action: 'block',
+};
+
+/* The worker counts its own windows (RL_FB·RL_SC·RL_AU), but only after it wakes. This one
+   sits in front, so a flood is dropped at the edge. Free plan allows exactly one. */
+const RATE_RULE = {
+  ref: 'rt-relay-flood',
+  description: 'regiontype relay: per-IP ceiling on writes',
+  expression: '(http.host eq "feedback.regiontype.com" and http.request.method eq "POST")',
+  action: 'block',
+  ratelimit: {
+    characteristics: ['ip.src', 'cf.colo.id'],
+    period: 60,
+    requests_per_period: 20,
+    mitigation_timeout: 600,
+  },
+};
+
 const zones = await api('GET', `zones?name=${ZONE}`);
 const zoneId = zones.result?.[0]?.id;
 if (!zoneId) { fail('zone lookup', zones); process.exit(1); }
@@ -114,19 +148,29 @@ for (const rec of plan) {
 }
 if (!plan.length) console.log('  = nothing to add');
 
-console.log('\nResponse header rule');
-const phase = `zones/${zoneId}/rulesets/phases/http_response_headers_transform/entrypoint`;
-const entry = await api('GET', phase);
-if (!entry.ok && entry.status !== 404) { fail('read header rules', entry); process.exit(1); }
-/* PUT replaces the whole phase — keep every rule that is not ours */
-const others = (entry.result?.rules || []).filter(r => r.ref !== HEADER_RULE.ref)
-  .map(({ id, version, last_updated, ...keep }) => keep);
-console.log(`  ${others.length} other rule(s) kept; ${others.length === (entry.result?.rules || []).length ? 'adding' : 'replacing'} ${HEADER_RULE.ref}`);
-for (const [k, v] of Object.entries(HEADER_RULE.action_parameters.headers)) console.log(`    ${k}: ${v.value}`);
-if (APPLY) {
-  const res = await api('PUT', phase, { rules: [...others, HEADER_RULE] });
-  if (!res.ok) fail('write header rules', res);
+/* PUT replaces a whole phase — read what is there first and keep every rule that is
+   not ours, so a rule someone added by hand is not swept away by this script. */
+async function putPhase(phase, rule, label) {
+  console.log(`\n${label}`);
+  const path = `zones/${zoneId}/rulesets/phases/${phase}/entrypoint`;
+  const entry = await api('GET', path);
+  if (!entry.ok && entry.status !== 404) { fail(`read ${phase}`, entry); return; }
+  const had = entry.result?.rules || [];
+  const others = had.filter(r => r.ref !== rule.ref)
+    .map(({ id, version, last_updated, ...keep }) => keep);
+  console.log(`  ${others.length} other rule(s) kept; ${others.length === had.length ? 'adding' : 'replacing'} ${rule.ref}`);
+  if (rule.action_parameters?.headers)
+    for (const [k, v] of Object.entries(rule.action_parameters.headers)) console.log(`    ${k}: ${v.value}`);
+  else console.log(`    ${rule.action}: ${rule.expression}`);
+  if (APPLY) {
+    const res = await api('PUT', path, { rules: [...others, rule] });
+    if (!res.ok) fail(`write ${phase}`, res);
+  }
 }
+
+await putPhase('http_response_headers_transform', HEADER_RULE, 'Response header rule');
+await putPhase('http_request_firewall_custom', WAF_RULE, 'Security rule — repo internals');
+await putPhase('http_ratelimit', RATE_RULE, 'Rate limiting rule — relay writes');
 
 if (!APPLY) { console.log('\nNothing written. Re-run with --apply.'); process.exit(0); }
 

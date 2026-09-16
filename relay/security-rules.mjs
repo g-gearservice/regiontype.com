@@ -22,6 +22,8 @@ export const PROBES = {
   preflight: { url: 'https://feedback.regiontype.com/', method: 'OPTIONS',
                headers: { Origin: 'https://regiontype.com',
                           'Access-Control-Request-Method': 'POST' } },
+  /* 저장소 파일을 사이트가 내주는지 — Pages 에는 .assetsignore 가 없어 엣지가 대신 막는다 */
+  internals: { url: 'https://regiontype.com/relay/worker.mjs' },
   /* 남의 출처로 같은 문을 두드려 본다 — 문이 아무에게나 열리면 여기서 걸린다 */
   stranger: { url: 'https://feedback.regiontype.com/', method: 'OPTIONS',
               headers: { Origin: 'https://evil.example',
@@ -159,6 +161,14 @@ export const RULES = [
         .filter(p => !lines.includes(p));
       return gone.length ? `자산으로 새어 나갈 수 있다: ${gone.join(', ')}` : '';
     } },
+  /* 위 룰의 라이브 짝. .assetsignore 는 Worker 배포에서만 듣는다 — Pages 로 나가는 동안은
+     저장소가 통째로 열려 있고, 그때 막는 건 엣지 룰뿐이다. 저장소가 공개라 새는 비밀은
+     없으니 high 가 아니라 mid 다 — 줄일 표면이지, 뚫린 구멍이 아니다. */
+  { id: 'internals-closed', need: 'probe:internals', sev: 'mid',
+    want: '저장소 파일은 사이트가 내주지 않는다',
+    test: p => p.status === 200
+      ? '/relay/worker.mjs 를 그대로 내준다 — 사이트가 줄 이유가 없는 파일이다'
+      : '' },
   { id: 'headers-parity', need: 'file:_headers', sev: 'mid',
     want: '_headers 가 존 룰과 같은 헤더를 건다',
     test: src => {
