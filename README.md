@@ -96,7 +96,10 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
 ## Files
 
     index.html               screens (title / regions / settings / play / result)
-    about.html / about.*.html  about page — one file per UI language; inherits style.css tokens, does not load app.js
+    about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
+    wrangler.toml            the site as a Cloudflare Worker with static assets (no script, no build)
+    _headers / _redirects    security headers and folder-index rewrites, applied by Cloudflare
+    .assetsignore            files that never ship (relay/, tools/, maps/, docs)
     style.css
     app.js                   matching engine + game loop + result card
     design/                  play/queue design (`design.pen`)
@@ -153,7 +156,7 @@ A miss commits **when composition has ended and no suffix is still a prefix of a
 
 ## Feedback
 
-The yellow dot on the title logo is the feedback button. Hover or tab to it and it grows a flag; click opens a modal `<dialog>`. There is no extra screen — one dot next to the logo is the whole "you can talk to us here".
+Feedback is a grid-cell button in the bottom-left corner of the title screen. Like the other title buttons it can be dragged to another cell; clicking it opens a modal `<dialog>`. There is no extra screen.
 
 The destination is a single constant at the top of `app.js`.
 

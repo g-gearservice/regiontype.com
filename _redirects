@@ -1,0 +1,5 @@
+/        /index.html        200
+/about/  /about/index.html  200
+/about   /about/            301
+/mimi/   /mimi/index.html   200
+/mimi    /mimi/             301
