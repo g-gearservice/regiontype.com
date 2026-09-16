@@ -91,7 +91,10 @@ const WAF_RULE = {
 };
 
 /* The worker counts its own windows (RL_FB·RL_SC·RL_AU), but only after it wakes. This one
-   sits in front, so a flood is dropped at the edge. Free plan allows exactly one. */
+   sits in front, so a flood is dropped at the edge. Free plan allows exactly one.
+   Deliberately loose: a school or office shares one public IP, and a class finishing their
+   games together must not trip it. The worker's own windows do the fine counting — this
+   only has to cut a flood, so it stays far above anything a room of people can produce. */
 const RATE_RULE = {
   ref: 'rt-relay-flood',
   description: 'regiontype relay: per-IP ceiling on writes',
@@ -100,8 +103,8 @@ const RATE_RULE = {
   ratelimit: {
     characteristics: ['ip.src', 'cf.colo.id'],
     period: 60,
-    requests_per_period: 20,
-    mitigation_timeout: 600,
+    requests_per_period: 60,
+    mitigation_timeout: 60,
   },
 };
 
