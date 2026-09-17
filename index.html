@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=1.56">
+<link rel="stylesheet" href="style.css?v=1.57">
 </head>
 <body>
 
@@ -211,6 +211,7 @@
         <button type="submit" data-i18n="submitScore">기록 남기기</button>
       </div>
     </form>
+    <button type="button" class="board-drop" id="boardDrop" data-i18n="forgetMine" hidden>순위표에서 내 기록 내리기</button>
   </div>
   <h3 class="missed-head"><span data-i18n="missed">놓친 곳</span> <span id="missCount"></span></h3>
   <ul class="missed" id="missed"></ul>
@@ -244,6 +245,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=1.56"></script>
+<script src="app.js?v=1.57"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.56';
+const VER = '1.57';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 /* 설정 화면의 빌드 번호는 VER 에서 직접 읽는다. 손으로 적어두면 올릴 때마다
    맞춰야 할 자리가 하나 더 늘고, 언젠가 실제 빌드와 어긋난다. */
@@ -1774,6 +1774,7 @@ async function board() {
     /* 로그인 → 이름 → 올라감. 한 번에 하나씩만 묻는다 */
     $('#boardIn').hidden = inn;
     $('#boardJoin').hidden = !inn || !!me;
+    $('#boardDrop').hidden = !inn;
     drawRanks(d.top || []);
     sec.hidden = false;
   } catch (e) {
@@ -1809,6 +1810,18 @@ const tryAuth = async (run, done) => {
 
 $('#inGo').onclick = () => tryAuth(passkeyLogin, t('askingDevice'));
 $('#inNew').onclick = () => tryAuth(passkeyMake, t('makingKey'));
+
+/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 —
+   이 버튼이 사라지면 철회 불가가 된다. 이름도 지워 다음 판이 도로 올라가지 않게 한다 */
+$('#boardDrop').onclick = async () => {
+  if (!confirm(t('forgetAsk'))) return;
+  try {
+    const d = await boardAsk('/forget', {});
+    localStorage.removeItem(NAME_KEY);
+    await board();
+    boardSay(d.gone ? t('forgot', { n: d.gone }) : t('forgotNone'));
+  } catch { boardSay(t('forgetFail'), true); }
+};
 
 $('#boardJoin').onsubmit = e => {
   e.preventDefault();

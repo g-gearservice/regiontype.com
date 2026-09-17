@@ -425,6 +425,16 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 #inNew{background:none;color:var(--accent-text);border:2px solid var(--grid)}
 .board-in button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (hover:hover) and (pointer:fine){ .board-in button:hover{background:var(--accent);color:#fff} }
+/* 되돌릴 수 없는 버튼이라 표시는 하되, 이 판의 주인공은 아니다 */
+.board-drop{
+  display:block;margin-top:16px;
+  font:inherit;font-size:13px;font-weight:700;color:var(--bad);background:none;
+  border:2px solid var(--bad);border-radius:4px;padding:6px 14px;
+  cursor:pointer;opacity:.75;transition:opacity var(--fast) var(--ease-out);
+}
+.board-drop[hidden]{display:none}
+@media (hover:hover) and (pointer:fine){ .board-drop:hover{opacity:1} }
+.board-drop:focus-visible{outline:3px solid var(--accent);outline-offset:2px;opacity:1}
 .board-join{margin-top:16px;max-width:420px;font-size:14px;color:var(--ink-soft)}
 .board-join div{display:flex;gap:8px;margin-top:8px}
 .board-join input{
