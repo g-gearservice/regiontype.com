@@ -12,13 +12,17 @@ directory = "."
 # Keep URLs exactly as the files are named — hreflang and canonical links use .html
 html_handling = "none"
 
-# The site itself. Attaching these moves the domain off GitHub Pages: Cloudflare replaces
-# the Pages DNS records with the Worker's. To go back, point A records at GitHub again
-# (185.199.108.153 · .109.153 · .110.153 · .111.153) and re-add the custom domain there.
-[[routes]]
-pattern = "regiontype.com"
-custom_domain = true
-
+# www owns its DNS record: Cloudflare made a Worker record for it, so the hostname is the
+# Worker's and nothing else can answer there.
 [[routes]]
 pattern = "www.regiontype.com"
 custom_domain = true
+
+# The root keeps its GitHub Pages A records and is caught by a route instead. A custom
+# domain would have meant deleting those records first, and the gap where the name does not
+# resolve at all is the one outage worth avoiding — resolvers cache a missing name for
+# minutes. A route intercepts at the edge before the request ever leaves for GitHub, so the
+# switch is instant in both directions: delete the route and Pages answers again.
+[[routes]]
+pattern = "regiontype.com/*"
+zone_name = "regiontype.com"
