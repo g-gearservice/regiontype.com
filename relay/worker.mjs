@@ -29,7 +29,7 @@ const KIND = { bug: '버그', idea: '제안', data: '지명·정보 오류' };
 /* GitHub 저장소 라벨은 영어다. 한글 이름을 넣으면 422 → 브라우저엔 502 로 보인다. */
 const GH_LABEL = { bug: 'bug', idea: 'enhancement', data: 'bug' };
 const CAP = { body: 500, v: 16, href: 300, ua: 300, name: 12 };
-/* 제한 시간이 다르면 다른 판이다. app.js 의 TIMES 와 같아야 한다 */
+/* 제한 시간이 다르면 다른 판이다. app.js 의 opt.time 은 이 안의 값이어야 한다 */
 const TIMES = [60, 90, 120, 180, 300];
 const TOP = 10;
 /* SIZE 는 tools/build_size.py 가 data/*.course.json 에서 찍는다. */
