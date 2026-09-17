@@ -3,7 +3,22 @@
 name = "regiontype-com"
 compatibility_date = "2026-09-15"
 
+# One door only, the same rule the relay follows. The workers.dev address is open right now
+# because the site was verified there before the domain moved; the next deploy closes it.
+workers_dev = false
+
 [assets]
 directory = "."
 # Keep URLs exactly as the files are named — hreflang and canonical links use .html
 html_handling = "none"
+
+# The site itself. Attaching these moves the domain off GitHub Pages: Cloudflare replaces
+# the Pages DNS records with the Worker's. To go back, point A records at GitHub again
+# (185.199.108.153 · .109.153 · .110.153 · .111.153) and re-add the custom domain there.
+[[routes]]
+pattern = "regiontype.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.regiontype.com"
+custom_domain = true

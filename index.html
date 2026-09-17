@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=1.54">
+<link rel="stylesheet" href="style.css?v=1.57">
 </head>
 <body>
 
@@ -210,73 +210,12 @@
         <input id="boardName" name="name" maxlength="12" autocomplete="off" spellcheck="false" data-i18n-ph="namePh" placeholder="이름">
         <button type="submit" data-i18n="submitScore">기록 남기기</button>
       </div>
-
+    </form>
+    <button type="button" class="board-drop" id="boardDrop" data-i18n="forgetMine" hidden>순위표에서 내 기록 내리기</button>
+  </div>
   <h3 class="missed-head"><span data-i18n="missed">놓친 곳</span> <span id="missCount"></span></h3>
   <ul class="missed" id="missed"></ul>
-
-    </form>
-  </div>
 </section>
-
-<!-- 지역 카드 뒷면: 코스 고르기 → 시작 옵션 -->
-<template id="regionTpl">
-  <div class="card-back">
-    <div class="ov-rank" role="tabpanel" hidden>
-      <div class="rank-head">
-        <button type="button" class="rank-arrow" data-step="-1" data-i18n-aria="prevCourse" aria-label="이전 코스">
-          <i class="i i-arrow-left" aria-hidden="true"></i></button>
-        <b class="rank-title"></b>
-        <button type="button" class="rank-arrow" data-step="1" data-i18n-aria="nextCourse" aria-label="다음 코스">
-          <i class="i i-arrow-left flip" aria-hidden="true"></i></button>
-      </div>
-      <p class="rank-you" aria-live="polite"></p>
-      <div class="rank-plot"></div>
-      <div class="rank-foot">
-        <span class="rank-where"></span><b class="rank-score"></b>
-      </div>
-      <ol class="ranks rank-list"></ol>
-      <p class="rank-say"></p>
-      <button type="button" class="rank-drop" data-i18n="forgetMine">순위표에서 내 기록 내리기</button>
-    </div>
-
-    <div class="ov-pick">
-      <div class="pickmap"></div>
-      <p class="pickname"></p>
-      <button type="button" class="course wide" data-slug="seoul-gu"></button>
-    </div>
-    <div class="ov-play" hidden></div>
-  </div>
-</template>
-
-<template id="ovTpl">
-  <div class="ov-game">
-    <div class="hud ov-hud">
-      <div class="gauge"><i></i></div>
-      <div class="stat time">
-        <button type="button" class="ov-time" aria-haspopup="listbox" aria-expanded="false" data-i18n-aria="timeLimit" aria-label="제한 시간">0:00</button>
-      </div>
-      <div class="stat"><b>0</b><span class="ov-total">/0</span></div>
-    </div>
-    <div class="ov-body">
-      <div class="ov-stage">
-        <svg class="ov-map rt-map" aria-hidden="true"></svg>
-      </div>
-    </div>
-    <div class="ov-dock">
-      <div class="choice" role="group">
-        <span class="choice-l" data-i18n="hintName">이름</span>
-        <div class="choice-b ov-hint">
-          <button type="button" data-v="1" aria-pressed="true" data-i18n="hintOn">보임</button>
-          <button type="button" data-v="0" aria-pressed="false" data-i18n="hintOff">숨김</button>
-        </div>
-      </div>
-      <b class="ov-title"></b>
-      <div class="menu">
-        <button type="button" class="ov-start" data-i18n="startPlay">시작</button>
-      </div>
-    </div>
-  </div>
-</template>
 
 <div id="mobile">
   <div class="logo">region<span>type</span><i class="dot"></i></div>
@@ -306,6 +245,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=1.54"></script>
+<script src="app.js?v=1.57"></script>
 </body>
 </html>

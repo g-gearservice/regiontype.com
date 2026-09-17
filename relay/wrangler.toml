@@ -1,8 +1,11 @@
 name = "rt-feedback"
 main = "worker.mjs"
 compatibility_date = "2026-08-01"
-# Public API — Cloudflare Access on workers.dev breaks browser preflight (OPTIONS 403).
-# Remove rt-feedback.*.workers.dev from Zero Trust or add a Bypass policy for /.
+# One door only: the custom domain below. The workers.dev address answered the same
+# calls and widened the surface for nothing.
+workers_dev = false
+# Public API — never put Cloudflare Access in front of this. Access breaks the browser
+# preflight (OPTIONS 403) before the Worker runs, which reaches the site as a 502.
 
 # wrangler d1 create rt-board 가 찍어주는 id 를 여기 적는다
 [[d1_databases]]
