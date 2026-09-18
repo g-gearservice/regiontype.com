@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype · 설정</title>
+<!-- 검색에 걸 화면이 아니다 — hreflang·og·ld+json 을 두지 않고 색인만 막는다.
+     말은 about/ 처럼 언어별 파일로 복제하지 않고 data-i18n 으로 갈아끼운다 -->
+<meta name="robots" content="noindex">
+<!-- 파비콘의 ?v= 는 그림이 바뀔 때만 움직이는 캐시 열쇠다 — VER 을 따라가지 않는다
+     (settings.js 의 표류 경고도 rel=icon 은 건너뛴다) -->
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=1.54">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=1.54">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=1.54">
+<link rel="stylesheet" href="../style.css?v=1.75">
+</head>
+<!-- .set 이 이 페이지 표식이다 — 폰에서 홈의 .screen 만 접고 설정은 남기는 갈림이
+     style.css 에서 이 클래스를 읽는다 -->
+<body class="set">
+
+<!-- 장식 격자. 홈과 같은 무늬이고, 칸 크기는 settings.js 가 화면에 맞춰 넣는다 -->
+<svg class="grid-bg" aria-hidden="true">
+  <defs>
+    <pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152">
+      <path d="M152 0 V152 H0"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
+</svg>
+
+<!-- 설정 — 홈에 있던 #options 를 id·class 그대로 옮겼다. CSS 계약(격자 정렬·레일 폭·
+     확대 되돌림)이 그 이름들에 걸려 있어 이름을 바꾸지 않는다 -->
+<section id="options" class="screen on">
+  <div class="screen-head">
+    <a class="back" href="../" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></a>
+    <h2 class="head" data-i18n="options">설정</h2>
+  </div>
+  <div class="opts-shell">
+    <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
+      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-i18n="language">언어</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-status="development"><span data-i18n="region">지역</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabSecurity" aria-controls="optsSecurity" aria-selected="false" tabindex="-1" data-i18n="security">보안</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
+    </nav>
+    <div class="opts-panels">
+      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
+        <div id="optLang" class="opts-lang-pick" role="radiogroup"
+             data-i18n-aria="language" aria-label="언어"></div>
+      </div>
+      <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" hidden>
+        <!-- 고르는 UI 는 개발용 문이다 — CSS 기본이 숨김이라 배포에 새지 않는다 -->
+        <div id="optRegion" class="opts-region-pick" role="radiogroup"
+             data-i18n-aria="region" aria-label="지역"></div>
+        <p class="opts-region-pending" data-i18n="regionPending">지금은 서울만 지원합니다. 다른 지역은 개발 중입니다.</p>
+      </div>
+      <div id="optsVideo" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVideo" tabindex="0" hidden>
+        <dl class="opts">
+          <dt data-i18n="night">야간 모드</dt>
+          <dd><button class="toggle" data-opt="night" data-i18n-aria="night" aria-label="야간 모드"></button></dd>
+          <dt data-i18n="motion">애니메이션</dt>
+          <dd><button class="toggle" data-opt="motion" data-i18n-aria="motion" aria-label="애니메이션"></button></dd>
+          <dt data-i18n="grid">그리드</dt>
+          <dd><button class="toggle" data-opt="grid" data-i18n-aria="grid" aria-label="그리드"></button></dd>
+        </dl>
+      </div>
+      <div id="optsAudio" class="opts-panel" role="tabpanel" aria-labelledby="optsTabAudio" tabindex="0" hidden>
+        <dl class="opts">
+          <dt data-i18n="sound">효과음</dt>
+          <dd><button class="toggle" data-opt="sound" data-i18n-aria="sound" aria-label="효과음"></button></dd>
+        </dl>
+      </div>
+      <!-- 보안 — /signin/ 의 계정 화면을 그대로 흡수했다(.si-* 클래스도 함께).
+           로그인 자체는 여전히 /signin/ 이 한다 -->
+      <div id="optsSecurity" class="opts-panel" role="tabpanel" aria-labelledby="optsTabSecurity" tabindex="0" hidden>
+        <div class="si-view" id="secIn" hidden>
+          <h3 class="si-head" data-i18n="accountHead">내 계정</h3>
+          <p class="si-warn" id="acctWarn" hidden data-i18n="twoStepWarn">패스키가 하나뿐입니다.</p>
+          <p class="si-note" id="acctCodes" hidden></p>
+          <div class="si-btns is-wide">
+            <button type="button" id="acctKey" data-i18n="twoStepOn">2단계 인증 켜기</button>
+            <button type="button" id="acctCodesNew" data-i18n="codesNew">코드 새로 만들기 — 옛 코드는 모두 못 쓰게 됩니다</button>
+            <button type="button" id="acctOut" data-i18n="signOut">로그아웃</button>
+          </div>
+          <details class="si-lost">
+            <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
+            <p data-i18n="lostAllHow">계정은 되살릴 수 없습니다.</p>
+          </details>
+        </div>
+        <div class="si-view" id="secOut" hidden>
+          <h3 class="si-head" data-i18n="accountHead">내 계정</h3>
+          <div class="si-btns">
+            <a href="../signin/" data-i18n="signinBtn">로그인</a>
+          </div>
+        </div>
+        <p class="si-say" id="siSay" role="status" aria-live="polite"></p>
+      </div>
+      <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
+        <p class="ver">regiontype v0.6.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+      </div>
+    </div>
+  </div>
+  <!-- 바닥 블러 띠는 페이지에 건다 — 어느 통에도 매이지 않게 position:fixed 로
+       화면 아래변에 붙인다 -->
+  <span class="backdrop-blur bot" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </span>
+</section>
+
+<!-- 복구 코드 — 이 판을 닫으면 다시 못 본다. 그래서 Esc 로도, 바깥을 짚어도 안 닫힌다
+     (settings.js 가 cancel 을 막는다). 나가는 문은 '저장했습니다' 를 지난 완료뿐이다 -->
+<dialog id="codes" aria-labelledby="codesTitle">
+  <div id="codesBox">
+    <div class="fb-head"><h2 id="codesTitle" data-i18n="codesHead">복구 코드 — 이번 한 번만 보여줍니다</h2></div>
+    <ol class="si-codes" id="codeList"></ol>
+    <div class="si-btns is-wide">
+      <button type="button" id="codesCopy" data-i18n="codesCopy">복사</button>
+      <button type="button" id="codesDown" data-i18n="codesDown">.txt로 저장</button>
+    </div>
+    <label class="si-check"><input type="checkbox" id="codesOk"><span data-i18n="codesSaved">저장했습니다</span></label>
+    <p class="si-say" id="codesSay" role="status" aria-live="polite"></p>
+    <div class="fb-foot">
+      <button type="button" class="fb-send" id="codesDone" data-i18n="codesDone" disabled>완료</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="settings.js?v=1.60"></script>
+</body>
+</html>

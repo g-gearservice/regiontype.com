@@ -1,8 +1,9 @@
 /* 로그인 — 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
 
    비밀번호는 받지 않는다. 정적 사이트가 비밀번호를 다루면 해시·재설정·유출
-   대응을 전부 떠안는데, 그건 이 저장소가 감당할 층이 아니다. 패스키는 비밀이
-   기기 밖으로 나오지 않고, 메일 링크는 일회용이다.
+   대응을 전부 떠안는데, 그건 이 저장소가 감당할 층이 아니다. 1차 인증은
+   Google·Apple 이 하고(OIDC), 계정에 패스키가 있으면 그 위에 2단계로 얹는다.
+   복구 코드는 패스키가 없는 기기에서 2단계를 넘는 비상구다.
 
    세션은 서명한 무상태 토큰이다.
    ponytail: 무상태라 낱개로 끊을 수 없다 — 급하면 SESSION_KEY 를 갈아 전부 끊는다.
@@ -20,7 +21,9 @@ export const hex = n => [...crypto.getRandomValues(new Uint8Array(n))]
   .map(b => b.toString(16).padStart(2, '0')).join('');
 
 const enc = new TextEncoder();
-const mac = key => crypto.subtle.importKey(
+/* HMAC 키 하나 가져오기. 세션 서명 말고도 쓴다 — SSO 의 sub 을 이 사이트
+   안에서만 뜻이 있는 값으로 접어 두는 데도 같은 SESSION_KEY 를 쓴다(worker.mjs). */
+export const mac = key => crypto.subtle.importKey(
   'raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 
 /* payload 를 그대로 실어 보낸다 — 사용자 id 와 만료뿐이고 비밀이 아니다.
@@ -48,9 +51,11 @@ export async function open(key, token) {
 }
 
 /* Authorization: Bearer <토큰>.
-   쿠키를 안 쓰는 이유는 중계기가 사이트와 다른 곳(workers.dev)에 있어서다 —
-   사이트 밖 쿠키는 브라우저가 점점 더 막는다. 헤더로 들고 다니면 CSRF 도 없다.
-   ponytail: 중계기를 api.regiontype.com 으로 옮기면 HttpOnly 쿠키로 올릴 수 있다. */
+   쿠키를 안 쓰는 이유는 중계기가 사이트와 아예 다른 도메인(g.gearservicevanguard.com
+   ↔ regiontype.com)에 있어서다 — 남의 도메인 쿠키는 브라우저가 점점 더 막는다.
+   헤더로 들고 다니면 CSRF 도 없다.
+   도메인이 갈린 이상 HttpOnly 쿠키로 올릴 길은 닫혔다. 그 길을 원하면 중계기를
+   사이트와 같은 도메인의 서브도메인으로 되돌려야 한다. */
 const bearer = req => (req.headers.get('authorization') || '').replace(/^Bearer /, '');
 
 export const who = (env, req) => env.SESSION_KEY ? open(env.SESSION_KEY, bearer(req)) : null;

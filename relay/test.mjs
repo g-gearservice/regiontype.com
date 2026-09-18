@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { compose, entry, where, regionOf, allowedOrigin } from './worker.mjs';
-import { sign, open, derToRaw, readClientData, readAuthData, b64u } from './auth.mjs';
+import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
@@ -162,6 +162,87 @@ assert.equal(back.length, 64, '원시형은 64바이트다');
 assert.deepEqual([...back], [...raw], 'DER 을 풀면 원래 값이 나온다');
 
 console.log('auth self-check done');
+
+/* ── SSO 2단계 (Google·Apple → 패스키·복구 코드) ────────────────
+   authCb·authTake·peekTwo·issueRecoveryCodes 는 worker.mjs 가 내보내지 않고,
+   D1 이 있어야 도는 것도 많다. 못 부르는 것은 (a) 내보낸 재료(sha·mac·b64u)로
+   같은 계산을 재현하거나 (b) security-rules.mjs 와 같은 방식으로 실제 소스
+   문자열이 그 모양을 유지하는지를 정규식으로 붙든다. 둘 다 안 되는 건 아래
+   '못 덮은 것' 에 적는다. */
+const worker = readFileSync(new URL('worker.mjs', import.meta.url), 'utf8');
+const fn = name => worker.match(new RegExp(`(?:async )?function ${name}\\([\\s\\S]*?\\n}\\n`))?.[0] ?? '';
+
+/* 1) take 줄의 id = b64u(sha(state + tag)). state 만 아는 쪽(공격자)이 tag 를
+   못 맞히면 다른 id 가 나와야 한다 — 무너지면 계정 탈취가 되살아난다. */
+const stateOf = async b => b64u(await sha(b));
+const takeId = async (state, tag) => b64u(await sha(state + tag));
+const state1 = await stateOf('아무-bind-값');
+const realTag = rand(32);
+assert.equal(await takeId(state1, realTag), await takeId(state1, realTag), '같은 state·tag 는 늘 같은 id');
+assert.notEqual(await takeId(state1, rand(32)), await takeId(state1, realTag),
+  'state 만 아는 공격자가 tag 를 못 맞히면 다른 id 가 나와야 한다');
+
+/* 2) 2단계 시도 횟수 — peekTwo 는 D1 상태 없인 부를 수 없다. 5회 상한과
+   실패해도 세는 증분, 성공했을 때만 줄을 지우는 순서를 소스에서 붙든다. */
+const peekTwoSrc = fn('peekTwo');
+assert.ok(peekTwoSrc, 'peekTwo 를 찾지 못했다 — 검사가 낡았다');
+assert.ok(/tries >= 5/.test(peekTwoSrc), '5회 상한이 사라졌다');
+assert.ok(/tries = tries \+ 1/.test(peekTwoSrc), '실패해도 시도를 세는 증분이 사라졌다');
+assert.ok(!/consumeTwo/.test(peekTwoSrc), 'peekTwo 는 읽기만 한다 — 성공 판정 전에 줄을 지우면 안 된다');
+const authLogSrc = fn('authLog'), authCodeSrc = fn('authCode');
+assert.ok(authLogSrc.includes('consumeTwo(env, chal)') &&
+  authLogSrc.indexOf('서명이 맞지 않습니다') < authLogSrc.indexOf('consumeTwo(env, chal)'),
+  '패스키는 서명 검증을 통과했을 때만 줄을 지워야 한다');
+assert.ok(authCodeSrc.includes('consumeTwo(env, id)') &&
+  authCodeSrc.indexOf('맞지 않는 코드입니다') < authCodeSrc.indexOf('consumeTwo(env, id)'),
+  '복구 코드는 검증을 통과했을 때만 줄을 지워야 한다');
+
+/* 3) id_token 검증 — iss·aud·exp·nonce 가 하나라도 어긋나면 닫는 쪽으로
+   떨어져야 한다. authCb 도 못 부르니 같은 조건을 여기서 재현하고, 재현이
+   실제 코드에서 벗어나지 않았는지 느슨한 정규식으로 원문과 맞춰 본다. */
+const authCbSrc = fn('authCb');
+const guard = /!claims\s*\|\|\s*!prov\.iss\.includes\(claims\.iss\)\s*\|\|\s*claims\.aud\s*!==\s*prov\.id\(env\)\s*\|\|\s*!\(claims\.exp\s*>\s*Date\.now\(\)\s*\/\s*1000\)\s*\|\|\s*claims\.nonce\s*!==\s*state\s*\|\|\s*!claims\.sub/;
+assert.ok(guard.test(authCbSrc), 'id_token 검증 조건이 바뀌었다 — 재현한 계산을 다시 맞춰야 한다');
+
+const PROV = { iss: ['https://accounts.google.com', 'accounts.google.com'], id: 'client-123' };
+const validClaims = (c, prov, state) => !!c && prov.iss.includes(c.iss) && c.aud === prov.id
+  && c.exp > Date.now() / 1000 && c.nonce === state && !!c.sub;
+const now = Date.now() / 1000;
+const goodClaims = { iss: 'https://accounts.google.com', aud: 'client-123', exp: now + 300, nonce: 'n1', sub: 'u1' };
+assert.equal(validClaims(goodClaims, PROV, 'n1'), true, '맞는 토큰은 통과한다');
+assert.equal(validClaims({ ...goodClaims, iss: 'https://evil.example' }, PROV, 'n1'), false, 'iss 가 다르면 거른다');
+assert.equal(validClaims({ ...goodClaims, aud: 'other-client' }, PROV, 'n1'), false, 'aud 가 다르면 거른다');
+assert.equal(validClaims({ ...goodClaims, exp: now - 1 }, PROV, 'n1'), false, '지난 토큰은 거른다');
+assert.equal(validClaims({ ...goodClaims, nonce: 'n2' }, PROV, 'n1'), false, 'nonce 가 다르면 거른다');
+
+/* 4) 복구 코드 — 해시로만 맞춰 보고, 쓰면 지우고, 재발급은 옛 코드를 통째로
+   지운다. 평문 code 가 아니라 해시 h 만 저장하는지도 소스에서 확인한다. */
+const issueSrc = fn('issueRecoveryCodes');
+assert.ok(/delete from recovery where who = \?/.test(issueSrc), '재발급이 옛 코드를 지우지 않는다');
+assert.ok(/insert into recovery[\s\S]*bind\(h, who, now\)/.test(issueSrc), '해시만 저장해야 한다');
+assert.ok(!/\.bind\(code,/.test(issueSrc), '평문 코드가 저장되면 안 된다');
+assert.ok(/select who from recovery where hash = \?/.test(authCodeSrc), '코드가 아니라 해시로 맞춰 봐야 한다');
+assert.ok(authCodeSrc.includes("delete from recovery where hash = ?") &&
+  authCodeSrc.indexOf('맞지 않는 코드입니다') < authCodeSrc.indexOf("delete from recovery where hash = ?"),
+  '검증을 통과했을 때만 지워야 한다 — 복구 코드는 한 번만 쓴다');
+
+const hex = buf => [...buf].map(b => b.toString(16).padStart(2, '0')).join('');
+assert.equal(hex(await sha('가나다라마바')), hex(await sha('가나다라마바')), '같은 코드는 같은 해시');
+assert.notEqual(hex(await sha('가나다라마바')), hex(await sha('가나다라마사')), '다른 코드는 다른 해시');
+
+/* 5) sub 해시 — 같은 공급자·같은 sub·같은 키는 늘 같은 값으로, 키나 공급자가
+   다르면 다른 값으로 떨어져야 한다. hmacSub 은 안 내보내지만 mac() 은
+   내보내니 같은 재료로 재현한다. */
+const hmacSub = async (key, provider, sub) => hex(new Uint8Array(
+  await crypto.subtle.sign('HMAC', await mac(key), new TextEncoder().encode(`${provider}:${sub}`))));
+assert.equal(await hmacSub('key-a', 'google', 'sub-1'), await hmacSub('key-a', 'google', 'sub-1'),
+  '같은 공급자·같은 sub·같은 키는 늘 같은 값');
+assert.notEqual(await hmacSub('key-a', 'google', 'sub-1'), await hmacSub('key-b', 'google', 'sub-1'),
+  '키가 다르면 다른 값 — SUB_KEY 를 갈면 sso 연결이 끊긴다는 전제가 여기 있다');
+assert.notEqual(await hmacSub('key-a', 'google', 'sub-1'), await hmacSub('key-a', 'apple', 'sub-1'),
+  '공급자가 다르면 같은 sub 이라도 다른 값');
+
+console.log('sso two-factor self-check done');
 
 /* ── 보안 룰 ──────────────────────────────────────────
    룰이 통과만 시키는 룰이 되는 게 제일 무섭다. 그래서 여기서는 맞는 값 한 번,

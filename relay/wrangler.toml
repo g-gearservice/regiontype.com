@@ -7,6 +7,15 @@ workers_dev = false
 # Public API — never put Cloudflare Access in front of this. Access breaks the browser
 # preflight (OPTIONS 403) before the Worker runs, which reaches the site as a 502.
 
+# SSO 공급자 설정. 비밀이 아닌 값만 — client_secret(GOOGLE_SECRET) 과
+# .p8 키 원문(APPLE_KEY)은 반드시 `wrangler secret put` 으로 넣는다.
+# 채우기 전에는 빈 문자열이라 worker 가 503(nokey) 으로 답한다.
+[vars]
+GOOGLE_ID = "553049755538-kbc24ao0p1hv6re0nspv50j9e6hrqr0j.apps.googleusercontent.com"
+APPLE_ID = ""
+APPLE_TEAM = ""
+APPLE_KID = ""
+
 # wrangler d1 create rt-board 가 찍어주는 id 를 여기 적는다
 [[d1_databases]]
 binding = "DB"
@@ -30,15 +39,27 @@ namespace_id = "1002"
   period = 60
 
 [[ratelimits]]
+# 로그인 한 번이 POST 만 서넛(sso·take·log 또는 code) 이다 — 사무실·학교처럼
+# IP 를 같이 쓰는 곳에서 세 번째 사람부터 막히던 걸 10 → 20 으로 늘려 줄인다.
 name = "RL_AU"
 namespace_id = "1003"
   [ratelimits.simple]
-  limit = 10
+  limit = 20
+  period = 60
+
+[[ratelimits]]
+# /auth/cb 전용 창. GET 이라 harden-zone.mjs(POST 만 셈)에 안 걸리니 여기서
+# 따로 센다. RL_AU 와 섞지 않는 이유는 이 경로가 공급자의 리다이렉트로만 오고
+# (코드 재사용 불가), 로그인 단계별 POST 예산을 깎아 먹으면 안 되어서다.
+name = "RL_CB"
+namespace_id = "1004"
+  [ratelimits.simple]
+  limit = 30
   period = 60
 
 [[routes]]
-pattern = "feedback.regiontype.com"
-zone_name = "regiontype.com"
+pattern = "g.gearservicevanguard.com"
+zone_name = "gearservicevanguard.com"
 custom_domain = true
 
 [observability]
