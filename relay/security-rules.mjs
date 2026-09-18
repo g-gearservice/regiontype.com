@@ -17,15 +17,15 @@ export const PROBES = {
   site:     { url: 'https://regiontype.com/' },
   www:      { url: 'https://www.regiontype.com/' },
   plain:    { url: 'http://regiontype.com/', redirect: 'manual' },
-  relay:    { url: 'https://feedback.regiontype.com/where',
+  relay:    { url: 'https://g.gearservicevanguard.com/where',
               headers: { Origin: 'https://regiontype.com' } },
-  preflight: { url: 'https://feedback.regiontype.com/', method: 'OPTIONS',
+  preflight: { url: 'https://g.gearservicevanguard.com/', method: 'OPTIONS',
                headers: { Origin: 'https://regiontype.com',
                           'Access-Control-Request-Method': 'POST' } },
   /* 저장소 파일을 사이트가 내주는지 — Pages 에는 .assetsignore 가 없어 엣지가 대신 막는다 */
   internals: { url: 'https://regiontype.com/relay/worker.mjs' },
   /* 남의 출처로 같은 문을 두드려 본다 — 문이 아무에게나 열리면 여기서 걸린다 */
-  stranger: { url: 'https://feedback.regiontype.com/', method: 'OPTIONS',
+  stranger: { url: 'https://g.gearservicevanguard.com/', method: 'OPTIONS',
               headers: { Origin: 'https://evil.example',
                          'Access-Control-Request-Method': 'POST' } },
 };
@@ -148,9 +148,13 @@ export const RULES = [
       return bad ? `[vars] 에 ${bad[1]} 이 있다 — secret 으로 옮긴다` : '';
     } },
   { id: 'ratelimits', need: 'file:relay/wrangler.toml', sev: 'high',
-    want: '세 창(RL_FB·RL_SC·RL_AU)이 다 붙어 있다',
+    /* RL_CB 가 빠지면 /auth/cb 가 무제한으로 열리는 게 아니라 — worker.mjs 가
+       env.RL_CB 없는 바인딩을 만나 pass() 에서 null 을 받아 '설정 미비'로
+       막힌다(악용이 아니라 로그인이 전부 조용히 실패한다). 그래서 나머지
+       셋과 같은 sev(high)로 같이 본다. */
+    want: '네 창(RL_FB·RL_SC·RL_AU·RL_CB)이 다 붙어 있다',
     test: src => {
-      const gone = missing(src, 'RL_FB', 'RL_SC', 'RL_AU');
+      const gone = missing(src, 'RL_FB', 'RL_SC', 'RL_AU', 'RL_CB');
       return gone.length ? `빠진 레이트리밋 바인딩: ${gone.join(', ')}` : '';
     } },
   { id: 'assets-exclude', need: 'file:.assetsignore', sev: 'high',

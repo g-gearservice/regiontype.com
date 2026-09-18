@@ -1,5 +1,13 @@
 /        /index.html        200
 /about/  /about/index.html  200
 /about   /about/            301
+/signin/ /signin/index.html 200
+/signin  /signin/           301
+/settings/ /settings/index.html 200
+/settings  /settings/          301
+/policy/   /policy/index.html  200
+/policy    /policy/            301
+/terms/    /terms/index.html   200
+/terms     /terms/             301
 /mimi/   /mimi/index.html   200
 /mimi    /mimi/             301

@@ -2,6 +2,9 @@
   --bg:#e8edf0; --grid:#dae2e7; --ink:#3c464a; --ink-soft:#5b676e;
   --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
+  /* 주황 바탕 위의 글자. 시안의 흰 글자는 대비 2.06:1 로 기준에 못 미친다 —
+     어두운 먹으로 6.64:1 을 받는다. 야간에도 바탕이 그대로라 값도 그대로다 */
+  --on-accent:#232c31;
   --bad:#c1362b;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s;
@@ -79,7 +82,7 @@ body{
 
 .logo{font-size:clamp(38px,5vw,64px);font-weight:800;letter-spacing:-.03em;line-height:1}
 .logo span{font-weight:400}
-/* e 의 오른쪽 위 점 — 장식이다. 피드백은 홈 왼쪽 아래 격자 칸 버튼(.title-fb) */
+/* e 의 오른쪽 위 점 — 장식이다. 피드백은 홈 상단 넵바 안에 있다 */
 i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background:var(--accent);vertical-align:.6em;margin-left:.03em}
 .head{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin:0}
 
@@ -118,8 +121,18 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .back .i{font-size:34px}
 /* ── 코스 고르기 — 홈과 같은 격자 한 칸 버튼 ─────────── */
-#regions{overflow:hidden}
-#regions .screen-head{position:relative;z-index:2}
+#regions{overflow:hidden;cursor:grab;touch-action:none}
+#regions.is-drag,#regions.is-drag *{cursor:grabbing}
+/* 코스 이름은 넵바 바로 아래에 띄워 둔다. 흐름에서 빼는 이유는 이게 자리를
+   차지하면 그만큼 아래 지도가 밀려 내려가 바닥이 잘리기 때문이다 */
+#regions .screen-head{position:absolute;z-index:2;margin:0;top:168px;left:var(--screen-pad-x)}
+/* 홈 넵바 가운데의 브랜드. 누르면 홈으로 */
+.nav-logo{
+  font-size:34px;letter-spacing:-.02em;color:var(--ink);
+  text-decoration:none; cursor:pointer;
+}
+.nav-logo:hover,.nav-logo:focus{text-decoration:none}
+.nav-logo:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
 /* 머리글은 나라 코스 버튼이다. 아무 칸도 안 고른 동안(시작하면 나라 코스) 브랜드 색과
    밑줄로 켜 둔다 — 색만으로 가르지 않는다. 큰 글자라도 --accent 는 바탕과 대비가 모자라
    글자용 --accent-text 를 쓴다 */
@@ -143,6 +156,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 #courseBtns .grid-btn[aria-expanded="true"]{z-index:2}
 #courseBtns .grid-btn[aria-expanded="true"]::after{
   content:"";position:absolute;inset:10px;border:3px dashed currentColor;pointer-events:none;
+  border-radius:50%;
 }
 /* 고른 칸은 색에 더해 안쪽 테두리로도 드러낸다 */
 #courseBtns .grid-btn[aria-pressed="true"]{background:var(--accent);box-shadow:inset 0 0 0 5px var(--ink)}
@@ -150,12 +164,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 :root[data-night] #card,
 :root[data-night] #typein{box-shadow:none}
 
-.screen.on .missed li,
 .screen.on .menu button,
 .screen.on .opts > *{animation:rise .34s var(--ease-out) backwards}
 
 @media (prefers-reduced-motion:reduce){
-  .screen.on :is(.missed li,.menu button,.opts > *),
+  .screen.on :is(.menu button,.opts > *),
   .countdown b{animation:none}}
 
 /* ── 설정 ─────────────────────────────── */
@@ -228,6 +241,15 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   .opts-tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--block) 52%,transparent)}
 }
 .opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+/* 지역 탭은 개발 중이다. 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
+.opts-tab[data-status="development"]{border:2px dashed currentColor}
+.opts-tab-status{
+  display:inline-block;margin-inline-start:.4em;padding:1px 8px 2px;
+  border:2px solid currentColor;border-radius:999px;
+  font-size:13px;font-weight:800;letter-spacing:.04em;vertical-align:middle;
+  line-height:1.2;
+}
+.opts-tab[aria-selected="true"] .opts-tab-status{font-size:15px}
 /* 판은 프레임 높이를 다 갖는다 — 탭을 바꿔도 흰 프레임 크기가 뛰지 않는다. [hidden] 은 건드리지 않는다: display 를 주면
    UA 의 display:none 을 이겨 숨은 판이 되살아난다 */
 /* 판 통은 언어 판(두 열)의 봉투 폭으로 못 박는다 — min-width 로만 죄면 한 열짜리
@@ -238,8 +260,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
 .opts-panel:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
 /* 언어·지역 고르기 — 대륙 fieldset + 2열 라디오. 지역 판과 같은 스크롤 통 */
-.opts-lang-pick,
-:root[data-dev] .opts-region-pick{
+.opts-lang-pick{
   /* 대륙 fieldset 은 통을 가로지르고, 홀로 선 '자동' 칸은 한 열만 차지한다 —
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
   display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
@@ -271,8 +292,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   --fade-x:linear-gradient(#000,#000);
 }
 /* 굴러가는 통이 있는 판에서만 띠가 선다 — 토글·버전 판은 흐릴 것이 없다 */
-#options:has(#optsLanguage:not([hidden])) > .backdrop-blur.bot,
-:root[data-dev] #options:has(#optsRegion:not([hidden])) > .backdrop-blur.bot{display:grid}
+#options:has(#optsLanguage:not([hidden])) > .backdrop-blur.bot{display:grid}
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
 /* 지역 고르기는 아직 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다
@@ -319,7 +339,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (hover:hover) and (pointer:fine){
   .region-opt:hover:not(:has(input:checked)){background:var(--land)}
 }
-:root[data-dev] .opts-region-pending{display:none}
 .opts-region-pending{max-width:34em;margin-top:14px;color:var(--ink-soft);font-size:18px;line-height:1.6}
 /* 이제 셸 아래가 아니라 '버전' 탭의 판 안이다 — 다른 판처럼 왼쪽에서 시작한다 */
 .ver{color:var(--ink-soft);font-size:18px}
@@ -341,7 +360,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .combo{color:var(--accent-text);font-weight:800;font-size:24px;min-width:80px}
 
 .stage{flex:1;position:relative;display:flex;justify-content:center;min-height:0}
-#map{width:100%;height:100%;display:block}
+#map{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#map.is-drag{cursor:grabbing}
+#map.is-drag .cam,#map.is-zoom .cam{transition:none}
 /* 자치구는 도형이 아니라 도트 격자다. 정답을 맞히면 그 구의 도트가 차례로 물든다 */
 #map circle{
   fill:var(--land);
@@ -391,14 +412,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .scores .best{color:var(--accent-text);font-weight:700;min-height:24px;display:block}
 .scores .menu{margin-top:24px;gap:3px}
 .scores .menu button{font-size:20px;padding:4px 14px 6px}
-.missed-head{margin:34px 0 14px;font-size:20px;font-weight:800}
-.missed-head span{color:var(--ink-soft);font-weight:500}
-.missed{list-style:none;display:flex;flex-wrap:wrap;gap:12px}
-.missed li{background:var(--card);padding:12px 16px;max-width:330px;font-size:14px;color:var(--ink-soft)}
-.missed b{display:block;font-size:17px;color:var(--ink);margin-bottom:4px}
+.res-head{margin:34px 0 14px;font-size:20px;font-weight:800}
+.res-head span{color:var(--ink-soft);font-weight:500}
 
-/* 순위표 — 놓친 곳 목록과 같은 카드를 쓴다. 내 줄은 테두리와 '나' 라벨을
-   함께 붙인다: 색 하나로만 갈라 두면 못 보는 사람이 생긴다 */
+/* 순위표 — 내 줄은 테두리와 '나' 라벨을 함께 붙인다:
+   색 하나로만 갈라 두면 못 보는 사람이 생긴다 */
 .ranks{list-style:none;display:flex;flex-direction:column;gap:6px;max-width:420px}
 .ranks li{
   display:flex;align-items:baseline;gap:12px;background:var(--card);
@@ -415,16 +433,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .board-say{margin:-6px 0 12px;min-height:22px;color:var(--accent-text);font-weight:700}
 .board-say.bad{color:var(--bad)}
 .board-in{margin-top:14px;max-width:460px;font-size:14px;color:var(--ink-soft);line-height:1.6}
-.board-in b{color:var(--ink)}
-.board-in div{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.board-in button{
-  font:inherit;font-weight:700;font-size:15px;color:#fff;background:var(--block);
-  border:0;border-radius:4px;padding:8px 16px;cursor:pointer;
-  transition:background var(--fast) var(--ease-out);
-}
-#inNew{background:none;color:var(--accent-text);border:2px solid var(--grid)}
-.board-in button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover) and (pointer:fine){ .board-in button:hover{background:var(--accent);color:#fff} }
 /* 되돌릴 수 없는 버튼이라 표시는 하되, 이 판의 주인공은 아니다 */
 .board-drop{
   display:block;margin-top:16px;
@@ -454,24 +462,13 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* ── 모바일 안내 ───────────────────────── */
 #mobile{display:none;position:fixed;inset:0;place-content:center;text-align:center;padding:32px;gap:20px}
 #mobile p{color:var(--ink-soft);line-height:1.7}
+/* 물리 키보드 안내는 홈(body 에 클래스가 없는 쪽)에만 건다 — 설정(/settings/, body.set)은
+   패스키·로그아웃이 있어 폰에서 닿아야 한다. 이 규칙을 넓게 두면 그 페이지가 백지가 된다 */
 @media (pointer:coarse),(max-width:640px){
-  .screen{display:none!important}
+  body:not(.set) .screen{display:none!important}
   #mobile{display:grid}
 }
 
-/* 타이틀 — 칸이 곧 자리다. 로고는 가운데 세 칸 한 줄, 그 아래 줄의 세 칸이 각각
-   소개·설정·시작하기 버튼이다. 몇 번째 칸인지는 app.js 가 --title-col/row 로 준다 */
-#title{padding:0}
-.title-block{
-  position:absolute;
-  left:calc(var(--deco-cw) * var(--title-col));
-  top:calc(var(--deco-ch) * var(--title-row));
-  width:calc(var(--deco-cw) * 3); max-width:100vw;
-}
-#title .logo{
-  height:var(--deco-ch); display:flex; align-items:center; justify-content:center;
-  text-align:center;
-}
 /* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
    잡고, 끌어다 놓으면 그 칸에 남는다. position:relative 를 여기서 주지 않는다 —
    주면 left/top 칸 계산이 흐름 기준이 되어 구석에 앉지 못한다 */
@@ -481,29 +478,19 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   top:calc(var(--deco-ch) * var(--btn-row, 0));
   width:var(--deco-cw); height:var(--deco-ch);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-  padding:8px; border:0; text-align:center; text-decoration:none;
+  padding:8px; border:0; border-radius:50%; text-align:center; text-decoration:none;
   font:inherit; font-size:30px; font-weight:700; line-height:1.2; color:#fff; background:var(--block);
-  cursor:grab; user-select:none; touch-action:none;
+  cursor:pointer; user-select:none; touch-action:none;
   transition:background var(--fast);
 }
-.grid-btn[data-drag]{cursor:grabbing; z-index:5}
-#title .title-alt{font-size:16px; display:none}
-:root[data-dev] #title .title-alt{display:flex}
-#title .title-gh{font-size:17px; font-variant-numeric:tabular-nums}
-/* 다른 말의 '피드백'은 한 칸 폭을 넘게 길다 — 깃허브 칸과 같은 크기로 줄인다 */
-#title .title-fb{font-size:17px}
-#title .title-fb .i{font-size:22px}
-#title .title-gh svg{fill:currentColor;display:block}
 @media (hover:hover) and (pointer:fine){
   .grid-btn:hover{background:var(--accent)}
 }
 .grid-btn:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
-#title, #options{pointer-events:none}
-#title .title-block, #title .grid-btn,
+#options{pointer-events:none}
 #options .screen-head, #options .opts-shell{
   pointer-events:auto; z-index:2;
 }
-#title .title-block{position:absolute}
 
 /* 설정 화면 — 뒤로·제목은 왼쪽 위에 고정해 두고(.screen 이 이미
    position:fixed 라 그 패딩 모서리가 기준이 된다), 나머지(레일+판, 버전 줄)는
@@ -545,7 +532,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
                          border-color var(--fast) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
 }
-.missed li,.ranks li{border-radius:4px;box-shadow:var(--shadow)}
+.ranks li{border-radius:4px;box-shadow:var(--shadow)}
 .board-join :is(input,button){border-radius:4px}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
@@ -554,8 +541,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @keyframes rise{from{opacity:0;transform:translateY(10px) scale(.98)}}
 .screen.on .menu button:nth-child(2){animation-delay:60ms}
 .screen.on .menu button:nth-child(3){animation-delay:120ms}
-.missed li:nth-child(3n+2){animation-delay:50ms}
-.missed li:nth-child(3n+3){animation-delay:100ms}
 
 /* 카운트다운: scale(0) 이 아니라 거의 다 자란 상태에서 */
 .countdown{backdrop-filter:blur(2px)}
@@ -735,34 +720,34 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .backdrop-blur > span{grid-area:1/1}
 .backdrop-blur > :nth-child(1){
-  backdrop-filter:blur(1px); -webkit-backdrop-filter:blur(1px);
-  mask:linear-gradient(0deg,transparent,#000 8%);
-  -webkit-mask:linear-gradient(0deg,transparent,#000 8%);
+  backdrop-filter:blur(calc(1px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,1)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent,#000 8%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent,#000 8%);
 }
 .backdrop-blur > :nth-child(2){
-  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-  mask:linear-gradient(0deg,transparent 8%,#000 16%);
-  -webkit-mask:linear-gradient(0deg,transparent 8%,#000 16%);
+  backdrop-filter:blur(calc(4px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,1)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 8%,#000 16%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 8%,#000 16%);
 }
 .backdrop-blur > :nth-child(3){
-  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-  mask:linear-gradient(0deg,transparent 16%,#000 24%);
-  -webkit-mask:linear-gradient(0deg,transparent 16%,#000 24%);
+  backdrop-filter:blur(calc(8px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,1)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 16%,#000 24%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 16%,#000 24%);
 }
 .backdrop-blur > :nth-child(4){
-  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  mask:linear-gradient(0deg,transparent 24%,#000 36%);
-  -webkit-mask:linear-gradient(0deg,transparent 24%,#000 36%);
+  backdrop-filter:blur(calc(16px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,1)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 24%,#000 36%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 24%,#000 36%);
 }
 .backdrop-blur > :nth-child(5){
-  backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-  mask:linear-gradient(0deg,transparent 36%,#000 48%);
-  -webkit-mask:linear-gradient(0deg,transparent 36%,#000 48%);
+  backdrop-filter:blur(calc(24px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,1)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 36%,#000 48%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 36%,#000 48%);
 }
 .backdrop-blur > :nth-child(6){
-  backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
-  mask:linear-gradient(0deg,transparent 48%,#000 60%);
-  -webkit-mask:linear-gradient(0deg,transparent 48%,#000 60%);
+  backdrop-filter:blur(calc(32px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,1)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 48%,#000 60%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 48%,#000 60%);
 }
 /* 원본은 검정 스크림이다. 여기 배경은 밝으니 사이트 배경색으로 깐다 */
 .backdrop-blur::after{
@@ -830,18 +815,18 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (prefers-reduced-motion:reduce){ .rt-map .tiles > g.pop{animation:none} }
 
 /* ── 피드백 ──────────────────────────────────────────── */
-#feedback{
+#feedback,#codes{
   border:0; padding:0; background:none; color:var(--ink);
   width:min(92vw,520px); max-width:none;
   margin:auto;   /* * { margin:0 } 이 UA 의 가운데 정렬을 지운다 — 되돌린다 */
 }
-#feedback::backdrop{background:rgba(35,44,49,.42);backdrop-filter:blur(2px)}
-#fbForm{
+#feedback::backdrop,#codes::backdrop{background:rgba(35,44,49,.42);backdrop-filter:blur(2px)}
+#fbForm,#codesBox{
   display:flex; flex-direction:column; gap:14px;
   background:var(--card); border-radius:6px; box-shadow:var(--shadow-lift);
   padding:24px 28px 22px; max-height:88vh; overflow:auto;
 }
-:root[data-night] #fbForm{border:1px solid var(--grid)}
+:root[data-night] :is(#fbForm,#codesBox){border:1px solid var(--grid)}
 .fb-head{display:flex;align-items:center;gap:12px}
 .fb-head h2{flex:1;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1}
 .fb-lead{margin-top:-8px;color:var(--ink-soft);font-size:15px;line-height:1.6}
@@ -864,4 +849,213 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .fb-send[disabled]{opacity:.5;cursor:default}
 @media (hover:hover) and (pointer:fine){
   .fb-send:not([disabled]):hover{background:var(--accent)}
+}
+
+/* ── 로그인 화면 (/signin/) ─────────────────────────────
+   시안: 배경 점 지도 위에 로고·제목·불 켜진 점 덩이·버튼 두 개.
+   쌓는 순서는 지도(-3) < 흐림 띠(-2) < 본문(1) 이다 — 흐림을 본문 위에 두면
+   버튼 글자가 함께 흐려진다. */
+body.si{overflow:auto}
+/* 점 지도는 마스크로 그린다 — 색을 --land 에서 받아 야간 모드가 그냥 따라온다.
+   (기존 .i-* 아이콘과 같은 방식, ?v= 는 여기 손으로 붙인다) */
+.si-map{
+  /* 시안에서 지도 한가운데는 점 덩이 한가운데보다 54px 위다 — 그 관계만 옮긴다
+     (화면 높이가 줄어도 본문은 그대로 가운데 있는다) */
+  position:fixed; left:50%; top:calc(50% - 53px); transform:translate(-50%,-50%);
+  width:min(1108px,94vw); aspect-ratio:1108.07/484.39; z-index:-3;
+  background:var(--land); pointer-events:none;
+  -webkit-mask:url(assets/signin-map.svg?v=1.59) center / contain no-repeat;
+  mask:url(assets/signin-map.svg?v=1.59) center / contain no-repeat;
+}
+/* 시안의 양옆 449·458px(=1280 기준 35%·36%)과 아래 띠.
+   흐림은 새로 짓지 않는다 — 플레이·설정 화면이 쓰는 .backdrop-blur 여섯 겹을
+   그대로 빌리고 방향(--blur-deg)과 세기(--blur-k)만 갈아 끼운다. 각 띠는 바깥
+   가장자리가 가장 진하고 안쪽으로 오면서 0 이 된다.
+   사다리 맨 윗층이 32px 이라 그대로 쓰면 점 지도가 죽이 된다 — 0.3 을 곱해
+   가장 진한 층을 10px 안팎(시안 값)으로 둔다 */
+.si-blur{
+  --blur-k:.3;
+  position:fixed; top:0; bottom:0; height:auto; z-index:-2;
+}
+/* 배경색 스크림은 끈다 — 점 지도를 덮어 흐리게 보이게 한다 */
+.si-blur::after{content:none}
+.si-blur.is-left{--blur-deg:270deg;left:0;right:auto;width:35%}
+.si-blur.is-right{--blur-deg:90deg;left:auto;right:0;width:36%}
+.si-blur.is-bot{--blur-deg:180deg;left:0;right:0;width:auto;top:auto;height:18%}
+
+.si-back{position:fixed;left:24px;top:24px;z-index:2}
+.si-wrap{
+  position:relative; z-index:1; min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:18px; padding:56px 24px; text-align:center;
+}
+.si-wrap .logo{font-size:clamp(34px,4.2vw,48px)}
+.si-view{display:flex;flex-direction:column;align-items:center;gap:18px}
+.si-view[hidden]{display:none}
+.si-head{font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.si-lead{color:var(--ink-soft);font-size:15px;line-height:1.6;max-width:32em}
+.si-blob{width:214px;height:106px;display:block}
+
+/* 이 화면은 글자를 긁어 갈 일이 없다. 전역 ::selection 의 주황이 주황 버튼 위에
+   덧칠되면 글자만 흐려 보이므로 투명으로 둔다 */
+.si ::selection,.si::selection{background:transparent}
+.si ::-moz-selection,.si::-moz-selection{background:transparent}
+
+/* 버튼 두 개는 시안대로 간격 없이 붙고, 사이는 1px 선으로만 갈린다 */
+.si-btns{display:flex;flex-direction:column;width:204px;max-width:100%}
+.si-btns.is-wide{width:340px}
+/* 로그인 문(계정 판)만 <a> 다 — 나머지는 버튼이고, 같은 결로 세운다 */
+.si-btns > :is(button,a){
+  font:inherit; font-weight:700; font-size:16px; line-height:1.35;
+  display:grid; place-items:center; text-align:center; text-decoration:none;
+  color:var(--on-accent); background:var(--accent); border:0;
+  min-height:44px; padding:10px 14px; cursor:pointer;
+  transition:background var(--fast) var(--ease-out);
+}
+.si-btns > :is(button,a) + :is(button,a){border-top:1px solid var(--land-line)}
+/* 주황 위에 주황 테두리는 안 보인다 — 안쪽으로 먹 테두리를 두른다 */
+.si-btns > :is(button,a):focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.si-btns > button[disabled]{background:var(--land);color:var(--ink-soft);cursor:default}
+@media (hover:hover) and (pointer:fine){
+  .si-btns > :is(button,a):not([disabled]):hover{background:var(--accent-deep)}
+}
+
+.si-say{min-height:1.5em;font-size:15px;color:var(--ink-soft);max-width:32em}
+/* 색만으로 말하지 않는다 — 글이 무엇이 틀렸는지 말하고, 왼쪽에 선을 하나 더 둔다 */
+.si-say.bad{color:var(--accent-text);border-left:3px solid var(--bad);padding-left:10px}
+.si-warn{
+  font-size:15px;line-height:1.6;color:var(--ink);max-width:32em;
+  border:1px solid var(--accent-deep);border-left-width:4px;padding:10px 12px;text-align:left;
+}
+.si-note{font-size:15px;color:var(--ink-soft)}
+.si-codes{
+  list-style:none;display:grid;grid-template-columns:repeat(2,auto);gap:6px 24px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;letter-spacing:.08em;
+  background:var(--card);border:1px solid var(--land);padding:14px 20px;
+}
+.si-check{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer}
+.si-code{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--ink-soft)}
+.si-code > div{display:flex;gap:6px}
+.si-code input{
+  font:inherit;font-size:16px;color:var(--ink);background:var(--bg);
+  border:2px solid var(--grid);border-radius:4px;padding:8px 10px;width:12em;
+}
+.si-code button{
+  font:inherit;font-weight:700;color:var(--on-accent);background:var(--accent);
+  border:0;padding:8px 16px;cursor:pointer;
+}
+.si-code button:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.si-lost{font-size:14px;color:var(--ink-soft);max-width:32em;text-align:left}
+.si-lost summary{cursor:pointer;padding:6px 0}
+.si-lost p{line-height:1.6;padding-bottom:6px}
+
+/* 손가락으로 여는 화면은 폭이 아니라 pointer 로 가른다 */
+@media (pointer:coarse){
+  .si-back{left:12px;top:12px}
+  .si-btns{width:min(300px,86vw)}
+  .si-btns.is-wide{width:min(340px,86vw)}
+  .si-btns > :is(button,a){min-height:48px}
+  .si-codes{grid-template-columns:auto}
+}
+
+/* 화면 사이 전환은 브라우저가 한다 — 라이브러리 없음 */
+@view-transition{navigation:auto}
+@media (prefers-reduced-motion:reduce){
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
+}
+:root[data-motion="off"]::view-transition-group(*),
+:root[data-motion="off"]::view-transition-old(*),
+:root[data-motion="off"]::view-transition-new(*){animation:none!important}
+
+/* ── 홈 넵바 ─────────────────────────────────────────────
+   흐림 띠는 플레이 화면과 같은 .backdrop-blur 를 그대로 쓴다(마크업도 같다).
+   띠는 장식이라 --blur-top 으로 높이만 주고, 줄은 그 위에 따로 앉는다 —
+   띠 안에 넣으면 pointer-events:none 을 물려받아 눌리지 않는다 */
+#regions > .backdrop-blur:not(.bot){--blur-top:160px; z-index:3}
+#regions > .backdrop-blur.bot{
+  z-index:3;
+  --blur-bot:150px;   /* 플레이 기본 220에서 조금 줄여 막대에 붙인다 */
+  --fade-x:linear-gradient(90deg,
+    transparent calc(50% - 280px),
+    #000 calc(50% - 160px),
+    #000 calc(50% + 160px),
+    transparent calc(50% + 280px));
+}
+#regions .navbar{
+  position:fixed; top:0; left:0; right:0; z-index:4;
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center; column-gap:8px; padding:18px 28px;
+}
+#regions .navbar .nav-side{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0;
+}
+#regions .navbar .nav-start{justify-content:flex-end}
+#regions .navbar .nav-end{justify-content:flex-start}
+#regions .navbar .nav-logo{
+  grid-column:2; justify-self:center; white-space:nowrap;
+  position:relative; z-index:1; padding:11px 16px;
+}
+/* 점은 #navShape 가 대신 그린다 — 자리를 비우면 글자가 밀리므로 숨기기만 한다 */
+#regions .navbar .nav-logo .dot{visibility:hidden}
+/* 설정·시작·계정. 알약은 불투명 — 라이트 #e7eef1, 야간 #232c31.
+   뒤 흐림은 플레이 타이핑 줄과 같은 .backdrop-blur.bot 이다 */
+#regions .nav-bot{
+  position:fixed; left:50%; bottom:28px; z-index:4; translate:-50% 0;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:8px 10px; background:#e7eef1; border-radius:999px;
+  box-shadow:var(--shadow);
+}
+:root[data-night] #regions .nav-bot{background:#232c31}
+#regions .nav-bot .nav-item{padding:14px 18px}
+/* 시작하기 채움은 #navBotShape 가 그린다 — 호버 틴트를 두면 알약이 옮겨도 남는다 */
+#regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
+@media (pointer:coarse){
+  #regions .nav-bot{bottom:20px; padding:10px 12px}
+}
+/* 아래 막대에 가리지 않게 코스 이름을 한 줄 올린다 */
+#regions .course-name{bottom:108px}
+/* 쉴 때는 로고 점(주황 원). 칸을 가리키면 경기장형으로 커지며 따라간다.
+   채움은 따라다녀도 --accent 그대로다. 좌표·크기는 app.js 스프링이 찍는다 */
+.nav-shape{
+  position:absolute; left:0; top:0; z-index:0; pointer-events:none;
+  background:var(--accent); border-radius:999px;
+}
+.nav-item{
+  position:relative; z-index:1;
+  display:inline-flex; align-items:center; gap:10px;
+  font:inherit; font-size:26px; font-weight:700; line-height:1;
+  color:var(--ink); background:none; border:0; border-radius:999px;
+  padding:15px 20px; cursor:pointer; text-decoration:none; white-space:nowrap;
+  transition:color var(--fast);
+}
+/* 알약이 올라앉은 칸은 주황 위 먹 글자. 자리·경기장 모양이 힌트라 색만으로 가르지 않는다 */
+.nav-item.is-on,.nav-logo.is-on{color:var(--on-accent)}
+.nav-item.is-play{font-size:27px; font-weight:800}
+.nav-item.is-on.is-play{color:var(--on-accent)}
+.nav-item.is-play.is-on:hover{color:var(--on-accent)}
+.nav-item .i{font-size:28px}
+.nav-item.is-on #ghStars{color:inherit}
+#ghStars{margin-left:8px; font-size:20px; font-weight:600; color:var(--ink-soft); font-variant-numeric:tabular-nums}
+.nav-item:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+/* Mimi 는 개발용 문이다 — 배포 화면에서는 줄에서 빠진다 */
+.navbar .title-alt{display:none}
+:root[data-dev] .navbar .title-alt{display:inline-flex}
+
+/* ── 설정 페이지의 손가락 갈림 (/settings/) ─────────────
+   격자 정렬은 데스크톱 계약이다. 좁은 손가락 화면에서는 레일을 가로로 눕히고
+   셸 높이를 풀어 페이지가 그대로 굴러가게 둔다 — settings.js 의 syncOptShell 도
+   여기서는 일찍 돌아선다(높이를 못 박으면 판이 잘린다) */
+@media (pointer:coarse){
+  body.set #options{justify-content:flex-start;padding:84px 20px 40px}
+  body.set #options .screen-head{top:20px;left:20px}
+  body.set .opts-shell{
+    flex-direction:column;align-items:stretch;gap:18px;
+    width:100%;max-width:none;height:auto;zoom:1;
+  }
+  body.set .opts-tabs{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;width:auto}
+  body.set .opts-panels{width:100%}
+  /* 셸 밖으로 자라던 고르기 통은 여기선 페이지가 굴린다 */
+  body.set .opts-lang-pick,
+  body.set .opts-region-pick{max-height:none;margin-bottom:0;overflow:visible;-webkit-mask:none;mask:none}
+  body.set #options > .backdrop-blur.bot{display:none!important}
 }

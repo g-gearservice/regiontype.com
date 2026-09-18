@@ -8,7 +8,51 @@
 
 # English
 
-A typing drill for place names. v0.4.154 (`VER=1.54`) — first-level admin courses by country. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.175 (`VER=1.75`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.175
+
+- On the home bottom bar, the Play fill follows hover and keyboard focus across Settings, Play, and Sign in, then sits back on Play
+
+## What's new in 0.6.174
+
+- The home bottom bar is opaque: `#e7eef1` in light, `#232c31` at night
+
+## What's new in 0.6.165
+
+- Settings, Play, and Account sit in a bottom bar under the map. The top bar keeps About, GitHub, Privacy, Community, Feedback, and Mimi, with the logo centered as a home link
+- The filled hover pill stays on the top bar and no longer follows Play
+
+## What's new in 0.6.164
+
+- Double-click a district (or Enter on the selected cell) to expand its administrative dongs from that cell, along the map coordinates. The rest of Seoul stays on screen, shrunk into leftover cells. Esc folds them back
+- Scroll or pinch to zoom the home and play maps. Plus and minus zoom the home map; Ctrl-plus/minus zoom play
+
+## What's new in 0.6.163
+
+- Scroll or pinch (trackpad) to zoom the home course map and the play map. Plus and minus zoom the home map; Ctrl-plus/minus zoom play. Zoom stays clamped so tiles cannot leave the screen
+- Click a Seoul district to open its dongs; pointer capture no longer swallows the click
+
+## What's new in 0.6.162
+
+- Click a district to open its administrative dongs as grid-cell buttons in that district's shape. Esc (or the district heading) returns to Seoul
+- The filled pill behind Start follows hover and keyboard focus across the home navbar
+- The home heading no longer shows the city name; the district name appears only after you open a district
+
+## What's new in 0.6.161
+
+- Click a district on the home map to see its administrative dongs as grid-cell buttons, laid out in that district's shape. The heading or Esc returns to Seoul
+
+## What's new in 0.6.160
+
+- The home map is Seoul only: each of the 25 districts is a grid-cell button, placed so the block follows the city's shape. Double-click still opens that district's dongs
+- The settings Region tab is marked in development. Other countries stay closed
+
+## What's new in 0.6.159
+
+- Signing in now starts with Google or Apple on its own page at `/signin/`; a passkey is an optional second step you turn on afterward, not a way to log in by itself
+- Turning the second step on gives you eight one-time recovery codes, shown once — losing your passkey no longer locks you out
+- The result screen no longer lists the places you missed
 
 ## What's new in 0.4.145
 
@@ -97,6 +141,7 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
 
     index.html               screens (title / regions / settings / play / result)
     about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
+    signin/                  sign in with Google or Apple, then switch on a passkey second step; inherits style.css tokens, does not load app.js
     wrangler.toml            the site as a Cloudflare Worker with static assets (no script, no build)
     _headers / _redirects    security headers and folder-index rewrites, applied by Cloudflare
     .assetsignore            files that never ship (relay/, tools/, maps/, docs)
@@ -182,7 +227,7 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
 
 Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
 
-**Do not put Cloudflare Access in front of this Worker.** If `feedback.regiontype.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code, which the site shows as a 502. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. That custom domain is the only door: `workers_dev = false` closes the `*.workers.dev` one. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
+**Do not put Cloudflare Access in front of this Worker.** If `g.gearservicevanguard.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code, which the site shows as a 502. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. That custom domain is the only door: `workers_dev = false` closes the `*.workers.dev` one. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
 
     node relay/test.mjs      checks that one issue and one score row are filtered correctly
 
@@ -201,16 +246,22 @@ The same Worker adds two more paths. A board is **course plus time limit**. One 
     POST /dist     {c, t} → {bins, bucket, cap, total, score, over}
     POST /forget   {} → {gone}      drop all of my rows
 
-    POST /auth/new  start passkey create → challenge
-    POST /auth/reg  finish passkey create → session token
-    POST /auth/go   start login → challenge
-    POST /auth/log  finish login → session token
-    GET  /auth/me   who is this
+    POST /auth/new    start passkey create (needs login) → challenge
+    POST /auth/reg    finish passkey create (needs login) → session token (recovery codes too, on the first key)
+    POST /auth/sso    start SSO {p,s} → provider URL
+    GET  /auth/cb     where the provider redirects back (GET, no Origin) → 302 (#signin=ok&t=…)
+    POST /auth/take   {b,t} claims the session token — a passkey already on the account demands a second step
+    POST /auth/log    second step: clear it with a passkey → session token
+    POST /auth/code   second step: {b,t,code} clear it with a recovery code → session token
+    POST /auth/codes  reissue recovery codes (needs login; auto-issued only when the account has none yet; old codes all die)
+    GET  /auth/me     what the account screen shows (needs login) → {keys, codes} counts only, never `who` or a provider id
 
     cd relay
     wrangler d1 create rt-board                              # paste the id into wrangler.toml
     wrangler d1 execute rt-board --remote --file schema.sql
     wrangler deploy
+
+If `pending` already exists from an earlier deploy, that last command adds nothing to it — `create table if not exists` skips a table that is already there, even though this file gave it new columns (`back`, `provider`, `sub`, `tries`). Without them, login fails outright on the first insert. Either drop and recreate `pending` (it only holds five-minute login state, nothing to lose) or add the columns by hand — see the comment above the `pending` table in `schema.sql` for both commands.
 
 If `database_id` is empty or the deploy is not live, the relay folds with 503 and the site hides the whole leaderboard section. The result screen still works.
 
@@ -224,23 +275,30 @@ Honest scores and well-built lies still look the same here. **The board is a hal
 
 ### Login
 
-**Only required to post to the leaderboard.** The game runs without it. The distribution still shows — only your seat is missing.
+**Only required to post to the leaderboard.** The game runs without it. The distribution still shows — only your seat is missing. Login has its own page, `signin/` (`signin.js`); nothing on the title screen loads that code until you open the link, and its `<a>` swaps to "my account" once a token exists.
 
-**No passwords.** A static site that handles passwords inherits hashing, reset, and breach response, which this repo will not own. A passkey never leaves the device, so **there is nothing of ours to steal** — the server keeps a public key.
+**Google or Apple signs you in first. A passkey is a second step you switch on afterward, not the front door.** A static site that handles passwords inherits hashing, reset, and breach response, which this repo will not own, so it never asks for one — the provider makes that first check instead.
 
-    wrangler secret put SESSION_KEY   # any long random string. rotating it kills every session
+**We ask for no email and no name.** Google's request carries the `openid` scope alone; Apple's carries no scope at all. What comes back either way is a provider account id, and it is never kept as-is: it goes through an HMAC (`SUB_KEY`, or `SESSION_KEY` if that secret is unset) before it reaches D1, so a leak of that id somewhere else cannot be matched back to a row here.
 
-There is no email link yet. Cloudflare Email Routing can receive, not send, so a sender (Resend, Postmark, …) and an API key have to exist first.
+    wrangler secret put SESSION_KEY   # any long random string. rotating it kills every session, but leaves SSO links and passkeys alone
+    wrangler secret put SUB_KEY       # optional, falls back to SESSION_KEY. its own lever: rotating it kills every SSO link instead, and the next sign-in opens a new, empty account
+    wrangler secret put GOOGLE_SECRET # Google OAuth client secret
+    wrangler secret put APPLE_KEY     # Apple Sign in .p8 private key, as issued
 
-Passkey verify has **no extra dependency**. Registration gives SPKI from `getPublicKey()`, so the server does not need a CBOR parser. Signatures are checked with WebCrypto, and the authenticator's DER signature is unfolded to raw 64 bytes (`derToRaw`).
+`GOOGLE_ID`, `APPLE_ID`, `APPLE_TEAM`, and `APPLE_KID` are plain `[vars]` in `wrangler.toml`, not secrets — leave one empty and that provider's button answers 503 instead of failing halfway through. `/auth/cb`, where the provider's redirect lands, counts against its own window, `RL_CB`: it is a GET so the POST-only rate limiter never sees it, and a single login already spends several POSTs (`sso`, `take`, then `log` or `code`) that should not share a budget with it.
+
+Turning the second step on registers a passkey the same way the old passkey-only login did. **No extra dependency.** Registration gives SPKI from `getPublicKey()`, so the server does not need a CBOR parser. Signatures are checked with WebCrypto, and the authenticator's DER signature is unfolded to raw 64 bytes (`derToRaw`).
 
 `attestation` is `none`. We skip vendor certs and keep one claim: **this challenge, this origin, this device answered**. That is enough for a leaderboard.
 
-The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `feedback.regiontype.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
+**Recovery codes are the door when the passkey is gone.** Switching the second step on shows eight one-time codes exactly once; only their hashes reach D1. Each is spent once — a redeemed code is gone for good — and reissuing wipes every old code in the same stroke, so there is no way to see a code again once that screen closes.
+
+The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `g.gearservicevanguard.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
 
 **The row owner is read from the token.** The body is ignored — the old record-code path let anyone who knew the code post under that name.
 
-Stateless sessions cannot be revoked one by one. In a pinch, rotate `SESSION_KEY` and drop them all.
+Stateless sessions cannot be revoked one by one. In a pinch, rotate `SESSION_KEY` and drop them all — that breaks every session but leaves SSO links and passkeys as they are.
 
 ### Rank tab
 

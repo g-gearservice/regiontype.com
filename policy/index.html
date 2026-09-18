@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>개인정보처리방침 — regiontype</title>
+<meta name="description" content="regiontype이 무엇을 모으고, 무엇을 모으지 않는지. 로그인·패스키·복구 코드·순위표·피드백에서 실제로 오가는 값만 적었습니다.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://regiontype.com/policy/">
+
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=1.59">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=1.59">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=1.59">
+<link rel="stylesheet" href="../style.css?v=1.75">
+<!-- about/ 와 같은 결의 읽는 글이다. 앱의 고정 화면 규칙을 쓰지 않고, app.js 도
+     부르지 않는다. 26개 언어로 안 나누는 이유: 여기 적힌 건 지명이 아니라 법적
+     사실이라, 번역이 틀리면 본문과 뜻이 갈린다. ko·en 둘만 두고 나머지는 이
+     페이지가 다루는 사실 자체가 공용(영어)로도 읽히게 한다. -->
+<style>
+  html,body{height:auto}
+  body{overflow:auto}
+  .doc{max-width:720px;margin:0 auto;padding:56px 24px 96px;position:relative;z-index:1}
+  .doc a{color:var(--accent-text)}
+  .doc .logo{font-size:clamp(30px,4vw,44px);display:inline-block;margin-bottom:40px;
+              color:var(--ink);text-decoration:none}
+  .doc h1{font-size:clamp(28px,3.6vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-bottom:12px}
+  .doc h2{font-size:clamp(19px,2.2vw,23px);font-weight:800;letter-spacing:-.01em;margin:40px 0 14px}
+  .doc p{line-height:1.85;margin-bottom:16px}
+  .doc h2 + p{margin-top:0}
+  .doc .lead{font-size:17px;color:var(--ink-soft)}
+  .doc ul{margin:0 0 16px 1.1em}
+  .doc li{line-height:1.85;margin-bottom:4px}
+  .doc .updated{color:var(--ink-soft);font-size:14px}
+  .doc .lang-split{margin:72px 0 0;padding-top:40px;border-top:1px solid var(--land)}
+  .doc footer{margin-top:64px;color:var(--ink-soft);font-size:14px;line-height:1.8}
+</style>
+</head>
+<body>
+
+<svg class="grid-bg" aria-hidden="true">
+  <defs>
+    <pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152">
+      <path d="M152 0 V152 H0"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
+</svg>
+
+<main class="doc">
+  <a class="logo" href="/">region<span>type</span><i class="dot"></i></a>
+
+  <h1>개인정보처리방침</h1>
+  <p class="updated">2026년 9월 18일 시행</p>
+
+  <p class="lead">regiontype은 지명 타자연습입니다. 게임 자체는 로그인 없이 그대로
+  돌고, 아래 값들은 순위표에 이름을 올리기로 한 사람에게만 생깁니다.</p>
+
+  <h2>안 받는 것</h2>
+  <p>비밀번호를 받지 않습니다. 회원가입 메일도, 실명도 받지 않습니다. 광고나
+  방문자 분석 스크립트를 넣지 않고, 쿠키도 쓰지 않습니다.</p>
+
+  <h2>로그인 (Google·Apple)</h2>
+  <p>로그인은 Google 또는 Apple 계정으로 합니다. Google에는 <code>openid</code>
+  범위만 요청하고, Apple에는 아무 범위도 요청하지 않습니다 — 그래서 메일도
+  이름도 넘어오지 않습니다. 공급자가 주는 것은 그 계정을 가리키는 번호(sub)뿐이고,
+  이 값은 저장하기 전에 저희 서버 키로 한 번 더 섞어(HMAC) 저장합니다. 원래
+  번호는 어디에도 남지 않습니다.</p>
+
+  <h2>패스키 (2단계 인증)</h2>
+  <p>패스키는 선택입니다 — 계정에 하나라도 걸어 두면 다음 로그인부터 그 기기의
+  지문·얼굴·PIN으로 한 번 더 확인합니다. 저장하는 값은 기기가 만든 공개키와
+  자격증명 번호뿐이고, 지문이나 얼굴 자체는 기기 밖으로 나오지 않습니다.</p>
+
+  <h2>복구 코드</h2>
+  <p>패스키를 켜면 일회용 복구 코드 8개를 한 번만 보여줍니다. 저장은 그 코드의
+  해시값만 하고, 코드 원문은 서버에 남지 않습니다. 코드를 쓰면 그 줄은 지워집니다.</p>
+
+  <h2>로그인 세션</h2>
+  <p>로그인 상태는 쿠키가 아니라 브라우저의 localStorage에 담긴 토큰으로 유지합니다.
+  이 토큰에는 임의로 만든 계정 번호와 만료 시각만 들어 있고, 90일 뒤 만료됩니다.</p>
+
+  <h2>순위표</h2>
+  <p>순위표에 이름을 올리면 코스·제한 시간·고른 이름·점수·정확도·시각이 공개로
+  걸립니다. 줄의 주인은 화면에 보이는 이름이 아니라 브라우저가 한 번 만든 난수라,
+  같은 이름을 다른 사람이 써도 서로의 기록에 손댈 수 없습니다. 결과 화면의
+  '내 기록 내리기'로 언제든 자기 줄을 지울 수 있습니다.</p>
+
+  <h2>피드백</h2>
+  <p>피드백은 <a href="https://github.com/g-gearservice/regiontype.com/issues" target="_blank" rel="noopener noreferrer">GitHub 공개 이슈</a>로 그대로 올라갑니다.
+  회신 주소는 받지 않습니다 — 입력칸 자체가 없습니다. 보낸 내용과 함께 종류,
+  앱 버전, 보고 있던 페이지 주소, 브라우저 정보가 같이 올라갑니다. 이 내용은
+  누구나 볼 수 있으니, 남길 내용에 개인 정보를 적지 마세요.</p>
+
+  <h2>어디에 저장되나</h2>
+  <p>순위표·계정·패스키 값은 Cloudflare D1(아시아·태평양 리전)에 저장합니다.
+  피드백은 GitHub 저장소의 공개 이슈로 저장합니다. 그 밖에 저희가 따로 두는
+  서버나 데이터베이스는 없습니다.</p>
+
+  <h2>지우고 싶을 때</h2>
+  <p>순위표 줄은 위에 적은 대로 스스로 지울 수 있습니다. 계정 전체를 지우는
+  화면은 아직 없습니다 — 기기와 복구 코드를 모두 잃어 로그인할 방법이 없다면
+  피드백으로 코스·제한 시간·이름을 적어 보내 주세요. 위에 적은 대로 그 내용도
+  공개 이슈로 열립니다.</p>
+
+  <h2>제3자</h2>
+  <p>이 서비스가 실제로 주고받는 곳은 로그인을 처리하는 Google·Apple, 피드백이
+  올라가는 GitHub, 그리고 사이트와 로그인 서버를 올려 두는 Cloudflare뿐입니다.
+  그 밖의 광고·분석·추적 서비스는 쓰지 않습니다.</p>
+
+  <h2>바뀔 수 있습니다</h2>
+  <p>기능이 바뀌면 이 문서도 같이 고칩니다. 맨 위의 시행일로 마지막으로 고친
+  날을 알 수 있습니다.</p>
+
+  <div class="lang-split">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Effective September 18, 2026</p>
+
+  <p class="lead">regiontype is a place-name typing drill. The game itself works
+  without signing in. Everything below only applies once you choose to sign in
+  and post to the leaderboard.</p>
+
+  <h2>What we don't collect</h2>
+  <p>No passwords. No signup email, no real name. No ads, no analytics
+  scripts, no cookies.</p>
+
+  <h2>Signing in (Google · Apple)</h2>
+  <p>Sign-in goes through Google or Apple. We request only the
+  <code>openid</code> scope from Google and no scope at all from Apple — so
+  neither hands us an email or a name. The only thing the provider gives us is
+  a number identifying that account (its <code>sub</code>), and we HMAC-hash
+  it with a server-side key before storing it. The original number is never
+  kept anywhere.</p>
+
+  <h2>Passkeys (second step)</h2>
+  <p>A passkey is optional. Once you register one, the next sign-in also asks
+  for that device's fingerprint, face, or PIN. We store only the public key
+  and credential id the device hands us — the biometric itself never leaves
+  your device.</p>
+
+  <h2>Recovery codes</h2>
+  <p>Turning on a passkey shows eight one-time recovery codes, once. We store
+  only their hash, never the codes themselves. Using a code deletes that
+  entry.</p>
+
+  <h2>Sessions</h2>
+  <p>Sign-in state lives in a token in your browser's localStorage, not a
+  cookie. The token holds nothing but a random account id and an expiry, and
+  it expires after 90 days.</p>
+
+  <h2>Leaderboard</h2>
+  <p>Posting a score publishes the course, time limit, the name you chose,
+  your score, accuracy, and a timestamp. Each row is owned by a random id the
+  browser generates once, not by the display name, so two people can share a
+  name without touching each other's rows. "Remove my score" on the result
+  screen deletes your own rows at any time.</p>
+
+  <h2>Feedback</h2>
+  <p>Feedback is posted as-is to a
+  <a href="https://github.com/g-gearservice/regiontype.com/issues" target="_blank" rel="noopener noreferrer">public GitHub issue</a>.
+  We don't collect a reply address — there is no field for one. Your message
+  goes up alongside its category, the app version, the page URL you were on,
+  and your browser's user agent. Anyone can read this, so don't put personal
+  information in what you send.</p>
+
+  <h2>Where it's stored</h2>
+  <p>Leaderboard, account, and passkey data live in Cloudflare D1 (Asia-Pacific
+  region). Feedback lives as public issues in our GitHub repository. We keep
+  no other server or database.</p>
+
+  <h2>Deleting things</h2>
+  <p>You can remove your own leaderboard rows yourself, as above. There is no
+  self-service full account deletion yet — if you've lost both your device
+  and your recovery codes, write the course, time limit, and name in feedback
+  and send it. As above, that also opens as a public issue.</p>
+
+  <h2>Third parties</h2>
+  <p>The only outside parties this service actually talks to are Google and
+  Apple (for sign-in), GitHub (for feedback), and Cloudflare (hosting the site
+  and the sign-in server). No advertising, analytics, or tracking services.</p>
+
+  <h2>This can change</h2>
+  <p>If the app's behavior changes, this document changes with it. The date
+  at the top marks the last edit.</p>
+  </div>
+
+  <footer>
+    <a href="/">regiontype.com</a> · <a href="../terms/">Terms of Service</a> · <a href="https://github.com/g-gearservice/regiontype.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </footer>
+</main>
+
+</body>
+</html>

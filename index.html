@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=1.58">
+<link rel="stylesheet" href="style.css?v=1.75">
 </head>
 <body>
 
@@ -60,87 +60,46 @@
   <rect width="100%" height="100%" fill="url(#bitgrid)"/>
 </svg>
 
-<!-- 타이틀 -->
-<section id="title" class="screen on">
-  <!-- 로고는 가운데 세 칸. 소개·설정·시작하기는 그 아래 한 줄이 기본이고,
-       격자 한 칸 버튼이라 끌어다 다른 칸에 둘 수 있다. 탭 순서는 DOM 순이다 -->
-  <div class="title-block">
-    <h1 class="logo">region<span>type</span><i class="dot" aria-hidden="true"></i></h1>
-  </div>
-  <a class="grid-btn" data-grid-btn="about" id="aboutLink" href="about/" data-i18n="about" draggable="false">소개</a>
-  <button type="button" class="grid-btn" data-grid-btn="options" data-go="options" data-i18n="options">설정</button>
-  <button type="button" class="grid-btn" data-grid-btn="play" data-go="regions" data-i18n="start">시작하기</button>
-  <button type="button" class="title-fb grid-btn" data-grid-btn="fb" id="fbOpen"><i class="i i-flag" aria-hidden="true"></i><span data-i18n="feedback">피드백</span></button>
-  <a class="title-alt grid-btn" data-grid-btn="alt" href="mimi/" draggable="false">Mimi 스타일 보기</a>
-  <a class="title-gh grid-btn" data-grid-btn="gh" href="https://github.com/g-gearservice/regiontype.com" target="_blank" rel="noopener noreferrer" draggable="false" aria-label="GitHub">
-    <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-    <span id="ghStars" hidden></span>
-  </a>
-</section>
-
 <!-- 지역 목록 -->
-<section id="regions" class="screen">
+<section id="regions" class="screen on">
+  <!-- 상단 넵바. 흐림 띠는 플레이 화면 것과 같은 부품(.backdrop-blur)이다 —
+       여섯 겹이 층층이 겹쳐 위에서 아래로 흐림이 사라진다. 그 위에 줄이 앉는다 -->
+  <span class="backdrop-blur" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </span>
+  <nav class="navbar" data-i18n-aria="navMain" aria-label="주 메뉴">
+    <span class="nav-shape" id="navShape" aria-hidden="true"></span>
+    <span class="nav-side nav-start">
+      <a class="nav-item" id="aboutLink" href="about/" data-i18n="about">소개</a>
+      <a class="nav-item" href="https://github.com/g-gearservice/regiontype.com" target="_blank" rel="noopener noreferrer">GitHub<span id="ghStars" hidden></span></a>
+      <a class="nav-item" href="policy/" data-i18n="policyLink">개인정보</a>
+    </span>
+    <a class="nav-logo logo" href="/" aria-label="regiontype">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
+    <span class="nav-side nav-end">
+      <a class="nav-item" href="https://github.com/g-gearservice/regiontype.com/discussions" target="_blank" rel="noopener noreferrer" data-i18n="community">커뮤니티</a>
+      <!-- 피드백은 넵바에 남겨야 한다 — 방침·약관이 이 문을 유일한 연락 통로로 적고 있다 -->
+      <button type="button" class="nav-item" id="fbOpen"><i class="i i-flag" aria-hidden="true"></i><span data-i18n="feedback">피드백</span></button>
+      <a class="nav-item title-alt" href="mimi/">Mimi</a>
+    </span>
+  </nav>
+  <!-- 아래 막대 뒤의 흐림 띠. 플레이 화면 타이핑 줄과 같은 .backdrop-blur.bot 이다 -->
+  <span class="backdrop-blur bot" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </span>
+  <!-- 설정·시작·계정은 아래 막대 -->
+  <nav class="nav-bot" data-i18n-aria="navDock" aria-label="놀이 메뉴">
+    <span class="nav-shape" id="navBotShape" aria-hidden="true"></span>
+    <a class="nav-item" href="settings/" data-i18n="options">설정</a>
+    <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start">시작하기</button>
+    <!-- 로그인은 제 페이지다(/signin/). 로그인해 있으면 라벨만 '내 계정' 으로 바뀐다 -->
+    <a class="nav-item" id="signinLink" href="signin/" data-i18n="signinBtn">로그인</a>
+  </nav>
   <div class="screen-head">
-    <button class="back" data-go="title" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
-    <h2 class="head"><button type="button" id="coursePick" aria-pressed="true">대한민국</button></h2>
+    <h2 class="head"><button type="button" id="coursePick" aria-pressed="true" aria-label="서울" hidden></button></h2>
   </div>
   <!-- 코스마다 격자 한 칸 버튼. 칸은 app.js 의 renderCourses 가 채운다 -->
   <div id="courseBtns" role="group" data-i18n-aria="pickCourse" aria-label="코스 고르기"></div>
   <p class="course-name" id="courseName" aria-live="polite"></p>
-  <button type="button" class="grid-btn" data-grid-btn="courseStart" id="courseStart" data-i18n="startPlay">시작</button>
-</section>
-
-<!-- 설정 -->
-<section id="options" class="screen">
-  <div class="screen-head">
-    <button class="back" data-go="title" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
-    <h2 class="head" data-i18n="options">설정</h2>
-  </div>
-  <div class="opts-shell">
-    <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
-      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-i18n="language">언어</button>
-      <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-i18n="region">지역</button>
-      <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
-      <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
-      <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
-    </nav>
-    <div class="opts-panels">
-      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
-        <div id="optLang" class="opts-lang-pick" role="radiogroup"
-             data-i18n-aria="language" aria-label="언어"></div>
-      </div>
-      <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" hidden>
-        <!-- 고르는 UI 는 개발용 문이다 — CSS 기본이 숨김이라 배포에 새지 않는다 -->
-        <div id="optRegion" class="opts-region-pick" role="radiogroup"
-             data-i18n-aria="region" aria-label="지역"></div>
-        <p class="opts-region-pending" data-i18n="regionPending">지금은 대한민국(남한)만 지원합니다. 다른 지역도 곧 열립니다.</p>
-      </div>
-      <div id="optsVideo" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVideo" tabindex="0" hidden>
-        <dl class="opts">
-          <dt data-i18n="night">야간 모드</dt>
-          <dd><button class="toggle" data-opt="night" data-i18n-aria="night" aria-label="야간 모드"></button></dd>
-          <dt data-i18n="motion">애니메이션</dt>
-          <dd><button class="toggle" data-opt="motion" data-i18n-aria="motion" aria-label="애니메이션"></button></dd>
-          <dt data-i18n="grid">그리드</dt>
-          <dd><button class="toggle" data-opt="grid" data-i18n-aria="grid" aria-label="그리드"></button></dd>
-        </dl>
-      </div>
-      <div id="optsAudio" class="opts-panel" role="tabpanel" aria-labelledby="optsTabAudio" tabindex="0" hidden>
-        <dl class="opts">
-          <dt data-i18n="sound">효과음</dt>
-          <dd><button class="toggle" data-opt="sound" data-i18n-aria="sound" aria-label="효과음"></button></dd>
-        </dl>
-      </div>
-      <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
-        <p class="ver">regiontype v0.4.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
-      </div>
-    </div>
-  </div>
-  <!-- 바닥 블러 띠는 페이지에 건다 — 어느 통에도 매이지 않게 position:fixed 로
-       화면 아래변에 붙인다 -->
-  <span class="backdrop-blur bot" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
 </section>
 
 <!-- 플레이 -->
@@ -193,16 +152,11 @@
     </div>
   </div>
   <div id="board" hidden>
-    <h3 class="missed-head"><span data-i18n="board">순위표</span> <span id="boardWhere"></span></h3>
+    <h3 class="res-head"><span data-i18n="board">순위표</span> <span id="boardWhere"></span></h3>
     <p class="board-say" id="boardSay" aria-live="polite"></p>
     <ol class="ranks" id="ranks"></ol>
     <div class="board-in" id="boardIn" hidden>
-      <p><span data-i18n="needLogin">순위표에 올리려면 로그인이 필요합니다.</span> <b data-i18n="noSecret">비밀번호도 메일도 받지 않습니다</b> —
-        <span data-i18n="passkeyHow">이 기기의 지문·얼굴·PIN 으로 들어옵니다.</span></p>
-      <div>
-        <button type="button" id="inGo" data-i18n="passkeyGo">패스키로 로그인</button>
-        <button type="button" id="inNew" data-i18n="passkeyNew">패스키 만들기</button>
-      </div>
+      <p data-i18n="needLoginHome">홈에서 로그인하면 순위표에 올라갑니다</p>
     </div>
     <form class="board-join" id="boardJoin" hidden>
       <label for="boardName" data-i18n="nameLabel">누구나 보는 순위표에 이 이름이 올라갑니다</label>
@@ -213,8 +167,6 @@
     </form>
     <button type="button" class="board-drop" id="boardDrop" data-i18n="forgetMine" hidden>순위표에서 내 기록 내리기</button>
   </div>
-  <h3 class="missed-head"><span data-i18n="missed">놓친 곳</span> <span id="missCount"></span></h3>
-  <ul class="missed" id="missed"></ul>
 </section>
 
 <div id="mobile">
@@ -245,6 +197,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=1.58"></script>
+<script src="app.js?v=1.75"></script>
 </body>
 </html>

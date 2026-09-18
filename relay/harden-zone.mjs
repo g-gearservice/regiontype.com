@@ -12,6 +12,10 @@
  */
 const ZONE = 'regiontype.com';
 const SITE_HOSTS = ['regiontype.com', 'www.regiontype.com'];
+/* 중계기는 다른 존에 산다 — 홍수 차단 규칙은 사이트 존이 아니라 그 존에 걸어야
+   한다. 같은 존에 걸면 규칙이 아무 요청과도 안 맞아 조용히 아무것도 안 막는다 */
+const RELAY_ZONE = 'gearservicevanguard.com';
+const RELAY_HOST = 'g.gearservicevanguard.com';
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const APPLY = process.argv.includes('--apply');
 
@@ -98,7 +102,7 @@ const WAF_RULE = {
 const RATE_RULE = {
   ref: 'rt-relay-flood',
   description: 'regiontype relay: per-IP ceiling on writes',
-  expression: '(http.host eq "feedback.regiontype.com" and http.request.method eq "POST")',
+  expression: `(http.host eq "${RELAY_HOST}" and http.request.method eq "POST")`,
   action: 'block',
   ratelimit: {
     characteristics: ['ip.src', 'cf.colo.id'],
@@ -115,6 +119,11 @@ const zones = await api('GET', `zones?name=${ZONE}`);
 const zoneId = zones.result?.[0]?.id;
 if (!zoneId) { fail('zone lookup', zones); process.exit(1); }
 console.log(`${APPLY ? 'APPLY' : 'DRY RUN'} — ${ZONE} (${zoneId})\n`);
+
+/* 중계기 존은 따로 찾는다. 없으면 홍수 차단만 건너뛴다 — 사이트 쪽 굳히기는 그대로 돈다 */
+const relayZones = await api('GET', `zones?name=${RELAY_ZONE}`);
+const relayZoneId = relayZones.result?.[0]?.id;
+if (!relayZoneId) console.log(`  (${RELAY_ZONE} 존을 못 찾았다 — 중계기 홍수 차단은 건너뛴다)\n`);
 
 console.log('Zone settings');
 for (const [id, want] of Object.entries(SETTINGS)) {
@@ -156,9 +165,9 @@ if (!plan.length) console.log('  = nothing to add');
 
 /* PUT replaces a whole phase — read what is there first and keep every rule that is
    not ours, so a rule someone added by hand is not swept away by this script. */
-async function putPhase(phase, rule, label) {
+async function putPhase(phase, rule, label, zid = zoneId) {
   console.log(`\n${label}`);
-  const path = `zones/${zoneId}/rulesets/phases/${phase}/entrypoint`;
+  const path = `zones/${zid}/rulesets/phases/${phase}/entrypoint`;
   const entry = await api('GET', path);
   if (!entry.ok && entry.status !== 404) { fail(`read ${phase}`, entry); return; }
   const had = entry.result?.rules || [];
@@ -176,13 +185,14 @@ async function putPhase(phase, rule, label) {
 
 await putPhase('http_response_headers_transform', HEADER_RULE, 'Response header rule');
 await putPhase('http_request_firewall_custom', WAF_RULE, 'Security rule — repo internals');
-await putPhase('http_ratelimit', RATE_RULE, 'Rate limiting rule — relay writes');
+if (relayZoneId)
+  await putPhase('http_ratelimit', RATE_RULE, `Rate limiting rule — relay writes (${RELAY_ZONE})`, relayZoneId);
 
 if (!APPLY) { console.log('\nNothing written. Re-run with --apply.'); process.exit(0); }
 
 await new Promise(r => setTimeout(r, 5000));
 console.log('\nLive check');
-for (const url of SITE_HOSTS.map(h => `https://${h}/`).concat('https://feedback.regiontype.com/where')) {
+for (const url of SITE_HOSTS.map(h => `https://${h}/`).concat(`https://${RELAY_HOST}/where`)) {
   const r = await fetch(url, { redirect: 'manual', headers: { Origin: `https://${ZONE}` } });
   const pick = ['strict-transport-security', 'content-security-policy', 'x-frame-options', 'referrer-policy']
     .map(h => `${h}=${r.headers.get(h) ? 'yes' : 'no'}`).join(' ');

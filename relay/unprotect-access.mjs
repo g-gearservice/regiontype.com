@@ -12,7 +12,7 @@ import { execSync } from 'node:child_process';
 
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID || '0cf4c7fad03c3d370af003af56a365ac';
 const WORKER = 'rt-feedback';
-const HOST = 'feedback.regiontype.com';
+const HOST = 'g.gearservicevanguard.com';
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
 if (!TOKEN) {
