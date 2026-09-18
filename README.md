@@ -8,7 +8,15 @@
 
 # English
 
-A typing drill for place names. v0.6.175 (`VER=1.75`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.177 (`VER=1.77`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.177
+
+- The home top bar no longer has a GitHub link
+
+## What's new in 0.6.176
+
+- Nudge the home logo up so `regiontype` lines up with the Hangul nav labels beside it
 
 ## What's new in 0.6.175
 
