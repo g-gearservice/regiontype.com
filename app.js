@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.75';
+const VER = '1.77';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -236,37 +236,6 @@ function syncGrid() {
   const x1 = a.matrixTransform(ctm);
   applyGrid(o.x, o.y, Math.hypot(x1.x - o.x, x1.y - o.y));
 }
-/* GitHub 별 개수. 공개 저장소 정보라 토큰을 안 쓴다 — 토큰은 Worker 안에만 둔다.
-   IP당 시간당 60회 제한이 있어 10분은 재워두고, 실패하면 숫자 없이 링크만 남긴다 */
-const GH_REPO = 'g-gearservice/regiontype.com';
-async function ghStars() {
-  const el = $('#ghStars');
-  if (!el) return;
-  const show = n => { el.textContent = '\u2606 ' + n; el.hidden = false; };
-  /* 별 개수는 하루에 몇 개 움직인다. 10분마다 물어볼 값이 아니고, 물어볼 때마다
-     보는 사람의 IP 와 어디서 왔는지가 GitHub 로 간다 — 간격을 벌리고, 실패도
-     기억하고(안 그러면 막힌 망에서 매 페이지마다 다시 두드린다), 주소는 안 보낸다.
-     ponytail: IP 를 아예 안 보내려면 relay 에 /stars 를 두고 거기서 캐시해야 한다 */
-  const KEY = 'rt.gh', TTL = 432e5, FAIL_TTL = 36e5;
-  const save = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} };
-  try {
-    const c = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (c && Date.now() - c.t < (c.n == null ? FAIL_TTL : TTL)) {
-      if (c.n != null) { show(c.n); requestAnimationFrame(() => relayoutNavShapes()); }
-      return;
-    }
-  } catch {}
-  try {
-    const r = await fetch('https://api.github.com/repos/' + GH_REPO,
-                          { signal: AbortSignal.timeout(1600), referrerPolicy: 'no-referrer' });
-    const n = r.ok ? (await r.json()).stargazers_count : null;
-    if (typeof n !== 'number') { save({ n: null, t: Date.now() }); return; }
-    save({ n, t: Date.now() });
-    show(n);
-    requestAnimationFrame(() => relayoutNavShapes());
-  } catch { save({ n: null, t: Date.now() }); }
-}
-
 function decoGrid() {
   const s = getComputedStyle(document.documentElement);
   const cw = parseFloat(s.getPropertyValue('--deco-cw')) || DECO_CELL;
@@ -1209,7 +1178,6 @@ async function boot() {
   paintUI();
   fbPlaceholder();
   paintRegion();
-  ghStars();
   wireNavShape();
   await showCountry(COUNTRY);
 }
