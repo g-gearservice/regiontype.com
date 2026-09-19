@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.49';
+const VER = '2.50';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -412,10 +412,11 @@ const calm = () => !opt.motion || matchMedia('(prefers-reduced-motion:reduce)').
 const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05),
              px: sp(0, .05), py: sp(0, .05), cz: sp(1, .0005),
              nx: sp(0, .02), ny: sp(0, .02) };   // 격자 배율·붙잡은 점·카메라·커서 반응
-/* 커서가 움직이면 지도가 그쪽으로 아주 조금 기운다 — 초점이 살아 있다는 신호다.
+/* 커서가 움직이면 초점이 그쪽을 바라본다 — 지도는 반대로 아주 조금 물러나고,
+   그만큼 커서 쪽이 드러난다(고개를 돌리면 눈앞 풍경이 반대로 흐르는 결).
    10px 이면 칸(160px)의 6% 라 눈에 걸리지 않고 손끝에만 남는다. 카메라와 같은
    스프링(response .42)을 타서 커서보다 한 박자 늦게 따라온다 */
-const NUDGE = 10;
+const NUDGE = -10;
 /* 홈 카메라 배율. 핀치와 스마트 포커스가 같이 쓴다. 펼친 동이 넵바에 들어가면
    하한까지 줄이고, 가운데에 작게 뜨면 상한까지 키운다 */
 const HOME_Z = [.42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
