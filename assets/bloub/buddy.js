@@ -66,8 +66,10 @@ export function mountBuddy(host, { calm = () => false } = {}) {
     node: svg,
     start() {
       if (raf) return;
-      /* 모션을 줄였으면 시계를 돌리지 않고 한 장만 그린다 — 깜빡임도 시선도 멈춘다 */
-      if (calm()) { draw(0); return; }
+      /* 모션을 줄였으면 시계를 돌리지 않고 한 장만 그린다 — 깜빡임도 시선도 멈춘다.
+         시각 0 이 아니라 지금 시계로 그린다: 0 은 상태를 바꾸기 전이라, 자라고
+         해 둔 놈이 start() 한 번에 도로 옛 모습으로 돌아온다 */
+      if (calm()) { draw((performance.now() - t0) / 1000 + 1); return; }
       raf = requestAnimationFrame(tick);
     },
     stop() { cancelAnimationFrame(raf); raf = 0; t0 = 0; },

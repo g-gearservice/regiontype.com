@@ -243,12 +243,12 @@ async function botMaker() {
   if (!mountBuddy) ({ mountBuddy } = await import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href));
   return mountBuddy;
 }
-/* 로고 왼쪽 위 — 글자에 살짝 걸치게 둔다 */
+/* 로고의 점 자리 — 오른쪽 위. 진짜 점은 숨기고 봇이 그 자리를 맡는다 */
 function parkAt() {
   const logo = $('.si-logo');
   if (!logo) return { x: 24, y: 24 };
   const r = logo.getBoundingClientRect();
-  return { x: Math.max(8, r.left - BOT * .6), y: Math.max(8, r.top - BOT * .5) };
+  return { x: r.right - BOT * .45, y: r.top - BOT * .35 };
 }
 function place(b) {
   b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;
@@ -330,6 +330,8 @@ function botGrab(e, b) {
     if (shrinks) { t.x = e.clientX - t.size / 2; t.y = e.clientY - t.size / 2; }
     place(t);
     t.el.classList.add('is-held');
+    /* 잡혀 있는 동안은 허둥지둥한다 — wide 는 눈이 위아래로 커지고 시선이 들린다 */
+    if (t.api) t.api.setState('wide');
     /* 이미 놓친 포인터면 던진다 — 캡처는 있으면 좋고 없어도 끌기는 된다 */
     try { t.el.setPointerCapture(e.pointerId); } catch {}
     const ox = e.clientX - t.x, oy = e.clientY - t.y;
@@ -338,7 +340,8 @@ function botGrab(e, b) {
       t.el.removeEventListener('pointermove', move);
       t.el.classList.remove('is-held');
       const tile = tileUnder(t);
-      if (!tile) return;
+      /* 빈 곳에 놓으면 도로 잠든다 — 허둥지둥한 얼굴로 남겨 두지 않는다 */
+      if (!tile) { wake(t, false); return; }
       /* 한 칸에 한 마리만 — 먼저 앉아 있던 놈은 내려온다 */
       bots.forEach(o => { if (o !== t && o.tile === tile) { unseat(o); place(o); } });
       t.tile = tile;
