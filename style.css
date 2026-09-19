@@ -1017,7 +1017,12 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .si-bot.is-held{cursor:grabbing; z-index:1}
 .si-bot .buddy{display:block; width:100%; height:100%; overflow:visible; pointer-events:none}
 /* 붙은 봇은 제 칸을 물고 따라다닌다 — 자리 계산은 auth.js 가 한다 */
-.si-bot.is-on{--buddy-ink:var(--accent-deep)}
+/* 붙은 봇은 그 칸의 크기를 그대로 받는다 — 비트맵 칸 자체가 봇이 된다.
+   칸은 제 그림(색·어둠 겹·글자)을 내려놓고 자리만 지킨다. paintTile 이 인라인으로
+   쓰는 것은 opacity 뿐이라, 배경 쪽만 걷으면 인라인과 안 부딪힌다 */
+#courseBtns .grid-btn.has-bot{background:transparent; box-shadow:none}
+#courseBtns .grid-btn.has-bot::before{opacity:0}
+#courseBtns .grid-btn.has-bot > span{opacity:0}
 
 .si-view{display:flex;flex-direction:column;align-items:center;gap:18px}
 .si-view[hidden]{display:none}

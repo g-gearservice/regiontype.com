@@ -250,16 +250,28 @@ function parkAt() {
   const r = logo.getBoundingClientRect();
   return { x: Math.max(8, r.left - BOT * .6), y: Math.max(8, r.top - BOT * .5) };
 }
-function place(b) { b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`; }
+function place(b) {
+  b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;
+  b.el.style.width = b.el.style.height = b.size + 'px';
+}
+/* 칸에서 내려온다 — 칸은 제 그림을 되찾고 봇은 손에 잡히는 크기로 돌아간다.
+   이름을 unseat 로 둔 것은 botGrab 안의 지역 drop(포인터업)과 가려지지 않게 하려는 것이다 */
+function unseat(b) {
+  if (b.tile) b.tile.classList.remove('has-bot');
+  b.tile = null;
+  b.size = BOT;
+  wake(b, false);
+}
 function wake(b, on) {
   b.el.classList.toggle('is-on', on);
+  if (!on) b.size = BOT;
   if (b.api && !motionOff()) b.api.setState(on ? 'alert' : 'sleep');
 }
 /* 봇 아래에 있는 비트맵 칸. elementsFromPoint 는 못 쓴다 — 덮개가 떠 있는 동안
    칸은 pointer-events:none 이라 hit-test 에서 통째로 빠진다. 좌표로 직접 고른다.
    스물다섯 칸이라 값이 싸고, 무엇이 위에 덮였든 결과가 같다 */
 function tileUnder(b) {
-  const cx = b.x + BOT / 2, cy = b.y + BOT / 2;
+  const cx = b.x + b.size / 2, cy = b.y + b.size / 2;
   for (const el of document.querySelectorAll('#courseBtns .grid-btn')) {
     if (parseFloat(getComputedStyle(el).opacity) < .5) continue;
     const r = el.getBoundingClientRect();
@@ -272,10 +284,12 @@ function followFrame() {
   let live = false;
   for (const b of bots) {
     if (!b.tile) continue;
-    if (!b.tile.isConnected) { b.tile = null; wake(b, false); continue; }
+    if (!b.tile.isConnected) { unseat(b); place(b); continue; }
     const r = b.tile.getBoundingClientRect();
-    b.x = r.left + r.width / 2 - BOT / 2;
-    b.y = r.top + r.height / 2 - BOT / 2;
+    /* 칸이 곧 몸이다 — 자리도 크기도 칸에서 받는다. 지도를 밀거나 줄여도 맞는다 */
+    b.size = r.width;
+    b.x = r.left;
+    b.y = r.top;
     place(b);
     live = true;
   }
@@ -289,7 +303,7 @@ async function addBot(x, y) {
   const el = document.createElement('div');
   el.className = 'si-bot';
   $('#siBots').append(el);
-  const b = { el, api: make(el, { calm: motionOff }), tile: null, x, y };
+  const b = { el, api: make(el, { calm: motionOff }), tile: null, x, y, size: BOT };
   bots.push(b);
   place(b);
   b.api.start();
@@ -305,8 +319,8 @@ function botGrab(e, b) {
     /* 복제는 원본을 두고 새 놈을 끈다 — 끌던 손이 그대로 이어진다 */
     const t = cloneKey(e) ? await addBot(b.x, b.y) : b;
     if (!t) return;
-    t.tile = null;
-    wake(t, false);
+    unseat(t);
+    place(t);
     t.el.classList.add('is-held');
     /* 이미 놓친 포인터면 던진다 — 캡처는 있으면 좋고 없어도 끌기는 된다 */
     try { t.el.setPointerCapture(e.pointerId); } catch {}
@@ -316,7 +330,13 @@ function botGrab(e, b) {
       t.el.removeEventListener('pointermove', move);
       t.el.classList.remove('is-held');
       const tile = tileUnder(t);
-      if (tile) { t.tile = tile; wake(t, true); followKick(); }
+      if (!tile) return;
+      /* 한 칸에 한 마리만 — 먼저 앉아 있던 놈은 내려온다 */
+      bots.forEach(o => { if (o !== t && o.tile === tile) { unseat(o); place(o); } });
+      t.tile = tile;
+      tile.classList.add('has-bot');
+      wake(t, true);
+      followKick();
     };
     t.el.addEventListener('pointermove', move);
     t.el.addEventListener('pointerup', drop, { once: true });
@@ -338,8 +358,8 @@ function buddyLook(e) {
   if (motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   const grip = v => Math.max(-1, Math.min(1, v));
   for (const b of bots) {
-    const dx = (e.clientX - (b.x + BOT / 2)) / BOT;
-    const dy = (e.clientY - (b.y + BOT / 2)) / BOT;
+    const dx = (e.clientX - (b.x + b.size / 2)) / b.size;
+    const dy = (e.clientY - (b.y + b.size / 2)) / b.size;
     b.api.lookAt(-grip(dx), -grip(dy));
   }
 }
