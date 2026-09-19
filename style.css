@@ -926,9 +926,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 /* 로고는 버튼 뒤에서 솟아오른다 — 그래서 버튼보다 뒤에 둔다 */
 .si-logo{order:-1; font-size:clamp(34px,4.2vw,48px); margin:0; position:relative; z-index:0}
-/* 로고의 주황 점은 봇이 대신 선다 — 둘 다 두면 점이 두 개로 보인다. 자리는
-   비우지 않고 숨기기만 한다(지우면 글자가 밀린다) */
-.si-logo .dot{visibility:hidden}
+/* 로고의 주황 점은 평소 그대로 서 있다. 가리키면 auth.js 가 이 점을 감추고
+   같은 자리에서 봇을 꺼낸다 — 점이 두 개로 보이는 일이 없다 */
 .si-card > :not(.si-logo){position:relative; z-index:1}
 
 /* ── 열리는 동안 ─────────────────────────────────────── */

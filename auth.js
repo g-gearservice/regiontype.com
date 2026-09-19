@@ -263,11 +263,21 @@ const blocked = () => ['.si-logo', '#vSignin .si-head', '#vSignin .si-btns']
   .map(sel => boxOf(sel, 14)).filter(Boolean);
 /* 로고 근처에 놓으면 제자리(로고 옆 동글뱅이)로 돌아간다 */
 const overLogo = b => inBox(b.x + b.size / 2, b.y + b.size / 2, boxOf('.si-logo', 28));
+/* 평소에는 로고의 점이 서 있고 봇은 숨어 있다. 로고 근처를 가리키면 점을 감추고
+   그 자리에서 봇이 나온다 — 집을 수 있다는 신호다. 자는 덩이로 점을 흉내 내지
+   않는다: 그 모양은 SVG 안에서 5% 크기라 로고 점만큼 키우면 과녁이 글자를 덮는다 */
+function perch(b, out) {
+  const dot = $('.si-logo .dot');
+  if (dot) dot.style.visibility = out ? 'hidden' : '';
+  b.el.hidden = !out;
+  if (out && b.api) b.api.setState('idle');
+}
 function park(b) {
   const p = parkAt();
   b.x = p.x; b.y = p.y;
   unseat(b);
   place(b);
+  perch(b, false);
 }
 function place(b) {
   b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;
@@ -331,14 +341,6 @@ async function addBot(x, y) {
   place(b);
   b.api.start();
   wake(b, false);
-  /* 평소에는 로고 옆 작은 동글뱅이(sleep)로 자다가, 가리키면 깨어나 봇으로 보인다 —
-     집을 수 있다는 신호다. 칸에 앉았거나 손에 들려 있으면 건드리지 않는다 */
-  const idleIfFree = on => {
-    if (b.tile || b.el.classList.contains('is-held') || !b.api) return;
-    b.api.setState(on ? 'idle' : 'sleep');
-  };
-  el.addEventListener('pointerenter', () => idleIfFree(true));
-  el.addEventListener('pointerleave', () => idleIfFree(false));
   el.addEventListener('pointerdown', e => botGrab(e, b));
   return b;
 }
@@ -370,6 +372,7 @@ function botGrab(e, b) {
       const tile = tileUnder(t);
       /* 로고 근처면 제자리로 돌아가고, 그냥 빈 곳이면 거기서 잠든다 */
       if (!tile) { if (overLogo(t)) park(t); else wake(t, false); return; }
+      t.el.hidden = false;
       /* 한 칸에 한 마리만 — 먼저 앉아 있던 놈은 내려온다 */
       bots.forEach(o => { if (o !== t && o.tile === tile) { unseat(o); place(o); } });
       t.tile = tile;
@@ -394,6 +397,14 @@ function sleepBuddy() {
      굳는다(도봉구가 사라져 보이던 이유). 복제본은 그 판의 놀이라 정리한다 */
   while (bots.length > 1) { const b = bots.pop(); unseat(b); b.api.stop(); b.el.remove(); }
   bots.forEach(b => { park(b); b.api.stop(); b.api.lookAway(); });
+}
+/* 로고(와 그 점) 언저리를 가리키면 봇이 나오고, 벗어나면 도로 점이 된다.
+   손에 들렸거나 칸에 앉은 놈은 건드리지 않는다 */
+function perchHover(e) {
+  const b = bots.find(x => !x.tile && !x.el.classList.contains('is-held'));
+  /* 횃대에 돌아올 놈이 없으면(다 칸에 앉았거나 손에 들렸으면) 로고는 제 점을 되찾는다 */
+  if (!b) { const d = $('.si-logo .dot'); if (d) d.style.visibility = ''; return; }
+  perch(b, inBox(e.clientX, e.clientY, boxOf('.si-logo', 28)));
 }
 /* 봇은 커서 쪽을 바라본다. 화면 좌표 차를 그대로 넘기면 엔진이 반대로 돌린다 */
 function buddyLook(e) {
@@ -502,6 +513,7 @@ function wire() {
   });
   $('#siClose').onclick = close;
   over().addEventListener('pointermove', buddyLook);
+  over().addEventListener('pointermove', perchHover);
   over().addEventListener('pointerleave', () => { if (buddy) buddy.lookAway(); });
   addEventListener('rt-open-settings', close);
   addEventListener('keydown', e => {
