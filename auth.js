@@ -318,11 +318,16 @@ function botGrab(e, b) {
   if (e.button) return;
   e.preventDefault();
   e.stopPropagation();
+  /* 칸에 앉아 있던 놈은 집는 순간 칸 크기에서 44px 로 줄어든다 */
+  const shrinks = b.size !== BOT;
   const start = async () => {
     /* 복제는 원본을 두고 새 놈을 끈다 — 끌던 손이 그대로 이어진다 */
     const t = cloneKey(e) ? await addBot(b.x, b.y) : b;
     if (!t) return;
     unseat(t);
+    /* 줄어든 뒤에도 잡은 자리를 그대로 쓰면 커서가 봇 밖으로 빠진다 — 160px 상자
+       한가운데를 잡았으면 오프셋이 80 인데 몸은 44 다. 줄어든 몸을 커서 밑에 다시 놓는다 */
+    if (shrinks) { t.x = e.clientX - t.size / 2; t.y = e.clientY - t.size / 2; }
     place(t);
     t.el.classList.add('is-held');
     /* 이미 놓친 포인터면 던진다 — 캡처는 있으면 좋고 없어도 끌기는 된다 */
