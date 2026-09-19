@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.46';
+const VER = '2.47';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -568,7 +568,7 @@ function planCourses(snap = false) {
     });
     fold(COURSE.tiles.filter(tile => tile.gone), .02);
     aimGrid(1, GZ.ax.to, GZ.ay.to);
-    if (snap) restoreHomeView(true);
+    if (snap) syncHomeCam(true);
     courseKick();
     return;
   }
@@ -718,7 +718,9 @@ function closeCourse() {
   foldKids();
   OPEN = null;
   planCourses();
-  restoreHomeView();
+  /* 접었다고 서울 전체로 물러나지 않는다 — 보던 구에 그대로 남는다.
+     전체로 돌아가는 건 Esc 나 머리글을 눌러 고르기를 풀었을 때다 */
+  syncHomeCam();
   return true;
 }
 async function openCourse(host) {
@@ -794,10 +796,10 @@ document.addEventListener('click', e => {
          동 칸은 제 덩이 안에서 고르는 것이라 접지 않는다 */
       if (!tile.kid && OPEN && OPEN.tile !== tile) closeCourse();
       pickTile(tile);
-      focusHome();
+      syncHomeCam();
     }
   }
-  if (e.target.closest('#coursePick')) { pickTile(null); restoreHomeView(); }
+  if (e.target.closest('#coursePick')) { pickTile(null); syncHomeCam(); }
   /* 고른 칸이 있으면 그 코스로, 없으면 서울 코스로 */
   if (e.target.closest('#navPlay') && COURSE.root) start(PICK ? PICK.slug : COURSE.root);
 });
@@ -805,7 +807,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
   if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
   /* 고른 칸이 있으면 먼저 고르기를 멈춰 서울 코스로 돌아가고, 없을 때 펼친 곳을 접는다 */
-  if (PICK) { pickTile(null); restoreHomeView(); }
+  if (PICK) { pickTile(null); syncHomeCam(); }
   else closeCourse();
 });
 
@@ -902,6 +904,14 @@ function restoreHomeView(snap = false) {
   const viewH = stage.h;
   const py = box.h * z < viewH ? head + (viewH - box.h * z) / 2 - box.y0 * z : head - box.y0 * z;
   aimHomeCam(px, py, z, tiles, snap);
+}
+/* 카메라가 갈 곳은 늘 지금 초점이다 — 펼쳤으면 그 덩이, 고르기만 했으면 그 칸,
+   아무것도 없으면 서울 전체. 열고 닫고 크기를 바꾸는 길이 저마다 제 시야를 고르면
+   그때마다 초점이 샌다. 카메라를 옮기는 자리는 전부 여기로 모은다 */
+function syncHomeCam(snap = false) {
+  if (!$('#regions').classList.contains('on')) return;
+  if (OPEN || (PICK && !PICK.gone)) focusHome(snap);
+  else restoreHomeView(snap);
 }
 /* 서울 덩이가 화면보다 크면 가운데로 끌어 한강 일대가 먼저 보이게 한다 */
 function nudgeHome(snap = true) { restoreHomeView(snap); }

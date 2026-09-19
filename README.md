@@ -8,7 +8,11 @@
 
 # English
 
-A typing drill for place names. v0.6.246 (`VER=2.46`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.247 (`VER=2.47`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.247
+
+- The home camera always follows the current focus: folding a district keeps you on it, and only Esc or the header pulls back to all of Seoul
 
 ## What's new in 0.6.246
 
