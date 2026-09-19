@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=1.77">
+<link rel="stylesheet" href="style.css?v=2.10">
 </head>
 <body>
 
@@ -77,7 +77,7 @@
     <span class="nav-side nav-end">
       <a class="nav-item" href="https://github.com/g-gearservice/regiontype.com/discussions" target="_blank" rel="noopener noreferrer" data-i18n="community">커뮤니티</a>
       <!-- 피드백은 넵바에 남겨야 한다 — 방침·약관이 이 문을 유일한 연락 통로로 적고 있다 -->
-      <button type="button" class="nav-item" id="fbOpen"><i class="i i-flag" aria-hidden="true"></i><span data-i18n="feedback">피드백</span></button>
+      <button type="button" class="nav-item" id="fbOpen"><span data-i18n="feedback">피드백</span></button>
       <a class="nav-item title-alt" href="mimi/">Mimi</a>
     </span>
   </nav>
@@ -90,7 +90,7 @@
     <span class="nav-shape" id="navBotShape" aria-hidden="true"></span>
     <a class="nav-item" href="settings/" data-i18n="options">설정</a>
     <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start">시작하기</button>
-    <!-- 로그인은 제 페이지다(/signin/). 로그인해 있으면 라벨만 '내 계정' 으로 바뀐다 -->
+    <!-- 로그인은 홈 덮개를 연다. 로그인해 있으면 라벨과 길이 '내 계정' 으로 바뀐다 -->
     <a class="nav-item" id="signinLink" href="signin/" data-i18n="signinBtn">로그인</a>
   </nav>
   <div class="screen-head">
@@ -168,6 +168,47 @@
   </div>
 </section>
 
+<!-- 로그인 — 제 페이지가 아니라 홈 위에 뜨는 덮개다. 화면이 안 바뀌니 전환도
+     진짜 요소에 건 CSS transition 으로 한다(스냅샷 없음). /signin/ 은 공급자가
+     돌아오는 착지대로만 남아 해시를 여기로 넘긴다 -->
+<section id="signin" class="si-over" aria-modal="true" role="dialog" data-i18n-aria="signinBtn" aria-label="로그인" hidden>
+  <button type="button" class="back si-close" id="siClose" data-i18n-aria="close" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
+  <div class="si-card">
+    <p class="logo si-logo" aria-hidden="true">region<span>type</span><i class="dot"></i></p>
+
+    <div class="si-view" id="vSignin">
+      <h2 class="si-head"><span data-i18n="signinHead1">로그인하고</span><br><span data-i18n="signinHead2">승급전하기</span></h2>
+      <div class="si-btns">
+        <button type="button" id="goGoogle" data-i18n="signinGoogle">Google로 시작하기</button>
+      </div>
+    </div>
+
+    <!-- 2단계 확인 — SSO 를 넘은 뒤 패스키(또는 복구 코드)를 한 번 더 묻는다 -->
+    <div class="si-view" id="vTwo" hidden>
+      <h2 class="si-head" data-i18n="twoStepHead">2단계 인증</h2>
+      <p class="si-lead" data-i18n="passkeyHow">이 기기의 지문·얼굴·PIN 으로 들어옵니다.</p>
+      <div class="si-btns">
+        <button type="button" id="twoGo" data-i18n="passkeyGo">패스키로 로그인</button>
+        <button type="button" id="twoCode" data-i18n="useCode">복구 코드 쓰기</button>
+      </div>
+      <form class="si-code" id="codeForm" hidden>
+        <label for="codeIn" data-i18n="useCode">복구 코드 쓰기</label>
+        <div>
+          <input id="codeIn" maxlength="10" required pattern="[A-Za-z0-9]{10}"
+                 autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
+          <button type="submit" data-i18n="codeSubmit">인증하기</button>
+        </div>
+      </form>
+      <details class="si-lost">
+        <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
+        <p data-i18n="lostAllHow">계정은 되살릴 수 없습니다.</p>
+      </details>
+    </div>
+
+    <p class="si-say" id="siSay" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
 <div id="mobile">
   <div class="logo">region<span>type</span><i class="dot"></i></div>
   <p><span data-i18n="mobileNeed">물리 키보드가 필요합니다.</span><br><span data-i18n="mobilePc">PC에서 열어주세요.</span></p>
@@ -196,6 +237,7 @@
   </form>
 </dialog>
 
-<script src="app.js?v=1.77"></script>
+<script src="app.js?v=2.10"></script>
+<script src="auth.js?v=2.10"></script>
 </body>
 </html>

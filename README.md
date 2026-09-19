@@ -8,7 +8,12 @@
 
 # English
 
-A typing drill for place names. v0.6.177 (`VER=1.77`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.210 (`VER=2.10`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.210
+
+- Sign-in now opens over the home map instead of taking you to a separate page; `/signin/` remains only as the provider callback landing route
+- Screen changes cross-fade cleanly, play controls rise in sequence, and the home navigation pill stays aligned when you return to the map
 
 ## What's new in 0.6.177
 
@@ -149,7 +154,8 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
 
     index.html               screens (title / regions / settings / play / result)
     about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
-    signin/                  sign in with Google or Apple, then switch on a passkey second step; inherits style.css tokens, does not load app.js
+    auth.js                  sign-in overlay on the home screen: Google SSO, passkey second step, and recovery codes
+    signin/                  provider callback landing route; forwards its hash to the home screen
     wrangler.toml            the site as a Cloudflare Worker with static assets (no script, no build)
     _headers / _redirects    security headers and folder-index rewrites, applied by Cloudflare
     .assetsignore            files that never ship (relay/, tools/, maps/, docs)
@@ -283,7 +289,7 @@ Honest scores and well-built lies still look the same here. **The board is a hal
 
 ### Login
 
-**Only required to post to the leaderboard.** The game runs without it. The distribution still shows — only your seat is missing. Login has its own page, `signin/` (`signin.js`); nothing on the title screen loads that code until you open the link, and its `<a>` swaps to "my account" once a token exists.
+**Only required to post to the leaderboard.** The game runs without it. The distribution still shows — only your seat is missing. Login opens as an overlay on the home map (`auth.js`); `signin/` only forwards the provider callback hash back there. The home link swaps to "my account" once a token exists.
 
 **Google or Apple signs you in first. A passkey is a second step you switch on afterward, not the front door.** A static site that handles passwords inherits hashing, reset, and breach response, which this repo will not own, so it never asks for one — the provider makes that first check instead.
 

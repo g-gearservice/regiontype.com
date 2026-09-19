@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '1.77';
+const VER = '2.10';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -184,6 +184,8 @@ function beep(freq, dur = .07, type = 'sine') {
 function go(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id !== 'play') stop();
+  /* 숨어 있던 동안에는 알약을 앉힐 자리를 잴 수 없었다 — 보이고 난 다음 프레임에 앉힌다 */
+  if (id === 'regions') requestAnimationFrame(() => relayoutNavShapes());
   requestAnimationFrame(() => requestAnimationFrame(syncGrid));
 }
 
@@ -363,6 +365,10 @@ document.addEventListener('click', e => {
 
 /* ── 코스 로드 ──────────────────────────────────────── */
 const grab = url => fetch(asset(url)).then(r => r.json());
+/* 서울 칸 데이터는 boot 의 다른 짐(i18n·world·sense)을 기다리지 않고 곧장 나선다.
+   로그인 화면에서 돌아올 때 점이 제 칸으로 날아가려면, 새 문서가 처음 그려지는
+   순간에 칸이 이미 서 있어야 한다 — 늦게 서면 짝을 못 찾고 그냥 흐려진다 */
+const KR = Promise.all([grab('data/kr-tree.json'), grab('data/kr-names.json')]);
 const loadCourse = slug => grab(`data/${slug}.course.json`);
 const loadGeom = slug => grab(`data/${slug}.geom.json`);
 const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
@@ -736,7 +742,7 @@ async function openCourse(host) {
 
 async function renderCourses() {
   /* 서울만 연다. 설정 지역 탭은 개발 중이라 고른 나라가 홈 지도를 바꾸지 않는다 */
-  const [tree, names] = await Promise.all([grab('data/kr-tree.json'), grab('data/kr-names.json')]);
+  const [tree, names] = await KR;
   const root = 'seoul-gu';
   openGen++;
   OPEN = null;
@@ -757,6 +763,8 @@ async function renderCourses() {
 }
 /* 코스 칸은 지도가 다시 그려질 때마다 새로 나므로 문서에서 받는다 */
 document.addEventListener('click', e => {
+  /* 로그인 덮개가 떠 있으면 칸은 배경일 뿐이다 — 호버는 살아 있되 눌리지 않는다 */
+  if (document.body.classList.contains('signing')) return;
   const b = e.target.closest('#courseBtns .grid-btn');
   const tile = b && TILE.get(b);
   if (tile) {
@@ -769,6 +777,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('#navPlay') && COURSE.root) start(PICK ? PICK.slug : COURSE.root);
 });
 document.addEventListener('dblclick', e => {
+  if (document.body.classList.contains('signing')) return;
   skipClick = false;
   const b = e.target.closest('#courseBtns .grid-btn');
   if (b && TILE.get(b)) openCourse(TILE.get(b));
@@ -1006,10 +1015,24 @@ function makeNavFollow(spec) {
     nav.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('is-on', n === t));
     const logo = nav.querySelector('.nav-logo');
     if (logo) logo.classList.toggle('is-on', t === logo);
-    shape.classList.toggle('is-pill', !!(t && (spec.pillAtRest || t !== home)));
+    const pill = !!(t && (spec.pillAtRest || t !== home));
+    shape.classList.toggle('is-pill', pill);
     if (!t) return;
-    const nr = nav.getBoundingClientRect(), r = t.getBoundingClientRect();
-    const x = r.left - nr.left, y = r.top - nr.top, w = r.width, h = r.height;
+    const nr = nav.getBoundingClientRect();
+    /* 화면이 숨어 있으면(.screen 이 display:none) 모든 rect 가 0 이다. 그 값을 스프링에
+       넣으면 알약이 넵바 왼쪽 위 구석에 박힌 채 돌아온다 — 재지 말고 물러난다 */
+    if (!nr.width) return;
+    const r = t.getBoundingClientRect();
+    const x = r.left - nr.left, w = r.width, h = r.height;
+    let y = r.top - nr.top;
+    /* 알약은 줄 한가운데에 선다. 로고는 시각 보정으로 조금 올라가 있어서(translate)
+       제 rect 를 그대로 쓰면 알약만 따라 올라가 칸마다 높이가 달라 보인다.
+       쉴 때의 점은 줄이 아니라 로고의 점 자리라 손대지 않는다 */
+    const ref = pill && nav.querySelector('.nav-item');
+    if (ref) {
+      const rr = ref.getBoundingClientRect();
+      y = (rr.top + rr.bottom) / 2 - nr.top - h / 2;
+    }
     const still = calm() || !on;
     on = true;
     [[SPR.x, x], [SPR.y, y], [SPR.w, w], [SPR.h, h]].forEach(([p, v]) => {
@@ -1738,8 +1761,8 @@ const plain = (v, n = 12) =>
   String(v ?? '').trim().slice(0, n).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
 /* ── 로그인 ───────────────────────────────────────────
    순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
-   로그인 자체는 이 파일이 아니라 /signin/ 페이지(signin.js)가 한다 — 여기서는
-   그 결과로 받아 둔 토큰만 읽는다.
+   로그인은 같은 문서의 홈 덮개(auth.js)가 한다 — 여기서는 그 결과로 받아 둔
+   토큰만 읽는다. /signin/ 은 공급자 콜백을 홈으로 넘기는 착지대다.
 
    비밀번호는 안 받는다. 1차는 Google·Apple(SSO)이 하고, 패스키는 계정에 걸어
    둔 사람만 얹는 2단계다 — 어느 쪽 비밀도 우리가 쥐지 않는다.
