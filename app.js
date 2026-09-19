@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.48';
+const VER = '2.49';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -410,7 +410,12 @@ function spStep(p, dt) {
 }
 const calm = () => !opt.motion || matchMedia('(prefers-reduced-motion:reduce)').matches;
 const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05),
-             px: sp(0, .05), py: sp(0, .05), cz: sp(1, .0005) };   // 격자 배율·붙잡은 점·카메라
+             px: sp(0, .05), py: sp(0, .05), cz: sp(1, .0005),
+             nx: sp(0, .02), ny: sp(0, .02) };   // 격자 배율·붙잡은 점·카메라·커서 반응
+/* 커서가 움직이면 지도가 그쪽으로 아주 조금 기운다 — 초점이 살아 있다는 신호다.
+   10px 이면 칸(160px)의 6% 라 눈에 걸리지 않고 손끝에만 남는다. 카메라와 같은
+   스프링(response .42)을 타서 커서보다 한 박자 늦게 따라온다 */
+const NUDGE = 10;
 /* 홈 카메라 배율. 핀치와 스마트 포커스가 같이 쓴다. 펼친 동이 넵바에 들어가면
    하한까지 줄이고, 가운데에 작게 뜨면 상한까지 키운다 */
 const HOME_Z = [.42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
@@ -516,8 +521,8 @@ function courseFrame(now) {
   courseT = now;
   let busy = false;
   for (const p of Object.values(GZ)) busy = spStep(p, dt) || busy;
-  COURSE.px = GZ.px.x;
-  COURSE.py = GZ.py.x;
+  COURSE.px = GZ.px.x + GZ.nx.x;
+  COURSE.py = GZ.py.x + GZ.ny.x;
   COURSE.z = GZ.cz.x;
   COURSE.tiles = COURSE.tiles.filter(tile => {
     if (tile.wait > 0) {
@@ -922,6 +927,24 @@ function syncHomeCam(snap = false) {
 /* 서울 덩이가 화면보다 크면 가운데로 끌어 한강 일대가 먼저 보이게 한다 */
 function nudgeHome(snap = true) { restoreHomeView(snap); }
 
+/* 커서 반응. 손가락·펜에는 걸지 않고(헛호버), 모션을 줄였으면 아예 쉰다 */
+const fineHover = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
+function aimNudge(x, y) {
+  const on = fineHover() && !calm() && $('#regions').classList.contains('on')
+    && !document.body.classList.contains('signing') && !document.body.classList.contains('setting');
+  if (!on || x == null) { GZ.nx.to = GZ.ny.to = 0; courseKick(); return; }
+  const grip = v => Math.max(-1, Math.min(1, v));
+  GZ.nx.to = grip((x - innerWidth / 2) / (innerWidth / 2)) * NUDGE;
+  GZ.ny.to = grip((y - innerHeight / 2) / (innerHeight / 2)) * NUDGE;
+  courseKick();
+}
+$('#regions').addEventListener('pointermove', e => {
+  if (drag || e.pointerType !== 'mouse') return;
+  aimNudge(e.clientX, e.clientY);
+});
+$('#regions').addEventListener('pointerleave', () => aimNudge(null));
+addEventListener('blur', () => aimNudge(null));
+
 /* 홈·플레이 지도를 같은 끌기로 옮긴다. 칸을 눌러 고르는 클릭은 문턱을 넘지 않으면 그대로다 */
 let drag = null, skipClick = false;
 document.addEventListener('click', e => {
@@ -937,7 +960,7 @@ $('#regions').addEventListener('pointerdown', e => {
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
   GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
   drag = { kind: 'home', id: e.pointerId, cx: e.clientX, cy: e.clientY,
-           px: COURSE.px, py: COURSE.py, moved: false, host: $('#regions') };
+           px: GZ.px.x, py: GZ.py.x, moved: false, host: $('#regions') };
 });
 addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
