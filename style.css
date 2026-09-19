@@ -8,7 +8,7 @@
   --bad:#c1362b;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s;
-  /* 로그인 덮개만 쓰는 시간. 화면 한 판이 통째로 바뀌는 자리라 길다 */
+  /* 로그인·설정 덮개가 쓰는 시간. 화면 한 판이 통째로 바뀌는 자리라 길다 */
   --si-dur:.7s;
   --ease-out:cubic-bezier(.23,1,.32,1);
   --ease-in-out:cubic-bezier(.77,0,.175,1);
@@ -259,6 +259,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    (flex-shrink 는 남긴다 — 좁은 창에서는 줄어야 한다) */
 .opts-panels{flex:0 1 auto;width:calc(var(--opt-col) * 2 + 24px);align-self:stretch;display:flex;flex-direction:column}
 .opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+/* 언어 통은 위·아래 흐림이 끝나는 자리에 맞춘다. 가운데 두면 띠에 안 닿는다 */
+#optsLanguage:not([hidden]){justify-content:flex-start}
 .opts-panel:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
 /* 언어·지역 고르기 — 대륙 fieldset + 2열 라디오. 지역 판과 같은 스크롤 통 */
 .opts-lang-pick{
@@ -266,34 +268,37 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
   display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
   gap:14px; align-content:start; max-width:calc(var(--opt-col) * 2 + 24px); flex:0 1 auto;
-  /* 위로는 셸 안에서 굴리고, 아래로는 셸 밖으로 나가 화면 바닥까지 닿는다. max-height 를 같이 키우지 않으면
-     음수 margin 이 판의 가운데맞춤에 그대로 먹혀 통이 도로 셸 크기로 주저앉는다 */
-  max-height:calc(100% + var(--opt-shell-bot) / var(--zc));
-  margin-bottom:calc(0px - var(--opt-shell-bot) / var(--zc));
+  /* 통은 화면 위·아래까지(--opt-pick-h). 글자 자리는 padding 이 맡는다.
+     flex-shrink 를 끄지 않으면 셸 높이에 잘려 아랫변이 화면에 못 닿는다 */
+  flex:0 0 var(--opt-pick-h, auto);
+  height:var(--opt-pick-h, auto);
+  max-height:var(--opt-pick-h, var(--opt-rail-h, 100%));
+  margin-top:var(--opt-pick-dy, 0px);
+  margin-bottom:0;
   min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-right:10px;
-  /* 스크롤 중에는 위아래 둘 다 줄 높이와 무관하게 한 줄을 반토막 낸다 — 통에
-     테두리가 없으니 그 반토막이 '격자 밖으로 샌 것'처럼 읽힌다. 잘린 자리를
-     흐려 '더 있다'로 바꾼다. 위아래 padding 만큼 빈 여백이 있어, 맨 위·맨 아래로
-     끝까지 굴리면 첫 줄·마지막 줄은 그 빈 여백 뒤에 서서 흐려지지 않는다 —
-     마스크의 불투명 구간이 정확히 padding 이 끝나는 자리에서 시작·끝나기 때문.
-     scroll-padding 도 같이 줘서 키보드로 옮긴 초점 테두리가 흐린 띠 밑에 안 깔린다 */
-  padding-block:28px; scroll-padding-block:28px;
-  /* 위쪽은 안 흐린다 — 첫 줄이 희끄무레해 보이던 자리다. 아래쪽만 페이드 */
-  --pick-fade:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);
-  -webkit-mask:var(--pick-fade); mask:var(--pick-fade);
+  padding-top:var(--opt-pick-pad-t, 28px);
+  padding-bottom:var(--opt-pick-pad-b, 28px);
+  scroll-padding-top:var(--opt-pick-pad-t, 28px);
+  scroll-padding-bottom:var(--opt-pick-pad-b, 28px);
 }
-/* 바닥 블러 띠 — 페이지에 건다. 어느 통에도 매이지 않게 position:fixed 로 화면
-   아래변에 붙이고 좌우 끝까지 편다.
+/* 설정 페이지 위·아래 흐림. 목록 통이 아니라 뷰포트에 붙인다.
+   위 띠는 위에서 아래로, 아래 띠는 아래에서 위로 번진다. 언어 통과 같은
+   --opt-page-blur 를 써서 통이 띠에 닿는 높이를 같이 잰다.
    높이를 제 height 로 박지 않는 이유: 플레이 화면용 .backdrop-blur.bot 규칙이 같은
-   특이도에 파일 뒤쪽이라 그쪽 height 가 이긴다 — 함께 읽는 --blur-bot 에 값을 준다 */
-#options > .backdrop-blur.bot{
-  display:none; position:fixed; left:0; right:0; bottom:0; z-index:3;
-  --blur-bot:56px;   /* 띠 높이. 격자 한 행(152px)은 너무 두꺼웠다 */
-  /* .bot 의 가로 마스크(--fade-x)는 플레이 화면 지도용이다. 여기선 화면 폭을 다 쓴다 */
+   특이도에 파일 뒤쪽이라 그쪽 height 가 이긴다 — 함께 읽는 --blur-bot/--blur-top 에 값을 준다 */
+#options{--opt-page-blur:max(220px, 26vh)}
+#options > .backdrop-blur{
+  display:grid; position:fixed; left:0; right:0; z-index:3; pointer-events:none;
   --fade-x:linear-gradient(#000,#000);
 }
-/* 굴러가는 통이 있는 판에서만 띠가 선다 — 토글·버전 판은 흐릴 것이 없다 */
-#options:has(#optsLanguage:not([hidden])) > .backdrop-blur.bot{display:grid}
+#options > .backdrop-blur:not(.bot){
+  top:0; bottom:auto;
+  --blur-top:var(--opt-page-blur);
+}
+#options > .backdrop-blur.bot{
+  top:auto; bottom:0;
+  --blur-bot:var(--opt-page-blur);
+}
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
 /* 지역 고르기는 아직 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다
@@ -463,11 +468,12 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* ── 모바일 안내 ───────────────────────── */
 #mobile{display:none;position:fixed;inset:0;place-content:center;text-align:center;padding:32px;gap:20px}
 #mobile p{color:var(--ink-soft);line-height:1.7}
-/* 물리 키보드 안내는 홈(body 에 클래스가 없는 쪽)에만 건다 — 설정(/settings/, body.set)은
-   패스키·로그아웃이 있어 폰에서 닿아야 한다. 이 규칙을 넓게 두면 그 페이지가 백지가 된다 */
+/* 물리 키보드 안내는 홈(body 에 클래스가 없는 쪽)에만 건다 — 설정 덮개(body.setting)는
+   패스키·로그아웃이 있어 폰에서 닿아야 한다. 이 규칙을 넓게 두면 그 판이 백지가 된다 */
 @media (pointer:coarse),(max-width:640px){
-  body:not(.set) .screen{display:none!important}
+  body:not(.set):not(.setting) .screen{display:none!important}
   #mobile{display:grid}
+  body.setting #mobile{display:none}
 }
 
 /* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
@@ -489,14 +495,28 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .grid-btn:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 #options{pointer-events:none}
-#options .screen-head, #options .opts-shell{
-  pointer-events:auto; z-index:2;
-}
+#options .screen-head, #options .opts-shell{pointer-events:auto}
+#options .opts-shell{z-index:2}
+#options .screen-head{z-index:4}
 
-/* 설정 화면 — 뒤로·제목은 왼쪽 위에 고정해 두고(.screen 이 이미
-   position:fixed 라 그 패딩 모서리가 기준이 된다), 나머지(레일+판, 버전 줄)는
-   justify-content:center 로 남는 세로 공간 가운데로 몰린다 */
-#options{justify-content:center}
+/* 설정 덮개 — 제 페이지가 아니라 홈 위에 뜬다. .screen 을 쓰지 않는다
+   (body:not(.set) .screen 이 폰에서 접힌다). 뒤로·제목은 왼쪽 위에 고정하고
+   나머지(레일+판)는 justify-content:center 로 가운데에 둔다 */
+#options.opts-over{
+  position:fixed; inset:0; z-index:6;
+  display:flex; flex-direction:column;
+  padding:var(--screen-pad-y) var(--screen-pad-x);
+  overflow:auto;
+  justify-content:center;
+  opacity:0;
+  transition:opacity var(--si-dur) var(--ease-out);
+}
+#options.opts-over[hidden]{display:none}
+body.setting #options.opts-over{opacity:1}
+@media (pointer:fine){
+  /* 언어 통이 셸 밖으로 화면 끝까지 나가도 덮개가 스크롤을 만들지 않는다 */
+  body.setting #options.opts-over{overflow:hidden}
+}
 /* 셸은 뷰포트 한가운데 뜬다. 거기서 가장 가까운 장식 격자 가로선까지의 차이만큼만
    내려(올려) 윗변을 그 선에 앉힌다 — position:relative 는 위 규칙이 이미 준다 */
 /* dy 도 셸 자신의 길이라 zoom 에 같이 줄어든다 — 도로 나눠야 윗변이 격자 선에 앉는다 */
@@ -504,8 +524,22 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 #options .screen-head{
   /* 절대배치의 기준은 .screen 의 패딩 박스가 아니라 그 안쪽 모서리다 —
      top/left:0 이면 뷰포트 꼭짓점에 붙어 다른 화면의 머리글과 줄이 안 맞는다 */
-  position:absolute; top:var(--screen-pad-y); left:var(--screen-pad-x); margin-bottom:0; z-index:3;
+  position:absolute; top:var(--screen-pad-y); left:var(--screen-pad-x); margin-bottom:0; z-index:4;
 }
+/* 레일·판은 아래에서 올라오고 머리글은 왼쪽에서 들어온다. fill 을 주지 않아
+   끝나면 transform 이 없다. 나갈 때는 그 자리로 되돌리지 않는다 — 덮개는 바로
+   접고(#options.opts-exit) 칸 위의 서리만 걷는다 */
+body.setting #options .opts-shell{animation:opt-rise var(--si-dur) var(--ease-out)}
+body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--ease-out)}
+#options.opts-exit{opacity:0;transition:none}
+@keyframes opt-rise{from{transform:translateY(100%)}}
+@keyframes opt-in-left{from{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){
+  body.setting #options .opts-shell,
+  body.setting #options .screen-head{animation:none}
+}
+:root[data-motion="off"] body.setting #options .opts-shell,
+:root[data-motion="off"] body.setting #options .screen-head{animation:none}
 
 /* 뒤로 버튼과 제목이 겹치지 않게 */
 /* 정보 줄이 지도를 가리지 않도록 바닥에 깔아준다 */
@@ -892,14 +926,40 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .si-card > :not(.si-logo){position:relative; z-index:1}
 
 /* ── 열리는 동안 ─────────────────────────────────────── */
-/* 넵바 둘은 제 방향으로 빠진다. 흐림 띠는 건드리지 않는다 — 띠는 배경에 남는다 */
+/* 넵바 둘은 제 방향으로 빠진다. 로그인 덮개는 흐림 띠를 배경에 남긴다.
+   설정은 띠를 걷고 칸 위에 전면 흐림을 깐다. 흐림은 #options 가 아니라
+   #regions 쪽에 둔다 — 덮개에 backdrop-filter 를 걸면 셸·머리글이 필터
+   레이어에 올라 글자가 얇아진다. 상태는 흐림·랜드 겹·빠진 넵바로 함께 선다 */
+body.setting #regions > .backdrop-blur{display:none}
+#regions::after{
+  content:""; position:absolute; inset:0; z-index:3; pointer-events:none;
+  opacity:0; background:color-mix(in srgb,var(--bg) 34%,transparent);
+  transition:opacity var(--si-dur) var(--ease-out);
+}
+body.setting #regions::after,
+body.opts-leaving #regions::after{
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+body.setting #regions::after{opacity:1}
+body.opts-leaving #regions::after{opacity:0}
+@media (prefers-reduced-motion:reduce){
+  body.setting #regions::after,
+  body.opts-leaving #regions::after{backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+:root[data-motion="off"] body.setting #regions::after,
+:root[data-motion="off"] body.opts-leaving #regions::after{
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
 #regions .navbar,#regions .nav-bot{
   transition:transform var(--si-dur) var(--ease-in-out), opacity var(--si-dur) var(--ease-in-out);
 }
-body.signing #regions .navbar{transform:translateY(-130%);opacity:0;pointer-events:none}
+body.signing #regions .navbar,
+body.setting #regions .navbar{transform:translateY(-130%);opacity:0;pointer-events:none}
 /* 가운데 정렬은 translate 속성(-50%)이 이미 하고 있다. transform 에 -50% 를 또
    적으면 가로로 두 번 밀려 비스듬히 내려간다 — 여기서는 세로만 건드린다 */
-body.signing #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-events:none}
+body.signing #regions .nav-bot,
+body.setting #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-events:none}
 /* 칸은 자리를 지킨 채 가라앉는다. 가라앉기를 background 로 하면 구역 호버와 같은
    속성이라 시간을 못 나눈다 — 호버가 0.7초로 늘어진다. 그래서 어둠은 겹으로 깔고
    background 는 호버에 그대로 내준다 */
@@ -913,11 +973,16 @@ body.signing #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-even
 }
 /* 글자는 겹 위에 있어야 따로 빠지는 게 보인다 */
 #courseBtns .grid-btn > span{position:relative;z-index:1;transition:opacity var(--si-dur) var(--ease-out)}
-body.signing #courseBtns{pointer-events:none}
-body.signing #courseBtns .grid-btn::before{opacity:1}
-body.signing #courseBtns .grid-btn{box-shadow:none}
-body.signing #courseBtns .grid-btn > span{opacity:0}
-body.signing .course-name,body.signing .screen-head{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
+body.signing #courseBtns,
+body.setting #courseBtns{pointer-events:none}
+body.signing #courseBtns .grid-btn::before,
+body.setting #courseBtns .grid-btn::before{opacity:1}
+body.signing #courseBtns .grid-btn,
+body.setting #courseBtns .grid-btn{box-shadow:none}
+body.signing #courseBtns .grid-btn > span,
+body.setting #courseBtns .grid-btn > span{opacity:0}
+body.signing #regions .course-name,body.signing #regions .screen-head,
+body.setting #regions .course-name,body.setting #regions .screen-head{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
 
 /* 덮개 자체 — 로고는 아래에서 올라오고 나머지는 뒤따라 뜬다 */
 .si-over{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
@@ -1095,21 +1160,25 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .navbar .title-alt{display:none}
 :root[data-dev] .navbar .title-alt{display:inline-flex}
 
-/* ── 설정 페이지의 손가락 갈림 (/settings/) ─────────────
+/* ── 설정 덮개의 손가락 갈림 ───────────────────────────
    격자 정렬은 데스크톱 계약이다. 좁은 손가락 화면에서는 레일을 가로로 눕히고
-   셸 높이를 풀어 페이지가 그대로 굴러가게 둔다 — settings.js 의 syncOptShell 도
+   셸 높이를 풀어 판이 그대로 굴러가게 둔다 — settings.js 의 syncOptShell 도
    여기서는 일찍 돌아선다(높이를 못 박으면 판이 잘린다) */
 @media (pointer:coarse){
-  body.set #options{justify-content:flex-start;padding:84px 20px 40px}
-  body.set #options .screen-head{top:20px;left:20px}
-  body.set .opts-shell{
+  body.set #options, body.setting #options{justify-content:flex-start;padding:84px 20px 40px}
+  body.set #options .screen-head, body.setting #options .screen-head{top:20px;left:20px}
+  body.set .opts-shell, body.setting .opts-shell{
     flex-direction:column;align-items:stretch;gap:18px;
     width:100%;max-width:none;height:auto;zoom:1;
   }
-  body.set .opts-tabs{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;width:auto}
-  body.set .opts-panels{width:100%}
+  body.set .opts-tabs, body.setting .opts-tabs{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;width:auto}
+  body.set .opts-panels, body.setting .opts-panels{width:100%}
   /* 셸 밖으로 자라던 고르기 통은 여기선 페이지가 굴린다 */
   body.set .opts-lang-pick,
-  body.set .opts-region-pick{max-height:none;margin-bottom:0;overflow:visible;-webkit-mask:none;mask:none}
-  body.set #options > .backdrop-blur.bot{display:none!important}
+  body.set .opts-region-pick,
+  body.setting .opts-lang-pick,
+  body.setting .opts-region-pick{
+    flex:0 1 auto;height:auto;max-height:none;margin-top:0;margin-bottom:0;
+    overflow:visible;padding-block:28px;scroll-padding-block:28px;
+  }
 }

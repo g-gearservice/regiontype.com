@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.10';
+const VER = '2.29';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -764,7 +764,7 @@ async function renderCourses() {
 /* 코스 칸은 지도가 다시 그려질 때마다 새로 나므로 문서에서 받는다 */
 document.addEventListener('click', e => {
   /* 로그인 덮개가 떠 있으면 칸은 배경일 뿐이다 — 호버는 살아 있되 눌리지 않는다 */
-  if (document.body.classList.contains('signing')) return;
+  if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
   const b = e.target.closest('#courseBtns .grid-btn');
   const tile = b && TILE.get(b);
   if (tile) {
@@ -777,13 +777,14 @@ document.addEventListener('click', e => {
   if (e.target.closest('#navPlay') && COURSE.root) start(PICK ? PICK.slug : COURSE.root);
 });
 document.addEventListener('dblclick', e => {
-  if (document.body.classList.contains('signing')) return;
+  if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
   skipClick = false;
   const b = e.target.closest('#courseBtns .grid-btn');
   if (b && TILE.get(b)) openCourse(TILE.get(b));
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
+  if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
   /* 고른 칸이 있으면 먼저 고르기를 멈춰 서울 코스로 돌아가고, 없을 때 펼친 곳을 접는다 */
   if (PICK) pickTile(null);
   else closeCourse();
@@ -1009,6 +1010,11 @@ function makeNavFollow(spec) {
   function aimTo(el) {
     const shape = spec.shape(), nav = spec.nav();
     if (!shape || !nav) return;
+    /* 로그인 덮개로 초점이 넘어가도 뒤의 알약은 로그인에 남는다. */
+    const signin = $('#signinLink');
+    if ($('#signin') && !$('#signin').hidden && nav.contains(signin)) el = signin;
+    const setLink = nav.querySelector('a[href^="settings"]');
+    if (document.body.classList.contains('setting') && setLink) el = setLink;
     const home = spec.home();
     const t = el || home;
     aim = el || null;
@@ -1054,12 +1060,16 @@ function makeNavFollow(spec) {
     });
     nav.addEventListener('pointerleave', () => {
       const a = document.activeElement;
-      const keep = nav.contains(a) ? spec.target(a) : null;
+      const keep = nav.contains(a) && a.matches(':focus-visible') ? spec.target(a) : null;
       aimTo(keep || null);
     });
     nav.addEventListener('focusin', e => {
       const it = spec.target(e.target);
-      if (it) aimTo(it);
+      /* 포인터로 연 덮개를 닫아 돌려준 포커스까지 따라가면, 손을 뗐는데도 로그인
+         알약이 남는다. 키보드 포커스일 때만 따라가고 포인터는 hover 에 맡긴다. */
+      /* 설정·로그인을 클릭할 때 생기는 포커스도 현재 hover 는 유지한다.
+         클릭 직후 시작하기로 돌아가면 그 장면이 페이지 전환에 찍힌다. */
+      if (it) aimTo(e.target.matches(':focus-visible') || (fine() && it.matches(':hover')) ? it : null);
     });
     nav.addEventListener('focusout', e => {
       if (!nav.contains(e.relatedTarget)) aimTo(null);
@@ -1199,6 +1209,17 @@ async function boot() {
   COUNTRY = resolveCountry();
   LANG = resolveLang();
   paintUI();
+  addEventListener('rt-opt', () => {
+    const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
+    for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
+    Object.assign(opt, next);
+    document.documentElement.toggleAttribute('data-night', opt.night);
+    document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
+    document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
+    requestAnimationFrame(syncGrid);
+    LANG = resolveLang();
+    paintUI();
+  });
   fbPlaceholder();
   paintRegion();
   wireNavShape();
@@ -2051,7 +2072,7 @@ if (location.search.includes('rt=1')) {
   console.log('self-check done');
 }
 
-/* 설정은 제 페이지다 — 거기서 야간·언어를 바꾸고 뒤로 오면 이 화면은 뒤로/앞으로
+/* 소개·방침처럼 다른 문서로 나갔다가 뒤로 오면 이 화면은 뒤로/앞으로
    캐시(bfcache)에서 통째로 되살아나 스크립트가 다시 돌지 않는다. 그때만 새로 읽는다.
    storage 이벤트는 안 쓴다 — 그건 '다른 탭'에서만 오고, 같은 탭의 뒤로 가기에는 안 온다 */
 addEventListener('pageshow', e => { if (e.persisted) location.reload(); });

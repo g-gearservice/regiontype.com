@@ -8,7 +8,67 @@
 
 # English
 
-A typing drill for place names. v0.6.210 (`VER=2.10`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.229 (`VER=2.29`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.229
+
+- Scrolling the settings language list to the end leaves the last names on the Version tab
+
+## What's new in 0.6.227
+
+- The settings language list box reaches the top and bottom of the screen; the names stay where they were
+
+## What's new in 0.6.226
+
+- The settings language list stretches up and down until it meets the page frost
+
+## What's new in 0.6.225
+
+- The settings page frost bands are a little shorter
+
+## What's new in 0.6.224
+
+- Settings frosts the page from the top down and the bottom up, instead of only the language list
+
+## What's new in 0.6.223
+
+- The settings language list frosts at both its top and bottom edges
+
+## What's new in 0.6.222
+
+- The settings language list is as tall as the tab rail, so its bottom sits on the Version tab
+
+## What's new in 0.6.221
+
+- The settings language list ends at the Version tab instead of running to the bottom of the screen
+
+## What's new in 0.6.220
+
+- Opening Settings drops the bottom bar first, then the panel rises
+
+## What's new in 0.6.219
+
+- Closing Settings no longer slides the panel back; only the map frost fades out
+
+## What's new in 0.6.218
+
+- Settings frosts the whole home map; the top and bottom blur bands hide while it is open
+
+## What's new in 0.6.217
+
+- Closing Settings plays the enter motion in reverse: the panel slides back under the bottom blur, and the heading slides out to the left
+
+## What's new in 0.6.216
+
+- The settings bottom blur band now sits on every tab, not only Language
+
+## What's new in 0.6.215
+
+- Settings tabs and panels rise from under the bottom blur; the back heading slides in from the left
+
+## What's new in 0.6.214
+
+- Settings now opens over the home district map instead of taking you to a separate page; `/settings/` remains only as a hash-passthrough landing route
 
 ## What's new in 0.6.210
 
