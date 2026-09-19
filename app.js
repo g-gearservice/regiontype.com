@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.44';
+const VER = '2.46';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -376,8 +376,8 @@ const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
 
 /* ── 코스 고르기 — 격자 한 칸 버튼 ─────────────────────
    홈의 장식 격자와 격자 한 칸 버튼을 그대로 쓴다. 서울 자치구가 서울 모양으로
-   서고, 한 번 누르면 고르고, 두 번 누르면 그 구의 행정동이 그 칸에서 좌표대로
-   번져 나온다 — 화면은 그대로다. 격자는 그 칸을 붙잡고 촘촘해지고, 둘레 구는
+   서고, 한 번 누르면 그 구로 포커스, 같은 구를 한 번 더 누르면 행정동이 그 칸에서
+   좌표대로 번져 나온다 — 화면은 그대로다. 격자는 그 칸을 붙잡고 촘촘해지고, 둘레 구는
    작아진 채 밖으로 밀린다. 치는 건 시작 칸이 한다. */
 let COURSE = { tiles: [], tree: null, root: '', px: 0, py: 0, z: 1, map: null };
 let PICK = null;      // 고른 칸
@@ -748,7 +748,7 @@ async function openCourse(host) {
   COURSE.tiles.push(...kids);
   host.el.setAttribute('aria-expanded', 'true');
   OPEN = { tile: host, ar: w / h, kids };
-  /* 펼친 칸이 곧 current 다. 옆 구를 두 번 눌러 들어와도 포커스가 그 구로 간다 */
+  /* 펼친 칸이 곧 current 다 — 접었을 때 그 구가 그대로 골라져 있다 */
   pickTile(host);
   planCourses();
 }
@@ -784,25 +784,28 @@ document.addEventListener('click', e => {
   const b = e.target.closest('#courseBtns .grid-btn');
   const tile = b && TILE.get(b);
   if (tile) {
-    /* 키보드로 누른 click 은 detail 이 0 이다 — 고른 칸을 한 번 더 누르면 펴고 접는다 */
-    if (e.detail === 0 && PICK === tile) openCourse(tile);
-    else pickTile(tile);
+    /* 한 번 누르면 그 구로 포커스, 같은 구를 한 번 더 누르면 행정동을 편다.
+       세 번째는 openCourse 가 접는다. 동 칸은 아래가 없으니 고르기만 한다.
+       키보드 Enter 도 같은 click 이라 갈래를 따로 두지 않는다 */
+    if (!tile.kid && PICK === tile) openCourse(tile);
+    else {
+      /* 다른 구를 고르면 펼쳐둔 곳은 접는다 — 위 단계로 돌아온 것이다. 접지 않으면
+         focusHome 이 펼친 덩이 갈래를 타서 카메라가 엉뚱한 구로 간다.
+         동 칸은 제 덩이 안에서 고르는 것이라 접지 않는다 */
+      if (!tile.kid && OPEN && OPEN.tile !== tile) closeCourse();
+      pickTile(tile);
+      focusHome();
+    }
   }
-  if (e.target.closest('#coursePick')) pickTile(null);
+  if (e.target.closest('#coursePick')) { pickTile(null); restoreHomeView(); }
   /* 고른 칸이 있으면 그 코스로, 없으면 서울 코스로 */
   if (e.target.closest('#navPlay') && COURSE.root) start(PICK ? PICK.slug : COURSE.root);
-});
-document.addEventListener('dblclick', e => {
-  if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
-  skipClick = false;
-  const b = e.target.closest('#courseBtns .grid-btn');
-  if (b && TILE.get(b)) openCourse(TILE.get(b));
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
   if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
   /* 고른 칸이 있으면 먼저 고르기를 멈춰 서울 코스로 돌아가고, 없을 때 펼친 곳을 접는다 */
-  if (PICK) pickTile(null);
+  if (PICK) { pickTile(null); restoreHomeView(); }
   else closeCourse();
 });
 
@@ -869,17 +872,25 @@ function worldBox(tiles) {
   }
   return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
 }
-/* 두 번 눌러 펼친 덩이만 포커스한다. 한 번 고른 칸은 카메라를 옮기지 않는다.
-   동이 윗줄·아래 막대에 가리면 줄이고, 한가운데 작게 뜨면 키운다 */
+/* 펼친 덩이는 무대를 채우도록 맞춘다 — 동이 윗줄·아래 막대에 가리면 줄이고,
+   한가운데 작게 뜨면 키운다. 고르기만 했으면 배율은 그대로 두고 그 칸을
+   한가운데로 밀기만 한다: 구 하나를 채우려 들면 배율이 상한까지 튄다 */
 function focusHome(snap = false) {
-  if (!$('#regions').classList.contains('on') || !OPEN) return;
-  const tiles = [OPEN.tile, ...OPEN.kids].filter(t => !t.gone && t.o.to > 0);
-  if (!tiles.length) return;
-  const box = worldBox(tiles), stage = homeStage();
-  const z = clampZoom(HOME_FILL * Math.min(stage.w / Math.max(box.w, 1), stage.h / Math.max(box.h, 1)), HOME_Z[0], HOME_Z[1]);
-  const px = stage.cx - (box.x0 + box.x1) / 2 * z;
-  const py = stage.cy - (box.y0 + box.y1) / 2 * z;
-  aimHomeCam(px, py, z, tiles, snap);
+  if (!$('#regions').classList.contains('on')) return;
+  const stage = homeStage();
+  if (OPEN) {
+    const tiles = [OPEN.tile, ...OPEN.kids].filter(t => !t.gone && t.o.to > 0);
+    if (!tiles.length) return;
+    const box = worldBox(tiles);
+    const z = clampZoom(HOME_FILL * Math.min(stage.w / Math.max(box.w, 1), stage.h / Math.max(box.h, 1)), HOME_Z[0], HOME_Z[1]);
+    aimHomeCam(stage.cx - (box.x0 + box.x1) / 2 * z, stage.cy - (box.y0 + box.y1) / 2 * z, z, tiles, snap);
+    return;
+  }
+  if (!PICK || PICK.gone) return;
+  const box = worldBox([PICK]), z = 1;
+  /* 가둠은 덩이 전체로 잰다 — 가장자리 구를 가운데로 밀어도 지도가 날아가지 않는다 */
+  aimHomeCam(stage.cx - (box.x0 + box.x1) / 2 * z, stage.cy - (box.y0 + box.y1) / 2 * z, z,
+             COURSE.tiles.filter(t => !t.kid && !t.gone), snap);
 }
 function restoreHomeView(snap = false) {
   const tiles = COURSE.tiles.filter(t => !t.kid && !t.gone);

@@ -8,7 +8,11 @@
 
 # English
 
-A typing drill for place names. v0.6.244 (`VER=2.44`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.246 (`VER=2.46`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.246
+
+- Double-click is gone from the home map: one click focuses a district, a second click on the same district opens its dongs, and a third folds them back
 
 ## What's new in 0.6.244
 
