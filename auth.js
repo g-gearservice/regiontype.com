@@ -225,6 +225,35 @@ const toAccount = () => {
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
 const over = () => $('#signin');
 let opener = null;
+/* 로그인 로고 옆 주황 점은 Grok 봇(bloub). 덮개가 열리면 그 자리에 앉고
+   한 바퀴씩 돈다. 모션을 줄이면 시계를 돌리지 않고 한 장만 둔다 */
+const motionOff = () => matchMedia('(prefers-reduced-motion:reduce)').matches
+  || document.documentElement.dataset.motion === 'off';
+let buddy = null;
+async function wakeBuddy() {
+  const host = $('.si-logo .dot');
+  if (!host) return;
+  try {
+    if (!buddy) {
+      const { mountBuddy } = await import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
+      buddy = mountBuddy(host, { calm: motionOff });
+      host.classList.add('is-buddy');
+    }
+    buddy.start();
+  } catch {}
+}
+function sleepBuddy() {
+  if (!buddy) return;
+  buddy.stop();
+  buddy.lookAway();
+}
+function buddyLook(e) {
+  if (!buddy || motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  const box = buddy.node.getBoundingClientRect();
+  const dx = (e.clientX - (box.left + box.width / 2)) / Math.max(box.width, 1);
+  const dy = (e.clientY - (box.top + box.height / 2)) / Math.max(box.height, 1);
+  buddy.lookAt(Math.max(-1, Math.min(1, dx)), Math.max(-1, Math.min(1, dy)));
+}
 let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
@@ -261,12 +290,14 @@ function open() {
   show('vSignin');
   /* 뒤로 가기로 닫힌다 — 주소는 그대로고 기록만 한 칸 쌓는다 */
   if (location.hash !== '#signin') history.pushState({ si: 1 }, '', '#signin');
+  wakeBuddy();
 }
 function close() {
   if (over().hidden) return;
   modalGeneration += 1;
   document.body.classList.remove('signing');
   live = false;
+  sleepBuddy();
   over().hidden = true;
   TWO = null;
   sessionStorage.removeItem(BIND_KEY);
@@ -319,6 +350,8 @@ function wire() {
     open();
   });
   $('#siClose').onclick = close;
+  over().addEventListener('pointermove', buddyLook);
+  over().addEventListener('pointerleave', () => { if (buddy) buddy.lookAway(); });
   addEventListener('rt-open-settings', close);
   addEventListener('keydown', e => {
     if (over().hidden) return;

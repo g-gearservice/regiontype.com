@@ -1,4 +1,4 @@
-/* 넵바의 동글이. 그림과 움직임은 옆의 engine.js(bloub, MIT · Jérémy Perret)가 내고,
+/* 로그인 로고 옆의 동글이. 그림과 움직임은 옆의 engine.js(bloub, MIT · Jérémy Perret)가 내고,
    여기서는 그 결과(BotFrame)를 SVG 에 옮기고 시계를 돌리는 일만 한다.
 
    원본은 Vue 컴포넌트로 그리지만 이 저장소에는 프레임워크가 없다(CLAUDE.md).

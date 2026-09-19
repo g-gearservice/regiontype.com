@@ -1,0 +1,10 @@
+[mcp_servers.codex]
+command = "codex"
+args = ["mcp"]
+
+[mcp_servers.pencil]
+command = "/Users/aventar.sevena/.pencil/mcp/cursor/out/mcp-server-darwin-arm64"
+args = [
+    "--app",
+    "cursor",
+]
