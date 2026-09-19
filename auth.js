@@ -227,7 +227,7 @@ const over = () => $('#signin');
 let opener = null;
 /* ── Grok 봇(bloub) ──────────────────────────────────────
    로고 왼쪽 위에서 자고 있다. 끌어서 뒤의 비트맵 칸에 얹으면 그 칸을 물고
-   깨어나 눈을 깜빡인다(엔진 상태 sleep → alert). 끄는 동안 Option(맥·리눅스)
+   깨어나 눈을 뜨고 깜빡인다(엔진 상태 sleep → idle). 끄는 동안 Option(맥·리눅스)
    이나 Ctrl(윈도)을 누르고 있으면 한 마리가 더 생긴다.
    ponytail: 붙은 봇은 제 칸의 화면 좌표를 매 프레임 따라 읽는다 — 지도를 밀든
    줄이든 늘 맞는다. 칸 수만큼 도는 게 아니라 붙은 봇 수만큼이라 값이 싸다 */
@@ -265,7 +265,10 @@ function unseat(b) {
 function wake(b, on) {
   b.el.classList.toggle('is-on', on);
   if (!on) b.size = BOT;
-  if (b.api && !motionOff()) b.api.setState(on ? 'alert' : 'sleep');
+  /* idle 이 깨어 있는 얼굴이다 — baseFace·baseBody 가 켜져 둥근 몸에 눈이 붙고,
+     깜빡임은 sample() 이 낸다. alert 는 느낌표가 튀어 오르는 연출이라 얼굴이 없다.
+     sleep 은 눈을 감은 작은 덩이(eyeAlpha 0) — 로고 옆에서 자는 모습이다 */
+  if (b.api) b.api.setState(on ? 'idle' : 'sleep');
 }
 /* 봇 아래에 있는 비트맵 칸. elementsFromPoint 는 못 쓴다 — 덮개가 떠 있는 동안
    칸은 pointer-events:none 이라 hit-test 에서 통째로 빠진다. 좌표로 직접 고른다.
