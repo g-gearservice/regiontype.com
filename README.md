@@ -8,7 +8,67 @@
 
 # English
 
-A typing drill for place names. v0.6.229 (`VER=2.29`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.244 (`VER=2.44`) — Seoul's 25 districts on the home map; double-click a district to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.244
+
+- The home camera moves only on double-click; an expanded district stays framed, zooming out if dongs hit the bars and in if they sit too small in the middle
+
+## What's new in 0.6.243
+
+- The current district stays in the center of the home map; double-clicking a neighbour moves the camera to that district as it expands
+
+## What's new in 0.6.242
+
+- The home course label is centered under the bottom bar, not at the left edge
+
+## What's new in 0.6.241
+
+- The home course label sits under the bottom bar, in the gap below the dock
+
+## What's new in 0.6.240
+
+- The orange mark next to the sign-in logo becomes the Grok bot and walks a circle around its seat
+
+## What's new in 0.6.239
+
+- The settings Region tab is hidden in production; it still shows in local development
+
+## What's new in 0.6.238
+
+- The settings language list keeps its full-height box; top padding lines the names up with the Language tab
+
+## What's new in 0.6.237
+
+- Selected text on the orange highlight uses the night-mode ink
+
+## What's new in 0.6.236
+
+- The settings language list starts at the top of the Language tab
+
+## What's new in 0.6.235
+
+- The Korean tab line is “서울 얼마나 아세요?”
+
+## What's new in 0.6.234
+
+- A selected home-map district uses the same night-mode ink as hover
+
+## What's new in 0.6.233
+
+- The settings page frost bands are a third as tall as before
+
+## What's new in 0.6.232
+
+- Hovering a home-map district paints the name in the night-mode ink
+
+## What's new in 0.6.231
+
+- The settings page frost bands at the top and bottom are much shorter
+
+## What's new in 0.6.230
+
+- The browser tab reads “How well do you know Seoul?” in the current UI language
 
 ## What's new in 0.6.229
 

@@ -47,8 +47,9 @@
 :root[data-motion="off"]{ --fast:0s; --slow:0s; --si-dur:0s }
 
 *{box-sizing:border-box;margin:0;padding:0}
-::selection{background:var(--accent);color:var(--ink)}
-::-moz-selection{background:var(--accent);color:var(--ink)}
+/* 주황 하이라이트 위 글자. 야간에 --ink 가 밝아지면 주황 위에서 날아간다 */
+::selection{background:var(--accent);color:var(--on-accent)}
+::-moz-selection{background:var(--accent);color:var(--on-accent)}
 html,body{height:100%}
 /* 스크롤바는 안 보이게 둔다 — 굴리는 건 그대로다. 색만 지운다: ::-webkit-scrollbar 를
    건드리면 웹킷이 겹침(overlay) 스크롤바를 포기하고 자리를 차지하는 옛 스크롤바로
@@ -160,7 +161,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   border-radius:50%;
 }
 /* 고른 칸은 색에 더해 안쪽 테두리로도 드러낸다 */
-#courseBtns .grid-btn[aria-pressed="true"]{background:var(--accent);box-shadow:inset 0 0 0 5px var(--ink)}
+#courseBtns .grid-btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);box-shadow:inset 0 0 0 5px var(--ink)}
 
 :root[data-night] #card,
 :root[data-night] #typein{box-shadow:none}
@@ -268,7 +269,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
   display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
   gap:14px; align-content:start; max-width:calc(var(--opt-col) * 2 + 24px); flex:0 1 auto;
-  /* 통은 화면 위·아래까지(--opt-pick-h). 글자 자리는 padding 이 맡는다.
+  /* 통은 화면 위·아래까지(--opt-pick-h). 위 padding 이 언어 탭 옆에서 목록을 시작한다.
      flex-shrink 를 끄지 않으면 셸 높이에 잘려 아랫변이 화면에 못 닿는다 */
   flex:0 0 var(--opt-pick-h, auto);
   height:var(--opt-pick-h, auto);
@@ -286,7 +287,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    --opt-page-blur 를 써서 통이 띠에 닿는 높이를 같이 잰다.
    높이를 제 height 로 박지 않는 이유: 플레이 화면용 .backdrop-blur.bot 규칙이 같은
    특이도에 파일 뒤쪽이라 그쪽 height 가 이긴다 — 함께 읽는 --blur-bot/--blur-top 에 값을 준다 */
-#options{--opt-page-blur:max(220px, 26vh)}
+#options{--opt-page-blur:21px}
 #options > .backdrop-blur{
   display:grid; position:fixed; left:0; right:0; z-index:3; pointer-events:none;
   --fade-x:linear-gradient(#000,#000);
@@ -301,8 +302,10 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
-/* 지역 고르기는 아직 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다
-   사라지는 일이 없다 — mimi 링크와 같은 결. 배포는 대신 대기 안내만 읽는다 */
+/* 지역 탭은 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다 사라지는
+   일이 없다 — mimi 링크와 같은 결. 나라 고르기도 개발에서만 그린다 */
+#optsTabRegion{display:none}
+:root[data-dev] #optsTabRegion{display:revert}
 .opts-region-pick{display:none}
 /* 대륙마다 끊어 2열로 펼친다 — 스크롤 목록보다 한눈에 듄다. 칸이 좁아지면
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */
@@ -491,7 +494,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   transition:background var(--fast);
 }
 @media (hover:hover) and (pointer:fine){
-  .grid-btn:hover{background:var(--accent)}
+  .grid-btn:hover{background:var(--accent);color:var(--on-accent)}
 }
 .grid-btn:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 #options{pointer-events:none}
@@ -1001,6 +1004,34 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 }
 :root[data-motion="off"] .si-logo{transform:none}
 
+/* 로그인 로고 옆 점은 Grok 봇. 자리만 차지하고 봇은 그 주위를 한 바퀴씩 돈다.
+   궤도 반지름은 글자 크기(.em)라 로고가 커져도 비율이 같다. linear 는 상수
+   운동(한 바퀴)용이다. 자리 표시용 주황 원은 봇이 앉으면 지운다 */
+.si-logo{overflow:visible}
+.si-logo .dot{position:relative; overflow:visible}
+.si-logo .dot.is-buddy{
+  background:transparent;
+  --buddy-ink:var(--accent);
+  --buddy-paper:var(--on-accent);
+}
+.si-logo .dot .buddy{
+  position:absolute; left:50%; top:50%;
+  width:1em; height:1em; margin:-.5em 0 0 -.5em;
+  display:block; overflow:visible; pointer-events:none;
+}
+body.signing .si-logo .dot.is-buddy .buddy{
+  animation:si-buddy-orbit 5.6s linear infinite;
+  animation-delay:var(--si-dur);
+}
+@keyframes si-buddy-orbit{
+  from{transform:rotate(0turn) translateX(.72em) rotate(0turn)}
+  to{transform:rotate(1turn) translateX(.72em) rotate(-1turn)}
+}
+@media (prefers-reduced-motion:reduce){
+  body.signing .si-logo .dot.is-buddy .buddy{animation:none}
+}
+:root[data-motion="off"] body.signing .si-logo .dot.is-buddy .buddy{animation:none}
+
 .si-view{display:flex;flex-direction:column;align-items:center;gap:18px}
 .si-view[hidden]{display:none}
 .si-head{font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
@@ -1120,8 +1151,9 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 #regions .navbar .nav-logo .dot{visibility:hidden;margin-right:-.25em}
 /* 설정·시작·계정. 알약은 불투명 — 라이트 #e7eef1, 야간 #232c31.
    뒤 흐림은 플레이 타이핑 줄과 같은 .backdrop-blur.bot 이다 */
+#regions{--dock-gap:28px}
 #regions .nav-bot{
-  position:fixed; left:50%; bottom:28px; z-index:4; translate:-50% 0;
+  position:fixed; left:50%; bottom:var(--dock-gap); z-index:4; translate:-50% 0;
   display:flex; align-items:center; justify-content:center; gap:6px;
   padding:8px 10px; background:#e7eef1; border-radius:999px;
   box-shadow:var(--shadow);
@@ -1131,10 +1163,15 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 /* 시작하기 채움은 #navBotShape 가 그린다 — 호버 틴트를 두면 알약이 옮겨도 남는다 */
 #regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
 @media (pointer:coarse){
-  #regions .nav-bot{bottom:20px; padding:10px 12px}
+  #regions{--dock-gap:20px}
+  #regions .nav-bot{padding:10px 12px}
 }
-/* 아래 막대에 가리지 않게 코스 이름을 한 줄 올린다 */
-#regions .course-name{bottom:108px}
+/* 구역 이름은 아래 막대와 같은 x, 막대가 비운 틈에 앉는다. 높이 = --dock-gap */
+#regions .course-name{
+  left:50%; bottom:0; height:var(--dock-gap); z-index:4;
+  display:flex; align-items:center; justify-content:center; line-height:1;
+  translate:-50% 0;
+}
 /* 쉴 때는 로고 점(주황 원). 칸을 가리키면 경기장형으로 커지며 따라간다.
    채움은 따라다녀도 --accent 그대로다. 좌표·크기는 app.js 스프링이 찍는다 */
 .nav-shape{

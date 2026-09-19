@@ -111,22 +111,16 @@ function syncOptShell() {
   st.setProperty('--opt-shell-h', h + 'px');
   st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
   st.setProperty('--opt-rail-h', rail.offsetHeight + 'px');
-  /* 언어 통은 화면 위·아래 끝까지 닿게 키운다. 목록 글자는 흐림 띠 안쪽에
-     그대로 두려고, 늘어난 칸은 padding 으로 메운다. 셸 윗변은 방금 고른
-     top 을 쓴다 — 들어올 때 getBoundingClientRect 는 아직 바닥이다 */
-  const topBlur = $('#options > .backdrop-blur:not(.bot)');
-  const botBlur = $('#options > .backdrop-blur.bot');
+  /* 통은 화면 위·아래까지. 목록이 언어 탭 옆에서 시작하도록 위 padding 만 잰다.
+     셸 윗변은 방금 고른 top 을 쓴다 — 들어올 때 getBoundingClientRect 는 아직 바닥이다.
+     맨 아래 글자는 버전 탭에서 멈춘다 */
   const zc = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zc')) || 1;
   const inner = 28;
+  const railTop = top + (h - railH) / 2;
+  const railBot = railTop + railH;
   st.setProperty('--opt-pick-h', (vh / zc) + 'px');
   st.setProperty('--opt-pick-dy', ((-top) / zc) + 'px');
-  if (topBlur && botBlur) {
-    const a = topBlur.getBoundingClientRect().bottom;
-    st.setProperty('--opt-pick-pad-t', ((a + inner) / zc) + 'px');
-  }
-  /* 맨 아래 글자는 버전 탭 아랫변에서 멈춘다. 흐림 띠만큼 padding 을 넣으면
-     끝까지 내렸을 때 목록이 너무 올라간다 */
-  const railBot = top + (h - railH) / 2 + railH;
+  st.setProperty('--opt-pick-pad-t', (railTop / zc) + 'px');
   st.setProperty('--opt-pick-pad-b', (Math.max(inner, vh - railBot + inner) / zc) + 'px');
 }
 
@@ -212,7 +206,8 @@ function fillRegionPick() {}
 const tabHash = tb => tb.getAttribute('aria-controls').slice(4).toLowerCase();
 let pickTab = () => {};
 function wireOptsTabs() {
-  const tabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')];
+  const tabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')]
+    .filter(tb => isDev() || tb.id !== 'optsTabRegion');
   const rail = document.querySelector('.opts-tabs');
   if (!rail || !tabs.length) return;
   const select = (tab, keepHash) => {
@@ -231,7 +226,7 @@ function wireOptsTabs() {
   };
   rail.addEventListener('click', e => {
     const tab = e.target.closest('[role="tab"]');
-    if (tab) select(tab);
+    if (tab && tabs.includes(tab)) select(tab);
   });
   rail.addEventListener('keydown', e => {
     const cur = tabs.indexOf(document.activeElement);

@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.29';
+const VER = '2.44';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -88,6 +88,7 @@ function paintUI(then) {
   }
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
+  document.title = 'regiontype · ' + t('pageTitle');
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
   requestAnimationFrame(() => relayoutNavShapes());
   /* 소개 페이지는 언어마다 별도 파일이다(about/ 폴더 안, ko 는 접미 없이 about/index.html).
@@ -408,7 +409,12 @@ function spStep(p, dt) {
   return true;
 }
 const calm = () => !opt.motion || matchMedia('(prefers-reduced-motion:reduce)').matches;
-const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05) };   // 격자 배율과 붙잡은 점(px)
+const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05),
+             px: sp(0, .05), py: sp(0, .05), cz: sp(1, .0005) };   // 격자 배율·붙잡은 점·카메라
+/* 홈 카메라 배율. 핀치와 스마트 포커스가 같이 쓴다. 펼친 동이 넵바에 들어가면
+   하한까지 줄이고, 가운데에 작게 뜨면 상한까지 키운다 */
+const HOME_Z = [.42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
+function clampZoom(z, lo, hi) { return Math.max(lo, Math.min(hi, z)); }
 
 function makeTile(label, slug, kid) {
   const el = document.createElement('button');
@@ -510,6 +516,9 @@ function courseFrame(now) {
   courseT = now;
   let busy = false;
   for (const p of Object.values(GZ)) busy = spStep(p, dt) || busy;
+  COURSE.px = GZ.px.x;
+  COURSE.py = GZ.py.x;
+  COURSE.z = GZ.cz.x;
   COURSE.tiles = COURSE.tiles.filter(tile => {
     if (tile.wait > 0) {
       tile.wait -= dt;
@@ -559,7 +568,7 @@ function planCourses(snap = false) {
     });
     fold(COURSE.tiles.filter(tile => tile.gone), .02);
     aimGrid(1, GZ.ax.to, GZ.ay.to);
-    if (snap) nudgeHome();
+    if (snap) restoreHomeView(true);
     courseKick();
     return;
   }
@@ -657,6 +666,7 @@ function planCourses(snap = false) {
     });
   fold(COURSE.tiles.filter(tile => tile.gone), .02);
   aimGrid(1 / d, hc * cw, hr * ch);
+  focusHome(snap);
   courseKick();
 }
 
@@ -708,6 +718,7 @@ function closeCourse() {
   foldKids();
   OPEN = null;
   planCourses();
+  restoreHomeView();
   return true;
 }
 async function openCourse(host) {
@@ -737,6 +748,8 @@ async function openCourse(host) {
   COURSE.tiles.push(...kids);
   host.el.setAttribute('aria-expanded', 'true');
   OPEN = { tile: host, ar: w / h, kids };
+  /* 펼친 칸이 곧 current 다. 옆 구를 두 번 눌러 들어와도 포커스가 그 구로 간다 */
+  pickTile(host);
   planCourses();
 }
 
@@ -747,6 +760,9 @@ async function renderCourses() {
   openGen++;
   OPEN = null;
   const was = PICK && PICK.slug;
+  GZ.px.x = GZ.px.to = 0; GZ.px.v = 0;
+  GZ.py.x = GZ.py.to = 0; GZ.py.v = 0;
+  GZ.cz.x = GZ.cz.to = 1; GZ.cz.v = 0;
   COURSE = { tree, names, root, px: 0, py: 0, z: 1, map: SEOUL_MAP,
     tiles: courseList(root, tree).map(it => {
     const tile = makeTile(placeName(names, root, it.name), it.slug, false);
@@ -791,52 +807,93 @@ document.addEventListener('keydown', e => {
 });
 
 /* 홈 지도를 끌어도 칸이 화면 밖으로 통째로 사라지지 않게 가둔다 */
-function clampHomePan(px, py) {
-  const tiles = COURSE.tiles.filter(t => !t.gone && t.o.to > 0);
+function clampHomePan(px, py, tiles, useTo = false, z = COURSE.z || 1) {
+  tiles = tiles || COURSE.tiles.filter(t => !t.gone && t.o.to > 0);
   if (!tiles.length) return [0, 0];
   const { cw, ch } = decoGrid();
-  const z = COURSE.z || 1;
   const pad = Math.min(cw, ch) * .4 * z;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const t of tiles) {
-    const s = t.s.x * z;
-    x0 = Math.min(x0, t.x.x * z); y0 = Math.min(y0, t.y.x * z);
-    x1 = Math.max(x1, t.x.x * z + cw * s); y1 = Math.max(y1, t.y.x * z + ch * s);
+    const s = (useTo ? t.s.to : t.s.x) * z;
+    const x = (useTo ? t.x.to : t.x.x) * z;
+    const y = (useTo ? t.y.to : t.y.x) * z;
+    x0 = Math.min(x0, x); y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x + cw * s); y1 = Math.max(y1, y + ch * s);
   }
   return [
     Math.max(pad - x1, Math.min(innerWidth - pad - x0, px)),
     Math.max(pad - y1, Math.min(innerHeight - pad - y0, py)),
   ];
 }
-function shiftHome(px, py) {
-  [COURSE.px, COURSE.py] = clampHomePan(px, py);
+function shiftHome(px, py, tiles, useTo = false) {
+  [px, py] = clampHomePan(px, py, tiles, useTo);
+  COURSE.px = px; COURSE.py = py;
+  GZ.px.x = GZ.px.to = px; GZ.px.v = 0;
+  GZ.py.x = GZ.py.to = py; GZ.py.v = 0;
   COURSE.tiles.forEach(paintTile);
   const { cw, ch } = decoGrid();
   applyGrid(...courseGridArgs(cw, ch));
 }
-/* 서울 덩이가 화면보다 크면 가운데로 끌어 한강 일대가 먼저 보이게 한다 */
-function nudgeHome() {
-  const tiles = COURSE.tiles.filter(t => !t.kid && !t.gone);
-  if (!tiles.length) return;
-  const { cw, ch } = decoGrid();
-  const z = COURSE.z || 1;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const t of tiles) {
-    const s = t.s.to * z;
-    x0 = Math.min(x0, t.x.to * z); y0 = Math.min(y0, t.y.to * z);
-    x1 = Math.max(x1, t.x.to * z + cw * s); y1 = Math.max(y1, t.y.to * z + ch * s);
+function aimHomeCam(px, py, z, tiles, snap = false) {
+  z = clampZoom(z, HOME_Z[0], HOME_Z[1]);
+  [px, py] = clampHomePan(px, py, tiles, true, z);
+  GZ.cz.to = z; GZ.px.to = px; GZ.py.to = py;
+  if (snap || calm()) {
+    GZ.cz.x = z; GZ.cz.v = 0;
+    GZ.px.x = px; GZ.px.v = 0;
+    GZ.py.x = py; GZ.py.v = 0;
+    COURSE.z = z; COURSE.px = px; COURSE.py = py;
+    COURSE.tiles.forEach(paintTile);
+    const { cw, ch } = decoGrid();
+    applyGrid(...courseGridArgs(cw, ch));
   }
-  const pick = $('#coursePick');
+  courseKick();
+}
+function homeStage() {
   const nav = $('#regions .navbar');
   const dock = $('#regions .nav-bot');
-  const head = (pick && !pick.hidden ? pick.getBoundingClientRect().bottom
-    : nav ? nav.getBoundingClientRect().bottom : 160) + 12;
-  const foot = dock ? dock.getBoundingClientRect().height + 28 : 0;
-  const viewH = innerHeight - head - foot;
-  const boxH = y1 - y0;
-  const py = boxH < viewH ? head + (viewH - boxH) / 2 - y0 : head - y0;
-  shiftHome(innerWidth / 2 - (x0 + x1) / 2, py);
+  const pad = 28;
+  const top = (nav ? nav.getBoundingClientRect().bottom : 160) + pad;
+  const bot = (dock ? dock.getBoundingClientRect().top : innerHeight) - pad;
+  const left = pad, right = innerWidth - pad;
+  return { cx: (left + right) / 2, cy: (top + bot) / 2,
+           w: Math.max(1, right - left), h: Math.max(1, bot - top) };
 }
+function worldBox(tiles) {
+  const { cw, ch } = decoGrid();
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const t of tiles) {
+    const s = t.s.to;
+    x0 = Math.min(x0, t.x.to); y0 = Math.min(y0, t.y.to);
+    x1 = Math.max(x1, t.x.to + cw * s); y1 = Math.max(y1, t.y.to + ch * s);
+  }
+  return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+}
+/* 두 번 눌러 펼친 덩이만 포커스한다. 한 번 고른 칸은 카메라를 옮기지 않는다.
+   동이 윗줄·아래 막대에 가리면 줄이고, 한가운데 작게 뜨면 키운다 */
+function focusHome(snap = false) {
+  if (!$('#regions').classList.contains('on') || !OPEN) return;
+  const tiles = [OPEN.tile, ...OPEN.kids].filter(t => !t.gone && t.o.to > 0);
+  if (!tiles.length) return;
+  const box = worldBox(tiles), stage = homeStage();
+  const z = clampZoom(HOME_FILL * Math.min(stage.w / Math.max(box.w, 1), stage.h / Math.max(box.h, 1)), HOME_Z[0], HOME_Z[1]);
+  const px = stage.cx - (box.x0 + box.x1) / 2 * z;
+  const py = stage.cy - (box.y0 + box.y1) / 2 * z;
+  aimHomeCam(px, py, z, tiles, snap);
+}
+function restoreHomeView(snap = false) {
+  const tiles = COURSE.tiles.filter(t => !t.kid && !t.gone);
+  if (!tiles.length) return;
+  const box = worldBox(tiles), stage = homeStage();
+  const z = 1;
+  const px = innerWidth / 2 - (box.x0 + box.x1) / 2 * z;
+  const head = stage.cy - stage.h / 2;
+  const viewH = stage.h;
+  const py = box.h * z < viewH ? head + (viewH - box.h * z) / 2 - box.y0 * z : head - box.y0 * z;
+  aimHomeCam(px, py, z, tiles, snap);
+}
+/* 서울 덩이가 화면보다 크면 가운데로 끌어 한강 일대가 먼저 보이게 한다 */
+function nudgeHome(snap = true) { restoreHomeView(snap); }
 
 /* 홈·플레이 지도를 같은 끌기로 옮긴다. 칸을 눌러 고르는 클릭은 문턱을 넘지 않으면 그대로다 */
 let drag = null, skipClick = false;
@@ -851,6 +908,7 @@ $('#regions').addEventListener('pointerdown', e => {
   if (e.target.closest('.navbar, .nav-bot, .screen-head, dialog, a, input, textarea, select')) return;
   /* 캡처는 문턱을 넘긴 뒤에만. 처음부터 #regions 가 잡으면 칸 버튼의 click 이
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
+  GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
   drag = { kind: 'home', id: e.pointerId, cx: e.clientX, cy: e.clientY,
            px: COURSE.px, py: COURSE.py, moved: false, host: $('#regions') };
 });
@@ -891,8 +949,6 @@ document.addEventListener('keydown', e => {
 
 /* 홈·플레이 지도를 휠·트랙패드(핀치=ctrl+wheel)로 확대한다. 칸이 화면에서
    사라지지 않게 가두고, 줄어든 움직임에서는 배율만 바꾸고 카메라는 안 민다 */
-const HOME_Z = [.55, 2.6], PLAY_Z = [1, 8];
-function clampZoom(z, lo, hi) { return Math.max(lo, Math.min(hi, z)); }
 function wheelZoomFactor(e) {
   const line = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1;
   const gain = (e.ctrlKey ? .012 : .003) * (calm() ? .45 : 1);
@@ -905,6 +961,7 @@ function zoomHomeAt(mx, my, factor) {
   const z = clampZoom(old * factor, HOME_Z[0], HOME_Z[1]);
   if (z === old) return;
   COURSE.z = z;
+  GZ.cz.x = GZ.cz.to = z; GZ.cz.v = 0;
   shiftHome(mx - (mx - COURSE.px) / old * z, my - (my - COURSE.py) / old * z);
 }
 let zoomHold = 0;
