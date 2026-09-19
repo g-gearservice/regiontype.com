@@ -1004,33 +1004,20 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 }
 :root[data-motion="off"] .si-logo{transform:none}
 
-/* 로그인 로고 옆 점은 Grok 봇. 자리만 차지하고 봇은 그 주위를 한 바퀴씩 돈다.
-   궤도 반지름은 글자 크기(.em)라 로고가 커져도 비율이 같다. linear 는 상수
-   운동(한 바퀴)용이다. 자리 표시용 주황 원은 봇이 앉으면 지운다 */
-.si-logo{overflow:visible}
-.si-logo .dot{position:relative; overflow:visible}
-.si-logo .dot.is-buddy{
-  background:transparent;
-  --buddy-ink:var(--accent);
-  --buddy-paper:var(--on-accent);
+/* Grok 봇. 로고 왼쪽 위에서 자다가, 끌어다 뒤의 비트맵 칸에 붙이면 깨어난다.
+   층은 덮개 위에 있지만 클릭은 통과시킨다 — 받는 것은 봇 자신뿐이다.
+   44px 은 손가락 최소 과녁이기도 하다 */
+.si-bots{position:fixed; inset:0; z-index:7; pointer-events:none}
+.si-bot{
+  --bot:44px;
+  position:absolute; left:0; top:0; width:var(--bot); height:var(--bot);
+  --buddy-ink:var(--accent); --buddy-paper:var(--on-accent);
+  pointer-events:auto; cursor:grab; touch-action:none; will-change:transform;
 }
-.si-logo .dot .buddy{
-  position:absolute; left:50%; top:50%;
-  width:1em; height:1em; margin:-.5em 0 0 -.5em;
-  display:block; overflow:visible; pointer-events:none;
-}
-body.signing .si-logo .dot.is-buddy .buddy{
-  animation:si-buddy-orbit 5.6s linear infinite;
-  animation-delay:var(--si-dur);
-}
-@keyframes si-buddy-orbit{
-  from{transform:rotate(0turn) translateX(.72em) rotate(0turn)}
-  to{transform:rotate(1turn) translateX(.72em) rotate(-1turn)}
-}
-@media (prefers-reduced-motion:reduce){
-  body.signing .si-logo .dot.is-buddy .buddy{animation:none}
-}
-:root[data-motion="off"] body.signing .si-logo .dot.is-buddy .buddy{animation:none}
+.si-bot.is-held{cursor:grabbing; z-index:1}
+.si-bot .buddy{display:block; width:100%; height:100%; overflow:visible; pointer-events:none}
+/* 붙은 봇은 제 칸을 물고 따라다닌다 — 자리 계산은 auth.js 가 한다 */
+.si-bot.is-on{--buddy-ink:var(--accent-deep)}
 
 .si-view{display:flex;flex-direction:column;align-items:center;gap:18px}
 .si-view[hidden]{display:none}

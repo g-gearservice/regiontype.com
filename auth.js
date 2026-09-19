@@ -225,34 +225,123 @@ const toAccount = () => {
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
 const over = () => $('#signin');
 let opener = null;
-/* 로그인 로고 옆 주황 점은 Grok 봇(bloub). 덮개가 열리면 그 자리에 앉고
-   한 바퀴씩 돈다. 모션을 줄이면 시계를 돌리지 않고 한 장만 둔다 */
+/* ── Grok 봇(bloub) ──────────────────────────────────────
+   로고 왼쪽 위에서 자고 있다. 끌어서 뒤의 비트맵 칸에 얹으면 그 칸을 물고
+   깨어나 눈을 깜빡인다(엔진 상태 sleep → alert). 끄는 동안 Option(맥·리눅스)
+   이나 Ctrl(윈도)을 누르고 있으면 한 마리가 더 생긴다.
+   ponytail: 붙은 봇은 제 칸의 화면 좌표를 매 프레임 따라 읽는다 — 지도를 밀든
+   줄이든 늘 맞는다. 칸 수만큼 도는 게 아니라 붙은 봇 수만큼이라 값이 싸다 */
 const motionOff = () => matchMedia('(prefers-reduced-motion:reduce)').matches
   || document.documentElement.dataset.motion === 'off';
-let buddy = null;
+const BOT = 44;
+const WIN = /Win/i.test(navigator.userAgentData?.platform || navigator.platform || '');
+const cloneKey = e => e.altKey || (WIN && e.ctrlKey);
+const bots = [];
+let mountBuddy = null, follow = 0;
+
+async function botMaker() {
+  if (!mountBuddy) ({ mountBuddy } = await import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href));
+  return mountBuddy;
+}
+/* 로고 왼쪽 위 — 글자에 살짝 걸치게 둔다 */
+function parkAt() {
+  const logo = $('.si-logo');
+  if (!logo) return { x: 24, y: 24 };
+  const r = logo.getBoundingClientRect();
+  return { x: Math.max(8, r.left - BOT * .6), y: Math.max(8, r.top - BOT * .5) };
+}
+function place(b) { b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`; }
+function wake(b, on) {
+  b.el.classList.toggle('is-on', on);
+  if (b.api && !motionOff()) b.api.setState(on ? 'alert' : 'sleep');
+}
+/* 봇 아래에 있는 비트맵 칸. elementsFromPoint 는 못 쓴다 — 덮개가 떠 있는 동안
+   칸은 pointer-events:none 이라 hit-test 에서 통째로 빠진다. 좌표로 직접 고른다.
+   스물다섯 칸이라 값이 싸고, 무엇이 위에 덮였든 결과가 같다 */
+function tileUnder(b) {
+  const cx = b.x + BOT / 2, cy = b.y + BOT / 2;
+  for (const el of document.querySelectorAll('#courseBtns .grid-btn')) {
+    if (parseFloat(getComputedStyle(el).opacity) < .5) continue;
+    const r = el.getBoundingClientRect();
+    if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) return el;
+  }
+  return null;
+}
+function followFrame() {
+  follow = 0;
+  let live = false;
+  for (const b of bots) {
+    if (!b.tile) continue;
+    if (!b.tile.isConnected) { b.tile = null; wake(b, false); continue; }
+    const r = b.tile.getBoundingClientRect();
+    b.x = r.left + r.width / 2 - BOT / 2;
+    b.y = r.top + r.height / 2 - BOT / 2;
+    place(b);
+    live = true;
+  }
+  if (live && !over().hidden) follow = requestAnimationFrame(followFrame);
+}
+const followKick = () => { if (!follow) follow = requestAnimationFrame(followFrame); };
+
+async function addBot(x, y) {
+  const make = await botMaker().catch(() => null);
+  if (!make) return null;
+  const el = document.createElement('div');
+  el.className = 'si-bot';
+  $('#siBots').append(el);
+  const b = { el, api: make(el, { calm: motionOff }), tile: null, x, y };
+  bots.push(b);
+  place(b);
+  b.api.start();
+  wake(b, false);
+  el.addEventListener('pointerdown', e => botGrab(e, b));
+  return b;
+}
+function botGrab(e, b) {
+  if (e.button) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const start = async () => {
+    /* 복제는 원본을 두고 새 놈을 끈다 — 끌던 손이 그대로 이어진다 */
+    const t = cloneKey(e) ? await addBot(b.x, b.y) : b;
+    if (!t) return;
+    t.tile = null;
+    wake(t, false);
+    t.el.classList.add('is-held');
+    /* 이미 놓친 포인터면 던진다 — 캡처는 있으면 좋고 없어도 끌기는 된다 */
+    try { t.el.setPointerCapture(e.pointerId); } catch {}
+    const ox = e.clientX - t.x, oy = e.clientY - t.y;
+    const move = ev => { t.x = ev.clientX - ox; t.y = ev.clientY - oy; place(t); };
+    const drop = () => {
+      t.el.removeEventListener('pointermove', move);
+      t.el.classList.remove('is-held');
+      const tile = tileUnder(t);
+      if (tile) { t.tile = tile; wake(t, true); followKick(); }
+    };
+    t.el.addEventListener('pointermove', move);
+    t.el.addEventListener('pointerup', drop, { once: true });
+    t.el.addEventListener('pointercancel', drop, { once: true });
+  };
+  start();
+}
 async function wakeBuddy() {
-  const host = $('.si-logo .dot');
-  if (!host) return;
-  try {
-    if (!buddy) {
-      const { mountBuddy } = await import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
-      buddy = mountBuddy(host, { calm: motionOff });
-      host.classList.add('is-buddy');
-    }
-    buddy.start();
-  } catch {}
+  if (!bots.length) { const p = parkAt(); await addBot(p.x, p.y); }
+  bots.forEach(b => b.api.start());
+  followKick();
 }
 function sleepBuddy() {
-  if (!buddy) return;
-  buddy.stop();
-  buddy.lookAway();
+  cancelAnimationFrame(follow); follow = 0;
+  bots.forEach(b => { b.api.stop(); b.api.lookAway(); });
 }
+/* 봇은 커서 쪽을 바라본다. 화면 좌표 차를 그대로 넘기면 엔진이 반대로 돌린다 */
 function buddyLook(e) {
-  if (!buddy || motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  const box = buddy.node.getBoundingClientRect();
-  const dx = (e.clientX - (box.left + box.width / 2)) / Math.max(box.width, 1);
-  const dy = (e.clientY - (box.top + box.height / 2)) / Math.max(box.height, 1);
-  buddy.lookAt(Math.max(-1, Math.min(1, dx)), Math.max(-1, Math.min(1, dy)));
+  if (motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  const grip = v => Math.max(-1, Math.min(1, v));
+  for (const b of bots) {
+    const dx = (e.clientX - (b.x + BOT / 2)) / BOT;
+    const dy = (e.clientY - (b.y + BOT / 2)) / BOT;
+    b.api.lookAt(-grip(dx), -grip(dy));
+  }
 }
 let backgroundState = [];
 function setBackgroundInert(inert) {

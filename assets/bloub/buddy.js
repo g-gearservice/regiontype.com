@@ -84,5 +84,10 @@ export function mountBuddy(host, { calm = () => false } = {}) {
       if (calm()) return;
       engine.setLook(null, (performance.now() - t0) / 1000);
     },
+    /* 엔진의 상태를 갈아 끼운다. 쓸 수 있는 이름은 STATES 의 것뿐이다 —
+       idle·sleep·alert·notify·thinking·wink… (neutre 류는 상태가 아니라 표정이다).
+       없는 이름을 주면 setState 가 다음 호출에서 STATE_BY_ID.get(cur).morph 로 터진다.
+       깜빡임은 sample() 이 이미 내주므로, 깨우는 일은 sleep 에서 나오는 것으로 끝난다 */
+    setState(id) { engine.setState(id, (performance.now() - t0) / 1000); },
   };
 }
