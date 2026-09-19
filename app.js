@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.47';
+const VER = '2.48';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -883,9 +883,15 @@ function focusHome(snap = false) {
   if (OPEN) {
     const tiles = [OPEN.tile, ...OPEN.kids].filter(t => !t.gone && t.o.to > 0);
     if (!tiles.length) return;
-    const box = worldBox(tiles);
-    const z = clampZoom(HOME_FILL * Math.min(stage.w / Math.max(box.w, 1), stage.h / Math.max(box.h, 1)), HOME_Z[0], HOME_Z[1]);
-    aimHomeCam(stage.cx - (box.x0 + box.x1) / 2 * z, stage.cy - (box.y0 + box.y1) / 2 * z, z, tiles, snap);
+    const box = worldBox(tiles), self = worldBox([OPEN.tile]);
+    const cx = (self.x0 + self.x1) / 2, cy = (self.y0 + self.y1) / 2;
+    /* 펼친 구를 무대 한가운데에 못 박는다. 덩이 상자 한가운데에 맞추면 동이 한쪽으로
+       치우친 구(성북구처럼)에서 구 자신이 옆으로 밀려 — 방금 맞춘 초점이 흔들린다.
+       배율은 그 못에서 가장 먼 동까지가 들어가게 고른다 */
+    const reachX = Math.max(cx - box.x0, box.x1 - cx, 1);
+    const reachY = Math.max(cy - box.y0, box.y1 - cy, 1);
+    const z = clampZoom(HOME_FILL * Math.min(stage.w / (2 * reachX), stage.h / (2 * reachY)), HOME_Z[0], HOME_Z[1]);
+    aimHomeCam(stage.cx - cx * z, stage.cy - cy * z, z, tiles, snap);
     return;
   }
   if (!PICK || PICK.gone) return;
