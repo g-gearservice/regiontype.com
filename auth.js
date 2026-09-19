@@ -250,6 +250,25 @@ function parkAt() {
   const r = logo.getBoundingClientRect();
   return { x: r.right - BOT * .45, y: r.top - BOT * .35 };
 }
+/* 봇이 앉으면 안 되는 자리 — 로고·제목·버튼이 덮고 있는 칸이다. 글자 뒤로 들어가면
+   둘 다 안 읽힌다 */
+const boxOf = (sel, pad) => {
+  const el = $(sel);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { l: r.left - pad, t: r.top - pad, r: r.right + pad, b: r.bottom + pad };
+};
+const inBox = (x, y, z) => !!z && x >= z.l && x <= z.r && y >= z.t && y <= z.b;
+const blocked = () => ['.si-logo', '#vSignin .si-head', '#vSignin .si-btns']
+  .map(sel => boxOf(sel, 14)).filter(Boolean);
+/* 로고 근처에 놓으면 제자리(로고 옆 동글뱅이)로 돌아간다 */
+const overLogo = b => inBox(b.x + b.size / 2, b.y + b.size / 2, boxOf('.si-logo', 28));
+function park(b) {
+  const p = parkAt();
+  b.x = p.x; b.y = p.y;
+  unseat(b);
+  place(b);
+}
 function place(b) {
   b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;
   b.el.style.width = b.el.style.height = b.size + 'px';
@@ -275,6 +294,7 @@ function wake(b, on) {
    스물다섯 칸이라 값이 싸고, 무엇이 위에 덮였든 결과가 같다 */
 function tileUnder(b) {
   const cx = b.x + b.size / 2, cy = b.y + b.size / 2;
+  if (blocked().some(z => inBox(cx, cy, z))) return null;
   for (const el of document.querySelectorAll('#courseBtns .grid-btn')) {
     if (parseFloat(getComputedStyle(el).opacity) < .5) continue;
     const r = el.getBoundingClientRect();
@@ -311,6 +331,14 @@ async function addBot(x, y) {
   place(b);
   b.api.start();
   wake(b, false);
+  /* 평소에는 로고 옆 작은 동글뱅이(sleep)로 자다가, 가리키면 깨어나 봇으로 보인다 —
+     집을 수 있다는 신호다. 칸에 앉았거나 손에 들려 있으면 건드리지 않는다 */
+  const idleIfFree = on => {
+    if (b.tile || b.el.classList.contains('is-held') || !b.api) return;
+    b.api.setState(on ? 'idle' : 'sleep');
+  };
+  el.addEventListener('pointerenter', () => idleIfFree(true));
+  el.addEventListener('pointerleave', () => idleIfFree(false));
   el.addEventListener('pointerdown', e => botGrab(e, b));
   return b;
 }
@@ -340,8 +368,8 @@ function botGrab(e, b) {
       t.el.removeEventListener('pointermove', move);
       t.el.classList.remove('is-held');
       const tile = tileUnder(t);
-      /* 빈 곳에 놓으면 도로 잠든다 — 허둥지둥한 얼굴로 남겨 두지 않는다 */
-      if (!tile) { wake(t, false); return; }
+      /* 로고 근처면 제자리로 돌아가고, 그냥 빈 곳이면 거기서 잠든다 */
+      if (!tile) { if (overLogo(t)) park(t); else wake(t, false); return; }
       /* 한 칸에 한 마리만 — 먼저 앉아 있던 놈은 내려온다 */
       bots.forEach(o => { if (o !== t && o.tile === tile) { unseat(o); place(o); } });
       t.tile = tile;
@@ -357,12 +385,15 @@ function botGrab(e, b) {
 }
 async function wakeBuddy() {
   if (!bots.length) { const p = parkAt(); await addBot(p.x, p.y); }
-  bots.forEach(b => b.api.start());
+  bots.forEach(b => { if (!b.tile) park(b); b.api.start(); });
   followKick();
 }
 function sleepBuddy() {
   cancelAnimationFrame(follow); follow = 0;
-  bots.forEach(b => { b.api.stop(); b.api.lookAway(); });
+  /* 앉아 있던 칸을 반드시 돌려준다 — has-bot 이 남으면 그 구가 홈에서 투명한 채
+     굳는다(도봉구가 사라져 보이던 이유). 복제본은 그 판의 놀이라 정리한다 */
+  while (bots.length > 1) { const b = bots.pop(); unseat(b); b.api.stop(); b.el.remove(); }
+  bots.forEach(b => { park(b); b.api.stop(); b.api.lookAway(); });
 }
 /* 봇은 커서 쪽을 바라본다. 화면 좌표 차를 그대로 넘기면 엔진이 반대로 돌린다 */
 function buddyLook(e) {

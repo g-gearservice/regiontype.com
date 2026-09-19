@@ -8,7 +8,13 @@
 
 # English
 
-A typing drill for place names. v0.6.259 (`VER=2.59`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.260 (`VER=2.60`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.260
+
+- Closing sign-in hands the bot's tile back, so the district no longer vanishes from the home map
+- The bot cannot sit on tiles behind the logo, the heading, or the Google button, and drops near the logo return it to its perch
+- The perched bot is a small dot until you point at it, then it wakes so you can pick it up
 
 ## What's new in 0.6.259
 
