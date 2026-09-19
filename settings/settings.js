@@ -1,11 +1,11 @@
 /* regiontype 설정 화면 (/settings/).
 
    app.js 를 싣지 않는다 — 그 파일은 홈 전용 DOM 을 최상단에서 건드린다. 겹치는
-   잔손($·asset·t·b64u)은 하나하나가 다섯 줄 미만이라 signin.js 처럼 여기 다시 적는다.
+   잔손($·asset·t·b64u)은 하나하나가 다섯 줄 미만이라 auth.js 처럼 여기 다시 적는다.
    ponytail: 네 번째 페이지가 생기면 그때 공용 모듈로 뽑는다.
 
    여기 있는 것: 언어·지역·화면·소리·버전 판(홈의 #options 에서 옮겨 왔다)과
-   보안 판(/signin/ 의 계정 화면에서 옮겨 왔다). 로그인 자체는 여전히 /signin/ 이다.
+   계정 보안 판. 로그인 자체는 홈 위의 덮개(index.html + auth.js)가 한다.
    탭 자리는 해시에 남는다 — /settings/#security 로 바로 들어올 수 있다.            */
 'use strict';
 
@@ -259,7 +259,7 @@ function wireOptsTabs() {
   select(want || tabs[0], !want);
 }
 
-/* ── 보안 (signin.js 에서 옮겨 왔다) ─────────────────── */
+/* ── 계정 보안 ──────────────────────────────────────── */
 const toB64u = b => btoa(String.fromCharCode(...new Uint8Array(b)))
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64u = s => {

@@ -2,77 +2,16 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>regiontype · 로그인</title>
-<!-- 검색에 걸 화면이 아니다 — hreflang·og·ld+json 을 두지 않고 색인만 막는다.
-     말은 about/ 처럼 언어별 파일로 복제하지 않고 data-i18n 으로 갈아끼운다 -->
+<title>regiontype</title>
+<!-- 로그인 화면은 이제 홈 위에 뜨는 덮개다(index.html + auth.js). 이 자리는
+     공급자가 돌아오는 착지대로만 남는다 — relay/worker.mjs 의 redir() 이
+     브라우저를 /signin/#signin=… 로 보내기 때문이다. 해시를 그대로 홈에
+     넘기고 비킨다. Worker 를 고쳐 /#… 로 바로 보내면 이 파일은 지워도 된다. -->
 <meta name="robots" content="noindex">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=1.59">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=1.59">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=1.59">
-<link rel="stylesheet" href="../style.css?v=1.77">
+<script>
+  /* replace 로 넘긴다 — 뒤로 가기가 이 자리로 되돌아오면 안 된다 */
+  location.replace('../' + (location.hash || ''));
+</script>
 </head>
-<body class="si">
-
-<!-- 배경 점 지도 → 흐림 띠 → 본문. 이 순서라야 버튼 글자가 안 흐려진다 -->
-<div class="si-map" aria-hidden="true"></div>
-<!-- 가장자리에서 안쪽으로 사라지는 흐림. 여섯 겹 구조는 플레이·설정 화면이 쓰는
-     .backdrop-blur 그대로다(style.css) — 방향과 세기만 .si-blur 가 갈아 끼운다 -->
-<span class="backdrop-blur si-blur is-left" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-<span class="backdrop-blur si-blur is-right" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-<span class="backdrop-blur si-blur is-bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-
-<a class="back si-back" href="../" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></a>
-
-<main class="si-wrap">
-  <h1 class="logo">region<span>type</span><i class="dot" aria-hidden="true"></i></h1>
-
-  <!-- 로그인 전 -->
-  <section class="si-view" id="vSignin">
-    <h2 class="si-head"><span data-i18n="signinHead1">로그인해서</span><br><span data-i18n="signinHead2">지역을 알려보자!</span></h2>
-    <!-- 불 켜진 점 덩이. 장식이라 읽어줄 것이 없다 -->
-    <svg class="si-blob" viewBox="0 0 214.34 105.7" aria-hidden="true" focusable="false">
-      <g fill="var(--land)" stroke="var(--accent-text)" stroke-width="1.16" stroke-opacity=".85">
-  <circle cx="39.84" cy="12.84" r="12.36"/> <circle cx="66.75" cy="12.84" r="12.36"/> <circle cx="93.65" cy="12.84" r="12.36"/> <circle cx="120.69" cy="12.84" r="12.36"/> <circle cx="147.6" cy="12.84" r="12.36"/>
-  <circle cx="174.5" cy="12.84" r="12.36"/> <circle cx="201.4" cy="12.84" r="12.36"/> <circle cx="12.94" cy="39.51" r="12.36"/> <circle cx="39.84" cy="39.51" r="12.36"/> <circle cx="66.75" cy="39.51" r="12.36"/>
-  <circle cx="93.65" cy="39.51" r="12.36"/> <circle cx="120.69" cy="39.51" r="12.36"/> <circle cx="147.6" cy="39.51" r="12.36"/> <circle cx="174.5" cy="39.51" r="12.36"/> <circle cx="201.4" cy="39.51" r="12.36"/>
-  <circle cx="12.94" cy="66.18" r="12.36"/> <circle cx="39.84" cy="66.18" r="12.36"/> <circle cx="66.75" cy="66.18" r="12.36"/> <circle cx="93.65" cy="66.18" r="12.36"/> <circle cx="120.69" cy="66.18" r="12.36"/>
-  <circle cx="147.6" cy="66.18" r="12.36"/> <circle cx="147.65" cy="92.52" r="12.36"/> <circle cx="174.65" cy="92.52" r="12.36"/> <circle cx="174.5" cy="66.18" r="12.36"/> <circle cx="12.94" cy="92.86" r="12.36"/>
-  <circle cx="39.84" cy="92.86" r="12.36"/> <circle cx="66.75" cy="92.86" r="12.36"/> <circle cx="93.65" cy="92.86" r="12.36"/> <circle cx="120.69" cy="92.86" r="12.36"/>
-      </g>
-    </svg>
-    <div class="si-btns">
-      <button type="button" id="goGoogle" data-i18n="signinGoogle">Google로 시작하기</button>
-      <button type="button" id="goApple" data-i18n="signinApple">Apple로 시작하기</button>
-    </div>
-  </section>
-
-  <!-- 2단계 확인 — SSO 를 넘은 뒤 패스키(또는 복구 코드)를 한 번 더 묻는다 -->
-  <section class="si-view" id="vTwo" hidden>
-    <h2 class="si-head" data-i18n="twoStepHead">2단계 인증</h2>
-    <p class="si-lead" data-i18n="passkeyHow">이 기기의 지문·얼굴·PIN 으로 들어옵니다.</p>
-    <div class="si-btns">
-      <button type="button" id="twoGo" data-i18n="passkeyGo">패스키로 로그인</button>
-      <button type="button" id="twoCode" data-i18n="useCode">복구 코드 쓰기</button>
-    </div>
-    <form class="si-code" id="codeForm" hidden>
-      <label for="codeIn" data-i18n="useCode">복구 코드 쓰기</label>
-      <div>
-        <!-- 열 글자 영숫자. 모양 검사는 브라우저에 맡긴다 — 우리 말로 다시 적지 않는다 -->
-        <input id="codeIn" maxlength="10" required pattern="[A-Za-z0-9]{10}"
-               autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
-        <button type="submit" data-i18n="codeSubmit">인증하기</button>
-      </div>
-    </form>
-    <details class="si-lost">
-      <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
-      <p data-i18n="lostAllHow">계정은 되살릴 수 없습니다.</p>
-    </details>
-  </section>
-
-  <p class="si-say" id="siSay" role="status" aria-live="polite"></p>
-</main>
-
-<script src="signin.js?v=1.59"></script>
-</body>
+<body></body>
 </html>

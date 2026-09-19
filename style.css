@@ -8,6 +8,8 @@
   --bad:#c1362b;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s;
+  /* 로그인 덮개만 쓰는 시간. 화면 한 판이 통째로 바뀌는 자리라 길다 */
+  --si-dur:.7s;
   --ease-out:cubic-bezier(.23,1,.32,1);
   --ease-in-out:cubic-bezier(.77,0,.175,1);
   --shadow:0 12px 18px -14px rgba(58,78,88,.22), 0 2px 4px -2px rgba(58,78,88,.12);
@@ -41,8 +43,8 @@
   --shadow-lift:none; --land:#334047; --land-line:#232c31; --card:#2b353b;
 }
 /* 모션을 줄이면 뒤집기도 즉시 전환된다 — 회전은 어지럼의 주 원인 */
-@media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s } }
-:root[data-motion="off"]{ --fast:0s; --slow:0s }
+@media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s; --si-dur:0s } }
+:root[data-motion="off"]{ --fast:0s; --slow:0s; --si-dur:0s }
 
 *{box-sizing:border-box;margin:0;padding:0}
 ::selection{background:var(--accent);color:var(--ink)}
@@ -108,7 +110,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   -webkit-mask:var(--i) center / 100% no-repeat; mask:var(--i) center / 100% no-repeat;
 }
 .i-arrow-left{--i:url(assets/arrow-back.svg?v=1.31)}
-.i-flag{--i:url(assets/flag.svg?v=1.31)}
 .i-close{--i:url(assets/close.svg?v=1.31)}
 
 /* 아이콘을 품은 버튼은 격자로 가운데 정렬한다 */
@@ -516,9 +517,29 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* ═══ UI 질감 ═══════════════════════════════════════════
    블록 메뉴 · 긴 그림자 · 눌림 피드백 · 등장 모션 */
 
-/* 화면 전환 — 순간이동 대신 크로스페이드 */
-.screen{opacity:0;transition:opacity var(--slow) var(--ease-out)}
-.screen.on{opacity:1}
+/* 화면 전환 — 순간이동 대신 크로스페이드.
+   display 가 none↔flex 라 allow-discrete 를 함께 태워야 나가는 쪽도 끝까지 보인다.
+   단축으로 'display … allow-discrete' 를 var() 와 섞으면 그 항목이 조용히 떨어져
+   나가므로 롱핸드로 적는다. 화면 자체에는 transform 을 걸지 않는다 — 걸면 그 화면이
+   position:fixed 자식(넵바 두 줄)의 컨테이닝 블록이 되어 줄이 흔들린다 */
+.screen{
+  opacity:0;
+  transition-property:opacity, display;
+  transition-duration:var(--slow);
+  transition-timing-function:var(--ease-out);
+  transition-behavior:allow-discrete;
+}
+/* 들어오는 화면은 처음부터 불투명하다(@starting-style 을 쓰지 않는다). 조상의
+   opacity 가 1 이 아니면 그 안의 backdrop-filter 가 backdrop root 를 갈아 엉뚱한
+   그림을 뜨고, opacity 가 1 에 닿는 순간 제 그림으로 툭 바뀐다 — 흐림 띠의 '틱'.
+   대신 나가는 화면이 위에 얹혀 사라지며 크로스페이드가 된다 */
+.screen.on{opacity:1; z-index:0}
+.screen:not(.on){z-index:1}
+/* 플레이 조각은 결과 화면 메뉴와 같은 rise 를 쓴다 — 어휘를 새로 만들지 않는다.
+   플레이 시작은 하루에 수십 번 누르는 주 동작이라 늘이지 않고 계단만 둔다 */
+#play.on .hud{animation:rise var(--slow) var(--ease-out) backwards}
+#play.on .stage{animation:rise var(--slow) var(--ease-out) 40ms backwards}
+#play.on .typebar{animation:rise var(--slow) var(--ease-out) 80ms backwards}
 
 .menu button, .scores .menu button, .menu a, #save, #again{
   transition:background var(--fast) var(--ease-out);
@@ -851,51 +872,74 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   .fb-send:not([disabled]):hover{background:var(--accent)}
 }
 
-/* ── 로그인 화면 (/signin/) ─────────────────────────────
-   시안: 배경 점 지도 위에 로고·제목·불 켜진 점 덩이·버튼 두 개.
-   쌓는 순서는 지도(-3) < 흐림 띠(-2) < 본문(1) 이다 — 흐림을 본문 위에 두면
-   버튼 글자가 함께 흐려진다. */
-body.si{overflow:auto}
-/* 점 지도는 마스크로 그린다 — 색을 --land 에서 받아 야간 모드가 그냥 따라온다.
-   (기존 .i-* 아이콘과 같은 방식, ?v= 는 여기 손으로 붙인다) */
-.si-map{
-  /* 시안에서 지도 한가운데는 점 덩이 한가운데보다 54px 위다 — 그 관계만 옮긴다
-     (화면 높이가 줄어도 본문은 그대로 가운데 있는다) */
-  position:fixed; left:50%; top:calc(50% - 53px); transform:translate(-50%,-50%);
-  width:min(1108px,94vw); aspect-ratio:1108.07/484.39; z-index:-3;
-  background:var(--land); pointer-events:none;
-  -webkit-mask:url(assets/signin-map.svg?v=1.59) center / contain no-repeat;
-  mask:url(assets/signin-map.svg?v=1.59) center / contain no-repeat;
+/* ── 로그인 덮개 (홈 위) ────────────────────────────────
+   제 페이지가 아니라 홈 위에 뜬다. 뒤의 코스 칸이 그대로 배경이 되고, 열리면
+   어둡게 가라앉는다 — 그 '검게 전환' 이 곧 배경 비트맵이다.
+   전환은 전부 진짜 요소에 건 transform·opacity 다. 스냅샷을 쓰지 않으므로
+   브라우저마다 다르게 보일 자리가 없다 */
+.si-over{
+  position:fixed; inset:0; z-index:6;
+  display:grid; place-items:center; padding:24px;
 }
-/* 시안의 양옆 449·458px(=1280 기준 35%·36%)과 아래 띠.
-   흐림은 새로 짓지 않는다 — 플레이·설정 화면이 쓰는 .backdrop-blur 여섯 겹을
-   그대로 빌리고 방향(--blur-deg)과 세기(--blur-k)만 갈아 끼운다. 각 띠는 바깥
-   가장자리가 가장 진하고 안쪽으로 오면서 0 이 된다.
-   사다리 맨 윗층이 32px 이라 그대로 쓰면 점 지도가 죽이 된다 — 0.3 을 곱해
-   가장 진한 층을 10px 안팎(시안 값)으로 둔다 */
-.si-blur{
-  --blur-k:.3;
-  position:fixed; top:0; bottom:0; height:auto; z-index:-2;
+.si-over[hidden]{display:none}
+.si-close{position:fixed;left:24px;top:24px;z-index:1}
+.si-card{
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  text-align:center;
 }
-/* 배경색 스크림은 끈다 — 점 지도를 덮어 흐리게 보이게 한다 */
-.si-blur::after{content:none}
-.si-blur.is-left{--blur-deg:270deg;left:0;right:auto;width:35%}
-.si-blur.is-right{--blur-deg:90deg;left:auto;right:0;width:36%}
-.si-blur.is-bot{--blur-deg:180deg;left:0;right:0;width:auto;top:auto;height:18%}
+/* 로고는 버튼 뒤에서 솟아오른다 — 그래서 버튼보다 뒤에 둔다 */
+.si-logo{order:-1; font-size:clamp(34px,4.2vw,48px); margin:0; position:relative; z-index:0}
+.si-card > :not(.si-logo){position:relative; z-index:1}
 
-.si-back{position:fixed;left:24px;top:24px;z-index:2}
-.si-wrap{
-  position:relative; z-index:1; min-height:100vh;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:18px; padding:56px 24px; text-align:center;
+/* ── 열리는 동안 ─────────────────────────────────────── */
+/* 넵바 둘은 제 방향으로 빠진다. 흐림 띠는 건드리지 않는다 — 띠는 배경에 남는다 */
+#regions .navbar,#regions .nav-bot{
+  transition:transform var(--si-dur) var(--ease-in-out), opacity var(--si-dur) var(--ease-in-out);
 }
-.si-wrap .logo{font-size:clamp(34px,4.2vw,48px)}
+body.signing #regions .navbar{transform:translateY(-130%);opacity:0;pointer-events:none}
+/* 가운데 정렬은 translate 속성(-50%)이 이미 하고 있다. transform 에 -50% 를 또
+   적으면 가로로 두 번 밀려 비스듬히 내려간다 — 여기서는 세로만 건드린다 */
+body.signing #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-events:none}
+/* 칸은 자리를 지킨 채 가라앉는다. 가라앉기를 background 로 하면 구역 호버와 같은
+   속성이라 시간을 못 나눈다 — 호버가 0.7초로 늘어진다. 그래서 어둠은 겹으로 깔고
+   background 는 호버에 그대로 내준다 */
+#courseBtns .grid-btn{transition:none}
+#courseBtns .grid-btn::before{
+  /* -1px 은 겉돌라고 둔 값이 아니다. 같은 반지름의 원 두 장을 겹치면 가장자리
+     안티에일리어싱이 한 겹 남아, 고른 칸(주황)이나 호버 자국이 링처럼 비친다 */
+  content:""; position:absolute; inset:-1px; border-radius:50%;
+  background:var(--land); opacity:0; pointer-events:none;
+  transition:opacity var(--si-dur) var(--ease-in-out);
+}
+/* 글자는 겹 위에 있어야 따로 빠지는 게 보인다 */
+#courseBtns .grid-btn > span{position:relative;z-index:1;transition:opacity var(--si-dur) var(--ease-out)}
+body.signing #courseBtns{pointer-events:none}
+body.signing #courseBtns .grid-btn::before{opacity:1}
+body.signing #courseBtns .grid-btn{box-shadow:none}
+body.signing #courseBtns .grid-btn > span{opacity:0}
+body.signing .course-name,body.signing .screen-head{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
+
+/* 덮개 자체 — 로고는 아래에서 올라오고 나머지는 뒤따라 뜬다 */
+.si-over{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
+body.signing .si-over{opacity:1}
+/* 흐림은 '들어오는 동안'에만 태운다. transition 으로 blur(0) 에 앉히면 끝난 뒤에도
+   계산값이 blur(0px) 로 남아 요소가 필터 레이어에 올라간 채 굳는다 — 글자가 서브픽셀
+   대신 회색 안티에일리어싱으로 그려져 어두운 배경에서 얇아 보인다. 애니메이션에는
+   fill 을 주지 않아, 끝나면 필터가 아예 없는 제 모습으로 돌아간다 */
+.si-logo{transform:translateY(150px);transition:transform var(--si-dur) var(--ease-out)}
+body.signing .si-logo{transform:none;animation:si-blur-in var(--si-dur) var(--ease-out)}
+.si-card > :not(.si-logo){opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
+body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-dur) var(--ease-out)}
+@keyframes si-blur-in{from{filter:blur(12px)}}
+@media (prefers-reduced-motion:reduce){
+  .si-logo{transform:none}
+}
+:root[data-motion="off"] .si-logo{transform:none}
+
 .si-view{display:flex;flex-direction:column;align-items:center;gap:18px}
 .si-view[hidden]{display:none}
 .si-head{font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
 .si-lead{color:var(--ink-soft);font-size:15px;line-height:1.6;max-width:32em}
-.si-blob{width:214px;height:106px;display:block}
-
 /* 이 화면은 글자를 긁어 갈 일이 없다. 전역 ::selection 의 주황이 주황 버튼 위에
    덧칠되면 글자만 흐려 보이므로 투명으로 둔다 */
 .si ::selection,.si::selection{background:transparent}
@@ -951,14 +995,16 @@ body.si{overflow:auto}
 
 /* 손가락으로 여는 화면은 폭이 아니라 pointer 로 가른다 */
 @media (pointer:coarse){
-  .si-back{left:12px;top:12px}
+  .si-close{left:12px;top:12px}
   .si-btns{width:min(300px,86vw)}
   .si-btns.is-wide{width:min(340px,86vw)}
   .si-btns > :is(button,a){min-height:48px}
   .si-codes{grid-template-columns:auto}
 }
 
-/* 화면 사이 전환은 브라우저가 한다 — 라이브러리 없음 */
+/* 다른 페이지(소개·설정·방침) 사이 전환은 브라우저에 맡긴다 — 라이브러리 없음.
+   로그인은 더 이상 페이지가 아니라 홈 위의 덮개라 여기 이름이 필요 없다.
+   흐림 띠에는 절대 이름을 주지 않는다 — backdrop root 가 되어 띠가 죽는다 */
 @view-transition{navigation:auto}
 @media (prefers-reduced-motion:reduce){
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
@@ -971,6 +1017,9 @@ body.si{overflow:auto}
    흐림 띠는 플레이 화면과 같은 .backdrop-blur 를 그대로 쓴다(마크업도 같다).
    띠는 장식이라 --blur-top 으로 높이만 주고, 줄은 그 위에 따로 앉는다 —
    띠 안에 넣으면 pointer-events:none 을 물려받아 눌리지 않는다 */
+/* 띠에 view-transition-name 을 주면 안 된다 — 이름이 붙는 순간 그 요소가
+   backdrop root 가 되어, 안쪽 여섯 겹의 backdrop-filter 가 뒤에서 가져올 그림을
+   잃고 띠가 통째로 사라진다. 나갈 때는 root 크로스페이드에 실려 저절로 흐려진다 */
 #regions > .backdrop-blur:not(.bot){--blur-top:160px; z-index:3}
 #regions > .backdrop-blur.bot{
   z-index:3;
@@ -993,12 +1042,17 @@ body.si{overflow:auto}
 #regions .navbar .nav-end{justify-content:flex-start}
 #regions .navbar .nav-logo{
   grid-column:2; justify-self:center; white-space:nowrap;
-  position:relative; z-index:1; padding:11px 16px;
+  /* 좌우는 다른 칸과 같은 비율로 튼다 — 칸은 26px 글자에 20px(≈.77em)이고
+     로고는 34px 글자라 26px 이다. 세로 11px 은 그대로 둔다: 높이 56px 이 다른
+     칸과 같아야 알약이 줄에서 안 흔들린다 */
+  position:relative; z-index:1; padding:11px 26px;
   /* 한글 메뉴는 네모 글자의 시각 중심이 높고, regiontype 은 g·y·p 디센더로 내려 보인다 */
   translate:0 -.16em;
 }
-/* 점은 #navShape 가 대신 그린다 — 자리를 비우면 글자가 밀리므로 숨기기만 한다 */
-#regions .navbar .nav-logo .dot{visibility:hidden}
+/* 점은 #navShape 가 대신 그린다. 숨기기만 하면 안 보이면서 자리는 차지해(.22em 에
+   margin-left .03em = .25em) 알약 오른쪽만 그만큼 더 벌어 보인다 — 음수 마진으로
+   그 자리만 걷는다. display:none 과 달리 글자 흐름은 그대로다 */
+#regions .navbar .nav-logo .dot{visibility:hidden;margin-right:-.25em}
 /* 설정·시작·계정. 알약은 불투명 — 라이트 #e7eef1, 야간 #232c31.
    뒤 흐림은 플레이 타이핑 줄과 같은 .backdrop-blur.bot 이다 */
 #regions .nav-bot{
