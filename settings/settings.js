@@ -1,16 +1,13 @@
-/* regiontype 설정 화면 (/settings/).
+/* regiontype 설정 덮개. 제 페이지가 아니라 홈(index.html) 위에 뜬다 —
+   뒤의 자치구 칸이 배경 비트맵이 된다. 전환은 style.css 의 body.setting.
+   /settings/ 는 해시만 여기로 넘기는 착지대다(signin/ 과 같은 결).
 
-   app.js 를 싣지 않는다 — 그 파일은 홈 전용 DOM 을 최상단에서 건드린다. 겹치는
-   잔손($·asset·t·b64u)은 하나하나가 다섯 줄 미만이라 auth.js 처럼 여기 다시 적는다.
-   ponytail: 네 번째 페이지가 생기면 그때 공용 모듈로 뽑는다.
-
-   여기 있는 것: 언어·지역·화면·소리·버전 판(홈의 #options 에서 옮겨 왔다)과
-   계정 보안 판. 로그인 자체는 홈 위의 덮개(index.html + auth.js)가 한다.
-   탭 자리는 해시에 남는다 — /settings/#security 로 바로 들어올 수 있다.            */
+   app.js 와 한 문서에 함께 실리므로 전부를 한 겹 함수 안에 둔다.            */
+(function () {
 'use strict';
 
 const $ = s => document.querySelector(s);
-/* VER 을 여기 또 적지 않는다 — 손으로 고칠 자리는 settings/index.html 의 ?v= 하나다 */
+/* VER 을 여기 또 적지 않는다 — 손으로 고칠 자리는 index.html 의 ?v= 하나다 */
 const VER = new URL(document.currentScript.src).searchParams.get('v') || '';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const grab = url => fetch(asset(url)).then(r => r.json());
@@ -38,8 +35,9 @@ const saveOpt = () => {
   document.documentElement.toggleAttribute('data-night', opt.night);
   document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
   document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
-  requestAnimationFrame(paintGrid);
-  document.querySelectorAll('.toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+  requestAnimationFrame(syncOptShell);
+  document.querySelectorAll('#options .toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+  dispatchEvent(new CustomEvent('rt-opt'));
 };
 
 /* ── 화면 말 ─────────────────────────────────────────── */
@@ -69,33 +67,7 @@ const countryName = id => {
   catch { return id; }
 };
 
-/* ── 장식 격자 ───────────────────────────────────────
-   홈의 syncGrid 비플레이 갈래와 같은 셈이다: 화면 폭·높이가 152 의 배수가 아니면
-   가장자리에 짜투리 칸이 남으므로 칸을 딱 떨어지는 배수로 늘렸다 줄인다 */
-const DECO_CELL = 152;
-function paintGrid() {
-  const svg = $('.grid-bg'), p = $('#bitgrid');
-  if (!p) return;
-  const w = window.innerWidth, h = window.innerHeight;
-  /* 칸은 정사각형이다 — 홈(app.js 의 syncGrid)과 같은 규칙이라야 페이지를 넘나들 때
-     배경 격자가 같은 크기로 이어진다. 자투리가 적게 남는 한 변을 고른다 */
-  const cols = Math.max(1, Math.round(w / DECO_CELL));
-  const rows = Math.max(1, Math.round(h / DECO_CELL));
-  const fitW = w / cols, fitH = h / rows;
-  const spare = (cell) => Math.abs(w - cols * cell) + Math.abs(h - rows * cell);
-  const cw = spare(fitH) < spare(fitW) ? fitH : fitW, ch = cw;
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  p.setAttribute('width', cw);
-  p.setAttribute('height', ch);
-  p.setAttribute('x', 0);
-  p.setAttribute('y', 0);
-  p.querySelector('path').setAttribute('d', `M${cw} 0 V${ch} H0`);
-  const st = document.documentElement.style;
-  st.setProperty('--deco-cw', cw + 'px');
-  st.setProperty('--deco-ch', ch + 'px');
-  syncOptShell();
-}
-
+/* 장식 격자는 홈(app.js 의 syncGrid)이 그린다. 여기서는 셸만 그 선에 앉힌다 */
 /* .opts-shell 의 위아래 변을 둘 다 장식 격자의 가로선에 앉힌다.
    윗변만 앉히고 높이를 아무 값이나 쓰면 아랫변은 칸의 중간 어디쯤에서 끊긴다 —
    테두리도 배경도 없는 통이라 그 끊김이 '내용이 격자 밖으로 샜다'로 읽힌다.
@@ -138,6 +110,24 @@ function syncOptShell() {
   const st = document.documentElement.style;
   st.setProperty('--opt-shell-h', h + 'px');
   st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
+  st.setProperty('--opt-rail-h', rail.offsetHeight + 'px');
+  /* 언어 통은 화면 위·아래 끝까지 닿게 키운다. 목록 글자는 흐림 띠 안쪽에
+     그대로 두려고, 늘어난 칸은 padding 으로 메운다. 셸 윗변은 방금 고른
+     top 을 쓴다 — 들어올 때 getBoundingClientRect 는 아직 바닥이다 */
+  const topBlur = $('#options > .backdrop-blur:not(.bot)');
+  const botBlur = $('#options > .backdrop-blur.bot');
+  const zc = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zc')) || 1;
+  const inner = 28;
+  st.setProperty('--opt-pick-h', (vh / zc) + 'px');
+  st.setProperty('--opt-pick-dy', ((-top) / zc) + 'px');
+  if (topBlur && botBlur) {
+    const a = topBlur.getBoundingClientRect().bottom;
+    st.setProperty('--opt-pick-pad-t', ((a + inner) / zc) + 'px');
+  }
+  /* 맨 아래 글자는 버전 탭 아랫변에서 멈춘다. 흐림 띠만큼 padding 을 넣으면
+     끝까지 내렸을 때 목록이 너무 올라간다 */
+  const railBot = top + (h - railH) / 2 + railH;
+  st.setProperty('--opt-pick-pad-b', (Math.max(inner, vh - railBot + inner) / zc) + 'px');
 }
 
 /* 데스크톱 확대는 125% 까지만 레이아웃에 반영한다 — 그 위로는 설정 셸을 같은 비율로
@@ -220,6 +210,7 @@ function fillRegionPick() {}
    aria-selected="true" · tabindex="0" · 패널 hidden 해제로 남긴다. 고른 탭은
    해시에도 남는다 — 그래야 /settings/#security 딥링크가 산다 */
 const tabHash = tb => tb.getAttribute('aria-controls').slice(4).toLowerCase();
+let pickTab = () => {};
 function wireOptsTabs() {
   const tabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')];
   const rail = document.querySelector('.opts-tabs');
@@ -255,8 +246,10 @@ function wireOptsTabs() {
     select(tabs[i]); tabs[i].focus();
   });
   /* 들어올 때 해시를 읽는다. 모르는 해시면 첫 탭 그대로 두고 주소도 안 건드린다 */
-  const want = tabs.find(tb => tabHash(tb) === location.hash.slice(1).toLowerCase());
-  select(want || tabs[0], !want);
+  pickTab = (name, keepHash) => {
+    const want = tabs.find(tb => tabHash(tb) === String(name || '').toLowerCase());
+    select(want || tabs[0], keepHash || !want);
+  };
 }
 
 /* ── 계정 보안 ──────────────────────────────────────── */
@@ -267,7 +260,7 @@ const fromB64u = s => {
   return Uint8Array.from(atob(x + '='.repeat((4 - x.length % 4) % 4)), c => c.charCodeAt(0));
 };
 const say = (msg, bad) => {
-  const p = $('#siSay');
+  const p = $('#optSay');
   p.textContent = msg || '';
   p.classList.toggle('bad', !!bad);
 };
@@ -375,10 +368,87 @@ function showCodes(codes) {
   $('#codes').showModal();
 }
 
+
+/* ── 덮개 여닫기 ─────────────────────────────────────── */
+const SET_HASH = new Set(['settings', 'language', 'region', 'video', 'audio', 'security', 'version']);
+const isSetHash = (h = location.hash) => SET_HASH.has(h.slice(1).toLowerCase());
+const over = () => $('#options');
+let opener = null;
+let backgroundState = [];
+function setBackgroundInert(inert) {
+  if (inert) {
+    backgroundState = [...document.body.children]
+      .filter(el => el !== over() && el.id !== 'codes' && el.tagName !== 'SCRIPT')
+      .map(el => [el, el.hasAttribute('inert')]);
+    backgroundState.forEach(([el]) => { el.inert = true; });
+    return;
+  }
+  backgroundState.forEach(([el, wasInert]) => {
+    el.inert = wasInert;
+    if (!wasInert) el.removeAttribute('inert');
+  });
+  backgroundState = [];
+}
+const focusable = () => [...over().querySelectorAll(
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
+  'textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+)].filter(el => !el.closest('[hidden]') && !el.closest('dialog[open]'));
+let closeGen = 0;
+const motionOff = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+  || document.documentElement.dataset.motion === 'off';
+function siDurMs() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--si-dur').trim();
+  if (!raw || raw === '0' || raw === '0s' || raw === '0ms') return 0;
+  return raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+}
+function finishClose() {
+  document.body.classList.remove('setting', 'opts-leaving');
+  over().classList.remove('opts-exit');
+  if (over().hidden) return;
+  over().hidden = true;
+  setBackgroundInert(false);
+  if (opener) { opener.focus(); opener = null; }
+  if (isSetHash()) history.replaceState(null, '', location.pathname + location.search);
+}
+function open(tab) {
+  const name = String(tab || location.hash.slice(1) || 'settings').toLowerCase();
+  dispatchEvent(new CustomEvent('rt-open-settings', { detail: name }));
+  const leaving = document.body.classList.contains('opts-leaving') || over().classList.contains('opts-exit');
+  if (over().hidden) {
+    opener = document.activeElement;
+    setBackgroundInert(true);
+    over().classList.remove('opts-exit');
+    document.body.classList.remove('opts-leaving');
+    over().hidden = false;
+    document.body.classList.add('setting');
+  } else if (leaving) {
+    closeGen += 1;
+    over().classList.remove('opts-exit');
+    document.body.classList.remove('opts-leaving');
+    document.body.classList.add('setting');
+  }
+  pickTab(name === 'settings' ? '' : name, name === 'settings');
+  if (!isSetHash()) history.pushState({ set: 1 }, '', '#' + (name === 'settings' ? 'settings' : name));
+  requestAnimationFrame(syncOptShell);
+}
+function close(immediate) {
+  if (over().hidden && !document.body.classList.contains('opts-leaving')) return;
+  const skip = immediate === true || motionOff() || siDurMs() === 0;
+  if (skip) { closeGen += 1; finishClose(); return; }
+  if (over().classList.contains('opts-exit')) return;
+  closeGen += 1;
+  const gen = closeGen;
+  /* 덮개 글자는 바로 접고, 칸 위 서리만 --si-dur 동안 걷는다 */
+  over().classList.add('opts-exit');
+  document.body.classList.remove('setting');
+  document.body.classList.add('opts-leaving');
+  setTimeout(() => { if (gen === closeGen) finishClose(); }, siDurMs() + 80);
+}
+
 /* ── 손잡이 ──────────────────────────────────────────── */
 function wire() {
   document.addEventListener('click', e => {
-    const tog = e.target.closest('.toggle');
+    const tog = e.target.closest('#options .toggle');
     if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
   });
 
@@ -388,8 +458,9 @@ function wire() {
     opt.lang = r.value; saveOpt();
     LANG = UI_LANGS.includes(opt.lang) ? opt.lang : LANG;
     document.documentElement.lang = LANG;
-    applyI18n(document);
+    applyI18n(over());
     fillLangPick(); fillRegionPick();
+    dispatchEvent(new CustomEvent('rt-opt'));
   });
   $('#optRegion').addEventListener('change', e => {
     const r = e.target.closest('input[name="rtCountry"]');
@@ -443,13 +514,46 @@ function wire() {
   $('#codes').addEventListener('cancel', e => e.preventDefault());
 
   addEventListener('resize', capZoom);
-  addEventListener('resize', paintGrid);
+  addEventListener('resize', () => { if (!over().hidden) syncOptShell(); });
+
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (href !== 'settings/' && !href.startsWith('settings/') && !href.startsWith('#language') &&
+        !href.startsWith('#security') && !href.startsWith('#settings')) return;
+    if (href.startsWith('#') && !SET_HASH.has(href.slice(1))) return;
+    e.preventDefault();
+    let tab = 'settings';
+    try { tab = (new URL(href, location.href).hash || '#settings').slice(1) || 'settings'; } catch {}
+    open(tab);
+  });
+  const closeBtn = $('#optClose');
+  if (closeBtn) closeBtn.onclick = close;
+  addEventListener('rt-open-signin', () => close(true));
+  addEventListener('rt-open-settings', () => {});
+  addEventListener('keydown', e => {
+    if (over().hidden) return;
+    if ($('#codes') && $('#codes').open) return;
+    if (e.key === 'Escape') return close();
+    if (e.key !== 'Tab') return;
+    const items = focusable();
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !over().contains(document.activeElement))) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && (document.activeElement === last || !over().contains(document.activeElement))) {
+      e.preventDefault(); first.focus();
+    }
+  });
+  addEventListener('popstate', () => { if (!isSetHash()) close(); });
+  addEventListener('hashchange', () => { if (isSetHash()) open(location.hash.slice(1)); });
 }
 
 (async () => {
   capZoom();
   saveOpt();
-  try { I18N = await grab('../data/i18n.json'); } catch {}
+  try { I18N = await grab('data/i18n.json'); } catch {}
   /* 배포는 아직 한국어만이다(app.js 의 UI_LANGS 와 같은 갈림) */
   UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
   /* 'auto' 의 정책(중계기 위치·타임존까지 보는 resolveLang)은 홈에 있다. 여기서는
@@ -457,17 +561,15 @@ function wire() {
      한국어 하나다 */
   LANG = UI_LANGS.includes(opt.lang) ? opt.lang
     : (navigator.languages || []).map(x => x.split('-')[0]).find(x => UI_LANGS.includes(x)) || 'ko';
-  document.documentElement.lang = LANG;
-  applyI18n(document);
+  applyI18n(over());
   $('#verBuild').textContent = VER;
   $('#verPatch').textContent = VER.replace('.', '');   // 릴리스 C 자리는 VER 에서 점을 뺀 숫자
   /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */
-  if (isDev()) { try { WORLD = await grab('../data/world.json'); } catch {} }
+  if (isDev()) { try { WORLD = await grab('data/world.json'); } catch {} }
   wire();
   wireOptsTabs();
-  paintGrid();
-  /* 글꼴이 늦게 오면 레일 높이가 달라진다 — 그때 한 번 더 앉힌다 */
-  document.fonts?.ready.then(paintGrid);
+  if (isSetHash()) open(location.hash.slice(1));
+  document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });
 
   /* ?v= 표류. 페이지가 셋이라 손으로 적는 자리가 여섯이다 — 개발에서만 짖는다.
      파비콘(rel=icon)은 뺀다: 그림이 바뀔 때만 움직이는 별개의 캐시 열쇠다 */
@@ -475,4 +577,5 @@ function wire() {
     const v = new URL(el.getAttribute('src') || el.getAttribute('href'), location.href).searchParams.get('v');
     if (v !== VER) console.warn('[ver] ?v=' + v + ' ≠ ' + VER, el);
   });
+})();
 })();

@@ -217,7 +217,10 @@ function done(tok, generation) {
   say('');
   toAccount();
 }
-const toAccount = () => location.assign('settings/#security');
+const toAccount = () => {
+  close();
+  location.hash = 'security';
+};
 
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
 const over = () => $('#signin');
@@ -226,7 +229,7 @@ let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
     backgroundState = [...document.body.children]
-      .filter(el => el !== over() && el.tagName !== 'SCRIPT')
+      .filter(el => el !== over() && el.id !== 'options' && el.id !== 'codes' && el.tagName !== 'SCRIPT')
       .map(el => [el, el.hasAttribute('inert')]);
     backgroundState.forEach(([el]) => { el.inert = true; });
     return;
@@ -249,6 +252,7 @@ const current = generation => generation === modalGeneration && !over().hidden;
 function open() {
   if (!over().hidden) return;
   modalGeneration += 1;
+  dispatchEvent(new CustomEvent('rt-open-signin'));
   opener = document.activeElement;
   setBackgroundInert(true);
   over().hidden = false;
@@ -305,13 +309,17 @@ function wire() {
 
   /* 홈의 '로그인' 은 이제 페이지가 아니라 이 덮개를 연다. 로그인해 있으면
      app.js 가 라벨과 href 를 계정 쪽으로 바꿔 두므로 그때는 가로채지 않는다 */
-  const link = $('#signinLink');
-  if (link) link.addEventListener('click', e => {
-    if (token()) return;            // 계정 화면으로 그냥 보낸다
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (href !== 'signin/' && !href.startsWith('signin/') && href !== '#signin') return;
+    if (token()) return;
     e.preventDefault();
     open();
   });
   $('#siClose').onclick = close;
+  addEventListener('rt-open-settings', close);
   addEventListener('keydown', e => {
     if (over().hidden) return;
     if (e.key === 'Escape') return close();
