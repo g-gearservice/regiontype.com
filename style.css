@@ -243,7 +243,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   .opts-tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--block) 52%,transparent)}
 }
 .opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
-/* 지역 탭은 개발 중이다. 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
+/* 개발 탭은 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
 .opts-tab[data-status="development"]{border:2px dashed currentColor}
 .opts-tab-status{
   display:inline-block;margin-inline-start:.4em;padding:1px 8px 2px;
@@ -302,10 +302,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
-/* 지역 탭은 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다 사라지는
-   일이 없다 — mimi 링크와 같은 결. 나라 고르기도 개발에서만 그린다 */
-#optsTabRegion{display:none}
-:root[data-dev] #optsTabRegion{display:revert}
+/* 언어·지역은 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
+   언어 목록이 번쩍이지 않는다. 선택된 판만 개발 환경에서 되살린다. */
+.opts-tab[data-dev-only],.opts-panel[data-dev-only]{display:none}
+:root[data-dev] .opts-tab[data-dev-only]{display:revert}
+:root[data-dev] .opts-panel[data-dev-only]:not([hidden]){display:flex}
 .opts-region-pick{display:none}
 /* 대륙마다 끊어 2열로 펼친다 — 스크롤 목록보다 한눈에 듄다. 칸이 좁아지면
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */

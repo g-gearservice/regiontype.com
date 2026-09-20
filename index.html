@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=2.65">
+<link rel="stylesheet" href="style.css?v=2.66">
 </head>
 <body>
 
@@ -219,19 +219,19 @@
   </div>
   <div class="opts-shell">
     <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
-      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-i18n="language">언어</button>
-      <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-status="development"><span data-i18n="region">지역</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-dev-only data-status="development"><span data-i18n="language">언어</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-dev-only data-status="development"><span data-i18n="region">지역</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
       <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabSecurity" aria-controls="optsSecurity" aria-selected="false" tabindex="-1" data-i18n="security">보안</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
     </nav>
     <div class="opts-panels">
-      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0">
+      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0" data-dev-only>
         <div id="optLang" class="opts-lang-pick" role="radiogroup"
              data-i18n-aria="language" aria-label="언어"></div>
       </div>
-      <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" hidden>
+      <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" data-dev-only hidden>
         <div id="optRegion" class="opts-region-pick" role="radiogroup"
              data-i18n-aria="region" aria-label="지역"></div>
         <p class="opts-region-pending" data-i18n="regionPending">지금은 서울만 지원합니다. 다른 지역은 개발 중입니다.</p>
@@ -332,8 +332,8 @@
   </form>
 </dialog>
 
-<script src="app.js?v=2.65"></script>
-<script src="auth.js?v=2.65"></script>
-<script src="settings/settings.js?v=2.65"></script>
+<script src="app.js?v=2.66"></script>
+<script src="auth.js?v=2.66"></script>
+<script src="settings/settings.js?v=2.66"></script>
 </body>
 </html>
