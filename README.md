@@ -8,7 +8,40 @@
 
 # English
 
-A typing drill for place names. v0.6.250 (`VER=2.50`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.266 (`VER=2.66`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.266
+
+- The Language and Region settings tabs are development-only, so production Settings opens on Video
+
+## What's new in 0.6.265
+
+- The Grok bot's horizontal gaze now follows the pointer instead of mirroring it
+
+## What's new in 0.6.264
+
+- Dragging keeps the bot's center under the pointer regardless of where you pick it up, and the tile-size spring begins from that same center, so growing onto a tile no longer jumps down and right
+
+## What's new in 0.6.263
+
+- The orange mark beside the sign-in logo is always the Grok bot, so it no longer swaps with a separate dot when you point at it
+- The bot floats at the logo, reacts to hover and being held, settles when dropped in empty space, and springs back when dropped near the logo
+- Attaching the bot to a bitmap tile now uses a spring instead of a snap; reduced-motion settings remove the continuous and settling motion
+
+## What's new in 0.6.262
+
+- Closing sign-in hands the bot's tile back, so the district no longer vanishes from the home map
+- The bot cannot sit on tiles behind the logo, the heading, or the Google button, and drops near the logo return it to its perch
+- The logo keeps its own orange dot until you point at the logo; then the dot gives way to the bot, ready to pick up
+
+## What's new in 0.6.259
+
+- The Grok bot takes the place of the dot beside the sign-in logo, so there is only one orange mark, and it pulls a startled face while you carry it
+
+## What's new in 0.6.257
+
+- The Grok bot sleeps above the sign-in logo; drag it onto a bitmap tile and that tile becomes the bot, awake and at full size. Drag with Option (macOS/Linux) or Ctrl (Windows) to copy one
+- The bot now looks toward the cursor instead of away from it
 
 ## What's new in 0.6.250
 

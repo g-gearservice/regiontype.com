@@ -66,8 +66,10 @@ export function mountBuddy(host, { calm = () => false } = {}) {
     node: svg,
     start() {
       if (raf) return;
-      /* 모션을 줄였으면 시계를 돌리지 않고 한 장만 그린다 — 깜빡임도 시선도 멈춘다 */
-      if (calm()) { draw(0); return; }
+      /* 모션을 줄였으면 시계를 돌리지 않고 한 장만 그린다 — 깜빡임도 시선도 멈춘다.
+         시각 0 이 아니라 지금 시계로 그린다: 0 은 상태를 바꾸기 전이라, 자라고
+         해 둔 놈이 start() 한 번에 도로 옛 모습으로 돌아온다 */
+      if (calm()) { draw((performance.now() - t0) / 1000 + 1); return; }
       raf = requestAnimationFrame(tick);
     },
     stop() { cancelAnimationFrame(raf); raf = 0; t0 = 0; },
@@ -83,6 +85,18 @@ export function mountBuddy(host, { calm = () => false } = {}) {
     lookAway() {
       if (calm()) return;
       engine.setLook(null, (performance.now() - t0) / 1000);
+    },
+    /* 엔진의 상태를 갈아 끼운다. 쓸 수 있는 이름은 STATES 의 것뿐이다 —
+       idle·sleep·alert·notify·thinking·wink… (neutre 류는 상태가 아니라 표정이다).
+       없는 이름을 주면 setState 가 다음 호출에서 STATE_BY_ID.get(cur).morph 로 터진다.
+       깜빡임은 sample() 이 이미 내주므로, 깨우는 일은 sleep 에서 나오는 것으로 끝난다 */
+    setState(id) {
+      const now = (performance.now() - t0) / 1000;
+      engine.setState(id, now);
+      /* 모션을 줄였으면 시계가 안 돈다 — 바뀐 모습을 한 장 그려 둔다. 같은 시계로,
+         모프(최대 .5s)가 끝난 뒤를 그려야 한다. draw(0) 은 상태가 바뀌기 전 시각이라
+         옛 모습이 그대로 나온다 */
+      if (calm()) draw(now + 1);
     },
   };
 }

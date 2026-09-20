@@ -206,12 +206,12 @@ function fillRegionPick() {}
 const tabHash = tb => tb.getAttribute('aria-controls').slice(4).toLowerCase();
 let pickTab = () => {};
 function wireOptsTabs() {
-  const tabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')]
-    .filter(tb => isDev() || tb.id !== 'optsTabRegion');
+  const allTabs = [...document.querySelectorAll('.opts-tabs [role="tab"]')];
+  const tabs = allTabs.filter(tb => isDev() || !tb.hasAttribute('data-dev-only'));
   const rail = document.querySelector('.opts-tabs');
   if (!rail || !tabs.length) return;
   const select = (tab, keepHash) => {
-    tabs.forEach(tb => {
+    allTabs.forEach(tb => {
       const on = tb === tab;
       tb.setAttribute('aria-selected', String(on));
       tb.tabIndex = on ? 0 : -1;
@@ -245,6 +245,9 @@ function wireOptsTabs() {
     const want = tabs.find(tb => tabHash(tb) === String(name || '').toLowerCase());
     select(want || tabs[0], keepHash || !want);
   };
+  /* 덮개가 아직 닫혀 있어도 ARIA·tabindex·hidden 을 현재 환경의 첫 탭에 맞춘다.
+     개발은 언어, 배포는 화면이 첫 탭이다. CSS 는 이보다 먼저 개발용 판을 숨긴다. */
+  select(tabs[0], true);
 }
 
 /* ── 계정 보안 ──────────────────────────────────────── */

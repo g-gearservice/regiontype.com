@@ -243,7 +243,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   .opts-tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--block) 52%,transparent)}
 }
 .opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
-/* 지역 탭은 개발 중이다. 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
+/* 개발 탭은 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
 .opts-tab[data-status="development"]{border:2px dashed currentColor}
 .opts-tab-status{
   display:inline-block;margin-inline-start:.4em;padding:1px 8px 2px;
@@ -302,10 +302,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
-/* 지역 탭은 개발용 문이다. 기본이 숨김이라 배포에서 잠깐 보였다 사라지는
-   일이 없다 — mimi 링크와 같은 결. 나라 고르기도 개발에서만 그린다 */
-#optsTabRegion{display:none}
-:root[data-dev] #optsTabRegion{display:revert}
+/* 언어·지역은 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
+   언어 목록이 번쩍이지 않는다. 선택된 판만 개발 환경에서 되살린다. */
+.opts-tab[data-dev-only],.opts-panel[data-dev-only]{display:none}
+:root[data-dev] .opts-tab[data-dev-only]{display:revert}
+:root[data-dev] .opts-panel[data-dev-only]:not([hidden]){display:flex}
 .opts-region-pick{display:none}
 /* 대륙마다 끊어 2열로 펼친다 — 스크롤 목록보다 한눈에 듄다. 칸이 좁아지면
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */
@@ -926,6 +927,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 /* 로고는 버튼 뒤에서 솟아오른다 — 그래서 버튼보다 뒤에 둔다 */
 .si-logo{order:-1; font-size:clamp(34px,4.2vw,48px); margin:0; position:relative; z-index:0}
+/* 주황 점 자리는 Grok 봇이 늘 맡는다. 원래 점은 레이아웃 표식으로만 남긴다. */
+.si-logo .dot{visibility:hidden}
 .si-card > :not(.si-logo){position:relative; z-index:1}
 
 /* ── 열리는 동안 ─────────────────────────────────────── */
@@ -1004,33 +1007,43 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 }
 :root[data-motion="off"] .si-logo{transform:none}
 
-/* 로그인 로고 옆 점은 Grok 봇. 자리만 차지하고 봇은 그 주위를 한 바퀴씩 돈다.
-   궤도 반지름은 글자 크기(.em)라 로고가 커져도 비율이 같다. linear 는 상수
-   운동(한 바퀴)용이다. 자리 표시용 주황 원은 봇이 앉으면 지운다 */
-.si-logo{overflow:visible}
-.si-logo .dot{position:relative; overflow:visible}
-.si-logo .dot.is-buddy{
-  background:transparent;
-  --buddy-ink:var(--accent);
-  --buddy-paper:var(--on-accent);
+/* Grok 봇. 로고 오른쪽 위에서 떠 있다가, 끌어다 뒤의 비트맵 칸에 붙이면 커진다.
+   층은 덮개 위에 있지만 클릭은 통과시킨다 — 받는 것은 봇 자신뿐이다.
+   44px 은 손가락 최소 과녁이기도 하다 */
+.si-bots{position:fixed; inset:0; z-index:7; pointer-events:none}
+.si-bot{
+  --bot:44px;
+  position:absolute; left:0; top:0; width:var(--bot); height:var(--bot);
+  --buddy-ink:var(--accent); --buddy-paper:var(--on-accent);
+  pointer-events:auto; cursor:grab; touch-action:none; will-change:transform;
 }
-.si-logo .dot .buddy{
-  position:absolute; left:50%; top:50%;
-  width:1em; height:1em; margin:-.5em 0 0 -.5em;
-  display:block; overflow:visible; pointer-events:none;
+.si-bot.is-held{cursor:grabbing; z-index:1}
+.si-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out)}
+.si-bot .buddy{display:block; width:100%; height:100%; overflow:visible; pointer-events:none}
+.si-bot.is-home:not(.is-held):not(.is-settling) .buddy{
+  animation:si-bot-hover calc(var(--slow) + var(--slow) + var(--slow) + var(--slow) + var(--slow) + var(--slow) + var(--slow) + var(--slow)) var(--ease-in-out) infinite;
 }
-body.signing .si-logo .dot.is-buddy .buddy{
-  animation:si-buddy-orbit 5.6s linear infinite;
-  animation-delay:var(--si-dur);
+.si-bot.is-held .si-bot-motion{transform:scale(.94) rotate(2deg)}
+@keyframes si-bot-hover{
+  0%,100%{transform:translateY(0) rotate(-1deg)}
+  50%{transform:translateY(-8%) rotate(1deg)}
 }
-@keyframes si-buddy-orbit{
-  from{transform:rotate(0turn) translateX(.72em) rotate(0turn)}
-  to{transform:rotate(1turn) translateX(.72em) rotate(-1turn)}
+@media (hover:hover) and (pointer:fine){
+  .si-bot:not(.is-held):hover .si-bot-motion{transform:scale(1.06) rotate(-3deg)}
 }
 @media (prefers-reduced-motion:reduce){
-  body.signing .si-logo .dot.is-buddy .buddy{animation:none}
+  .si-bot.is-home .buddy{animation:none}
+  .si-bot-motion{transition:none}
 }
-:root[data-motion="off"] body.signing .si-logo .dot.is-buddy .buddy{animation:none}
+:root[data-motion="off"] .si-bot.is-home .buddy{animation:none}
+:root[data-motion="off"] .si-bot-motion{transition:none}
+/* 붙은 봇은 제 칸을 물고 따라다닌다 — 자리 계산은 auth.js 가 한다 */
+/* 붙은 봇은 그 칸의 크기를 그대로 받는다 — 비트맵 칸 자체가 봇이 된다.
+   칸은 제 그림(색·어둠 겹·글자)을 내려놓고 자리만 지킨다. paintTile 이 인라인으로
+   쓰는 것은 opacity 뿐이라, 배경 쪽만 걷으면 인라인과 안 부딪힌다 */
+#courseBtns .grid-btn.has-bot{background:transparent; box-shadow:none}
+#courseBtns .grid-btn.has-bot::before{opacity:0}
+#courseBtns .grid-btn.has-bot > span{opacity:0}
 
 .si-view{display:flex;flex-direction:column;align-items:center;gap:18px}
 .si-view[hidden]{display:none}
