@@ -226,8 +226,8 @@ const toAccount = () => {
 const over = () => $('#signin');
 let opener = null;
 /* ── Grok 봇(bloub) ──────────────────────────────────────
-   로고 왼쪽 위에서 자고 있다. 끌어서 뒤의 비트맵 칸에 얹으면 그 칸을 물고
-   깨어나 눈을 뜨고 깜빡인다(엔진 상태 sleep → idle). 끄는 동안 Option(맥·리눅스)
+   로고 오른쪽 위에서 떠 있다. 끌어서 뒤의 비트맵 칸에 얹으면 그 칸을 물고
+   커진 채 눈을 뜨고 깜빡인다(엔진 상태 idle). 끄는 동안 Option(맥·리눅스)
    이나 Ctrl(윈도)을 누르고 있으면 한 마리가 더 생긴다.
    ponytail: 붙은 봇은 제 칸의 화면 좌표를 매 프레임 따라 읽는다 — 지도를 밀든
    줄이든 늘 맞는다. 칸 수만큼 도는 게 아니라 붙은 봇 수만큼이라 값이 싸다 */
@@ -262,22 +262,63 @@ const inBox = (x, y, z) => !!z && x >= z.l && x <= z.r && y >= z.t && y <= z.b;
 const blocked = () => ['.si-logo', '#vSignin .si-head', '#vSignin .si-btns']
   .map(sel => boxOf(sel, 14)).filter(Boolean);
 /* 로고 근처에 놓으면 제자리(로고 옆 동글뱅이)로 돌아간다 */
-const overLogo = b => inBox(b.x + b.size / 2, b.y + b.size / 2, boxOf('.si-logo', 28));
-/* 평소에는 로고의 점이 서 있고 봇은 숨어 있다. 로고 근처를 가리키면 점을 감추고
-   그 자리에서 봇이 나온다 — 집을 수 있다는 신호다. 자는 덩이로 점을 흉내 내지
-   않는다: 그 모양은 SVG 안에서 5% 크기라 로고 점만큼 키우면 과녁이 글자를 덮는다 */
-function perch(b, out) {
-  const dot = $('.si-logo .dot');
-  if (dot) dot.style.visibility = out ? 'hidden' : '';
-  b.el.hidden = !out;
-  if (out && b.api) b.api.setState('idle');
-}
-function park(b) {
-  const p = parkAt();
-  b.x = p.x; b.y = p.y;
-  unseat(b);
+const overLogo = (x, y) => inBox(x, y, boxOf('.si-logo', 28));
+/* WAAPI 이동을 집는 중에 끊어도 목표점으로 순간이동하지 않게, 지금 화면에 그려진
+   위치를 인라인 좌표로 굳힌 뒤 취소한다. 좌표 host 와 몸짓 motion 을 갈라 둬서
+   드래그의 즉각 추종과 몸의 scale/rotate 가 서로 transform 을 빼앗지 않는다. */
+function freezeSettle(b) {
+  if (!b.settle) return;
+  const m = new DOMMatrixReadOnly(getComputedStyle(b.el).transform);
+  b.settle.cancel();
+  b.settle = null;
+  b.el.classList.remove('is-settling');
+  b.x = m.m41; b.y = m.m42;
   place(b);
-  perch(b, false);
+  if (b.bodySettle) { b.bodySettle.cancel(); b.bodySettle = null; }
+}
+const cssSeconds = name => {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return raw.endsWith('ms') ? parseFloat(raw) / 1000 : parseFloat(raw) || 0;
+};
+function springTo(b, x, y, from = { x: b.x, y: b.y, size: b.size }) {
+  freezeSettle(b);
+  const oldSize = from.size || b.size;
+  b.x = x; b.y = y;
+  place(b);
+  if (motionOff()) return;
+  const dx = from.x - x, dy = from.y - y;
+  const duration = cssSeconds('--slow') * 2000;
+  const ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim();
+  b.el.classList.add('is-settling');
+  b.settle = b.el.animate([
+    { transform: `translate3d(${x + dx}px,${y + dy}px,0)`, offset: 0 },
+    { transform: `translate3d(${x - dx * .04}px,${y - dy * .04}px,0)`, offset: .64 },
+    { transform: `translate3d(${x + dx * .015}px,${y + dy * .015}px,0)`, offset: .84 },
+    { transform: `translate3d(${x}px,${y}px,0)`, offset: 1 },
+  ], { duration, easing: ease });
+  const scale = oldSize / b.size;
+  b.bodySettle = b.motion.animate([
+    { transform: `scale(${scale})`, transformOrigin: '50% 50%', offset: 0 },
+    { transform: 'scale(1.035)', transformOrigin: '50% 50%', offset: .64 },
+    { transform: 'scale(.99)', transformOrigin: '50% 50%', offset: .84 },
+    { transform: 'scale(1)', transformOrigin: '50% 50%', offset: 1 },
+  ], { duration, easing: ease });
+  b.settle.onfinish = () => {
+    b.settle = b.bodySettle = null;
+    b.el.classList.remove('is-settling');
+  };
+}
+function park(b, animate = true) {
+  freezeSettle(b);
+  const from = { x: b.x, y: b.y, size: b.size };
+  const p = parkAt();
+  unseat(b);
+  b.home = true;
+  b.el.hidden = false;
+  b.el.classList.add('is-home');
+  wake(b, true);
+  if (animate) springTo(b, p.x, p.y, from);
+  else { b.x = p.x; b.y = p.y; place(b); }
 }
 function place(b) {
   b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;
@@ -288,6 +329,8 @@ function place(b) {
 function unseat(b) {
   if (b.tile) b.tile.classList.remove('has-bot');
   b.tile = null;
+  b.home = false;
+  b.el.classList.remove('is-home');
   b.size = BOT;
   wake(b, false);
 }
@@ -302,13 +345,12 @@ function wake(b, on) {
 /* 봇 아래에 있는 비트맵 칸. elementsFromPoint 는 못 쓴다 — 덮개가 떠 있는 동안
    칸은 pointer-events:none 이라 hit-test 에서 통째로 빠진다. 좌표로 직접 고른다.
    스물다섯 칸이라 값이 싸고, 무엇이 위에 덮였든 결과가 같다 */
-function tileUnder(b) {
-  const cx = b.x + b.size / 2, cy = b.y + b.size / 2;
-  if (blocked().some(z => inBox(cx, cy, z))) return null;
+function tileUnder(x, y) {
+  if (blocked().some(z => inBox(x, y, z))) return null;
   for (const el of document.querySelectorAll('#courseBtns .grid-btn')) {
     if (parseFloat(getComputedStyle(el).opacity) < .5) continue;
     const r = el.getBoundingClientRect();
-    if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) return el;
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return el;
   }
   return null;
 }
@@ -335,8 +377,12 @@ async function addBot(x, y) {
   if (!make) return null;
   const el = document.createElement('div');
   el.className = 'si-bot';
+  const motion = document.createElement('span');
+  motion.className = 'si-bot-motion';
+  el.append(motion);
   $('#siBots').append(el);
-  const b = { el, api: make(el, { calm: motionOff }), tile: null, x, y, size: BOT };
+  const b = { el, motion, api: make(motion, { calm: motionOff }), tile: null,
+    x, y, size: BOT, home: false, settle: null, bodySettle: null };
   bots.push(b);
   place(b);
   b.api.start();
@@ -348,36 +394,58 @@ function botGrab(e, b) {
   if (e.button) return;
   e.preventDefault();
   e.stopPropagation();
-  /* 칸에 앉아 있던 놈은 집는 순간 칸 크기에서 44px 로 줄어든다 */
-  const shrinks = b.size !== BOT;
   const start = async () => {
     /* 복제는 원본을 두고 새 놈을 끈다 — 끌던 손이 그대로 이어진다 */
     const t = cloneKey(e) ? await addBot(b.x, b.y) : b;
     if (!t) return;
+    freezeSettle(t);
     unseat(t);
-    /* 줄어든 뒤에도 잡은 자리를 그대로 쓰면 커서가 봇 밖으로 빠진다 — 160px 상자
-       한가운데를 잡았으면 오프셋이 80 인데 몸은 44 다. 줄어든 몸을 커서 밑에 다시 놓는다 */
-    if (shrinks) { t.x = e.clientX - t.size / 2; t.y = e.clientY - t.size / 2; }
+    /* 집은 위치와 상관없이 몸의 중심을 포인터에 둔다. 이 중심을 아래의 타일 판정과
+       확대 spring 시작점까지 그대로 써야 크기가 바뀌어도 우하단으로 튀지 않는다. */
+    let px = e.clientX, py = e.clientY;
+    t.x = px - t.size / 2; t.y = py - t.size / 2;
     place(t);
     t.el.classList.add('is-held');
     /* 잡혀 있는 동안은 허둥지둥한다 — wide 는 눈이 위아래로 커지고 시선이 들린다 */
     if (t.api) t.api.setState('wide');
     /* 이미 놓친 포인터면 던진다 — 캡처는 있으면 좋고 없어도 끌기는 된다 */
     try { t.el.setPointerCapture(e.pointerId); } catch {}
-    const ox = e.clientX - t.x, oy = e.clientY - t.y;
-    const move = ev => { t.x = ev.clientX - ox; t.y = ev.clientY - oy; place(t); };
-    const drop = () => {
+    const move = ev => {
+      px = ev.clientX; py = ev.clientY;
+      t.x = px - t.size / 2; t.y = py - t.size / 2;
+      place(t);
+    };
+    const drop = ev => {
       t.el.removeEventListener('pointermove', move);
       t.el.classList.remove('is-held');
-      const tile = tileUnder(t);
-      /* 로고 근처면 제자리로 돌아가고, 그냥 빈 곳이면 거기서 잠든다 */
-      if (!tile) { if (overLogo(t)) park(t); else wake(t, false); return; }
+      /* pointerup 좌표가 마지막 pointermove보다 새로울 수 있다. cancel은 마지막으로
+         확인한 좌표에 놓아, (0,0)을 주는 브라우저에서도 화면 모서리로 날리지 않는다. */
+      if (ev.type !== 'pointercancel') { px = ev.clientX; py = ev.clientY; }
+      t.x = px - t.size / 2; t.y = py - t.size / 2;
+      place(t);
+      /* 로고의 복귀 범위는 타일 금지 범위보다 넓다. 먼저 보지 않으면 그 바깥 14px
+         고리에서는 뒤에 깔린 비트맵 칸이 이겨, 집으로 놓아도 칸에 붙어 버린다. */
+      if (overLogo(px, py)) { park(t); return; }
+      const tile = tileUnder(px, py);
+      /* 칸이 아닌 빈 곳에서는 그 자리에 내려앉아 잠든다. */
+      if (!tile) {
+        const from = { x: t.x, y: t.y - 5, size: t.size };
+        wake(t, false);
+        springTo(t, t.x, t.y, from);
+        return;
+      }
       t.el.hidden = false;
       /* 한 칸에 한 마리만 — 먼저 앉아 있던 놈은 내려온다 */
       bots.forEach(o => { if (o !== t && o.tile === tile) { unseat(o); place(o); } });
       t.tile = tile;
       tile.classList.add('has-bot');
       wake(t, true);
+      const r = tile.getBoundingClientRect();
+      /* host는 지금부터 타일 크기다. 그 큰 상자의 중심을 포인터에 맞춘 좌표에서
+         시작하고 안쪽 몸만 이전 크기로 줄여 두면, 확대 첫 프레임도 포인터 중심이다. */
+      const from = { x: px - r.width / 2, y: py - r.width / 2, size: t.size };
+      t.size = r.width;
+      springTo(t, r.left, r.top, from);
       followKick();
     };
     t.el.addEventListener('pointermove', move);
@@ -388,7 +456,7 @@ function botGrab(e, b) {
 }
 async function wakeBuddy() {
   if (!bots.length) { const p = parkAt(); await addBot(p.x, p.y); }
-  bots.forEach(b => { if (!b.tile) park(b); b.api.start(); });
+  bots.forEach(b => { if (!b.tile) park(b, false); b.api.start(); });
   followKick();
 }
 function sleepBuddy() {
@@ -396,24 +464,16 @@ function sleepBuddy() {
   /* 앉아 있던 칸을 반드시 돌려준다 — has-bot 이 남으면 그 구가 홈에서 투명한 채
      굳는다(도봉구가 사라져 보이던 이유). 복제본은 그 판의 놀이라 정리한다 */
   while (bots.length > 1) { const b = bots.pop(); unseat(b); b.api.stop(); b.el.remove(); }
-  bots.forEach(b => { park(b); b.api.stop(); b.api.lookAway(); });
+  bots.forEach(b => { park(b, false); b.api.stop(); b.api.lookAway(); });
 }
-/* 로고(와 그 점) 언저리를 가리키면 봇이 나오고, 벗어나면 도로 점이 된다.
-   손에 들렸거나 칸에 앉은 놈은 건드리지 않는다 */
-function perchHover(e) {
-  const b = bots.find(x => !x.tile && !x.el.classList.contains('is-held'));
-  /* 횃대에 돌아올 놈이 없으면(다 칸에 앉았거나 손에 들렸으면) 로고는 제 점을 되찾는다 */
-  if (!b) { const d = $('.si-logo .dot'); if (d) d.style.visibility = ''; return; }
-  perch(b, inBox(e.clientX, e.clientY, boxOf('.si-logo', 28)));
-}
-/* 봇은 커서 쪽을 바라본다. 화면 좌표 차를 그대로 넘기면 엔진이 반대로 돌린다 */
+/* 봇은 커서 쪽을 바라본다. 엔진의 가로축은 화면과 같고 세로축만 반대다. */
 function buddyLook(e) {
   if (motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   const grip = v => Math.max(-1, Math.min(1, v));
   for (const b of bots) {
     const dx = (e.clientX - (b.x + b.size / 2)) / b.size;
     const dy = (e.clientY - (b.y + b.size / 2)) / b.size;
-    b.api.lookAt(-grip(dx), -grip(dy));
+    b.api.lookAt(grip(dx), -grip(dy));
   }
 }
 let backgroundState = [];
@@ -513,8 +573,7 @@ function wire() {
   });
   $('#siClose').onclick = close;
   over().addEventListener('pointermove', buddyLook);
-  over().addEventListener('pointermove', perchHover);
-  over().addEventListener('pointerleave', () => { if (buddy) buddy.lookAway(); });
+  over().addEventListener('pointerleave', () => bots.forEach(b => b.api.lookAway()));
   addEventListener('rt-open-settings', close);
   addEventListener('keydown', e => {
     if (over().hidden) return;

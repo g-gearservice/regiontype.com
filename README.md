@@ -8,7 +8,21 @@
 
 # English
 
-A typing drill for place names. v0.6.262 (`VER=2.62`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.6.265 (`VER=2.65`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.6.265
+
+- The Grok bot's horizontal gaze now follows the pointer instead of mirroring it
+
+## What's new in 0.6.264
+
+- Dragging keeps the bot's center under the pointer regardless of where you pick it up, and the tile-size spring begins from that same center, so growing onto a tile no longer jumps down and right
+
+## What's new in 0.6.263
+
+- The orange mark beside the sign-in logo is always the Grok bot, so it no longer swaps with a separate dot when you point at it
+- The bot floats at the logo, reacts to hover and being held, settles when dropped in empty space, and springs back when dropped near the logo
+- Attaching the bot to a bitmap tile now uses a spring instead of a snap; reduced-motion settings remove the continuous and settling motion
 
 ## What's new in 0.6.262
 
