@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.66';
+const VER = '2.67';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1834,19 +1834,79 @@ $('#again').onclick = () => start(G.slug);
    글만으로는 재현할 수 없어 버전·주소·브라우저를 함께 싣는다. */
 const FEEDBACK_URL = 'https://g.gearservicevanguard.com';
 const fbNote = $('#fbNote');
+const fbSend = $('#fbSend');
 const fbSay = (msg, bad) => { fbNote.textContent = msg; fbNote.classList.toggle('bad', !!bad); };
 let fbKind = 'bug';
+let fbToken = '', fbWidget = null, fbLoading = null, fbRetry = null;
+const fbCanSend = () => { fbSend.disabled = !fbToken; };
+const fbClearToken = (reset = false) => {
+  fbToken = '';
+  fbCanSend();
+  if (reset && fbWidget !== null && window.turnstile) window.turnstile.reset(fbWidget);
+};
+const loadTurnstile = () => {
+  if (window.turnstile) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const old = document.querySelector('script[data-turnstile]');
+    if (old) old.remove();
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true; s.defer = true; s.dataset.turnstile = '';
+    const timer = setTimeout(() => { s.remove(); reject(new Error(t('fbFail'))); }, 8000);
+    s.onload = () => { clearTimeout(timer); resolve(); };
+    s.onerror = e => { clearTimeout(timer); s.remove(); reject(e); };
+    document.head.append(s);
+  });
+};
+const fbReady = async () => {
+  try {
+    const sitekey = await (fbLoading || (fbLoading = (async () => {
+      const r = await fetch(`${FEEDBACK_URL}/turnstile`, { signal: AbortSignal.timeout(8000) });
+      const c = await r.json();
+      if (!r.ok || !c.sitekey) throw new Error(c.msg || t('fbFail'));
+      await loadTurnstile();
+      return c.sitekey;
+    })()));
+    /* 느린 연결에서 기다리다 창을 닫았으면 숨은 상자에 iframe 을 만들지 않는다.
+       준비 Promise 는 남겨 두므로 다시 열 때 곧바로 여기부터 이어진다. */
+    if (!$('#feedback').open || fbWidget !== null) return;
+    fbWidget = window.turnstile.render('#fbHuman', {
+      sitekey, action: 'feedback', theme: 'auto', size: 'flexible',
+      callback: token => {
+        if (!$('#feedback').open) return;
+        fbToken = token; fbCanSend(); fbSay('');
+      },
+      'expired-callback': () => fbClearToken(true),
+      'timeout-callback': () => fbClearToken(true),
+      'error-callback': () => {
+        fbClearToken(); fbSay(t('fbFail'), true);
+        clearTimeout(fbRetry);
+        fbRetry = setTimeout(() => { if ($('#feedback').open) fbClearToken(true); }, 1000);
+      },
+    });
+  } catch (e) {
+    fbLoading = null;
+    fbClearToken();
+    fbSay(e.message || t('fbFail'), true);
+  }
+};
 const fbPlaceholder = () => {
   const key = { bug: 'kindBug', idea: 'kindIdea', data: 'kindData' }[fbKind];
   $('#fbBody').placeholder = t(key);
 };
 fbPlaceholder();
 
-$('#fbOpen').onclick = () => { fbSay(''); fbPlaceholder(); $('#feedback').showModal(); };
+$('#fbOpen').onclick = () => {
+  fbSay(''); fbPlaceholder(); $('#feedback').showModal();
+  if (fbWidget !== null) fbClearToken(true); else fbReady();
+};
 $('#fbClose').onclick = () => $('#feedback').close();
 /* dialog 는 배경 클릭으로 닫히지 않는다. 여백은 form 이 갖고 있으니
    dialog 자신이 표적이면 곧 바깥이다. */
 $('#feedback').onclick = e => { if (e.target === e.currentTarget) e.currentTarget.close(); };
+$('#feedback').addEventListener('close', () => {
+  clearTimeout(fbRetry); fbRetry = null; fbClearToken(true);
+});
 
 $('.fb-kind').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -1858,11 +1918,12 @@ $('.fb-kind').onclick = e => {
 $('#fbForm').onsubmit = async e => {
   e.preventDefault();
   const body = $('#fbBody').value.trim();
-  if (!body) return;
+  if (!body || !fbToken) return;
   const c = { kind: fbKind, body,
-              v: VER, href: location.href, ua: navigator.userAgent };
-  $('#fbSend').disabled = true;
+              v: VER, href: location.href, ua: navigator.userAgent, cf: fbToken };
+  fbClearToken();
   fbSay(t('fbSending'));
+  let accepted = false;
   try {
     const r = await fetch(FEEDBACK_URL, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(c) });
@@ -1871,11 +1932,12 @@ $('#fbForm').onsubmit = async e => {
     if (!r.ok) throw new Error(msg || String(r.status));
     $('#fbBody').value = '';
     fbSay(t('fbThanks'));
+    accepted = true;
     setTimeout(() => $('#feedback').close(), 1200);
   } catch (e) {
     fbSay(e.message && e.message !== 'Failed to fetch' ? e.message : t('fbFail'), true);
   }
-  $('#fbSend').disabled = false;
+  if (!accepted && $('#feedback').open) fbClearToken(true);
 };
 
 /* ── 순위표 ───────────────────────────────────────────

@@ -406,6 +406,8 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
     cd relay
     wrangler login
     wrangler secret put GH_TOKEN     # fine-grained token with Issues write on that repo
+    wrangler secret put TURNSTILE_SITEKEY # public widget key, kept as deploy-time config
+    wrangler secret put TURNSTILE_SECRET  # server-side verification secret
     wrangler deploy
 
 Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
@@ -414,7 +416,7 @@ Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
 
     node relay/test.mjs      checks that one issue and one score row are filtered correctly
 
-It is an open URL that creates issues, so spam will come. There is a per-IP window, and metadata sits in a code block so foreign input cannot break the issue template. If it still leaks, put Turnstile in front — the token can only open issues, so the worst case is emptying a README-only repo.
+It is an open URL that creates issues, so the relay requires both a per-IP window and a Turnstile token before it calls GitHub. The browser gets only the public sitekey; the Worker keeps the secret, verifies the fixed `feedback` action and approved hostname, and fails closed when verification is unavailable. Metadata sits in a code block so foreign input cannot break the issue template.
 
 The window is counted with a `ratelimit` binding. **It used to use the Cache API, which `workers.dev` silently ignores** — `put` is dropped and `match` is always empty, so the window never actually ran. A wall that looks closed and is open is worse than no wall. If the binding is missing, the door returns 503 instead of 200.
 

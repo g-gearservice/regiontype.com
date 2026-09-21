@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=2.66">
+<link rel="stylesheet" href="style.css?v=2.67">
 </head>
 <body>
 
@@ -325,15 +325,16 @@
     </div>
     <textarea id="fbBody" required autofocus maxlength="500" data-i18n-aria="fbBody" aria-label="내용"
       placeholder="버그내용"></textarea>
+    <div id="fbHuman" aria-live="polite"></div>
     <div class="fb-foot">
       <p class="fb-note" id="fbNote" aria-live="polite"></p>
-      <button type="submit" class="fb-send" id="fbSend" data-i18n="fbSend">보내기</button>
+      <button type="submit" class="fb-send" id="fbSend" data-i18n="fbSend" disabled>보내기</button>
     </div>
   </form>
 </dialog>
 
-<script src="app.js?v=2.66"></script>
-<script src="auth.js?v=2.66"></script>
-<script src="settings/settings.js?v=2.66"></script>
+<script src="app.js?v=2.67"></script>
+<script src="auth.js?v=2.67"></script>
+<script src="settings/settings.js?v=2.67"></script>
 </body>
 </html>

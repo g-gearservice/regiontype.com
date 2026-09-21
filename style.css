@@ -897,6 +897,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 #fbForm textarea{height:130px;min-height:130px;resize:none;line-height:1.6}
 #fbForm :is(textarea,input):focus{outline:0;border-color:transparent}
+#fbHuman{min-height:65px;width:100%;display:grid;align-items:center}
+#fbHuman:empty{min-height:0}
 .fb-foot{display:flex;align-items:center;gap:14px}
 .fb-note{flex:1;font-size:14px;line-height:1.4;color:var(--ink-soft)}
 .fb-note.bad{color:var(--accent-text)}
