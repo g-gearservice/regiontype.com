@@ -137,7 +137,7 @@ export const RULES = [
     test: src => {
       const hit = /gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}/.exec(src);
       if (hit) return `GitHub 토큰처럼 생긴 값이 있다: ${hit[0].slice(0, 8)}…`;
-      const set = /\b(GH_TOKEN|SESSION_KEY)\s*[:=]\s*['"`][^'"`]+['"`]/.exec(src);
+      const set = /\b(GH_TOKEN|SESSION_KEY|SUB_KEY|GOOGLE_SECRET|APPLE_KEY|TURNSTILE_SECRET)\s*[:=]\s*['"`][^'"`]+['"`]/.exec(src);
       return set ? `소스에 값이 박혀 있다: ${set[1]}` : '';
     } },
   { id: 'secret-not-in-vars', need: 'file:relay/wrangler.toml', sev: 'high',

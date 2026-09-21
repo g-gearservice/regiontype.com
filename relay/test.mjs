@@ -1,7 +1,7 @@
 /* node relay/test.mjs — 이슈 한 장이 제대로 지어지는지만 본다 */
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import { compose, entry, where, regionOf, allowedOrigin } from './worker.mjs';
+import relayWorker, { compose, entry, where, regionOf, allowedOrigin } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
@@ -39,6 +39,124 @@ assert.equal(allowedOrigin('https://www.regiontype.com'), true);
 assert.equal(allowedOrigin('http://localhost:3000'), true);
 assert.equal(allowedOrigin('https://g-gearservice.github.io/regiontype.com'), true);
 assert.equal(allowedOrigin('https://evil.example'), false);
+
+/* ── 피드백 문 앞: IP 창 → Turnstile → GitHub ─────────── */
+const fbReq = (body = { ...base, cf: 'human-token' }, ip = '203.0.113.7') => new Request(
+  'https://g.gearservicevanguard.com/', {
+    method: 'POST',
+    headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
+               ...(ip ? { 'cf-connecting-ip': ip } : {}) },
+    body: JSON.stringify(body),
+  });
+const limit = (success, order) => ({ limit: async () => { order?.push('rate'); return { success }; } });
+const fbEnv = (over = {}, order) => ({
+  RL_FB: limit(true, order), GH_TOKEN: 'bound-at-runtime',
+  TURNSTILE_SECRET: 'server-secret', TURNSTILE_SITEKEY: 'public-sitekey', ...over,
+});
+const status = async (env, body, ip) => (await relayWorker.fetch(fbReq(body, ip), env)).status;
+const originalFetch = globalThis.fetch;
+try {
+  let calls = [];
+  globalThis.fetch = async (...args) => { calls.push(args); throw new Error('외부 호출 금지'); };
+  assert.equal(await status(fbEnv({ TURNSTILE_SECRET: '' })), 503, '비밀키가 없으면 닫는다');
+  assert.equal(calls.length, 0, '비밀키가 없으면 바깥을 부르지 않는다');
+  assert.equal(await status(fbEnv(), { ...base }), 403, '토큰이 없으면 거른다');
+  assert.equal(await status(fbEnv(), { ...base, cf: 7 }), 403, '문자열 아닌 토큰은 거른다');
+  assert.equal(await status(fbEnv(), { ...base, cf: 'x'.repeat(2049) }), 403, '2KB 넘는 토큰은 거른다');
+  assert.equal(calls.length, 0, '틀린 토큰은 Siteverify 도 부르지 않는다');
+  assert.equal(await status(fbEnv({ RL_FB: undefined })), 503, 'IP 창이 없으면 닫는다');
+  assert.equal(await status(fbEnv({ RL_FB: limit(false) })), 429, 'IP 창이 거절하면 멈춘다');
+  assert.equal(calls.length, 0, 'IP 창을 못 지나면 Siteverify 를 부르지 않는다');
+
+  const verdict = async (answer, siteStatus = 200) => {
+    let github = 0;
+    globalThis.fetch = async url => {
+      if (String(url).includes('/siteverify')) return new Response(answer, { status: siteStatus });
+      github++; return new Response('{}', { status: 201 });
+    };
+    const s = await status(fbEnv());
+    assert.equal(github, 0, 'Turnstile 실패 뒤 GitHub 을 부르지 않는다');
+    return s;
+  };
+  assert.equal(await verdict('{}', 502), 403, 'Siteverify 비정상 응답은 거른다');
+  assert.equal(await verdict('{'), 403, 'Siteverify JSON 오류는 거른다');
+  assert.equal(await verdict(JSON.stringify({ success: false })), 403, '실패 판정은 거른다');
+  assert.equal(await verdict(JSON.stringify({ success: true, action: 'score', hostname: 'regiontype.com' })), 403,
+               '다른 action 토큰은 거른다');
+  assert.equal(await verdict(JSON.stringify({ success: true, action: 'feedback', hostname: 'evil.example' })), 403,
+               '다른 hostname 토큰은 거른다');
+  globalThis.fetch = async () => { throw new Error('network down'); };
+  assert.equal(await status(fbEnv()), 403, 'Siteverify 네트워크 오류는 닫는다');
+  for (const hostname of ['regiontype.com', 'www.regiontype.com', 'g-gearservice.github.io']) {
+    let github = 0;
+    globalThis.fetch = async url => {
+      if (String(url).includes('/siteverify'))
+        return Response.json({ success: true, action: 'feedback', hostname });
+      github++; return new Response('{}', { status: 201 });
+    };
+    assert.equal(await status(fbEnv()), 201, `${hostname} 토큰은 통과한다`);
+    assert.equal(github, 1);
+  }
+
+  const order = [], sent = [];
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (u.includes('/siteverify')) {
+      order.push('turnstile'); sent.push({ u, init });
+      return Response.json({ success: true, action: 'feedback', hostname: 'regiontype.com' });
+    }
+    order.push('github'); sent.push({ u, init });
+    return new Response('{}', { status: 201 });
+  };
+  const ok = await relayWorker.fetch(fbReq(), fbEnv({}, order));
+  assert.equal(ok.status, 201);
+  assert.deepEqual(order, ['rate', 'turnstile', 'github'], 'IP 창, 사람 확인, GitHub 순서다');
+  const form = new URLSearchParams(sent[0].init.body);
+  assert.equal(sent[0].init.method, 'POST');
+  assert.equal(sent[0].u, 'https://challenges.cloudflare.com/turnstile/v0/siteverify');
+  assert.equal(sent[0].init.headers['content-type'], 'application/x-www-form-urlencoded');
+  assert.equal(form.get('secret'), 'server-secret');
+  assert.equal(form.get('response'), 'human-token');
+  assert.equal(form.get('remoteip'), '203.0.113.7');
+  assert.equal(sent[1].init.body.includes('human-token'), false,
+               '사람 확인 토큰은 공개 이슈에 싣지 않는다');
+
+  globalThis.fetch = async url => String(url).includes('/siteverify')
+    ? Response.json({ success: true, action: 'feedback', hostname: 'regiontype.com' })
+    : new Response('{}', { status: 500 });
+  const log = console.log; console.log = () => {};
+  try { assert.equal(await status(fbEnv()), 502, 'GitHub 실패는 중계기 실패로 감춘다'); }
+  finally { console.log = log; }
+
+  sent.length = 0;
+  globalThis.fetch = async (url, init) => {
+    sent.push({ u: String(url), init });
+    return String(url).includes('/siteverify')
+      ? Response.json({ success: true, action: 'feedback', hostname: 'regiontype.com' })
+      : new Response('{}', { status: 201 });
+  };
+  await relayWorker.fetch(fbReq(undefined, ''), fbEnv());
+  assert.equal(new URLSearchParams(sent[0].init.body).has('remoteip'), false,
+               'IP 헤더가 없으면 선택 필드를 보내지 않는다');
+
+  const cfg = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/turnstile', {
+    headers: { origin: 'https://regiontype.com' },
+  }), fbEnv());
+  assert.equal(cfg.status, 200);
+  assert.equal((await cfg.json()).sitekey, 'public-sitekey');
+  assert.equal(cfg.headers.get('access-control-allow-origin'), 'https://regiontype.com');
+  assert.equal(JSON.stringify(await (await relayWorker.fetch(new Request(
+    'https://g.gearservicevanguard.com/turnstile', { headers: { origin: 'https://regiontype.com' } }
+  ), fbEnv())).json()).includes('server-secret'), false, '설정 응답에는 비밀키가 없다');
+  assert.equal((await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/turnstile', {
+    headers: { origin: 'https://evil.example' },
+  }), fbEnv())).status, 403, '낯선 출처에는 공개 설정도 주지 않는다');
+  assert.equal((await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/turnstile', {
+    headers: { origin: 'https://regiontype.com' },
+  }), fbEnv({ TURNSTILE_SITEKEY: '' }))).status, 503, '공개키가 없으면 위젯 설정도 닫는다');
+} finally {
+  globalThis.fetch = originalFetch;
+}
 
 console.log('relay self-check done');
 
@@ -307,6 +425,7 @@ bad('relay-no-credentials', { status: 204, headers: { 'access-control-allow-cred
 bad('no-secret-literal', "const t = 'ghp_0123456789abcdefghijklmnopqrstuvwxyz';",
     '토큰처럼 생긴 값을 놓치면 안 된다');
 bad('no-secret-literal', "const GH_TOKEN = 'x-very-secret-value';");
+bad('no-secret-literal', "const TURNSTILE_SECRET = 'x-very-secret-value';");
 good('no-secret-literal', 'authorization: `Bearer ${env.GH_TOKEN}`,',
      '바인딩에서 읽는 건 비밀이 박힌 게 아니다');
 bad('secret-not-in-vars', '[vars]\nGH_TOKEN = "abc"\n');

@@ -37,6 +37,8 @@
        // pending 표가 이전 배포에서 이미 있었다면 위 실행으로는 새 칼럼이
        // 안 붙는다 — schema.sql 의 pending 주석을 본다
        wrangler secret put GH_TOKEN     // 그 저장소의 Issues 쓰기만 가진 세밀 토큰
+       wrangler secret put TURNSTILE_SITEKEY // 공개 키지만 배포별 설정으로 둔다
+       wrangler secret put TURNSTILE_SECRET  // Turnstile 서버 검증 비밀키
        wrangler deploy                                                        */
 
 import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac,
@@ -143,6 +145,42 @@ const pass = async (rl, key) => rl ? (await rl.limit({ key })).success : null;
 const shut = (ok, o) => ok === null ? reply(503, '중계기 설정이 덜 되었습니다.', o)
                                     : reply(429, '조금 뒤에 다시 보내주세요.', o);
 
+/* Turnstile — 사람인지 묻는 일은 전부 여기서 한다. 사이트는 공개 sitekey 로 토큰만
+   만들어 보내고, 비밀키도 검증도 이 중계기에만 있다. 계정과 세션이 그렇듯 사람
+   판정도 저쪽 도메인으로 새 나가지 않는다.
+   비밀키가 없으면 null 을 돌려 문을 닫는다 — IP 창과 같은 결이다. 조용히 열린
+   방벽은 없는 방벽보다 나쁘다. 배포 전에 TURNSTILE_SECRET 을 먼저 넣어야 한다. */
+const TURNSTILE = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const TURNSTILE_ACTION = 'feedback';
+const TURNSTILE_HOSTS = new Set(['regiontype.com', 'www.regiontype.com', 'g-gearservice.github.io']);
+async function human(env, token, from) {
+  if (!env.TURNSTILE_SECRET) return null;
+  /* 토큰은 남이 보낸 값이다 — 길이를 먼저 자른다. 정상 토큰은 2KB 를 넘지 않는다 */
+  if (typeof token !== 'string' || !token || token.length > 2048) return false;
+  try {
+    const form = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token });
+    /* remoteip 는 선택값이다. CF 헤더가 없는 로컬 검사에서 '?'를 보내지 않는다 */
+    if (from && from !== '?') form.set('remoteip', from);
+    const r = await fetch(TURNSTILE, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    /* 같은 sitekey 의 다른 위젯에서 얻은 토큰도 받아들이지 않는다 */
+    return d.success === true && d.action === TURNSTILE_ACTION
+      && TURNSTILE_HOSTS.has(String(d.hostname || '').toLowerCase());
+  } catch { return false; }   /* 못 물어봤으면 사람이 아니라고 본다 */
+}
+
+/* sitekey 는 브라우저에 보이는 공개값이다. 정적 파일에 박지 않고 여기서 주면
+   Turnstile 위젯을 갈 때 사이트를 다시 배포할 필요가 없다. 비밀키는 절대 안 보낸다. */
+const turnstileConfig = (env, o) => env.TURNSTILE_SITEKEY
+  ? send(200, { sitekey: env.TURNSTILE_SITEKEY }, o)
+  : reply(503, '사람 확인 설정이 덜 되었습니다.', o);
+
 const board = (env, w) => env.DB.prepare(
   'select who, name, score, hits, acc from board where slug = ? and secs = ? order by score desc, at asc limit ?'
 ).bind(w.slug, w.secs, TOP);
@@ -159,6 +197,12 @@ async function feedback(req, env, o) {
   if (!issue.ok) return reply(400, '내용이 비어 있습니다.', o);
   const ok = await pass(env.RL_FB, ip(req));
   if (ok !== true) return shut(ok, o);
+  /* 창을 지난 뒤에 사람인지 묻는다 — 퍼붓는 쪽에 바깥 호출을 시키지 않는다.
+     여기만 잠그면 된다: /score·/forget 은 이미 로그인 뒤고, 이슈를 만드는 이 길만
+     아무나 두드릴 수 있다 */
+  const who = await human(env, c && c.cf, ip(req));
+  if (who === null) return reply(503, '중계기 설정이 덜 되었습니다.', o);
+  if (!who) return reply(403, '사람인지 확인하지 못했습니다. 다시 시도해 주세요.', o);
 
   const r = await fetch(`https://api.github.com/repos/${REPO}/issues`, {
     method: 'POST',
@@ -756,6 +800,7 @@ export default {
     if (!mine(o)) return reply(403, '허용된 곳이 아닙니다.', o);
 
     if (path === '/' && req.method === 'POST') return feedback(req, env, o);
+    if (path === '/turnstile' && req.method === 'GET') return turnstileConfig(env, o);
     if (path === '/where' && req.method === 'GET') {
       return send(200, regionOf(req.cf, req.headers.get('accept-language')), o);
     }
