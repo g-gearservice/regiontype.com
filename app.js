@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.67';
+const VER = '2.68';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1839,10 +1839,19 @@ const fbSay = (msg, bad) => { fbNote.textContent = msg; fbNote.classList.toggle(
 let fbKind = 'bug';
 let fbToken = '', fbWidget = null, fbLoading = null, fbRetry = null;
 const fbCanSend = () => { fbSend.disabled = !fbToken; };
-const fbClearToken = (reset = false) => {
+const fbClearToken = () => {
   fbToken = '';
   fbCanSend();
-  if (reset && fbWidget !== null && window.turnstile) window.turnstile.reset(fbWidget);
+};
+const fbRemoveWidget = () => {
+  fbClearToken();
+  if (fbWidget !== null && window.turnstile) window.turnstile.remove(fbWidget);
+  fbWidget = null;
+  $('#fbHuman').replaceChildren();
+};
+const fbRenewWidget = () => {
+  fbRemoveWidget();
+  if ($('#feedback').open) fbReady();
 };
 const loadTurnstile = () => {
   if (window.turnstile) return Promise.resolve();
@@ -1876,12 +1885,12 @@ const fbReady = async () => {
         if (!$('#feedback').open) return;
         fbToken = token; fbCanSend(); fbSay('');
       },
-      'expired-callback': () => fbClearToken(true),
-      'timeout-callback': () => fbClearToken(true),
+      'expired-callback': fbRenewWidget,
+      'timeout-callback': fbRenewWidget,
       'error-callback': () => {
         fbClearToken(); fbSay(t('fbFail'), true);
         clearTimeout(fbRetry);
-        fbRetry = setTimeout(() => { if ($('#feedback').open) fbClearToken(true); }, 1000);
+        fbRetry = setTimeout(fbRenewWidget, 1000);
       },
     });
   } catch (e) {
@@ -1898,14 +1907,14 @@ fbPlaceholder();
 
 $('#fbOpen').onclick = () => {
   fbSay(''); fbPlaceholder(); $('#feedback').showModal();
-  if (fbWidget !== null) fbClearToken(true); else fbReady();
+  fbReady();
 };
 $('#fbClose').onclick = () => $('#feedback').close();
 /* dialog 는 배경 클릭으로 닫히지 않는다. 여백은 form 이 갖고 있으니
    dialog 자신이 표적이면 곧 바깥이다. */
 $('#feedback').onclick = e => { if (e.target === e.currentTarget) e.currentTarget.close(); };
 $('#feedback').addEventListener('close', () => {
-  clearTimeout(fbRetry); fbRetry = null; fbClearToken(true);
+  clearTimeout(fbRetry); fbRetry = null; fbRemoveWidget();
 });
 
 $('.fb-kind').onclick = e => {
@@ -1937,7 +1946,7 @@ $('#fbForm').onsubmit = async e => {
   } catch (e) {
     fbSay(e.message && e.message !== 'Failed to fetch' ? e.message : t('fbFail'), true);
   }
-  if (!accepted && $('#feedback').open) fbClearToken(true);
+  if (!accepted && $('#feedback').open) fbRenewWidget();
 };
 
 /* ── 순위표 ───────────────────────────────────────────
