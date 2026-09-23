@@ -1,0 +1,26 @@
+[
+  {
+    "v": "0.6.270",
+    "date": "2026-09-23",
+    "ko": "지역 카드를 Shift 로 눌러 붙어 있는 구를 여럿 고를 수 있습니다. 한 칸 넘게 떨어진 곳을 누르면 복수 선택이 풀립니다. 소개 페이지는 앱에서 고른 야간 테마를 따라가고, 맨 위에 돌아가기 단추와 맨 아래 '바뀐 것' 목록이 생겼습니다.",
+    "en": "Shift-click region cards to pick several neighbouring districts at once. Clicking one more than a cell away drops the multi-selection. The about page now follows the night theme you picked in the app, and gained a back button at the top and this list at the bottom."
+  },
+  {
+    "v": "0.6.269",
+    "date": "2026-09-22",
+    "ko": "계정 페이지가 생기고 설정의 보안 탭을 새로 그렸습니다.",
+    "en": "Added the account page and rebuilt the security tab in settings."
+  },
+  {
+    "v": "0.6.267",
+    "date": "2026-09-21",
+    "ko": "피드백을 보낼 때 사람 확인을 한 번 거칩니다. 회신 주소는 받지 않습니다 — 올라간 이슈는 공개입니다.",
+    "en": "Feedback now goes through a human check before it opens an issue. No reply address is collected — the issues are public."
+  },
+  {
+    "v": "0.6.265",
+    "date": "2026-09-19",
+    "ko": "로그인 화면 로고 옆 봇을 끌어 비트맵 칸에 태울 수 있습니다.",
+    "en": "The little bot beside the sign-in logo can be dragged onto a bitmap tile and ridden."
+  }
+]

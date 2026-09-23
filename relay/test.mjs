@@ -281,6 +281,60 @@ assert.deepEqual([...back], [...raw], 'DER 을 풀면 원래 값이 나온다');
 
 console.log('auth self-check done');
 
+/* 실제 /auth/take 응답을 검사한다. D1 경계만 대역으로 바꿔 최초 생성과
+   재로그인·공급자 연결·경쟁 생성 실패를 구분한다. */
+async function takeResponse({ existing = false, linked = false, changes = 1,
+  conflict = false, passkey = false } = {}) {
+  const DB = {
+    prepare(sql) {
+      return {
+        sql,
+        bind(...values) { this.values = values; return this; },
+        async first() {
+          if (sql.startsWith('select who, kind, back')) return {
+            who: linked ? 'existing-user' : null, kind: 'take', provider: 'google',
+            sub: 'hashed-sub', until: Date.now() + 60000,
+          };
+          if (sql.startsWith('select who from sso')) return existing ? { who: 'existing-user' } : null;
+          if (sql.startsWith('select 1 from passkey')) return passkey ? { 1: 1 } : null;
+          throw new Error(`Unexpected query: ${sql}`);
+        },
+        async run() {
+          assert.ok(sql.startsWith('insert into pending'));
+          return { meta: { changes: 1 } };
+        },
+      };
+    },
+    async batch(statements) {
+      if (statements[0].sql.startsWith('delete from pending'))
+        return statements.map(() => ({ meta: { changes: 1 } }));
+      assert.ok(statements[0].sql.startsWith('insert or ignore into user'));
+      assert.ok(statements[1].sql.startsWith('insert into sso'));
+      if (conflict) throw new Error('UNIQUE constraint failed');
+      return [{ meta: { changes } }, { meta: { changes: 1 } }];
+    },
+  };
+  const response = await relayWorker.fetch(new Request('https://relay.example/auth/take', {
+    method: 'POST', headers: { origin: 'https://regiontype.com', 'content-type': 'application/json' },
+    body: JSON.stringify({ b: 'test-bind', t: 'a'.repeat(43) }),
+  }), { DB, SESSION_KEY: KEY, RL_AU: { limit: async () => ({ success: true }) } });
+  return { status: response.status, body: await response.json() };
+}
+const firstLogin = await takeResponse();
+assert.equal(firstLogin.status, 200);
+assert.ok(firstLogin.body.token);
+assert.equal(firstLogin.body.isNewAccount, true, '실제로 새 계정을 생성한 로그인만 최초 가입이다');
+assert.equal((await takeResponse({ existing: true })).body.isNewAccount, false, '재로그인은 가입이 아니다');
+assert.equal((await takeResponse({ linked: true })).body.isNewAccount, false, '공급자 추가는 가입이 아니다');
+assert.equal((await takeResponse({ changes: 0 })).body.isNewAccount, false, '생성되지 않은 행은 신규로 세지 않는다');
+const racedLogin = await takeResponse({ conflict: true });
+assert.equal(racedLogin.status, 503);
+assert.ok(!racedLogin.body.token && !racedLogin.body.isNewAccount, '경쟁 생성 실패는 가입 성공을 반환하지 않는다');
+const secondFactorLogin = await takeResponse({ existing: true, passkey: true });
+assert.equal(secondFactorLogin.body.need, 'passkey');
+assert.ok(!secondFactorLogin.body.token && !secondFactorLogin.body.isNewAccount,
+  '2단계 확인 전에는 가입 성공이나 세션을 반환하지 않는다');
+
 /* ── SSO 2단계 (Google·Apple → 패스키·복구 코드) ────────────────
    authCb·authTake·peekTwo·issueRecoveryCodes 는 worker.mjs 가 내보내지 않고,
    D1 이 있어야 도는 것도 많다. 못 부르는 것은 (a) 내보낸 재료(sha·mac·b64u)로

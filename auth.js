@@ -197,7 +197,7 @@ async function take(bind, tag, generation) {
     return show('vSignin');
   }
   if (!current(generation)) return;
-  if (d.token) return done(d.token, generation);
+  if (d.token) return done(d.token, generation, d.isNewAccount === true);
   if (d.need === 'passkey') {
     TWO = { bind, tag, challenge: d.challenge };
     say('');
@@ -208,19 +208,16 @@ async function take(bind, tag, generation) {
   show('vSignin');
 }
 
-/* 토큰을 쥐었으면 여기 볼 것은 없다 — 계정 화면은 설정의 보안 탭이다 */
-function done(tok, generation) {
+/* 토큰을 쥐었으면 여기 볼 것은 없다 — 계정 화면은 독립 페이지다 */
+function done(tok, generation, isNewAccount = false) {
   if (!current(generation)) return;
   localStorage.setItem(TOKEN_KEY, tok);
   sessionStorage.removeItem(BIND_KEY);   // 쓰고 나면 지운다
   TWO = null;
   say('');
-  toAccount();
-}
-const toAccount = () => {
   close();
-  location.hash = 'security';
-};
+  location.assign(isNewAccount ? 'account/' : './');
+}
 
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
 const over = () => $('#signin');

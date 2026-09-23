@@ -47,7 +47,7 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=2.68">
+<link rel="stylesheet" href="style.css?v=2.69">
 </head>
 <body>
 
@@ -253,25 +253,43 @@
         </dl>
       </div>
       <div id="optsSecurity" class="opts-panel" role="tabpanel" aria-labelledby="optsTabSecurity" tabindex="0" hidden>
-        <div class="si-view" id="secIn" hidden>
-          <h3 class="si-head" data-i18n="accountHead">내 계정</h3>
-          <p class="si-warn" id="acctWarn" hidden data-i18n="twoStepWarn">패스키가 하나뿐입니다.</p>
-          <p class="si-note" id="acctCodes" hidden></p>
-          <div class="si-btns is-wide">
-            <button type="button" id="acctKey" data-i18n="twoStepOn">2단계 인증 켜기</button>
-            <button type="button" id="acctCodesNew" data-i18n="codesNew">코드 새로 만들기 — 옛 코드는 모두 못 쓰게 됩니다</button>
-            <button type="button" id="acctOut" data-i18n="signOut">로그아웃</button>
+        <div class="security-content">
+          <div class="security-cards">
+            <div class="profile-card security-health">
+              <strong id="securityState">로그인 필요</strong>
+              <img class="security-shield" id="securityShield" alt="" aria-hidden="true">
+              <button type="button" class="profile-button" id="securityCheck">보안 상태 진단</button>
+            </div>
+            <div class="profile-card security-device">
+              <h3 class="profile-label">로그인된 기기</h3>
+              <p class="device-current"><img id="securityDeviceIcon" alt="" aria-hidden="true"><span id="securityDevice">로그인이 필요합니다</span></p>
+              <hr>
+              <h3 class="profile-label">최근 위협 차단 내역</h3>
+              <p class="security-history">조회할 수 있는 기록이 없습니다.</p><p class="profile-help">위협 차단 내역은 아직 제공하지 않습니다.</p>
+            </div>
           </div>
-          <details class="si-lost">
-            <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
-            <p data-i18n="lostAllHow">계정은 되살릴 수 없습니다.</p>
-          </details>
-        </div>
-        <div class="si-view" id="secOut" hidden>
-          <h3 class="si-head" data-i18n="accountHead">내 계정</h3>
-          <div class="si-btns">
-            <a href="signin/" data-i18n="signinBtn">로그인</a>
+          <div id="secIn" hidden>
+            <section class="profile-section">
+              <h3 class="profile-label">인증 및 패스키</h3>
+              <div class="profile-row"><div><strong>2단계 인증 (2FA)</strong><p class="profile-help">로그인할 때 기기의 패스키로 한 번 더 확인합니다.</p></div><button type="button" class="profile-button" id="acctKey">패스키 추가</button></div>
+              <p class="profile-help" id="securityKeys"></p>
+              <p class="si-warn" id="acctWarn" hidden data-i18n="twoStepWarn">패스키가 하나뿐입니다.</p>
+            </section>
+            <section class="profile-section">
+              <h3 class="profile-label">이중 인증 및 보안</h3>
+              <div class="profile-row"><div><strong>2단계 인증 (2FA)</strong><p class="profile-help" id="securityTwoText">상태 확인 중</p></div><span class="security-two-state"><span class="security-badge" id="securityTwo">확인 중</span><button type="button" id="securityTwoSwitch" class="profile-switch" aria-label="2단계 인증 상태 (패스키 추가로 켜기)" aria-pressed="false" disabled></button></span></div>
+              <div class="profile-row"><div><strong>새로운 로그인 알림</strong><p class="profile-help">이메일 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" aria-label="새로운 로그인 알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
+              </section>
+            <div class="profile-actions security-session-actions"><button type="button" class="profile-button" disabled aria-describedby="securitySessionHelp">모든 기기에서 로그아웃</button><button type="button" class="profile-button destructive" disabled aria-describedby="securitySessionHelp">모든 세션 강제 종료</button></div>
+            <p class="profile-help" id="securitySessionHelp">전체 기기·세션 종료는 아직 지원하지 않습니다.</p>
+            <details class="security-recovery"><summary>복구 코드 및 현재 브라우저</summary>
+              <div class="profile-row"><div><strong>복구 코드</strong><p class="profile-help" id="acctCodes" hidden></p></div><button type="button" class="profile-button" id="acctCodesNew">코드 새로 만들기</button></div>
+              <p class="profile-help">새 코드를 만들면 이전 복구 코드는 모두 사용할 수 없습니다.</p>
+              <details class="security-recovery"><summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary><p data-i18n="lostAllHow">계정은 되살릴 수 없습니다.</p></details>
+              <div class="profile-actions"><button type="button" class="profile-button" id="acctOut">이 브라우저에서 로그아웃</button></div>
+            </details>
           </div>
+          <div id="secOut" hidden><p class="profile-help">로그인하면 패스키와 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
         </div>
         <p class="si-say" id="optSay" role="status" aria-live="polite"></p>
       </div>
@@ -333,8 +351,8 @@
   </form>
 </dialog>
 
-<script src="app.js?v=2.68"></script>
-<script src="auth.js?v=2.68"></script>
-<script src="settings/settings.js?v=2.68"></script>
+<script src="app.js?v=2.69"></script>
+<script src="auth.js?v=2.69"></script>
+<script src="settings/settings.js?v=2.69"></script>
 </body>
 </html>

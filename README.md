@@ -10,6 +10,11 @@
 
 A typing drill for place names. v0.6.266 (`VER=2.66`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
+## Unreleased
+
+- My Account opens a separate `/account/` page. Only a newly created account opens it automatically after sign-in; returning users go home. The relay reports whether the account was actually created, so this does not depend on browser storage.
+- Security settings use the Figma card layout while retaining passkey registration and recovery codes. Device history, login alerts, account deletion, and session-wide sign-out remain unavailable until server support exists.
+
 ## What's new in 0.6.266
 
 - The Language and Region settings tabs are development-only, so production Settings opens on Video
@@ -325,6 +330,8 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
     about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
     auth.js                  sign-in overlay on the home screen: Google SSO, passkey second step, and recovery codes
     signin/                  provider callback landing route; forwards its hash to the home screen
+    account/                 separate account page with browser-local character preferences
+    settings/                settings overlay script and hash-passthrough landing route
     wrangler.toml            the site as a Cloudflare Worker with static assets (no script, no build)
     _headers / _redirects    security headers and folder-index rewrites, applied by Cloudflare
     .assetsignore            files that never ship (relay/, tools/, maps/, docs)

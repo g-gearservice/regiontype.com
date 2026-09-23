@@ -73,6 +73,9 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=1.32">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=1.32">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=1.32">
+<!-- 앱에서 고른 야간 테마를 그대로 쓴다. 같은 출처라 rt.opt 를 그냥 읽으면 된다.
+     첫 그림 전에 붙여야 밝은 화면이 한 번 번쩍이지 않는다 -->
+<script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
 <link rel="stylesheet" href="../style.css?v=1.32">
 <!-- 이 페이지는 읽는 글이라 앱의 고정 화면 규칙(overflow:hidden, position:fixed)을
      쓰지 않는다. 토큰과 글꼴은 style.css 것을 그대로 물려받고, 문서 배치만 덧쓴다.
@@ -82,8 +85,15 @@
   body{overflow:auto}
   .doc{max-width:720px;margin:0 auto;padding:56px 24px 96px;position:relative;z-index:1}
   .doc a{color:var(--accent-text)}
-  .doc .logo{font-size:clamp(30px,4vw,44px);display:inline-block;margin-bottom:40px;
-              color:var(--ink);text-decoration:none}
+  .doc .go-back{display:inline-flex;align-items:center;gap:8px;margin-bottom:40px;font-weight:700;
+              color:var(--ink-soft);text-decoration:none;padding:6px 12px 6px 8px;border-radius:6px;
+              border:1px solid var(--grid);background:var(--card)}
+  .doc .go-back:hover,.doc .go-back:focus-visible{color:var(--ink);border-color:var(--ink-soft)}
+  .changes{list-style:none;margin:0}
+  .changes li{line-height:1.8;padding:14px 0;border-top:1px solid var(--grid)}
+  .changes .v{font-weight:800;color:var(--accent-text)}
+  .changes time{color:var(--ink-soft);font-size:14px;margin-left:8px}
+  .changes p{margin:4px 0 0}
   .doc h1{font-size:clamp(30px,4.4vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-bottom:28px}
   .doc h2{font-size:clamp(22px,2.6vw,28px);font-weight:800;letter-spacing:-.01em;margin:52px 0 16px}
   .doc p{line-height:1.85;margin-bottom:18px}
@@ -110,7 +120,7 @@
 </svg>
 
 <main class="doc">
-  <a class="logo" href="/">region<span>type</span><i class="dot"></i></a>
+  <a class="go-back" href="/"><span aria-hidden="true">←</span>Geri</a>
 
   <h1>Seul'ün ilçelerini ve mahallelerini yazarak ezberleyin</h1>
 
@@ -192,12 +202,31 @@
   <p>Bittiğinde puan, uğranan yerler ve isabet oranıyla birlikte kaçırılan yerlerin
   listesi çıkar. Sonuç görsel olarak kaydedilebilir.</p>
 
-  <p><a class="cta" href="/">Yazarak haritayı tamamlayın</a></p>
+  <h2>Yenilikler</h2>
 
-  <footer>
-    <p><a href="/">regiontype.com</a></p>
-  </footer>
+  <ul class="changes" id="changes"></ul>
 </main>
+
+<!-- 바뀐 것 목록은 data/changes.json 한 곳에 둔다 — 스물여섯 장을 따로 고치지 않는다.
+     그 나라 말이 없으면 영어로 적는다 -->
+<script>
+fetch('../data/changes.json?v=2.70').then(r => r.json()).then(list => {
+  const lang = document.documentElement.lang;
+  const ul = document.getElementById('changes');
+  if (!ul) return;
+  for (const c of list) {
+    const li = document.createElement('li');
+    const v = document.createElement('span');
+    v.className = 'v'; v.textContent = 'v' + c.v;
+    const t = document.createElement('time');
+    t.dateTime = c.date; t.textContent = c.date;
+    const p = document.createElement('p');
+    p.textContent = c[lang] || c.en;
+    li.append(v, t, p);
+    ul.append(li);
+  }
+}).catch(() => {});
+</script>
 
 </body>
 </html>
