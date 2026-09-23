@@ -30,14 +30,20 @@ const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, gr
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
-const saveOpt = () => {
-  localStorage.setItem('rt.opt', JSON.stringify(opt));
+/* 통에 든 값을 화면에 입히기만 한다 — 쓰지 않는다. 다른 탭이 바꾼 값을 따라갈
+   때 쓰려고 저장과 갈라 두었다. 되쓰면 그 탭이 또 storage 를 쏘아 둘이 주고받는다 */
+const applyOpt = () => {
   document.documentElement.toggleAttribute('data-night', opt.night);
   document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
   document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
   requestAnimationFrame(syncOptShell);
   document.querySelectorAll('#options .toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
   dispatchEvent(new CustomEvent('rt-opt'));
+};
+
+const saveOpt = () => {
+  localStorage.setItem('rt.opt', JSON.stringify(opt));
+  applyOpt();
 };
 
 /* ── 화면 말 ─────────────────────────────────────────── */
@@ -313,24 +319,42 @@ async function tryAuth(run, doing, btns) {
 let CODES = [];      // 복구 코드. 판이 떠 있는 동안만 산다
 let securityRequest = 0;
 
+/* 2단계 스위치. 중계기에 패스키를 지우는 문이 없으니 이 스위치는 켜는 쪽으로만
+   움직인다 — 켜져 있으면 눌러도 할 일이 없어 잠근다. 색만으로 가르지 않도록
+   왜 잠겼는지를 이름에 적고, 옆의 #securityTwo 가 말로 한 번 더 남긴다 */
+function twoSwitch(on, busy) {
+  const b = $('#securityTwoSwitch');
+  b.setAttribute('aria-pressed', String(!!on));
+  b.disabled = !!busy || !!on;
+  b.setAttribute('aria-label',
+    busy ? '2단계 인증 — 상태를 확인하는 중입니다'
+    : on ? '2단계 인증 켜짐 — 패스키는 기기 설정에서 지웁니다'
+    : '2단계 인증 켜기 — 이 기기에 패스키를 추가합니다');
+}
+
 async function account() {
   const request = ++securityRequest;
   const inn = !!token();
-  $('#secIn').hidden = false;
+  $('#secIn').hidden = !inn;
   $('#secOut').hidden = inn;
   [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')].forEach(b => { b.disabled = !inn; });
+  /* 읽는 동안만 진단을 잠근다 — 연타로 같은 질문을 겹쳐 보내지 않게 */
+  $('#securityCheck').disabled = inn;
   $('#securityState').textContent = inn ? '확인 중' : '로그인 필요';
   const platform = navigator.userAgentData?.platform || navigator.platform || '';
   const device = /Mac/i.test(platform) ? 'Mac' : /Win/i.test(platform) ? 'Windows PC' : /Linux/i.test(platform) ? 'Linux' : '현재 기기';
   $('#securityDevice').textContent = inn ? device + ' · 이 브라우저' : '로그인이 필요합니다';
   $('#securityKeys').textContent = '';
   $('#securityTwo').textContent = inn ? '확인 중' : '로그인 필요';
-  $('#securityTwoSwitch').setAttribute('aria-pressed', 'false');
+  twoSwitch(false, true);
   $('#securityTwoText').textContent = '패스키 등록 상태를 확인합니다.';
   $('#acctWarn').hidden = $('#acctCodes').hidden = true;
-  if (!inn) return;
+  /* 로그아웃하면 앞서 띄운 실패 문구도 함께 걷는다 — 남으면 새 상태를 덮어 읽힌다 */
+  if (!inn) return say('');
   const a = await me().catch(() => null);
+  /* 더 새 요청이 이미 떠났으면 잠금도 그쪽이 맡는다 — 여기서 풀면 둘이 엇갈린다 */
   if (request !== securityRequest) return;
+  $('#securityCheck').disabled = false;
   /* 못 읽었으면 숫자를 지어내지 않는다 — 줄을 숨긴다. 토큰이 죽었으면 로그인부터다 */
   if (!a) {
     if (!token()) return account();
@@ -343,7 +367,7 @@ async function account() {
   $('#securityState').textContent = a.keys > 0 ? '패스키 보호 중' : '추가 보호 필요';
   $('#securityKeys').textContent = '등록된 패스키 ' + a.keys + '개';
   $('#securityTwo').textContent = a.keys > 0 ? '사용 중' : '꺼짐';
-  $('#securityTwoSwitch').setAttribute('aria-pressed', String(a.keys > 0));
+  twoSwitch(a.keys > 0, false);
   $('#securityTwoText').textContent = a.keys > 0 ? '패스키로 로그인 시 한 번 더 확인합니다.' : '패스키를 추가하면 2단계 인증이 켜집니다.';
   $('#acctWarn').hidden = a.keys !== 1;
   $('#acctCodes').hidden = !a.codes;
@@ -471,12 +495,18 @@ function wire() {
     fillRegionPick();
   });
 
-  $('#acctKey').onclick = () => tryAuth(async () => {
+  /* '패스키 추가' 와 2단계 스위치는 같은 일을 한다 — 스위치를 켜는 길이 곧 패스키를
+     하나 만드는 길이다. 끝나면 반드시 다시 읽는다: 취소·실패로 빠져도 스위치가
+     잠긴 채 남지 않게 (복구 코드 판이 떴으면 그 판의 '완료' 가 대신 읽는다) */
+  const addPasskey = () => tryAuth(async () => {
     const out = await passkeyMake();
     say('');
     /* 첫 패스키면 중계기가 복구 코드를 함께 준다 — 이 판을 닫으면 다시 못 본다 */
-    if (out.codes) showCodes(out.codes); else account();
-  }, t('makingKey'), [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')]);
+    if (out.codes) showCodes(out.codes);
+  }, t('makingKey'), [$('#acctKey'), $('#acctCodesNew'), $('#acctOut'), $('#securityTwoSwitch')])
+    .then(() => { if (!$('#codes').open) account(); });
+  $('#acctKey').onclick = addPasskey;
+  $('#securityTwoSwitch').onclick = addPasskey;
 
   $('#acctCodesNew').onclick = async () => {
     const btns = [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')];
@@ -517,6 +547,27 @@ function wire() {
 
   addEventListener('resize', capZoom);
   addEventListener('resize', () => { if (!over().hidden) syncOptShell(); });
+
+  /* 다른 탭에서 설정을 바꾸거나 로그아웃하면 이 탭도 따라간다. 같은 문서의 app.js 는
+     rt-opt 하나만 듣고 있으므로 applyOpt() 가 홈 쪽 길까지 함께 연다 — 로그인 칸
+     라벨(로그인/내 계정)도 그 신호로 다시 그려진다. 되쓰지 않는다: storage 를 받은
+     자리에서 또 쓰면 상대 탭이 다시 받아 둘이 끝없이 주고받는다 */
+  addEventListener('storage', e => {
+    if (e.key !== null && e.key !== 'rt.opt' && e.key !== TOKEN_KEY) return;
+    if (e.key === null || e.key === 'rt.opt') {
+      let next = {};
+      try { next = JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch {}
+      next = Object.assign({}, DEF, next);
+      for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
+      Object.assign(opt, next);
+      applyOpt();
+    }
+    if (e.key === null || e.key === TOKEN_KEY) {
+      dispatchEvent(new CustomEvent('rt-opt'));
+      /* 덮개가 닫혀 있으면 묻지 않는다 — 패널은 덮개와 따로 열린 채로 남는다 */
+      if (!over().hidden && !$('#optsSecurity').hidden) account();
+    }
+  });
 
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href]');

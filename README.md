@@ -14,6 +14,12 @@ A typing drill for place names. v0.6.266 (`VER=2.66`) — Seoul's 25 districts o
 
 - My Account opens a separate `/account/` page. Only a newly created account opens it automatically after sign-in; returning users go home. The relay reports whether the account was actually created, so this does not depend on browser storage.
 - Security settings use the Figma card layout while retaining passkey registration and recovery codes. Device history, login alerts, account deletion, and session-wide sign-out remain unavailable until server support exists.
+- Signed-out Security shows only the sign-in notice again. The passkey and recovery-code block was rendering alongside it with its buttons greyed out.
+- The two-step switch now registers a passkey instead of sitting inert, sharing one path with the Add passkey button. It stays locked once on, because the relay has no way to remove a passkey.
+- Running the security check locks its button until the relay answers, so repeated presses cannot overlap.
+- The account page trims a nickname exactly as the relay does. A name that only looked non-empty here — a zero-width space, say — was stored and then rejected by every later score submission.
+- Save character is enabled only when there is an unsaved change, and a character saved in one tab now reaches the others.
+- A settings or sign-out change made in one tab reaches the others: night mode, motion, grid, and the Sign in / My Account label all follow.
 
 ## What's new in 0.6.266
 
