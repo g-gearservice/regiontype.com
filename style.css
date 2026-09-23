@@ -6,6 +6,8 @@
      어두운 먹으로 6.64:1 을 받는다. 야간에도 바탕이 그대로라 값도 그대로다 */
   --on-accent:#232c31;
   --bad:#c1362b;
+  /* 경쟁전. 빨간 봇·물든 칸·빨간 시작하기가 이 한 색이다. 흰 글자 대비 5.1:1 */
+  --ranked:#c8322a;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s;
   /* 로그인·설정 덮개가 쓰는 시간. 화면 한 판이 통째로 바뀌는 자리라 길다 */
@@ -477,7 +479,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (pointer:coarse),(max-width:640px){
   body:not(.set):not(.setting) .screen{display:none!important}
   #mobile{display:grid}
-  body.setting #mobile{display:none}
+  body.setting #mobile,body.paging #mobile{display:none}
 }
 
 /* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
@@ -937,19 +939,19 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    설정은 띠를 걷고 칸 위에 전면 흐림을 깐다. 흐림은 #options 가 아니라
    #regions 쪽에 둔다 — 덮개에 backdrop-filter 를 걸면 셸·머리글이 필터
    레이어에 올라 글자가 얇아진다. 상태는 흐림·랜드 겹·빠진 넵바로 함께 선다 */
-body.setting #regions > .backdrop-blur{display:none}
+body.setting #regions > .backdrop-blur,body.paging #regions > .backdrop-blur{display:none}
 #regions::after{
   content:""; position:absolute; inset:0; z-index:3; pointer-events:none;
   opacity:0; background:color-mix(in srgb,var(--bg) 34%,transparent);
   transition:opacity var(--si-dur) var(--ease-out);
 }
-body.setting #regions::after,
-body.opts-leaving #regions::after{
+body.setting #regions::after,body.paging #regions::after,
+body.opts-leaving #regions::after,body.pg-leaving #regions::after{
   backdrop-filter:blur(16px);
   -webkit-backdrop-filter:blur(16px);
 }
-body.setting #regions::after{opacity:1}
-body.opts-leaving #regions::after{opacity:0}
+body.setting #regions::after,body.paging #regions::after{opacity:1}
+body.opts-leaving #regions::after,body.pg-leaving #regions::after{opacity:0}
 @media (prefers-reduced-motion:reduce){
   body.setting #regions::after,
   body.opts-leaving #regions::after{backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -962,11 +964,11 @@ body.opts-leaving #regions::after{opacity:0}
   transition:transform var(--si-dur) var(--ease-in-out), opacity var(--si-dur) var(--ease-in-out);
 }
 body.signing #regions .navbar,
-body.setting #regions .navbar{transform:translateY(-130%);opacity:0;pointer-events:none}
+body.setting #regions .navbar,body.paging #regions .navbar{transform:translateY(-130%);opacity:0;pointer-events:none}
 /* 가운데 정렬은 translate 속성(-50%)이 이미 하고 있다. transform 에 -50% 를 또
    적으면 가로로 두 번 밀려 비스듬히 내려간다 — 여기서는 세로만 건드린다 */
 body.signing #regions .nav-bot,
-body.setting #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-events:none}
+body.setting #regions .nav-bot,body.paging #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-events:none}
 /* 칸은 자리를 지킨 채 가라앉는다. 가라앉기를 background 로 하면 구역 호버와 같은
    속성이라 시간을 못 나눈다 — 호버가 0.7초로 늘어진다. 그래서 어둠은 겹으로 깔고
    background 는 호버에 그대로 내준다 */
@@ -981,15 +983,16 @@ body.setting #regions .nav-bot{transform:translateY(160%);opacity:0;pointer-even
 /* 글자는 겹 위에 있어야 따로 빠지는 게 보인다 */
 #courseBtns .grid-btn > span{position:relative;z-index:1;transition:opacity var(--si-dur) var(--ease-out)}
 body.signing #courseBtns,
-body.setting #courseBtns{pointer-events:none}
+body.setting #courseBtns,body.paging #courseBtns{pointer-events:none}
 body.signing #courseBtns .grid-btn::before,
-body.setting #courseBtns .grid-btn::before{opacity:1}
+body.setting #courseBtns .grid-btn::before,body.paging #courseBtns .grid-btn::before{opacity:1}
 body.signing #courseBtns .grid-btn,
-body.setting #courseBtns .grid-btn{box-shadow:none}
+body.setting #courseBtns .grid-btn,body.paging #courseBtns .grid-btn{box-shadow:none}
 body.signing #courseBtns .grid-btn > span,
-body.setting #courseBtns .grid-btn > span{opacity:0}
+body.setting #courseBtns .grid-btn > span,body.paging #courseBtns .grid-btn > span{opacity:0}
 body.signing #regions .course-name,body.signing #regions .screen-head,
-body.setting #regions .course-name,body.setting #regions .screen-head{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
+body.setting #regions .course-name,body.setting #regions .screen-head,
+body.paging #regions .course-name,body.paging #regions .screen-head{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
 
 /* 덮개 자체 — 로고는 아래에서 올라오고 나머지는 뒤따라 뜬다 */
 .si-over{opacity:0;transition:opacity var(--si-dur) var(--ease-out)}
@@ -1241,9 +1244,7 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   --profile-border:color-mix(in srgb,var(--bg) 74%,var(--ink));   /* #c0cbd1 */
   --profile-soft:color-mix(in srgb,var(--bg) 94%,var(--ink));     /* #dde4e8 */
   --profile-space:12px;
-  --avatar-ink:var(--ink);--avatar-teal:var(--block-hi);--avatar-green:#43c591;
-  --avatar-orange:var(--accent);--avatar-red:var(--bad);--avatar-purple:#af52de;--avatar-blue:#3478f6;
-  --avatar-eyes:#fff;
+  --avatar-eyes:#fff;   /* 스위치 손잡이. 캐릭터 색은 이제 엔진 표(assets/bloub)에서 온다 */
 }
 .profile-label{display:block;font-size:11px;font-weight:400;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px}
 .profile-help{font-size:11px;line-height:1.4;color:var(--ink-soft);font-weight:400}
@@ -1253,7 +1254,11 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .profile-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:24px;padding:3px 14px;border:1px solid color-mix(in srgb,var(--card) 80%,transparent);border-radius:999px;background:linear-gradient(135deg,var(--profile-border),var(--profile-panel));box-shadow:inset 0 1px 0 var(--card);color:var(--ink);font-family:inherit;font-size:12px;font-weight:600;line-height:1.4;text-decoration:none;white-space:normal;cursor:pointer}
 .profile-button.destructive{background:color-mix(in srgb,var(--bad) 25%,var(--bg));color:var(--bad)}
 .profile-button:disabled,.profile-switch:disabled{opacity:.55;cursor:not-allowed}
-.profile-button:focus-visible,.profile-switch:focus-visible,.character-choice:focus-visible,.account-page input:focus-visible,.account-page select:focus-visible,.account-page textarea:focus-visible,.account-heading .back:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.profile-button:focus-visible,.profile-switch:focus-visible,.character-choice:focus-visible,.account-heading .back:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+/* 글칸은 주황 테를 두르지 않는다 — 브라우저가 글칸의 클릭을 키보드 초점과 같게
+   보아 마우스로 눌러도 :focus-visible 이 켜진다. 초점 표시를 없애지는 않는다(키보드로만
+   돌 수 있어야 한다) — 테두리와 옅은 띠로 조용히 바꾼다. */
+.account-details :is(input,select,textarea):focus-visible{outline:none;border-color:var(--ink-soft);box-shadow:0 0 0 3px color-mix(in srgb,var(--ink-soft) 22%,transparent)}
 .profile-section{padding:14px 0;border-bottom:1px solid var(--profile-border)}
 .profile-section:first-child{padding-top:0}
 .profile-row{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px;font-size:13px;min-width:0}
@@ -1306,30 +1311,22 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .account-details{flex:1 1 280px;min-width:0}
 .character-preview{position:relative;height:212px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0;overflow:hidden;border:0;background:var(--profile-soft)}
 .character-preview>.profile-help{font-size:14px;color:var(--ink);margin-top:8px}
-.character-preview .profile-button{width:100%;margin-top:12px}
-.character{position:relative;flex:none;width:120px;height:120px;background:var(--character-colour,var(--block-hi));transition:border-radius var(--fast),background var(--fast)}
-.shape-round{border-radius:50%}
-.shape-leaf{border-radius:50% 16% 50% 16%}
-.shape-square{border-radius:16%}
-.shape-arch{border-radius:50% 50% 12% 12%}
-.character span,.character-choice span{position:absolute;display:block;background:var(--avatar-eyes);border-radius:99px;width:10%;height:16%;left:50%;top:24%;transform:rotate(-26deg)}
-.character span+span,.character-choice span+span{left:72%;top:14%;width:8%}
-.expression-smile span{left:26%;top:48%;height:18%;width:6%;transform:rotate(-50deg)}
-.expression-smile span+span{left:58%;top:44%;height:6%;width:22%;transform:rotate(-52deg)}
-.expression-calm span,.expression-calm span+span{height:6%;width:14%;top:46%;left:29%;transform:none}
-.expression-calm span+span{left:58%}
-.expression-wink span{left:32%;top:35%;transform:rotate(-15deg)}
-.expression-wink span+span{left:62%;top:38%;height:6%;transform:none}
+.character-acts{display:flex;flex-wrap:wrap;gap:6px;width:100%;margin-top:12px}
+.character-acts .profile-button{flex:1 1 120px}
+/* 몸도 눈도 엔진(assets/bloub)이 SVG 로 낸다 — 예전의 CSS 동그라미 + 눈 두 개는
+   로그인 화면의 봇과 따로 놀아 걷어냈다. 고른 색은 account.js 가 --buddy-ink 로 넣는다 */
+.character{position:relative;flex:none;width:120px;height:120px;--buddy-paper:var(--profile-soft)}
+.character .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .character-controls{display:flex;flex-direction:column;gap:10px}
 .character-controls fieldset{border:0;min-width:0}
 .character-controls fieldset+fieldset{border-top:1px solid var(--profile-border);padding-top:10px}
 .character-controls legend{float:left;width:100%;padding:0}
 /* 고른 값의 이름은 화면에는 안 보이고 읽기 도구에만 간다 — 고른 칸은 테두리로 보인다 */
 .character-controls legend span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.character-choices{clear:both;display:flex;gap:6px}
-.character-choice{position:relative;width:36px;height:36px;flex:none;border:1px solid var(--profile-border);background:var(--block-hi);cursor:pointer}
-.character-choice[aria-pressed="true"]{border:2px solid var(--ink)}
-#expressionChoices .character-choice{border-radius:50%}
+.character-choices{clear:both;display:flex;flex-wrap:wrap;gap:6px}
+.character-choice{position:relative;width:36px;height:36px;flex:none;border:2px solid transparent;border-radius:9px;background:none;padding:0;cursor:pointer;--buddy-paper:var(--profile-soft)}
+.character-choice .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+.character-choice[aria-pressed="true"]{border-color:var(--ink);background:var(--profile-border)}
 .colour-choices{flex-wrap:wrap}
 .colour-choices .character-choice{width:22px;height:22px;border:0;border-radius:50%}
 .colour-choices .character-choice[aria-pressed="true"]{border:2px solid var(--ink)}
@@ -1342,6 +1339,39 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .account-details label.profile-row>:is(input,select){flex:1}
 #accountSignin[hidden]{display:none}
 #accountSay{min-height:1.5em;margin-top:8px}
+
+/* ── 계정 화면만 한 치수 크게 ──────────────────────────────
+   .profile-* 는 설정의 보안 탭과 함께 쓰는 옷이라 거기 값은 그대로 두고, 이 화면에서만
+   덮어쓴다. 캐릭터를 크게 보자고 보안 탭까지 커질 일은 아니다. */
+.account-page{--profile-space:16px}
+.account-shell{width:min(100% - 56px,820px);padding-block:56px}
+.account-heading{gap:16px;margin-bottom:28px}
+.account-heading h1{font-size:48px}
+.account-heading .back{width:40px;height:48px}
+.account-layout{gap:32px}
+.account-character{flex:0 1 300px;gap:16px}
+.account-details{flex:1 1 340px}
+.character-preview{height:280px}
+.character-preview>.profile-help{font-size:17px;margin-top:10px}
+.character{width:168px;height:168px;transition:transform var(--fast) var(--ease-out)}
+.character-acts{gap:8px;margin-top:16px}
+.account-page .profile-label{font-size:13px;margin-bottom:12px}
+.account-page .profile-help{font-size:13px}
+.account-page .profile-button{min-height:32px;padding:6px 18px;font-size:14px}
+.account-page .profile-section{padding:18px 0}
+.account-page .profile-row{margin-top:14px;font-size:15px}
+.account-page .profile-switch{width:66px;height:30px}
+.account-page .profile-switch::after{width:26px;height:26px}
+.account-page .profile-switch[aria-pressed="true"]::after{transform:translateX(36px)}
+.character-controls{gap:14px}
+.character-controls fieldset+fieldset{padding-top:14px}
+.character-choices{gap:8px}
+.character-choice{width:48px;height:48px;border-radius:12px}
+.colour-choices .character-choice{width:30px;height:30px}
+.account-details input,.account-details textarea,.account-details select{font-size:15px;padding:6px 10px;border-radius:8px}
+.account-details textarea{height:74px;line-height:22px;padding:10px 12px}
+.account-details label.profile-row>span{width:130px}
+#accountSay{font-size:13px}
 @media (pointer:coarse){
   .account-shell{width:min(100% - 40px,637px);padding-block:28px 40px}
   .account-character{flex:1 1 220px}
@@ -1352,4 +1382,219 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   .character-choice{min-width:38px;height:38px}
   .colour-choices .character-choice{min-width:24px;height:24px}
   #optsSecurity:not([hidden]){margin-top:0;overflow:visible}
+}
+
+/* 게임 탭 — 라벨이 길어 한 열로 쌓는다(판 폭은 --opt-col 하나). 조각 단추는
+   피드백 판의 .choice-b 를 그대로 쓴다 */
+#optsGame .opts{grid-template-columns:1fr;gap:10px;font-size:26px}
+#optsGame .opts dt{justify-self:start;text-align:left}
+#optsGame .choice-b{justify-content:flex-start}
+#optsGame .profile-help{margin-top:14px;max-width:34em}
+#unitNow{font-weight:700;color:var(--ink)}
+
+/* ═══ 순위 · 기록 덮개 ═══════════════════════════════════
+   설정 덮개와 같은 결이다(ranked.js). 홈에 거는 모습 — 넵바가 빠지고 칸이 가라앉고
+   서리가 끼는 것 — 은 위의 body.setting 규칙들에 body.paging 을 함께 걸어 둔다 */
+.pg-over{
+  position:fixed; inset:0; z-index:6;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:calc(var(--screen-pad-y) + 72px) var(--screen-pad-x) var(--screen-pad-y);
+  overflow:auto; opacity:0; transition:opacity var(--si-dur) var(--ease-out);
+}
+.pg-over[hidden]{display:none}
+body.paging .pg-over{opacity:1}
+.pg-over.pg-exit{opacity:0;transition:none}
+.pg-over .screen-head{position:absolute;top:var(--screen-pad-y);left:var(--screen-pad-x);margin:0}
+body.paging .pg-shell{animation:opt-rise var(--si-dur) var(--ease-out)}
+body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease-out)}
+.pg-shell{width:min(560px,100%);max-height:100%;display:flex;flex-direction:column;gap:14px}
+/* .profile-button 이 display 를 쥐고 있어 hidden 이 안 먹는다 */
+.pg-shell [hidden]{display:none}
+.pg-shell > .profile-button{align-self:flex-start}
+.pg-tabs{display:flex;gap:6px}
+.pg-tabs [role="tab"]{
+  font:inherit;font-size:18px;font-weight:700;color:var(--ink-soft);
+  background:none;border:2px solid transparent;border-radius:999px;padding:8px 18px;cursor:pointer;
+}
+/* 고른 탭은 채움과 테두리를 함께 — 색만으로 가르지 않는다 */
+.pg-tabs [aria-selected="true"]{color:var(--on-accent);background:var(--accent);border-color:var(--ink)}
+.pg-tabs [role="tab"]:focus-visible,.pg-panel:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.pg-panel{display:flex;flex-direction:column;gap:10px;min-height:0}
+.pg-panel[hidden]{display:none}
+.pg-help{font-size:14px;line-height:1.6;color:var(--ink-soft)}
+.pg-say{min-height:22px;color:var(--ink-soft);font-weight:700}
+.pg-ranks{max-width:none;overflow:auto}
+.pg-ranks li{align-items:center}
+
+/* 티어 이름표. 색 점과 이름을 함께 — 이름만으로도 읽힌다 */
+.tier{
+  display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;
+  color:var(--ink);white-space:nowrap;--tier:var(--ink-soft);
+}
+.tier::before{content:"";width:.8em;height:.8em;border-radius:50%;background:var(--tier);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ink) 25%,transparent)}
+.tier[data-tier="0"]{--tier:#b0764a}
+.tier[data-tier="1"]{--tier:#9aa7ae}
+.tier[data-tier="2"]{--tier:#e0b030}
+.tier[data-tier="3"]{--tier:#3fb6a8}
+.tier[data-tier="4"]{--tier:#5b8def}
+.tier[data-tier="5"]{--tier:#b05cd6}
+
+.rec-card{
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 16px;
+  background:var(--card);padding:18px 20px;border:2px solid var(--grid);
+}
+.rec-card[hidden]{display:none}
+.rec-card .tier{font-size:22px}
+.rec-lp{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.rec-bar{grid-column:1 / -1;width:100%;height:10px;appearance:none;border:0;background:var(--land);border-radius:999px;overflow:hidden}
+.rec-bar::-webkit-progress-bar{background:var(--land)}
+.rec-bar::-webkit-progress-value{background:var(--ranked)}
+.rec-bar::-moz-progress-bar{background:var(--ranked)}
+.rec-card .pg-help{grid-column:1 / -1}
+.rec-list{list-style:none;display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0}
+.rec-list li{
+  display:grid;grid-template-columns:5.5em 1fr auto 3.5em 5em;align-items:baseline;gap:4px 12px;
+  background:var(--card);padding:10px 14px;font-size:15px;border-left:4px solid var(--block);
+}
+/* 경쟁전 줄은 빨간 띠와 '경쟁전' 글자를 함께 단다 */
+.rec-list li[data-mode="ranked"]{border-left-color:var(--ranked)}
+.rec-list .mode{font-size:13px;font-weight:800;color:var(--ink-soft)}
+.rec-list li[data-mode="ranked"] .mode{color:var(--ranked)}
+:root[data-night] .rec-list li[data-mode="ranked"] .mode{color:#ff8a80}
+.rec-list .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-list .pt,.rec-list .acc,.rec-list .lp{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.rec-list .lp[data-sign="up"]::before{content:"▲ ";font-size:.7em}
+.rec-list .lp[data-sign="down"]::before{content:"▼ ";font-size:.7em}
+.rec-list .at{grid-column:2 / -1;font-size:12px;color:var(--ink-soft)}
+@media (pointer:coarse){
+  .pg-over{justify-content:flex-start;padding:84px 20px 40px}
+  .pg-over .screen-head{top:20px;left:20px}
+  .rec-list li{grid-template-columns:1fr auto}
+  .rec-list .where{grid-column:1 / -1}
+}
+
+/* ═══ 경쟁전 ════════════════════════════════════════════
+   로고는 잡을 수 있다 — 호버하면 쥐는 손이 된다(ranked.js) */
+#regions .navbar .nav-logo{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+body.rk-armed #regions .navbar .nav-logo{cursor:grabbing}
+.rk-layer{position:fixed;inset:0;z-index:5;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
+.rk-layer[hidden]{display:none}
+/* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */
+body:is(.signing,.setting,.paging) .rk-layer{opacity:0;visibility:hidden}
+.rk-bot{
+  position:absolute;left:0;top:0;width:56px;height:56px;
+  --buddy-ink:var(--ranked);--buddy-paper:var(--on-accent);
+  pointer-events:auto;cursor:grab;touch-action:none;will-change:transform;
+  transition:transform var(--slow) var(--ease-out),opacity var(--si-dur) var(--ease-out);
+}
+.rk-bot.is-held{cursor:grabbing;transition:none;z-index:1}
+.rk-bot.is-leaving{opacity:0;pointer-events:none}
+.rk-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out)}
+.rk-bot .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+.rk-bot.is-held .rk-bot-motion{transform:scale(1.08) rotate(4deg)}
+.rk-bot.is-leaving .rk-bot-motion{transform:scale(.4)}
+.rk-say{
+  position:absolute;left:0;top:0;width:min(300px,calc(100vw - 32px));
+  background:var(--card);color:var(--ink);border:2px solid var(--ranked);border-radius:14px;
+  padding:12px 14px;font-size:14px;line-height:1.55;box-shadow:var(--shadow-lift);
+  pointer-events:auto;transition:transform var(--slow) var(--ease-out);
+}
+body:has(.rk-bot.is-held) .rk-say{transition:none}
+.rk-say form{margin-top:10px;font-size:12px;color:var(--ink-soft)}
+.rk-say form[hidden]{display:none}
+.rk-say form div{display:flex;gap:6px;margin-top:6px}
+.rk-say input{font:inherit;font-size:15px;flex:1;min-width:0;color:var(--ink);background:var(--bg);border:2px solid var(--grid);padding:6px 10px}
+.rk-say input:focus{outline:0;border-color:var(--ranked)}
+.rk-say button{font:inherit;font-weight:700;color:#fff;background:var(--ranked);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.rk-say button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* 봇을 놓은 칸은 가운데서부터 빨갛게 번진다. 두꺼운 먹 테두리를 함께 둘러 색만으로
+   가르지 않는다(스크린리더에는 aria-description '경쟁전'). 끌고 지나가는 칸은 테두리만 */
+#courseBtns .grid-btn.rk-hot{box-shadow:inset 0 0 0 5px var(--ranked)}
+#courseBtns .grid-btn.is-ranked,
+#courseBtns .grid-btn.is-ranked:hover{
+  color:#fff;
+  background:radial-gradient(circle closest-side,var(--ranked) 98%,transparent 100%) center / 150% 150% no-repeat,var(--block);
+  box-shadow:inset 0 0 0 5px var(--ink);
+  animation:rk-dye var(--si-dur) var(--ease-out);
+}
+@keyframes rk-dye{from{background-size:0 0,auto}}
+
+/* 아래 줄의 시작하기도 빨개지고 '경쟁전 시작'으로 바뀐다(ranked.js 의 paintPlay) */
+.nav-shape{transition:background-color var(--si-dur) var(--ease-out)}
+body.rk-ready #navBotShape{background:var(--ranked)}
+body.rk-ready #navPlay.is-on{color:#fff}
+
+/* 경쟁전 판. 게이지가 빨갛고 HUD 에 '경쟁전' 글자가 붙는다 */
+#play.is-ranked .gauge i{background:var(--ranked)}
+.rk-tag{font-size:14px;font-weight:800;color:#fff;background:var(--ranked);padding:4px 10px;border-radius:999px}
+.rk-tag[hidden]{display:none}
+.rk-line.bad{color:var(--bad)}
+
+/* ── 가입 안내(welcome/) ────────────────────────────────────
+   한 번에 한 가지만 묻는 화면. .profile-* 옷을 그대로 입되 글자만 키운다 —
+   물음이 화면의 주인이라 나머지는 물러선다.
+   고른 것은 색만으로 나누지 않는다: 테두리가 굵어지고 배경이 바뀌고
+   aria-pressed 가 같이 선다. */
+.intro-page{--profile-space:18px;min-height:100svh;display:flex;flex-direction:column}
+.intro-rail{position:fixed;top:0;left:0;right:0;height:3px;background:var(--profile-border);z-index:2}
+.intro-rail span{display:block;height:100%;width:0;background:var(--block-hi);transition:width var(--slow) var(--ease-out)}
+.intro-shell{width:min(100% - 48px,640px);margin:auto;padding-block:56px;display:flex;flex-direction:column;gap:18px}
+.intro-count{font-size:12px;color:var(--ink-soft);letter-spacing:.06em}
+.intro-card{display:flex;flex-direction:column;gap:12px}
+.intro-kicker{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);min-height:1em}
+.intro-ask{font-size:30px;line-height:1.25;letter-spacing:-.6px;font-weight:800;margin:0}
+.intro-note,.intro-lede{font-size:14px;line-height:1.6;color:var(--ink-soft)}
+.intro-lede{font-size:16px;color:var(--ink)}
+.intro-say{min-height:1.5em;font-size:13px;color:var(--ink-soft)}
+.intro-say.bad{color:var(--bad)}
+.intro-body{margin-top:4px}
+
+.intro-picks{display:flex;flex-direction:column;gap:8px}
+.intro-yesno{flex-direction:row;flex-wrap:wrap}
+.intro-yesno .intro-pick{flex:1 1 140px}
+.intro-pick{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:2px solid var(--profile-border);border-radius:10px;background:var(--profile-soft);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.intro-pick kbd{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--profile-border);font:inherit;font-size:12px;font-weight:700}
+.intro-pick[aria-pressed="true"]{border-color:var(--ink);background:var(--profile-border)}
+.intro-pick[aria-pressed="true"] kbd{background:var(--ink);color:var(--bg)}
+.intro-pick[aria-pressed="true"]::after{content:'✓';margin-left:auto;font-weight:700}
+
+.intro-scale{display:flex;flex-wrap:wrap;gap:6px}
+.intro-score{flex:1 1 42px;min-width:42px;min-height:44px;border:2px solid var(--profile-border);border-radius:8px;background:var(--profile-soft);color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.intro-score[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.intro-ends{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--ink-soft)}
+
+.intro-field{display:flex;align-items:center;gap:2px;border:2px solid var(--profile-border);border-radius:10px;background:var(--card);padding:6px 12px}
+.intro-field:focus-within{border-color:var(--ink)}
+.intro-prefix{font-size:20px;color:var(--ink-soft)}
+.intro-field input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;font-size:20px;padding:6px 2px}
+.intro-field input:focus{outline:none}
+
+.intro-stage{display:flex;align-items:center;justify-content:center;height:180px;border-radius:12px;background:var(--profile-soft);margin-bottom:14px}
+.intro-stage .character{width:140px;height:140px}
+.intro-controls{gap:12px}
+.intro-controls fieldset+fieldset{border-top:1px solid var(--profile-border);padding-top:12px}
+
+.intro-recap{display:grid;grid-template-columns:auto 1fr;gap:8px 20px;font-size:15px;align-items:baseline}
+.intro-recap dt{color:var(--ink-soft);font-size:13px}
+.intro-recap dd{margin:0}
+
+.intro-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.intro-page .profile-button{min-height:38px;padding:8px 22px;font-size:15px}
+.intro-next{margin-right:auto;order:2}
+#introBack{order:1}
+.intro-skip{order:3;border:0;background:none;color:var(--ink-soft);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.intro-skip:focus-visible,.intro-score:focus-visible,.intro-pick:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.intro-help{font-size:12px;color:var(--ink-soft)}
+.intro-help kbd{border:1px solid var(--profile-border);border-radius:4px;padding:0 5px;font:inherit;font-size:11px}
+/* 이 화면 안에서만 — .intro-acts 의 flex 가 hidden 을 이기지 못하게 */
+.intro-page [hidden]{display:none!important}
+
+@media (pointer:coarse){
+  /* 손가락에는 숫자 키가 없다 — 안내와 번호 칸을 거둔다 */
+  .intro-help,.intro-pick kbd{display:none}
+  .intro-ask{font-size:26px}
+}
+@media (prefers-reduced-motion:reduce){
+  .intro-rail span{transition:none}
 }

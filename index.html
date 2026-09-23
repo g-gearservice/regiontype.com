@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=1.54">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=1.54">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=1.54">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=2.85">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=2.85">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=2.85">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=2.69">
+<link rel="stylesheet" href="style.css?v=2.85">
 </head>
 <body>
 
@@ -71,13 +71,14 @@
     <span class="nav-shape" id="navShape" aria-hidden="true"></span>
     <span class="nav-side nav-start">
       <a class="nav-item" id="aboutLink" href="about/" data-i18n="about">소개</a>
-      <a class="nav-item" href="policy/" data-i18n="policyLink">개인정보</a>
+      <a class="nav-item" href="#records" data-i18n="records">기록</a>
     </span>
-    <a class="nav-logo logo" href="/" aria-label="regiontype">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
+    <!-- 로고를 잡고 아래로 끌면 빨간 Grok 봇이 나와 경쟁전을 연다(ranked.js).
+         키보드는 로고에서 ↓ -->
+    <a class="nav-logo logo" href="/" draggable="false" aria-label="regiontype" data-i18n-aria="logoRanked">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
     <span class="nav-side nav-end">
+      <a class="nav-item" href="#ranking" data-i18n="ranking">순위</a>
       <a class="nav-item" href="https://github.com/g-gearservice/regiontype.com/discussions" target="_blank" rel="noopener noreferrer" data-i18n="community">커뮤니티</a>
-      <!-- 피드백은 넵바에 남겨야 한다 — 방침·약관이 이 문을 유일한 연락 통로로 적고 있다 -->
-      <button type="button" class="nav-item" id="fbOpen"><span data-i18n="feedback">피드백</span></button>
       <a class="nav-item title-alt" href="mimi/">Mimi</a>
     </span>
   </nav>
@@ -99,6 +100,19 @@
   <!-- 코스마다 격자 한 칸 버튼. 칸은 app.js 의 renderCourses 가 채운다 -->
   <div id="courseBtns" role="group" data-i18n-aria="pickCourse" aria-label="코스 고르기"></div>
   <p class="course-name" id="courseName" aria-live="polite"></p>
+  <!-- 경쟁전 봇과 말풍선. 홈이 보일 때만 산다 — #regions 안에 둬서 플레이 화면에선 저절로 빠진다 -->
+  <div class="rk-layer" id="rkLayer" hidden>
+    <div class="rk-say" id="rkSay" role="status" aria-live="polite">
+      <p id="rkSayText"></p>
+      <form id="rkName" hidden>
+        <label for="rkNameIn" data-i18n="nameLabel">누구나 보는 순위표에 이 이름이 올라갑니다</label>
+        <div>
+          <input id="rkNameIn" maxlength="12" autocomplete="off" spellcheck="false" data-i18n-ph="namePh" placeholder="이름">
+          <button type="submit" data-i18n="rankedStart">경쟁전 시작</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </section>
 
 <!-- 플레이 -->
@@ -108,8 +122,10 @@
     <div class="gauge"><i id="gaugeFill"></i></div>
     <div class="stat time" id="statTime"><b>0:00</b></div>
     <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
-    <div class="stat"><b id="statScore">0</b><span data-i18n="scoreUnit">점</span></div>
+    <!-- 점수 대신 타자 속도를 보인다. 단위 글자는 설정의 게임 탭이 정한다(app.js 의 unitLabel) -->
+    <div class="stat"><b id="statSpeed">0</b><span class="unit">타/분</span></div>
     <div class="stat combo" id="statCombo"></div>
+    <div class="stat rk-tag" id="rkTag" data-i18n="rankedTab" hidden>경쟁전</div>
   </div>
   <div class="stage">
     <svg id="map" class="rt-map" role="img" data-i18n-aria="mapLabel" aria-label="지역 지도"></svg>
@@ -140,10 +156,11 @@
   <div class="result-wrap">
     <canvas id="card" width="1600" height="900"></canvas>
     <div class="scores">
-      <p><b id="rScore">0</b><span data-i18n="scoreUnit">점</span></p>
+      <p><b id="rScore">0</b><span class="unit">타/분</span></p>
       <p><b id="rCount">0</b><span data-i18n="visited">들른 곳</span></p>
       <p><b id="rAcc">0%</b><span data-i18n="accuracy">정확도</span></p>
       <p class="best" id="rBest"></p>
+      <p class="best rk-line" id="rLp" aria-live="polite"></p>
       <div class="menu">
         <button id="again" data-i18n="again">다시 하기</button>
         <button id="save" data-i18n="save">이미지 저장</button>
@@ -221,9 +238,11 @@
     <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
       <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-dev-only data-status="development"><span data-i18n="language">언어</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
       <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-dev-only data-status="development"><span data-i18n="region">지역</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabGame" aria-controls="optsGame" aria-selected="false" tabindex="-1" data-i18n="game">게임</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabSecurity" aria-controls="optsSecurity" aria-selected="false" tabindex="-1" data-i18n="security">보안</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabPolicy" aria-controls="optsPolicy" aria-selected="false" tabindex="-1" data-i18n="policyLink">정책</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
     </nav>
     <div class="opts-panels">
@@ -235,6 +254,21 @@
         <div id="optRegion" class="opts-region-pick" role="radiogroup"
              data-i18n-aria="region" aria-label="지역"></div>
         <p class="opts-region-pending" data-i18n="regionPending">지금은 서울만 지원합니다. 다른 지역은 개발 중입니다.</p>
+      </div>
+      <!-- 게임 — 타자 속도 단위. 저장되는 값은 늘 CPM 이고 여기서 고르는 건 보이는 자다 -->
+      <div id="optsGame" class="opts-panel" role="tabpanel" aria-labelledby="optsTabGame" tabindex="0" hidden>
+        <dl class="opts">
+          <dt data-i18n="speedUnit">타자 속도 단위</dt>
+          <dd>
+            <div class="choice-b" id="optUnit" role="group" data-i18n-aria="speedUnit" aria-label="타자 속도 단위">
+              <button type="button" data-v="auto" aria-pressed="true" data-i18n="unitAuto">자동</button>
+              <button type="button" data-v="cpm" aria-pressed="false">CPM</button>
+              <button type="button" data-v="wpm" aria-pressed="false">WPM</button>
+            </div>
+          </dd>
+        </dl>
+        <p class="profile-help" id="unitNow"></p>
+        <p class="profile-help" data-i18n="unitHelp">순위표는 늘 같은 값으로 저장하고 보일 때만 이 단위로 바꿉니다 — 단위가 다른 사람끼리도 같은 표에 섭니다.</p>
       </div>
       <div id="optsVideo" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVideo" tabindex="0" hidden>
         <dl class="opts">
@@ -293,6 +327,15 @@
         </div>
         <p class="si-say" id="optSay" role="status" aria-live="polite"></p>
       </div>
+      <!-- 정책 문서는 따로 선 페이지다. 여기서는 그리로 가는 문만 연다 -->
+      <div id="optsPolicy" class="opts-panel" role="tabpanel" aria-labelledby="optsTabPolicy" tabindex="0" hidden>
+        <div class="profile-actions">
+          <a class="profile-button" href="policy/" data-i18n="privacyLink">개인정보처리방침</a>
+          <a class="profile-button" href="terms/" data-i18n="termsLink">이용약관</a>
+          <button type="button" class="profile-button" data-fb-open data-i18n="feedback">피드백</button>
+        </div>
+        <p class="profile-help" data-i18n="policyHelp">새 창이 아니라 이 자리를 떠나 문서로 갑니다.</p>
+      </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
         <p class="ver">regiontype v0.6.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
       </div>
@@ -304,6 +347,48 @@
   <span class="backdrop-blur bot" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </span>
+</section>
+
+<!-- 순위·기록 — 설정처럼 홈 위에 뜨는 덮개다(ranked.js). 주소는 #ranking · #records -->
+<section id="ranking" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="rankingHead" hidden>
+  <div class="screen-head">
+    <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <h2 class="head" id="rankingHead" data-i18n="ranking">순위</h2>
+  </div>
+  <div class="pg-shell">
+    <div class="pg-tabs" role="tablist" data-i18n-aria="ranking" aria-label="순위">
+      <button type="button" role="tab" id="rkTabRanked" aria-controls="rkRanked" aria-selected="true" data-i18n="rankedTab">경쟁전</button>
+      <button type="button" role="tab" id="rkTabNormal" aria-controls="rkNormal" aria-selected="false" tabindex="-1" data-i18n="normalTab">일반전</button>
+    </div>
+    <div id="rkRanked" class="pg-panel" role="tabpanel" aria-labelledby="rkTabRanked" tabindex="0">
+      <p class="pg-help" data-i18n="rkHow">넵바의 로고를 잡고 아래로 끌면 경쟁전이 열립니다.</p>
+      <ol class="ranks pg-ranks" id="ladderList"></ol>
+      <p class="pg-say" id="ladderSay" role="status"></p>
+    </div>
+    <div id="rkNormal" class="pg-panel" role="tabpanel" aria-labelledby="rkTabNormal" tabindex="0" hidden>
+      <p class="pg-help" id="normalWhere"></p>
+      <ol class="ranks pg-ranks" id="normalList"></ol>
+      <p class="pg-say" id="normalSay" role="status"></p>
+    </div>
+  </div>
+</section>
+
+<section id="records" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="recordsHead" hidden>
+  <div class="screen-head">
+    <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <h2 class="head" id="recordsHead" data-i18n="records">기록</h2>
+  </div>
+  <div class="pg-shell">
+    <div class="rec-card" id="recCard" hidden>
+      <span class="tier" id="recTier"></span>
+      <b class="rec-lp" id="recLp"></b>
+      <progress class="rec-bar" id="recBar" max="100" value="0" data-i18n-aria="nextTier" aria-label="다음 티어까지"></progress>
+      <p class="pg-help" id="recWl"></p>
+    </div>
+    <ol class="rec-list" id="recList"></ol>
+    <p class="pg-say" id="recSay" role="status"></p>
+    <a class="profile-button" id="recIn" href="signin/" data-i18n="signinBtn" hidden>로그인</a>
+  </div>
 </section>
 
 <dialog id="codes" aria-labelledby="codesTitle">
@@ -351,8 +436,9 @@
   </form>
 </dialog>
 
-<script src="app.js?v=2.69"></script>
-<script src="auth.js?v=2.69"></script>
-<script src="settings/settings.js?v=2.69"></script>
+<script src="app.js?v=2.85"></script>
+<script src="auth.js?v=2.85"></script>
+<script src="settings/settings.js?v=2.85"></script>
+<script src="ranked.js?v=2.85"></script>
 </body>
 </html>

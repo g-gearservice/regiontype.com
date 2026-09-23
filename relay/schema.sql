@@ -4,19 +4,30 @@
 -- 줄의 주인은 이름이 아니라 who 다 — 브라우저가 한 번 만들어 두는 난수.
 -- 이름으로 주인을 삼으면 남의 이름에 높은 점수를 박아 그 사람이 영영
 -- 자기 기록을 못 올리게 만들 수 있다. 이름은 화면에 거는 표시일 뿐이다.
+--
+-- ★ 순위는 점수가 아니라 타자 속도(cpm, 분당 글자 수)로 세운다. 이미 board 표가
+-- 있는 DB 에 이 파일을 다시 적용하는 경우 `create table if not exists` 는 아무것도
+-- 하지 않는다 — cpm 칸이 안 붙고, 그 순간부터 /score 의 insert 가 "no column named
+-- cpm" 으로 터진다. board 에는 지킬 기록이 있으니 표를 지우지 말고 칸만 더한다
+-- (사람이 직접 실행한다. 옛 줄의 cpm 은 0 이라 새 기록이 올라오면 갱신된다):
+--
+--   wrangler d1 execute rt-board --remote --command "alter table board add column cpm integer not null default 0"
+--   wrangler d1 execute rt-board --remote --command "drop index if exists board_top"
+--   wrangler d1 execute rt-board --remote --file schema.sql
 create table if not exists board (
   slug  text    not null,
   secs  integer not null,
   who   text    not null,
   name  text    not null,
+  cpm   integer not null default 0,   -- 분당 글자 수. 화면의 WPM 은 이걸 다섯으로 나눈 것
   score integer not null,
   hits  integer not null,
   acc   integer not null,
   at    integer not null,
   primary key (slug, secs, who)
 );
--- 판마다 상위 몇 줄만 읽는다. 동점이면 먼저 올린 쪽이 앞이다.
-create index if not exists board_top on board (slug, secs, score desc, at asc);
+-- 판마다 상위 몇 줄만 읽는다. 같은 속도면 먼저 올린 쪽이 앞이다.
+create index if not exists board_top on board (slug, secs, cpm desc, at asc);
 
 -- ── 로그인 ────────────────────────────────────────────────
 -- 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
@@ -116,4 +127,98 @@ create table if not exists pending (
                                          -- 태운다 — 패스키를 취소하거나 틀려도
                                          -- 복구 코드로 갈아탈 수 있어야 해서, 그
                                          -- 사이엔 이 줄을 지우지 않는다
+);
+
+-- ── 경쟁전 · 전적 ──────────────────────────────────────────
+-- 경쟁전 사다리. 한 사람이 한 줄이고 lp 는 0 에서 시작해 판마다 오르내린다.
+-- 티어는 따로 적지 않는다 — lp 100 마다 한 단계(worker.mjs 의 STEP)라 읽는 쪽이 셈한다.
+-- name 은 순위표(board)와 같은 규칙으로 다듬은 공개 표시다.
+create table if not exists ladder (
+  who   text primary key,
+  name  text    not null,
+  lp    integer not null default 0,
+  games integer not null default 0,
+  wins  integer not null default 0,
+  at    integer not null
+);
+create index if not exists ladder_top on ladder (lp desc, at asc);
+
+-- 판 기록(전적). 경쟁전·일반전 모두. 사람마다 최근 50판만 남긴다.
+-- delta 는 경쟁전에서 오르내린 lp 다(일반전은 null). 탈주는 score 0 · delta 음수 줄이다.
+create table if not exists played (
+  who   text    not null,
+  mode  text    not null,         -- 'ranked' | 'normal'
+  slug  text    not null,
+  secs  integer not null,
+  cpm   integer not null default 0,   -- 그 판의 타자 속도. 기록 페이지가 이걸 보인다
+  score integer not null,
+  hits  integer not null,
+  acc   integer not null,
+  delta integer,
+  at    integer not null
+);
+create index if not exists played_who on played (who, at desc);
+
+-- 진행 중인 경쟁전. 한 사람 한 장. 끝내지 않고 새로 시작하면 그 판은 탈주로 친다 —
+-- 지는 판을 창을 닫아 지우는 길을 막는다.
+create table if not exists ticket (
+  who  text primary key,
+  id   text    not null,
+  slug text    not null,
+  at   integer not null
+);
+
+-- ── 프로필 ────────────────────────────────────────────────
+-- 로그인한 사람을 따라다니는 값. 기기를 바꿔도 같은 닉네임·소개·캐릭터가 온다.
+-- (브라우저의 localStorage 는 그 브라우저에서만 산다 — 여기가 원본이다.)
+-- name 은 순위표(board)·사다리(ladder)에 걸리는 것과 같은 표시라, 고치면
+-- worker.mjs 의 authProfile 이 그 두 표의 name 도 같이 고친다.
+-- face 는 캐릭터 세 값을 'shape,expression,colour' 로 이어 적은 것이다 —
+-- 어떤 말이 있는지는 화면(account.js)이 알고, 서버는 모양만 본다.
+--
+-- handle 은 사람이 고르는 공개 아이디다(a-z 0-9 _ , 3‥16자). name 과 달리
+-- 겹치지 않는다 — 아래 부분 인덱스가 막는다. 아직 안 정한 사람은 빈 값이고,
+-- 빈 값은 여럿일 수 있어야 하므로 인덱스에서 뺀다(sqlite 의 unique 는 빈
+-- 문자열을 서로 같다고 본다 — null 과 다르다).
+-- botname 은 그록 봇 캐릭터의 이름이고, push·shut 은 가입 안내(welcome/)에서
+-- 고르는 두 값이다 — 새소식 알림을 받을지, 계정을 비공개로 둘지.
+-- ★ who 를 가진 표를 새로 만들면 worker.mjs 의 ERASE 에도 더한다. 빠뜨리면 계정을
+-- 지워도 그 줄만 남아 '지웠다'는 말이 거짓이 된다 — relay/test.mjs 가 이 파일을 읽어
+-- 대조하므로 잊으면 검사가 먼저 깨진다.
+create table if not exists profile (
+  who  text primary key,
+  name text    not null default '',
+  bio  text    not null default '',   -- 한 줄 소개. 60자
+  face text    not null default '',
+  lang text    not null default 'auto',
+  at   integer not null,
+  handle  text    not null default '',   -- 공개 아이디. a-z 0-9 _ , 3‥16자
+  botname text    not null default '',   -- 캐릭터 이름. 12자
+  push    integer not null default 0,    -- 새소식 알림을 받겠다고 했는지
+  shut    integer not null default 0     -- 계정 비공개
+);
+
+-- ★ 이미 profile 표가 있는 DB 에 이 파일을 다시 적용하는 경우:
+-- `create table if not exists` 는 아무것도 하지 않는다 — 위의 네 칸이 안 붙고,
+-- 그 순간부터 /auth/profile 의 insert 가 "no column named handle" 로 터진다.
+-- profile 에는 지킬 값이 있으니 표를 지우지 말고 칸만 더한다(사람이 직접 실행한다):
+--
+--   wrangler d1 execute rt-board --remote --command "alter table profile add column handle text not null default ''"
+--   wrangler d1 execute rt-board --remote --command "alter table profile add column botname text not null default ''"
+--   wrangler d1 execute rt-board --remote --command "alter table profile add column push integer not null default 0"
+--   wrangler d1 execute rt-board --remote --command "alter table profile add column shut integer not null default 0"
+--   wrangler d1 execute rt-board --remote --file schema.sql
+create unique index if not exists profile_handle on profile (handle) where handle <> '';
+
+-- ── 처음 온 사람 ───────────────────────────────────────────
+-- 가입 직후 한 번 묻는 설문(welcome/). 한 사람 한 줄이고, 이 줄이 있다는 것이
+-- 곧 "가입 안내를 마쳤다" 는 표시다 — /auth/me 의 intro 가 그것을 알린다.
+-- platform·medium 은 화면(welcome/welcome.js)이 쥔 목록의 slug 고 nps 는 0‥10 이다.
+-- 고른 것 말고는 아무것도 담지 않는다 — 자유 입력 칸이 없다.
+create table if not exists intro (
+  who      text primary key,
+  platform text    not null default '',
+  medium   text    not null default '',
+  nps      integer,
+  at       integer not null
 );

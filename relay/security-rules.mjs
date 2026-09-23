@@ -69,7 +69,9 @@ const siteRules = key => [
     test: p => h(p, 'referrer-policy') === 'strict-origin-when-cross-origin' ? ''
              : `다른 값이다: ${h(p, 'referrer-policy') || '없음'}` },
   { id: `${key}-permissions`, need: `probe:${key}`, sev: 'low',
-    want: '카메라·마이크·위치·결제·USB 를 아무에게도 주지 않는다',
+    /* /account/* 한 곳만 _headers 에서 camera=(self) 로 연다 — 계정 화면의 '카메라로
+       따라 하기'가 쓴다. 여기서 보는 페이지들은 그 예외 밖이라 문턱은 그대로다. */
+    want: '카메라·마이크·위치·결제·USB 를 아무에게도 주지 않는다(계정 화면만 예외)',
     test: p => {
       const v = h(p, 'permissions-policy');
       if (!v) return 'Permissions-Policy 가 없다';
@@ -152,9 +154,9 @@ export const RULES = [
        env.RL_CB 없는 바인딩을 만나 pass() 에서 null 을 받아 '설정 미비'로
        막힌다(악용이 아니라 로그인이 전부 조용히 실패한다). 그래서 나머지
        셋과 같은 sev(high)로 같이 본다. */
-    want: '네 창(RL_FB·RL_SC·RL_AU·RL_CB)이 다 붙어 있다',
+    want: '다섯 창(RL_FB·RL_SC·RL_AU·RL_CB·RL_RK)이 다 붙어 있다',
     test: src => {
-      const gone = missing(src, 'RL_FB', 'RL_SC', 'RL_AU', 'RL_CB');
+      const gone = missing(src, 'RL_FB', 'RL_SC', 'RL_AU', 'RL_CB', 'RL_RK');
       return gone.length ? `빠진 레이트리밋 바인딩: ${gone.join(', ')}` : '';
     } },
   { id: 'assets-exclude', need: 'file:.assetsignore', sev: 'high',

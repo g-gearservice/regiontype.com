@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>내 계정 — regiontype</title>
-<link rel="stylesheet" href="../style.css?v=2.69">
+<link rel="stylesheet" href="../style.css?v=2.85">
 <script>try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');document.documentElement.toggleAttribute('data-night',!!o.night);document.documentElement.dataset.motion=o.motion===false?'off':'on'}catch{}</script>
-<script src="account.js?v=2.69" defer></script>
+<script src="account.js?v=2.85" defer></script>
 </head>
 <body class="account-page">
 <div class="account-backdrop" aria-hidden="true">
@@ -41,29 +41,26 @@
   <header class="account-heading"><a class="back" href="../" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></a><h1>내 계정</h1></header>
   <div class="account-layout">
     <section class="account-character" aria-label="내 캐릭터">
-      <div class="profile-card character-preview"><div id="character" class="character shape-round expression-curious" role="img" aria-label="동그라미 캐릭터"><span></span><span></span></div><p class="profile-help">My Grok Character</p><button type="button" class="profile-button" id="characterSave">캐릭터 저장</button></div>
+      <div class="profile-card character-preview"><div id="character" class="character" role="img" aria-label="내 캐릭터"></div><p class="profile-help">My Grok Character</p><div class="character-acts"><button type="button" class="profile-button" id="characterCam" aria-pressed="false">카메라로 따라 하기</button></div></div>
       <div class="profile-card character-controls">
-        <fieldset><legend class="profile-label">Shape <span id="shapeLabel">동그라미</span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
-        <fieldset><legend class="profile-label">Expression <span id="expressionLabel">호기심</span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
-        <fieldset><legend class="profile-label">Colour <span id="colourLabel">청록</span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
+        <fieldset><legend class="profile-label">Shape <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
+        <fieldset><legend class="profile-label">Expression <span id="expressionLabel"></span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
+        <fieldset><legend class="profile-label">Colour <span id="colourLabel"></span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
       </div>
-      <p class="profile-help">캐릭터는 이 브라우저에 저장됩니다.</p>
+      <p class="profile-help" id="camSay" role="status" aria-live="polite"></p>
     </section>
     <div class="account-details">
-      <section class="profile-section account-bio"><label for="accountBio" class="profile-label">소개</label><textarea id="accountBio" maxlength="160" rows="2" placeholder="소개 기능은 준비 중입니다." disabled></textarea><p class="profile-help">소개와 공개 프로필은 아직 지원하지 않습니다.</p></section>
+      <section class="profile-section account-bio"><label for="accountBio" class="profile-label">소개</label><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><p class="profile-help"><span id="bioCount">0/60</span></p></section>
       <section class="profile-section"><h2 class="profile-label">계정</h2>
         <label class="profile-row" for="accountName"><span>닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" placeholder="닉네임 (최대 12자)"></label>
-        <p class="profile-help">이 브라우저에서 다음 순위 등록에 사용할 이름입니다.</p>
-        <label class="profile-row" for="accountId"><span>아이디</span><input id="accountId" value="별도 아이디를 제공하지 않습니다" disabled></label>
+        <label class="profile-row" for="accountId"><span>아이디</span><input id="accountId" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="영문 소문자·숫자·밑줄 3~16자"></label>
         <label class="profile-row" for="accountLanguage"><span>언어</span><select id="accountLanguage" aria-label="언어"><option value="auto">자동</option><option value="ko">한국어</option></select></label>
       </section>
       <section class="profile-section"><h2 class="profile-label">설정</h2>
-        <div class="profile-row"><div><strong>알림</strong><p class="profile-help">새 소식 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" aria-label="알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
-        <div class="profile-row"><div><strong>어두운 테마</strong><p class="profile-help">밤에 눈을 편안하게, 어둡게 쓰세요.</p></div><button type="button" class="profile-switch" id="accountNight" aria-label="어두운 테마" aria-pressed="false"></button></div>
-        <div class="profile-row"><div><strong>계정 공개</strong><p class="profile-help">공개 프로필은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" aria-label="계정 공개 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
+        <div class="profile-row"><div><strong>새소식 알림</strong><p class="profile-help">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><button type="button" class="profile-switch" id="accountPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
+        <div class="profile-row"><div><strong>계정 비공개</strong><p class="profile-help">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><button type="button" class="profile-switch" id="accountShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
       </section>
-      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout">로그아웃</button><button type="button" class="profile-button destructive" disabled aria-describedby="deleteHelp">계정 삭제</button><a class="profile-button" href="../settings/#security">보안 설정</a></div>
-      <p class="profile-help" id="deleteHelp">계정 삭제는 아직 지원하지 않습니다.</p>
+      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase">계정 삭제</button><a class="profile-button" href="../settings/#security">보안 설정</a></div>
       <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
       <p id="accountSession" class="profile-help" role="status"></p>
       <a id="accountSignin" class="profile-button" href="../signin/" hidden>로그인</a>
