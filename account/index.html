@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>내 계정 — regiontype</title>
+<link rel="stylesheet" href="../style.css?v=2.69">
+<script>try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');document.documentElement.toggleAttribute('data-night',!!o.night);document.documentElement.dataset.motion=o.motion===false?'off':'on'}catch{}</script>
+<script src="account.js?v=2.69" defer></script>
+</head>
+<body class="account-page">
+<div class="account-backdrop" aria-hidden="true">
+  <span style="grid-column:6;grid-row:1">도봉구</span>
+  <span style="grid-column:3;grid-row:2">은평구</span>
+  <span style="grid-column:5;grid-row:2">강북구</span>
+  <span style="grid-column:6;grid-row:2">노원구</span>
+  <span style="grid-column:4;grid-row:3">종로구</span>
+  <span style="grid-column:5;grid-row:3">성북구</span>
+  <span style="grid-column:7;grid-row:3">중랑구</span>
+  <span style="grid-column:1;grid-row:4">강서구</span>
+  <span style="grid-column:3;grid-row:4">마포구</span>
+  <span style="grid-column:4;grid-row:4">서대문구</span>
+  <span style="grid-column:5;grid-row:4">중구</span>
+  <span style="grid-column:6;grid-row:4">동대문구</span>
+  <span style="grid-column:8;grid-row:4">강동구</span>
+  <span style="grid-column:2;grid-row:5">양천구</span>
+  <span style="grid-column:3;grid-row:5">영등포구</span>
+  <span style="grid-column:4;grid-row:5">용산구</span>
+  <span style="grid-column:6;grid-row:5">성동구</span>
+  <span style="grid-column:7;grid-row:5">광진구</span>
+  <span style="grid-column:2;grid-row:6">구로구</span>
+  <span style="grid-column:4;grid-row:6">동작구</span>
+  <span style="grid-column:6;grid-row:6">강남구</span>
+  <span style="grid-column:7;grid-row:6">송파구</span>
+  <span style="grid-column:3;grid-row:7">금천구</span>
+  <span style="grid-column:4;grid-row:7">관악구</span>
+  <span style="grid-column:5;grid-row:7">서초구</span>
+</div>
+<main class="account-shell">
+  <header class="account-heading"><a class="back" href="../" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></a><h1>내 계정</h1></header>
+  <div class="account-layout">
+    <section class="account-character" aria-label="내 캐릭터">
+      <div class="profile-card character-preview"><div id="character" class="character shape-round expression-curious" role="img" aria-label="동그라미 캐릭터"><span></span><span></span></div><p class="profile-help">My Grok Character</p><button type="button" class="profile-button" id="characterSave">캐릭터 저장</button></div>
+      <div class="profile-card character-controls">
+        <fieldset><legend class="profile-label">Shape <span id="shapeLabel">동그라미</span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
+        <fieldset><legend class="profile-label">Expression <span id="expressionLabel">호기심</span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
+        <fieldset><legend class="profile-label">Colour <span id="colourLabel">청록</span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
+      </div>
+      <p class="profile-help">캐릭터는 이 브라우저에 저장됩니다.</p>
+    </section>
+    <div class="account-details">
+      <section class="profile-section account-bio"><label for="accountBio" class="profile-label">소개</label><textarea id="accountBio" maxlength="160" rows="2" placeholder="소개 기능은 준비 중입니다." disabled></textarea><p class="profile-help">소개와 공개 프로필은 아직 지원하지 않습니다.</p></section>
+      <section class="profile-section"><h2 class="profile-label">계정</h2>
+        <label class="profile-row" for="accountName"><span>닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" placeholder="닉네임 (최대 12자)"></label>
+        <p class="profile-help">이 브라우저에서 다음 순위 등록에 사용할 이름입니다.</p>
+        <label class="profile-row" for="accountId"><span>아이디</span><input id="accountId" value="별도 아이디를 제공하지 않습니다" disabled></label>
+        <label class="profile-row" for="accountLanguage"><span>언어</span><select id="accountLanguage" aria-label="언어"><option value="auto">자동</option><option value="ko">한국어</option></select></label>
+      </section>
+      <section class="profile-section"><h2 class="profile-label">설정</h2>
+        <div class="profile-row"><div><strong>알림</strong><p class="profile-help">새 소식 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" aria-label="알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
+        <div class="profile-row"><div><strong>어두운 테마</strong><p class="profile-help">밤에 눈을 편안하게, 어둡게 쓰세요.</p></div><button type="button" class="profile-switch" id="accountNight" aria-label="어두운 테마" aria-pressed="false"></button></div>
+        <div class="profile-row"><div><strong>계정 공개</strong><p class="profile-help">공개 프로필은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" aria-label="계정 공개 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
+      </section>
+      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout">로그아웃</button><button type="button" class="profile-button destructive" disabled aria-describedby="deleteHelp">계정 삭제</button><a class="profile-button" href="../settings/#security">보안 설정</a></div>
+      <p class="profile-help" id="deleteHelp">계정 삭제는 아직 지원하지 않습니다.</p>
+      <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
+      <p id="accountSession" class="profile-help" role="status"></p>
+      <a id="accountSignin" class="profile-button" href="../signin/" hidden>로그인</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>

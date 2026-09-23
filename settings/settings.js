@@ -67,49 +67,27 @@ const countryName = id => {
   catch { return id; }
 };
 
-/* 장식 격자는 홈(app.js 의 syncGrid)이 그린다. 여기서는 셸만 그 선에 앉힌다 */
-/* .opts-shell 의 위아래 변을 둘 다 장식 격자의 가로선에 앉힌다.
-   윗변만 앉히고 높이를 아무 값이나 쓰면 아랫변은 칸의 중간 어디쯤에서 끊긴다 —
-   테두리도 배경도 없는 통이라 그 끊김이 '내용이 격자 밖으로 샜다'로 읽힌다.
-   그래서 높이 자체를 칸의 정수배로 죈다: 윗변이 선 위에 서면 그로부터 정수 칸
-   내려간 아랫변도 저절로 선 위에 선다. 칸 수는 뷰포트 56% 근방에서 고르되
+/* 장식 격자는 홈(app.js 의 syncGrid)이 그린다. 셸 높이는 격자 칸의 정수배로 두되
+   셸의 세로 중심은 뷰포트의 정중앙에 고정한다. 칸 수는 뷰포트 56% 근방에서 고르되
    레일(.opts-tabs) 자연 높이를 밑돌지 않는다(밑돌면 탭이 잘린다) — 탭 글자로
    재지 않는 건 언어마다 글자 길이가 달라 통이 뛰는 걸 막기 위해서다.
-   shell.top 은 안 쓴다: #options 가 position:fixed;inset:0 라 셸은 늘 뷰포트
-   한가운데 뜬다 — 거기서 거꾸로 풀어야 계산이 자기 참조가 되지 않는다.
    손가락 화면에서는 레일이 가로로 눕고 셸 높이가 auto 라 격자 정렬 자체가 없다 —
    여기서 값을 넣으면 오히려 높이를 못 박아 판이 잘린다 */
 function syncOptShell() {
   if (matchMedia('(pointer:coarse)').matches) return;
-  const rail = $('.opts-tabs'), p = $('#bitgrid'), head = $('#options .screen-head');
+  const rail = $('.opts-tabs'), p = $('#bitgrid');
   if (!rail || !p || !rail.getClientRects().length) return;
   const cell = Number(p.getAttribute('height'));
   const railH = rail.getBoundingClientRect().height;
   if (!(cell > 0) || !(railH > 0)) return;
-  const gridY = Number(p.getAttribute('y')) || 0;
   const vh = window.innerHeight;
-  /* 자리는 뷰포트가 아니라 '머리글 아래'에서 잡는다 — 뒤로·제목이 절대배치라 흐름에서
-     빠져 있어, 뷰포트 한가운데로 재면 글자가 얹힌 위쪽이 늘 좁아 보인다 */
-  const pad = parseFloat(getComputedStyle(document.documentElement)
-                          .getPropertyValue('--screen-pad-y')) || 0;
-  const areaTop = (head ? head.getBoundingClientRect().bottom : pad) + pad / 2;
-  const areaBottom = vh - pad;
-  const fits = (v, h) => v >= areaTop - 1 && v + h <= areaBottom + 1;
   const minCells = Math.max(1, Math.ceil(railH / cell));
   const wantCells = Math.max(minCells, Math.round(vh * 0.56 / cell));
-  let h = wantCells * cell, top;
-  for (let n = wantCells; n >= minCells; n--) {
-    h = n * cell;
-    const mid = areaTop + (areaBottom - areaTop - h) / 2;   // 그 자리에 가운데 놓은 윗변
-    const k = Math.round((mid - gridY) / cell);
-    // 가장 가까운 선부터, 안 되면 이웃 선
-    top = [k, k + 1, k - 1].map(i => gridY + i * cell).find(v => fits(v, h));
-    if (top !== undefined) break;
-  }
-  if (top === undefined) { h = minCells * cell; top = areaTop + (areaBottom - areaTop - h) / 2; }
+  const h = wantCells * cell;
+  const top = (vh - h) / 2;
   const st = document.documentElement.style;
   st.setProperty('--opt-shell-h', h + 'px');
-  st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
+  st.setProperty('--opt-shell-dy', '0px');
   st.setProperty('--opt-rail-h', rail.offsetHeight + 'px');
   /* 통은 화면 위·아래까지. 목록이 언어 탭 옆에서 시작하도록 위 padding 만 잰다.
      셸 윗변은 방금 고른 top 을 쓴다 — 들어올 때 getBoundingClientRect 는 아직 바닥이다.
@@ -283,9 +261,11 @@ async function ask(path, body) {
    뜬다. 비상구가 몇 개 남았는지는 틀리면 안 되는 숫자다.
    401 이면 죽은 토큰이니 여기서 같이 버린다 */
 async function me() {
-  if (!token()) return null;
-  const r = await fetch(RELAY + '/auth/me', { headers: { authorization: 'Bearer ' + token() } });
-  if (r.status === 401) { try { localStorage.removeItem(TOKEN_KEY); } catch {} return null; }
+  const tok = token();
+  if (!tok) return null;
+  const r = await fetch(RELAY + '/auth/me', { headers: { authorization: 'Bearer ' + tok } });
+  if (tok !== token()) return null;
+  if (r.status === 401) { try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY); } catch {} return null; }
   return r.ok ? r.json().catch(() => null) : null;
 }
 
@@ -331,19 +311,40 @@ async function tryAuth(run, doing, btns) {
 }
 
 let CODES = [];      // 복구 코드. 판이 떠 있는 동안만 산다
+let securityRequest = 0;
 
 async function account() {
+  const request = ++securityRequest;
   const inn = !!token();
-  $('#secIn').hidden = !inn;
+  $('#secIn').hidden = false;
   $('#secOut').hidden = inn;
+  [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')].forEach(b => { b.disabled = !inn; });
+  $('#securityState').textContent = inn ? '확인 중' : '로그인 필요';
+  const platform = navigator.userAgentData?.platform || navigator.platform || '';
+  const device = /Mac/i.test(platform) ? 'Mac' : /Win/i.test(platform) ? 'Windows PC' : /Linux/i.test(platform) ? 'Linux' : '현재 기기';
+  $('#securityDevice').textContent = inn ? device + ' · 이 브라우저' : '로그인이 필요합니다';
+  $('#securityKeys').textContent = '';
+  $('#securityTwo').textContent = inn ? '확인 중' : '로그인 필요';
+  $('#securityTwoSwitch').setAttribute('aria-pressed', 'false');
+  $('#securityTwoText').textContent = '패스키 등록 상태를 확인합니다.';
+  $('#acctWarn').hidden = $('#acctCodes').hidden = true;
   if (!inn) return;
   const a = await me().catch(() => null);
+  if (request !== securityRequest) return;
   /* 못 읽었으면 숫자를 지어내지 않는다 — 줄을 숨긴다. 토큰이 죽었으면 로그인부터다 */
   if (!a) {
     if (!token()) return account();
+    $('#securityState').textContent = '확인할 수 없음';
+    $('#securityTwo').textContent = '확인 불가';
+    $('#securityTwoText').textContent = '보안 상태 진단을 눌러 다시 확인해 주세요.';
     $('#acctWarn').hidden = $('#acctCodes').hidden = true;
     return;
   }
+  $('#securityState').textContent = a.keys > 0 ? '패스키 보호 중' : '추가 보호 필요';
+  $('#securityKeys').textContent = '등록된 패스키 ' + a.keys + '개';
+  $('#securityTwo').textContent = a.keys > 0 ? '사용 중' : '꺼짐';
+  $('#securityTwoSwitch').setAttribute('aria-pressed', String(a.keys > 0));
+  $('#securityTwoText').textContent = a.keys > 0 ? '패스키로 로그인 시 한 번 더 확인합니다.' : '패스키를 추가하면 2단계 인증이 켜집니다.';
   $('#acctWarn').hidden = a.keys !== 1;
   $('#acctCodes').hidden = !a.codes;
   if (a.codes) $('#acctCodes').textContent = t('codesLeft', { n: a.codes });
@@ -445,6 +446,9 @@ function close(immediate) {
 
 /* ── 손잡이 ──────────────────────────────────────────── */
 function wire() {
+  $('#securityShield').src = asset('assets/security-shield.svg');
+  $('#securityDeviceIcon').src = asset('assets/security-device.svg');
+  $('#securityCheck').onclick = account;
   document.addEventListener('click', e => {
     const tog = e.target.closest('#options .toggle');
     if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
@@ -486,7 +490,7 @@ function wire() {
   /* 이름도 함께 지운다 — 남겨 두면 같은 브라우저의 다음 사람이 올린 점수가
      앞사람 이름으로 순위표에 걸린다(app.js 의 board 가 이 칸을 읽는다) */
   $('#acctOut').onclick = () => {
-    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY); } catch {}
+    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY); localStorage.removeItem('rt.character'); } catch {}
     try { sessionStorage.removeItem(BIND_KEY); } catch {}
     wipeCodes();
     say('');

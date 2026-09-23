@@ -629,7 +629,7 @@ async function authTake(req, env, o) {
 
     const found = await env.DB.prepare('select who from sso where provider = ? and sub = ?')
       .bind(row.provider, row.sub).first();
-    let who;
+    let who, isNewAccount = false;
     if (found?.who) {
       /* 이미 다른 계정에 붙어 있는 공급자다. 지금 로그인해 있는 계정과 다르면
          조용히 갈아타지 않는다 — 공격자가 로그인한 채로 이 흐름을 밟으면
@@ -639,11 +639,13 @@ async function authTake(req, env, o) {
       who = found.who;
     } else {
       who = row.who || hex(16);
-      await env.DB.batch([
+      const created = await env.DB.batch([
         env.DB.prepare('insert or ignore into user (id, mail, at) values (?, null, ?)').bind(who, Date.now()),
         env.DB.prepare('insert into sso (provider, sub, who, at) values (?, ?, ?, ?)')
           .bind(row.provider, row.sub, who, Date.now()),
       ]);
+      // 성공한 원자적 생성 결과만 센다. 공급자 추가·기존 계정 로그인은 제외한다.
+      isNewAccount = !row.who && created[0]?.meta?.changes === 1;
     }
 
     const has = await env.DB.prepare('select 1 from passkey where who = ? limit 1').bind(who).first();
@@ -653,7 +655,7 @@ async function authTake(req, env, o) {
       await challenge(env, 'two', who, { id });
       return send(200, { need: 'passkey', challenge: id }, o);
     }
-    return send(200, { token: await sign(env.SESSION_KEY, who) }, o);
+    return send(200, { token: await sign(env.SESSION_KEY, who), isNewAccount }, o);
   });
 }
 

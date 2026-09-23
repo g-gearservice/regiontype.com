@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.68';
+const VER = '2.69';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -83,8 +83,8 @@ function paintUI(then) {
   if (signinLink) {
     const inn = !!token();
     signinLink.dataset.i18n = inn ? 'accountBtn' : 'signinBtn';
-    /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 계정은 설정의 보안 탭이다 */
-    signinLink.href = inn ? 'settings/#security' : 'signin/';
+    /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 별도 계정 페이지로 간다 */
+    signinLink.href = inn ? 'account/' : 'signin/';
   }
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);

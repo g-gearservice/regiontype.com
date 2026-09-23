@@ -5,6 +5,8 @@
 /signin  /signin/           301
 /settings/ /settings/index.html 200
 /settings  /settings/          301
+/account/  /account/index.html 200
+/account   /account/           301
 /policy/   /policy/index.html  200
 /policy    /policy/            301
 /terms/    /terms/index.html   200
