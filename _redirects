@@ -7,6 +7,8 @@
 /settings  /settings/          301
 /account/  /account/index.html 200
 /account   /account/           301
+/welcome/  /welcome/index.html 200
+/welcome   /welcome/           301
 /policy/   /policy/index.html  200
 /policy    /policy/            301
 /terms/    /terms/index.html   200

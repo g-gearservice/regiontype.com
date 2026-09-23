@@ -5,7 +5,12 @@
      POST /score    판 하나의 점수를 순위표에 올린다
      GET  /top      그 판의 상위 기록을 읽는다
      POST /dist     그 판의 점수 분포와 그 안에서 내가 선 자리
-     POST /forget   내 줄을 전부 내린다
+     POST /forget   내 줄을 전부 내린다 (순위표·경쟁전·전적)
+     POST /ranked/start {c,name}  경쟁전 표를 낸다. 끝내지 않은 옛 표는 탈주로 셈한다
+     POST /ranked/end   {id,score,hits,tries}  표를 태우고 lp 를 오르내린다
+     POST /played   일반전 한 판을 전적에 남긴다
+     GET  /games    내 사다리 줄과 최근 판들 (로그인 필요)
+     GET  /ladder   경쟁전 상위 50
 
      1차 인증은 Google·Apple(SSO) 이 하고, 패스키는 그 위에 얹는 2단계다.
      POST /auth/new    패스키 만들기 시작 (로그인 필요)   → 챌린지
@@ -50,7 +55,7 @@ const SITE = ['https://regiontype.com', 'https://www.regiontype.com'];
 const KIND = { bug: '버그', idea: '제안', data: '지명·정보 오류' };
 /* GitHub 저장소 라벨은 영어다. 한글 이름을 넣으면 422 → 브라우저엔 502 로 보인다. */
 const GH_LABEL = { bug: 'bug', idea: 'enhancement', data: 'bug' };
-const CAP = { body: 500, v: 16, href: 300, ua: 300, name: 12 };
+const CAP = { body: 500, v: 16, href: 300, ua: 300, name: 12, bio: 60, handle: 16, botname: 12 };
 /* 제한 시간이 다르면 다른 판이다. app.js 의 opt.time 은 이 안의 값이어야 한다 */
 const TIMES = [60, 90, 120, 180, 300];
 const TOP = 10;
@@ -113,15 +118,20 @@ export function entry(c, who = '') {
   /* 줄의 주인은 로그인한 사람이다. 몸통에 실려 온 값이 아니라 세션 토큰에서
      읽으므로, 남의 이름으로 올리는 길이 아예 없다 — 예전 기록 코드 방식은
      코드를 아는 사람이면 누구나 그 이름으로 올릴 수 있었다. */
-  const [score, hits, tries] = [c.score, c.hits, c.tries].map(Number);
+  const [score, hits, tries, cpm] = [c.score, c.hits, c.tries, c.cpm].map(Number);
   const int = n => Number.isInteger(n) && n >= 0;
   const ok = w.ok && !!name && /^[a-z0-9]{8,64}$/.test(who)
-    && int(score) && int(hits) && int(tries)
+    && int(score) && int(hits) && int(tries) && int(cpm)
+    /* 속도는 분당 글자 수다. 천장 둘은 app.js 의 cpmNow 가 쓰는 것과 같은 값이어야
+       한다 — 한 곳당 30 은 아무리 빨라도 못 넘는 자고(이름이 서른 자일 리 없다),
+       900(=180 WPM)은 사람의 천장이다. 이 둘이 없으면 한 곳만 맞히고 아무 속도나
+       적어 보낼 수 있다 */
+    && cpm <= Math.min(900, hits * 30)
     /* 한 곳당 최대 100점 × 콤보 5배. 상한은 둘이 함께 정한다 — 코스에 있는
        곳보다 많이 들를 수 없고, 한 곳을 치는 데 아무리 빨라도 0.5초는 든다. */
     && hits <= tries && tries <= w.secs * 8 && hits <= Math.min(w.size, w.secs * 2)
     && score % 100 === 0 && score <= Math.min(hits * 500, w.secs * 1000);
-  return { ...w, name, who, score, hits, tries, ok,
+  return { ...w, name, who, score, hits, tries, cpm, ok,
            acc: tries ? Math.round(hits / tries * 100) : 0 };
 }
 
@@ -181,8 +191,17 @@ const turnstileConfig = (env, o) => env.TURNSTILE_SITEKEY
   ? send(200, { sitekey: env.TURNSTILE_SITEKEY }, o)
   : reply(503, '사람 확인 설정이 덜 되었습니다.', o);
 
+/* 순위는 타자 속도로 세운다 — 들른 곳 수가 아니라 얼마나 빨리 쳤는가다.
+   동점이면 먼저 올린 쪽이 앞이다 */
+/* 비공개(profile.shut)로 둔 사람은 이름 자리가 빈다. 쓰는 자리에서 지우지 않고
+   읽는 자리에서 가리는 이유: 기록을 올리는 길이 /score·/ranked/end·/auth/profile
+   셋이라 한 곳만 막으면 다음 판에 도로 박힌다. 읽는 쿼리는 여기 둘뿐이다.
+   기록(cpm·순위)은 그대로 선다 — 가리는 것은 이름 하나다. */
 const board = (env, w) => env.DB.prepare(
-  'select who, name, score, hits, acc from board where slug = ? and secs = ? order by score desc, at asc limit ?'
+  `select b.who as who, case when p.shut = 1 then '' else b.name end as name,
+          b.cpm as cpm, b.score as score, b.hits as hits, b.acc as acc
+     from board b left join profile p on p.who = b.who
+    where b.slug = ? and b.secs = ? order by b.cpm desc, b.at asc limit ?`
 ).bind(w.slug, w.secs, TOP);
 /* 이름은 서버가 다듬어 저장하므로 브라우저가 자기 줄을 이름으로 찾으면 어긋난다.
    난수 id 는 남에게 보일 값이 아니니 여기서 떼고 '나' 표시만 붙여 보낸다. */
@@ -288,20 +307,21 @@ async function post(req, env, o) {
   return safely(o, async () => {
     const [, rank, list] = await env.DB.batch([
       env.DB.prepare(
-        `insert into board (slug, secs, who, name, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?)
+        `insert into board (slug, secs, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)
          on conflict (slug, secs, who) do update set
-           /* 이름만은 점수와 무관하게 바뀐다. 이걸 점수 조건에 묶어두면 잘못 적은
+           /* 이름만은 기록과 무관하게 바뀐다. 이걸 기록 조건에 묶어두면 잘못 적은
               본명을 지우려고 자기 최고 기록을 깨야 한다 — 사실상 철회 불가가 된다. */
            name  = excluded.name,
-           score = max(board.score, excluded.score),
-           hits  = case when excluded.score > board.score then excluded.hits else board.hits end,
-           acc   = case when excluded.score > board.score then excluded.acc  else board.acc  end,
-           at    = case when excluded.score > board.score then excluded.at   else board.at   end`
-      ).bind(e.slug, e.secs, e.who, e.name, e.score, e.hits, e.acc, Date.now()),
+           cpm   = max(board.cpm, excluded.cpm),
+           score = case when excluded.cpm > board.cpm then excluded.score else board.score end,
+           hits  = case when excluded.cpm > board.cpm then excluded.hits else board.hits end,
+           acc   = case when excluded.cpm > board.cpm then excluded.acc  else board.acc  end,
+           at    = case when excluded.cpm > board.cpm then excluded.at   else board.at   end`
+      ).bind(e.slug, e.secs, e.who, e.name, e.cpm, e.score, e.hits, e.acc, Date.now()),
       /* coalesce 가 없으면 그 줄이 없을 때 score > NULL 이 NULL 이 되어 조용히 1위가 된다 */
       env.DB.prepare(
-        `select count(*) + 1 as n from board where slug = ? and secs = ? and score >
-           coalesce((select score from board where slug = ? and secs = ? and who = ?), -1)`
+        `select count(*) + 1 as n from board where slug = ? and secs = ? and cpm >
+           coalesce((select cpm from board where slug = ? and secs = ? and who = ?), -1)`
       ).bind(e.slug, e.secs, e.slug, e.secs, e.who),
       board(env, { slug: e.slug, secs: e.secs }),
     ]);
@@ -316,9 +336,169 @@ async function forget(req, env, o) {
   if (!who) return reply(401, '로그인이 필요합니다.', o);
   const ok = await pass(env.RL_SC, ip(req));
   if (ok !== true) return shut(ok, o);
+  /* 이름이 걸린 곳은 전부 내린다 — 경쟁전 사다리와 전적도 같은 사람의 것이다 */
   return safely(o, async () => {
-    const r = await env.DB.prepare('delete from board where who = ?').bind(who).run();
+    const [r] = await env.DB.batch(['board', 'ladder', 'played', 'ticket']
+      .map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(who)));
     return send(200, { gone: r.meta?.changes ?? 0 }, o);
+  });
+}
+
+/* ── 경쟁전 ──────────────────────────────────────────────
+   혼자 치는 게임이라 맞상대가 없다. 그래서 이긴다·진다를 "이 티어에서 기대하는
+   속도를 넘었나"로 정한다(TypeClash 의 티어별 기대 WPM 과 같은 결).
+     속도  = 분당 글자 수(CPM). 코스가 달라도 견줄 수 있는 유일한 값이다
+     기대  = WANT[티어]                       브론즈 40 … 마스터 140 CPM
+     lp    = (속도 − 기대) × .4 × K × 정확도 배율   K 는 배치 5판 동안 2, 그 뒤 1
+   정확도는 얻는 쪽만 깎는다(95%↑ ×1 · 90 ×.8 · 85 ×.6 · 80 ×.4 · 그 아래는 이겨도 잃는다).
+   이기면 최소 +3, 지면 최소 −5, 한 판에 ±50 을 넘지 않는다. 탈주는 −25.
+   하루(24시간)에 얻는 lp 는 200 까지다.
+   제한 시간은 120초로 못 박는다 — 판마다 조건이 같아야 견줄 수 있다. */
+export const RANKED_SECS = 120;
+const STEP = 100, PLACE = 5, QUIT = 25, KEEP = 50, DAY_CAP = 200;
+/* 티어마다 기대하는 속도(CPM). 위로 갈수록 너비가 같아 한 계단이 20 CPM 이다.
+   ponytail: 서울 코스의 어림값이다. 판이 쌓이면 실제 분포의 분위수로 다시 잡는다 */
+export const WANT = [40, 60, 80, 100, 120, 140];
+export function lpDelta(lp, games, cpm, acc) {
+  const want = WANT[Math.min(WANT.length - 1, Math.floor(lp / STEP))];
+  const raw = (cpm - want) * .4 * (games < PLACE ? 2 : 1);
+  const mod = acc >= 95 ? 1 : acc >= 90 ? .8 : acc >= 85 ? .6 : acc >= 80 ? .4 : -.5;
+  let d = Math.round(raw >= 0 ? raw * mod : raw);
+  d = d > 0 || (d === 0 && mod > 0) ? Math.max(3, d) : Math.min(-5, d);
+  return Math.max(-lp, Math.max(-50, Math.min(50, d)));
+}
+/* 끝난 판이 앞뒤가 맞는지. 표를 낸 코스·시간으로만 본다 — 몸통의 c·t 는 무시한다.
+   다 치지 않았으면 120초가 지나야 하고, 다 쳤으면 한 곳에 0.5초는 들었어야 한다 */
+export function rankedCheck(c, tk, now, who) {
+  const e = entry({ ...c, c: tk.slug, t: RANKED_SECS }, who);
+  const took = now - tk.at;
+  const need = e.hits >= (SIZE[tk.slug] || 0) ? e.hits * 500 : RANKED_SECS * 1000;
+  return { ...e, ok: e.ok && c.id === tk.id && took >= need && took <= 10 * 60e3 };
+}
+/* 판 한 줄을 적고 그 사람의 옛 줄을 50 판에서 자른다 */
+const logPlay = (env, who, mode, slug, secs, e, delta, at) => [
+  env.DB.prepare('insert into played (who, mode, slug, secs, cpm, score, hits, acc, delta, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(who, mode, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, at),
+  env.DB.prepare('delete from played where who = ? and rowid not in (select rowid from played where who = ? order by at desc limit ?)')
+    .bind(who, who, KEEP),
+];
+
+async function rankedStart(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '경쟁전은 로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const slug = cut(c.c, 40), name = plain(c.name, CAP.name);
+  if (!Object.hasOwn(SIZE, slug) || !name) return reply(400, '시작할 수 없는 판입니다.', o);
+  const ok = await pass(env.RL_RK, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    const now = Date.now(), id = rand(18);
+    const [old, row] = await env.DB.batch([
+      env.DB.prepare('select slug from ticket where who = ?').bind(me),
+      env.DB.prepare('select lp from ladder where who = ?').bind(me),
+    ]);
+    const tk = old.results[0], lp = row.results[0]?.lp ?? 0;
+    const quit = tk ? -Math.min(QUIT, lp) : 0;
+    await env.DB.batch([
+      env.DB.prepare(`insert into ladder (who, name, lp, games, wins, at) values (?, ?, 0, 0, 0, ?)
+                      on conflict (who) do update set name = excluded.name`).bind(me, name, now),
+      ...(tk ? [
+        env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ?').bind(quit, now, me),
+        ...logPlay(env, me, 'ranked', tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now),
+      ] : []),
+      env.DB.prepare(`insert into ticket (who, id, slug, at) values (?, ?, ?, ?)
+                      on conflict (who) do update set id = excluded.id, slug = excluded.slug, at = excluded.at`)
+        .bind(me, id, slug, now),
+    ]);
+    return send(201, { id, secs: RANKED_SECS, quit }, o);
+  });
+}
+
+async function rankedEnd(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const ok = await pass(env.RL_RK, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    const now = Date.now();
+    /* 표를 먼저 태운다 — 한 줄을 돌려받은 요청만 이어 간다. 같은 표로 두 번
+       동시에 끝내도 한 번만 셈된다 */
+    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, at')
+      .bind(me, cut(c.id, 40)).first();
+    if (!tk) return reply(409, '끝낼 경쟁전이 없습니다.', o);
+    const [row, day] = await env.DB.batch([
+      env.DB.prepare('select name, lp, games from ladder where who = ?').bind(me),
+      env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and delta > 0 and at > ?")
+        .bind(me, now - 864e5),
+    ]);
+    const lad = row.results[0];
+    if (!lad) return reply(409, '끝낼 경쟁전이 없습니다.', o);
+    const e = rankedCheck({ ...c, name: lad.name }, { ...tk, id: c.id }, now, me);
+    /* 앞뒤가 안 맞는 판은 탈주와 같게 셈한다 — 표는 이미 탔다 */
+    let d = e.ok ? lpDelta(lad.lp, lad.games, e.cpm, e.acc) : -Math.min(QUIT, lad.lp);
+    /* 채점이 브라우저에 있어 잘 지은 만점을 가릴 수 없다. 하루에 얻는 lp 에 뚜껑을
+       덮어 거짓말 한 번의 값을 줄인다.
+       ponytail: 뚜껑은 속도만 늦춘다. 사다리가 시달리면 채점(타건 기록 검증)을 서버로 옮긴다 */
+    if (d > 0) d = Math.max(0, Math.min(d, DAY_CAP - (day.results[0]?.n ?? 0)));
+    await env.DB.batch([
+      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ?')
+        .bind(d, d > 0 ? 1 : 0, now, me),
+      ...logPlay(env, me, 'ranked', tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now),
+    ]);
+    if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
+    return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1 }, o);
+  });
+}
+
+/* 일반전 한 판을 전적에 남긴다. 이름은 받지 않는다 — 전적은 본인만 본다 */
+async function playedNormal(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  /* entry 는 공개 이름을 요구한다. 여기는 이름이 안 남으니 자리만 채운다 */
+  const e = entry({ ...c, name: '-' }, me);
+  if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
+  const ok = await pass(env.RL_SC, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    await env.DB.batch(logPlay(env, me, 'normal', e.slug, e.secs, e, null, Date.now()));
+    return send(201, {}, o);
+  });
+}
+
+/* 내 전적 — 사다리 한 줄과 최근 판들. who 는 싣지 않는다 */
+async function myGames(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  return safely(o, async () => {
+    const [lad, list, above] = await env.DB.batch([
+      env.DB.prepare('select name, lp, games, wins from ladder where who = ?').bind(me),
+      env.DB.prepare('select mode, slug, secs, cpm, score, hits, acc, delta, at from played where who = ? order by at desc limit ?')
+        .bind(me, KEEP),
+      env.DB.prepare(`select count(*) + 1 as n from ladder where games >= ? and lp >
+                      coalesce((select lp from ladder where who = ?), 1e9)`).bind(PLACE, me),
+    ]);
+    const r = lad.results[0] || null;
+    return send(200, { ladder: r && { ...r, rank: r.games >= PLACE ? above.results[0]?.n ?? null : null },
+                       place: PLACE, step: STEP, games: list.results }, o);
+  });
+}
+
+/* 경쟁전 순위. 배치 5판을 마친 사람만 오른다 */
+async function ladderTop(req, env, o) {
+  const me = await sessionWho(env, req);
+  return safely(o, async () => {
+    const { results } = await env.DB.prepare(
+      `select l.who as who, case when p.shut = 1 then '' else l.name end as name,
+              l.lp as lp, l.games as games, l.wins as wins
+         from ladder l left join profile p on p.who = l.who
+        where l.games >= ? order by l.lp desc, l.at asc limit 50`
+    ).bind(PLACE).all();
+    return send(200, { top: seen(results, me), place: PLACE, step: STEP }, o);
   });
 }
 
@@ -378,14 +558,29 @@ async function peekTwo(env, id) {
 const consumeTwo = (env, id) =>
   env.DB.prepare('delete from pending where id = ? and kind = ?').bind(id, 'two').run();
 
+/* 패스키를 만들기 전에 브라우저가 알아야 할 것들. keys 는 이 계정이 이미 가진
+   credential id 들이다 — excludeCredentials 에 실으면 같은 기기에서 두 번 만들
+   때 새 줄이 아니라 "이미 있습니다" 가 뜬다. 그게 없으면 한 사람의 열쇠고리에
+   같은 사이트가 여러 줄로 쌓여, 어느 줄이 어느 계정인지 알 길이 없어진다.
+   name 은 열쇠고리에 걸릴 이름이다 — 정해 둔 아이디·닉네임이 있으면 그것을 쓴다.
+   없을 때만 계정 id 앞 여섯 자로 떨어진다. */
 async function authNew(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
-  return safely(o, async () => send(200, {
-    challenge: await challenge(env, 'reg', me),
-    rp: { id: rpOf(o), name: RPNAME },
-    user: me,
-  }, o));
+  return safely(o, async () => {
+    const [keys, row] = await env.DB.batch([
+      env.DB.prepare('select id from passkey where who = ?').bind(me),
+      env.DB.prepare('select handle, name from profile where who = ?').bind(me),
+    ]);
+    const p = row.results[0] || {};
+    return send(200, {
+      challenge: await challenge(env, 'reg', me),
+      rp: { id: rpOf(o), name: RPNAME },
+      user: me,
+      keys: keys.results.map(k => k.id),
+      name: p.handle ? '@' + p.handle : (p.name || ''),
+    }, o);
+  });
 }
 
 /* 등록 마무리. attestation 을 안 받으므로 공개키는 브라우저가 준 것을 그대로 믿는다 —
@@ -747,15 +942,162 @@ async function authCodes(req, env, o) {
    패스키나 거기서 쓴 복구 코드를 알 수 없다 — 특히 "남은 비상구가 몇 개"는
    틀리면 안 되는 숫자라 여기서 세어 준다. 개수만 내보낸다 — who·sub·해시·
    자격증명 id 같이 사람을 가리키는 값은 하나도 싣지 않는다. */
+/* 프로필 한 장. 남 앞에 걸릴 값이라 이름과 같은 규칙으로 보이지 않는 글자를 턴다.
+   캐릭터(face)는 어떤 말이 있는지 여기서 세지 않는다 — 모양만 보고 넘기고, 모르는
+   값이면 화면(account.js)이 자기 기본값으로 떨어뜨린다. 목록을 두 곳에 두면
+   캐릭터를 하나 더할 때마다 워커를 같이 배포해야 한다. */
+/* 아무도 가져갈 수 없는 아이디. handle 은 화면에 @… 로 걸리므로(가입 안내의
+   요약, 패스키 이름) 이 말들을 내주면 그대로 사칭 통로가 된다. 목록이지 규칙이
+   아니다 — 늘릴 일이 생기면 여기 한 줄을 더한다. */
+const KEPT = new Set(['admin', 'administrator', 'root', 'staff', 'support', 'help',
+  'system', 'official', 'regiontype', 'moderator', 'mod', 'security', 'billing',
+  'api', 'www', 'mail', 'null', 'undefined', 'me', 'you', 'anonymous']);
+
+export function profile(c) {
+  const slug = s => /^[a-z]{1,16}$/.test(String(s ?? '')) ? String(s) : '';
+  /* face 는 두 모양으로 온다 — 객체({shape,expression,colour})거나, 이미 이어
+     붙인 'shape,expression,colour' 문자열이거나. 화면 둘이 서로 다르게 보내던
+     것을 여기서 한 번에 받는다(문자열을 객체만 받게 두면 캐릭터가 ',,' 로
+     저장돼, 고른 모습이 조용히 사라졌다). */
+  const f = typeof c?.face === 'string'
+    ? (([shape, expression, colour]) => ({ shape, expression, colour }))(c.face.split(','))
+    : (c?.face && typeof c.face === 'object' ? c.face : {});
+  const lang = String(c?.lang ?? '');
+  /* 아이디는 이름과 규칙이 다르다 — 남 앞에 주소처럼 걸리는 값이라 소문자·숫자·
+     밑줄만 받고, 모양이 안 맞으면 다듬지 않고 통째로 버린다(빈 값 = 아직 안 정함).
+     조용히 깎아 주면 사람이 친 것과 저장된 것이 달라진다. */
+  /* 한도(16)에서 자른 뒤에 모양을 보면 스무 자를 친 사람이 열여섯 자짜리 남의
+     아이디를 조용히 받아 가게 된다. 넉넉히 자른 다음 모양을 본다 — 길이도 모양의
+     일부다(자르는 건 정규식이 폭주하지 않게 두는 울타리일 뿐이다). */
+  const handle = cut(c?.handle, 64).toLowerCase();
+  return {
+    name: plain(c?.name, CAP.name),
+    bio:  plain(c?.bio, CAP.bio),
+    face: [slug(f.shape), slug(f.expression), slug(f.colour)].join(','),
+    lang: /^[a-z]{2}$/.test(lang) ? lang : 'auto',
+    handle: /^[a-z0-9_]{3,16}$/.test(handle) && !KEPT.has(handle) ? handle : '',
+    botname: plain(c?.botname, CAP.botname),
+    /* 두 스위치는 켬/끔이다. 안 보낸 것과 끈 것을 가르지 않는다 — 화면이 늘
+       지금 상태를 통째로 보내므로, 빠진 값은 끈 것으로 읽는다 */
+    push: c?.push === true || c?.push === 1 ? 1 : 0,
+    shut: c?.shut === true || c?.shut === 1 ? 1 : 0,
+  };
+}
+
+/* 프로필 저장. 이 저장소에서 사용자가 직접 쓰는 값이 서버에 남는 유일한 곳이다. */
+async function authProfile(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const p = profile(c);
+  if (!p.name) return reply(400, '닉네임을 1자 이상 입력해 주세요.', o);
+  return safely(o, async () => {
+    /* 아이디가 남의 것이면 여기서 돌려보낸다. unique 인덱스가 최종 판정이지만
+       (둘이 같은 순간에 같은 아이디를 낸 경우), 그 오류는 프로필 전체를 통째로
+       실패시켜 "왜 안 되는지" 를 못 알린다 — 먼저 보고 아이디만 짚어 준다. */
+    if (p.handle) {
+      const taken = await env.DB.prepare('select who from profile where handle = ?').bind(p.handle).first();
+      if (taken && taken.who !== me) return send(409, { msg: '이미 쓰이고 있는 아이디입니다.', handle: true }, o);
+    }
+    await env.DB.batch([
+      env.DB.prepare(
+        `insert into profile (who, name, bio, face, lang, at, handle, botname, push, shut)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         on conflict (who) do update set
+           name = excluded.name, bio = excluded.bio,
+           face = excluded.face, lang = excluded.lang, at = excluded.at,
+           /* 아이디는 한 번 정하면 빈 값으로 덮이지 않는다 — 아이디 칸이 없는
+              화면(내 계정)이 프로필을 통째로 올려도 지워지면 안 된다 */
+           handle = case when excluded.handle = '' then profile.handle else excluded.handle end,
+           botname = excluded.botname, push = excluded.push, shut = excluded.shut`
+      ).bind(me, p.name, p.bio, p.face, p.lang, Date.now(), p.handle, p.botname, p.push, p.shut),
+      /* 이미 걸려 있는 이름도 같이 고친다 — 한 곳에서 바꿨는데 순위표에 옛 이름이
+         남으면 그 이름을 거둘 손잡이가 없는 것과 같다 */
+      env.DB.prepare('update board set name = ? where who = ?').bind(p.name, me),
+      env.DB.prepare('update ladder set name = ? where who = ?').bind(p.name, me),
+    ]);
+    return send(200, p, o);
+  });
+}
+
+/* 가입 안내(welcome/)의 설문 한 줄. 고른 것만 담는다 — 자유 입력 칸이 없으므로
+   여기로 남의 글이 들어올 길도 없다. 한 사람 한 줄이고, 다시 보내면 덮어쓴다
+   (안내를 도중에 닫았다가 다시 들어온 사람이 막히면 안 된다). */
+export function intro(c) {
+  const slug = s => /^[a-z][a-z0-9-]{0,23}$/.test(String(s ?? '')) ? String(s) : '';
+  const n = Number(c?.nps);
+  return {
+    platform: slug(c?.platform),
+    medium: slug(c?.medium),
+    /* 안 고르고 넘어갈 수 있는 값이라 0 과 '안 함' 을 갈라야 한다 — null 이다 */
+    nps: Number.isInteger(n) && n >= 0 && n <= 10 ? n : null,
+  };
+}
+
+async function authIntro(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const v = intro(c);
+  return safely(o, async () => {
+    await env.DB.prepare(
+      `insert into intro (who, platform, medium, nps, at) values (?, ?, ?, ?, ?)
+       on conflict (who) do update set
+         platform = excluded.platform, medium = excluded.medium,
+         nps = excluded.nps, at = excluded.at`
+    ).bind(me, v.platform, v.medium, v.nps, Date.now()).run();
+    return send(200, v, o);
+  });
+}
+
+/* 계정을 지운다. 사람이 제 것을 거둘 권리이므로 반쪽짜리로 두지 않는다 —
+   순위표만 내리는 /forget 과 달리 이 사람을 가리키는 줄을 남김없이 지운다.
+
+   이 목록이 곧 "이 저장소가 사람에 대해 쥐고 있는 전부" 다. 새 표를 만들면서 여기
+   더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
+   빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
+export const ERASE = ['board', 'ladder', 'played', 'ticket', 'profile', 'intro',
+                      'passkey', 'recovery', 'pending', 'sso'];
+
+async function authErase(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  /* 되돌릴 수 없는 일이라 빈 POST 한 번으로는 안 지워지게 한다. 화면이 사람에게
+     물어 받은 답을 여기 실어 보낸다 — 문지기가 아니라 빗나간 요청을 거르는 턱이다. */
+  if (c?.sure !== true) return reply(400, '지우겠다는 확인이 없습니다.', o);
+
+  return safely(o, async () => {
+    const rows = await env.DB.batch([
+      ...ERASE.map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(me)),
+      /* 사람 줄은 맨 끝에 지운다. D1 의 batch 는 한 묶음으로 도니 도중에 엎어지면
+         통째로 없던 일이 된다 — 반쯤 지워진 계정이 남지 않는다 */
+      env.DB.prepare('delete from user where id = ?').bind(me),
+    ]);
+    /* 세션 토큰은 서명만으로 서는 무상태라 지운 뒤에도 모양은 멀쩡하다. 가리키는
+       줄이 없으니 무엇을 물어도 빈손이고, 다시 로그인하면 새 사람으로 시작한다 —
+       그게 '지웠다' 의 뜻이다. 화면은 받는 즉시 토큰을 버린다. */
+    return send(200, { gone: rows.reduce((n, r) => n + (r.meta?.changes ?? 0), 0) }, o);
+  });
+}
+
 async function authMe(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
   return safely(o, async () => {
-    const [keys, codes] = await env.DB.batch([
+    const [keys, codes, row, intro] = await env.DB.batch([
       env.DB.prepare('select count(*) as n from passkey where who = ?').bind(me),
       env.DB.prepare('select count(*) as n from recovery where who = ?').bind(me),
+      env.DB.prepare('select name, bio, face, lang, handle, botname, push, shut from profile where who = ?').bind(me),
+      env.DB.prepare('select 1 as n from intro where who = ?').bind(me),
     ]);
-    return send(200, { keys: keys.results[0]?.n ?? 0, codes: codes.results[0]?.n ?? 0 }, o);
+    /* intro 는 '가입 안내를 이미 마쳤다' 는 표시다. 화면(auth.js·welcome.js)이
+       이걸 보고 안내를 다시 띄울지 정한다 — 두 번 묻지 않기 위한 값 하나다. */
+    return send(200, { keys: keys.results[0]?.n ?? 0, codes: codes.results[0]?.n ?? 0,
+                       profile: row.results[0] ?? null, intro: !!intro.results[0] }, o);
   });
 }
 
@@ -827,6 +1169,9 @@ export default {
         if (path === '/auth/log') return authLog(req, env, o);
         if (path === '/auth/code') return authCode(req, env, o);
         if (path === '/auth/codes') return authCodes(req, env, o);
+        if (path === '/auth/profile') return authProfile(req, env, o);
+        if (path === '/auth/intro') return authIntro(req, env, o);
+        if (path === '/auth/erase') return authErase(req, env, o);
       }
     }
     /* 순위표는 D1 을 붙이기 전에도 사이트가 멀쩡해야 한다 — 없으면 없다고만 한다 */
@@ -836,6 +1181,15 @@ export default {
       if (path === '/dist' && req.method === 'POST') return dist(req, env, o);
       if (path === '/score' && req.method === 'POST') return post(req, env, o);
       if (path === '/forget' && req.method === 'POST') return forget(req, env, o);
+    }
+    if (path === '/ranked/start' || path === '/ranked/end' || path === '/played' ||
+        path === '/games' || path === '/ladder') {
+      if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);
+      if (path === '/ranked/start' && req.method === 'POST') return rankedStart(req, env, o);
+      if (path === '/ranked/end' && req.method === 'POST') return rankedEnd(req, env, o);
+      if (path === '/played' && req.method === 'POST') return playedNormal(req, env, o);
+      if (path === '/games' && req.method === 'GET') return myGames(req, env, o);
+      if (path === '/ladder' && req.method === 'GET') return ladderTop(req, env, o);
     }
     return reply(405, '받지 않는 요청입니다.', o);
   },

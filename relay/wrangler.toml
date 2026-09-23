@@ -57,6 +57,15 @@ namespace_id = "1004"
   limit = 30
   period = 60
 
+[[ratelimits]]
+# 경쟁전 시작·끝 전용 창. 점수 창(RL_SC)과 나눠 쓰면 일반전 뒤 /score·/played 에
+# 밀려 /ranked/end 가 429 를 받고, 타지 않은 표가 다음 판에서 탈주로 셈된다.
+name = "RL_RK"
+namespace_id = "1005"
+  [ratelimits.simple]
+  limit = 6
+  period = 60
+
 [[routes]]
 pattern = "g.gearservicevanguard.com"
 zone_name = "gearservicevanguard.com"

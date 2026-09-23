@@ -1,9 +1,11 @@
 /* node relay/test.mjs — 이슈 한 장이 제대로 지어지는지만 본다 */
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import relayWorker, { compose, entry, where, regionOf, allowedOrigin } from './worker.mjs';
+import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
+         lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
+import { faceFrom } from '../assets/face/mimic.js';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
 
@@ -39,6 +41,43 @@ assert.equal(allowedOrigin('https://www.regiontype.com'), true);
 assert.equal(allowedOrigin('http://localhost:3000'), true);
 assert.equal(allowedOrigin('https://g-gearservice.github.io/regiontype.com'), true);
 assert.equal(allowedOrigin('https://evil.example'), false);
+
+/* ── 경쟁전 lp ─────────────────────────────────────────
+   점수가 아니라 타자 속도(CPM)로 센다 — 코스가 달라도 견줄 수 있는 유일한 값이다 */
+assert.equal(lpDelta(0, 10, WANT[0], 100), 3, '기대 속도와 같으면 최소 +3');
+assert.equal(lpDelta(0, 10, 90, 100), 20, '브론즈(기대 40)가 90 CPM 이면 +20');
+assert.equal(lpDelta(0, 0, 90, 100), 40, '배치 중엔 두 배');
+assert.equal(lpDelta(0, 10, 90, 85), 12, '정확도 85% 는 얻는 몫을 .6 으로');
+assert.ok(lpDelta(100, 10, 200, 70) < 0, '정확도 80% 아래는 빨라도 잃는다');
+assert.equal(lpDelta(250, 10, 60, 100), -8, '골드(기대 80)가 60 CPM 이면 −8');
+assert.equal(lpDelta(250, 10, 75, 100), -5, '지면 최소 −5');
+assert.equal(lpDelta(3, 10, 0, 100), -3, 'lp 는 0 아래로 안 내려간다');
+assert.equal(lpDelta(900, 10, 200, 100), 24, '마스터 위로는 기대가 140 에서 멈춘다');
+assert.equal(lpDelta(0, 0, 900, 100), 50, '한 판에 ±50 을 넘지 않는다');
+
+/* 속도는 맞힌 곳 수에 묶인다 — 한 곳만 치고 아무 속도나 적어 보낼 수 없다 */
+const SME = 'a1b2c3d4e5';
+const sc = { c: 'seoul-gu', t: 120, name: '나', score: 1000, hits: 10, tries: 12 };
+assert.equal(entry({ ...sc, cpm: 120 }, SME).ok, true, '열 곳에 120 CPM 은 통과');
+assert.equal(entry({ ...sc, cpm: 301 }, SME).ok, false, '한 곳당 30 을 넘을 수 없다');
+assert.equal(entry({ ...sc, hits: 25, tries: 25, score: 11500, cpm: 901 }, SME).ok, false,
+             '900 CPM(=180 WPM)이 사람의 천장');
+assert.equal(entry({ ...sc, cpm: -1 }, SME).ok, false, '음수 속도는 없다');
+assert.equal(entry({ ...sc }, SME).ok, false, '속도를 안 보내면 거른다');
+assert.equal(entry({ ...sc, cpm: 120 }, SME).cpm, 120, '속도는 그대로 실려 나간다');
+
+const tk = { id: 'tk1', slug: 'seoul-gu', at: 0 }, RME = 'a1b2c3d4e5';
+const fin = { id: 'tk1', name: '나', score: 1000, cpm: 120, hits: 10, tries: 12 };
+assert.equal(rankedCheck(fin, tk, RANKED_SECS * 1000, RME).ok, true, '120초 뒤 끝낸 판');
+assert.equal(rankedCheck(fin, tk, 30e3, RME).ok, false, '다 못 쳤는데 120초 전에 끝낼 수 없다');
+assert.equal(rankedCheck({ ...fin, id: 'x' }, tk, 130e3, RME).ok, false, '남의 표로 끝낼 수 없다');
+assert.equal(rankedCheck({ ...fin, c: 'gangseo-dong', t: 60 }, tk, 130e3, RME).ok, true,
+             '코스·시간은 표에서 읽는다 — 몸통이 바꾸지 못한다');
+const clear = { ...fin, score: 11500, hits: 25, tries: 25, cpm: 200 };
+assert.equal(rankedCheck(clear, tk, 13e3, RME).ok, true, '다 쳤으면 곳당 0.5초 뒤에 끝낼 수 있다');
+assert.equal(rankedCheck(clear, tk, 5e3, RME).ok, false, '그보다 빠르면 거짓말');
+assert.equal(rankedCheck(fin, tk, 11 * 60e3, RME).ok, false, '10분 넘게 묵은 표는 무효');
+console.log('ranked self-check done');
 
 /* ── 피드백 문 앞: IP 창 → Turnstile → GitHub ─────────── */
 const fbReq = (body = { ...base, cf: 'human-token' }, ip = '203.0.113.7') => new Request(
@@ -161,7 +200,7 @@ try {
 console.log('relay self-check done');
 
 /* ── 순위표에 올릴 한 줄 ──────────────────────────── */
-const run = { c: 'seoul-gu', t: 120, name: '가나', score: 1500, hits: 5, tries: 6 };
+const run = { c: 'seoul-gu', t: 120, name: '가나', score: 1500, cpm: 60, hits: 5, tries: 6 };
 const ME = 'a1b2c3d4e5';   // 세션에서 읽어 온 주인. 몸통에 실려 오지 않는다
 
 const e = entry(run, ME);
@@ -236,6 +275,113 @@ assert.equal(regionOf({ country: 'KR<script>' }, '').country, '');
 assert.ok(!('city' in loc), '도시는 안 실어 보낸다');
 
 console.log('region self-check done');
+
+/* ── 프로필 ────────────────────────────────────────── */
+/* 이 절은 이름·소개·캐릭터·언어만 본다. 같은 함수가 다루는 다른 칸(handle·botname·
+   스위치)은 그쪽 절에서 따로 본다 — 여기서 통째로 견주면 칸이 하나 늘 때마다 깨진다 */
+const pr = profile({ name: '가양', bio: '강서구 사람', face: { shape: 'round', expression: 'wink', colour: 'teal' }, lang: 'ko' });
+const mineOnly = ({ name, bio, face, lang }) => ({ name, bio, face, lang });
+assert.deepEqual(mineOnly(pr), { name: '가양', bio: '강서구 사람', face: 'round,wink,teal', lang: 'ko' });
+/* 화면은 face 를 이어 붙인 문자열로 보낸다 — 객체만 받으면 ',,' 로 저장돼 고른 모습이 사라진다 */
+assert.equal(profile({ name: '가양', face: 'nuage,curieux,violet' }).face, 'nuage,curieux,violet',
+             '문자열로 온 캐릭터도 그대로 받는다');
+assert.equal(profile({ name: '가', bio: '소'.repeat(90) }).bio.length, 60, '소개는 60자에서 자른다');
+assert.equal(profile({ name: '가'.repeat(30) }).name.length, 12, '닉네임은 12자에서 자른다');
+/* 소개도 남 앞에 걸릴 값이다 — 이름과 같은 규칙으로 보이지 않는 글자를 턴다 */
+assert.equal(profile({ bio: '앞‮뒤\u0007' }).bio, '앞 뒤', '제어·방향 뒤집기 글자는 남지 않는다');
+assert.equal(profile({ name: '   ' }).name, '', '빈 닉네임은 빈 값으로 — 부르는 쪽이 400 으로 막는다');
+assert.equal(profile({ face: { shape: '../evil', expression: 'wink' } }).face, ',wink,',
+             '모르는 모양은 빈 칸으로 떨어진다');
+assert.equal(profile({ lang: 'ko-KR' }).lang, 'auto', '두 글자 말만 받는다');
+assert.equal(profile({}).lang, 'auto');
+assert.doesNotThrow(() => profile(null), '몸통이 없어도 터지지 않는다');
+
+/* 아이디(handle). 남 앞에 주소처럼 걸리는 값이라 모양이 안 맞으면 다듬지 않고
+   통째로 버린다 — 조용히 깎으면 사람이 친 것과 저장된 것이 달라진다 */
+assert.equal(profile({ name: '가', handle: 'GaYang' }).handle, 'gayang', '아이디는 소문자로 접는다');
+assert.equal(profile({ handle: 'ga' }).handle, '', '세 자 미만은 버린다');
+assert.equal(profile({ handle: 'a'.repeat(20) }).handle, '', '열여섯 자를 넘으면 자르지 않고 버린다');
+assert.equal(profile({ handle: '가양' }).handle, '', '한글 아이디는 받지 않는다');
+assert.equal(profile({ handle: 'ga-yang' }).handle, '', '밑줄 말고 다른 기호는 받지 않는다');
+assert.equal(profile({ handle: 'ga_yang9' }).handle, 'ga_yang9');
+assert.equal(profile({}).handle, '', '안 보내면 빈 값 — 서버가 옛 아이디를 덮지 않는다');
+assert.equal(profile({ handle: 'admin' }).handle, '', '예약어는 아무도 못 가져간다');
+assert.equal(profile({ handle: 'ADMIN' }).handle, '', '대문자로 우회할 수 없다');
+assert.equal(profile({ handle: 'regiontype' }).handle, '', '우리 이름도 예약어다');
+assert.equal(profile({ handle: 'admins' }).handle, 'admins', '예약어를 품은 말까지 막지는 않는다');
+
+assert.equal(profile({ botname: '방울‮이\u0007' }).botname, '방울 이', '캐릭터 이름도 닉네임과 같은 규칙으로 턴다');
+assert.equal(profile({ botname: '방'.repeat(30) }).botname.length, 12, '캐릭터 이름은 12자에서 자른다');
+
+/* 스위치 둘은 켬/끔이다. 화면이 늘 통째로 보내므로 빠진 값은 끈 것으로 읽는다 */
+assert.equal(profile({ push: true }).push, 1);
+assert.equal(profile({ push: 'yes' }).push, 0, '켬은 true·1 뿐이다 — 아무 값이나 참이 되지 않는다');
+assert.equal(profile({}).shut, 0);
+
+/* face 는 객체로도 문자열로도 온다 — 화면 둘이 서로 다르게 보낸다.
+   문자열을 못 읽으면 캐릭터가 ',,' 로 저장돼 고른 모습이 조용히 사라진다 */
+assert.equal(profile({ face: 'cercle,curieux,turquoise' }).face, 'cercle,curieux,turquoise',
+             '이어 붙인 문자열도 그대로 받는다');
+assert.equal(profile({ face: 'cercle,curieux,turquoise' }).face,
+             profile({ face: { shape: 'cercle', expression: 'curieux', colour: 'turquoise' } }).face,
+             '두 모양이 같은 값으로 떨어진다');
+assert.equal(profile({ face: '../evil,curieux' }).face, ',curieux,', '문자열로 와도 모양을 본다');
+
+/* ── 계정 삭제 ──────────────────────────────────────────
+   사람이 제 계정을 지우면 그 사람을 가리키는 줄이 하나도 남으면 안 된다. 표를 새로
+   만들면서 ERASE 에 더하는 걸 잊는 것이 이 기능이 조용히 반쪽이 되는 길이라,
+   schema.sql 을 직접 읽어 who 를 가진 표를 전부 찾아 대조한다. */
+const sql = readFileSync(new URL('./schema.sql', import.meta.url), 'utf8');
+const tablesWithWho = [...sql.matchAll(/create table if not exists (\w+) \(([\s\S]*?)\n\);/g)]
+  .filter(([, , body]) => /^\s*who\s/m.test(body))
+  .map(([, name]) => name);
+assert.ok(tablesWithWho.length >= 8, 'who 를 가진 표를 못 찾았다 — 검사가 헛돌고 있다');
+const missed = tablesWithWho.filter(t => !ERASE.includes(t));
+assert.deepEqual(missed, [], `계정을 지워도 남는 표가 있다: ${missed.join(', ')}`);
+/* 없는 표를 지우려 들면 배포한 뒤에야 500 으로 드러난다 */
+const ghosts = ERASE.filter(t => !tablesWithWho.includes(t));
+assert.deepEqual(ghosts, [], `schema.sql 에 없는 표가 ERASE 에 있다: ${ghosts.join(', ')}`);
+/* 사람 줄(user)은 who 가 아니라 id 로 산다 — 목록이 아니라 authErase 가 따로 지운다 */
+assert.ok(!ERASE.includes('user'), 'user 는 id 로 지운다 — 목록에 넣으면 who 칸을 찾다 터진다');
+
+console.log('erase self-check done');
+
+console.log('profile self-check done');
+
+/* ── 가입 안내 설문 ─────────────────────────────────────── */
+assert.deepEqual(intro({ platform: 'youtube', medium: 'video', nps: 9 }),
+                 { platform: 'youtube', medium: 'video', nps: 9 });
+assert.equal(intro({ platform: '../evil' }).platform, '', '고른 목록 밖의 값은 버린다');
+assert.equal(intro({ platform: '검색' }).platform, '', '자유 입력은 들어올 자리가 없다');
+assert.equal(intro({ nps: 11 }).nps, null, '0‥10 밖은 안 센다');
+assert.equal(intro({ nps: 0 }).nps, 0, '0 은 값이다 — 안 고른 것(null)과 다르다');
+assert.equal(intro({}).nps, null, '안 고르면 null');
+assert.equal(intro({ nps: '7' }).nps, 7, "'7' 처럼 글자로 온 숫자는 숫자로 읽는다");
+assert.equal(intro({ nps: '일곱' }).nps, null, '숫자가 아니면 안 센다');
+assert.equal(intro({ nps: 7.5 }).nps, null, '정수만 센다');
+assert.doesNotThrow(() => intro(null), '몸통이 없어도 터지지 않는다');
+
+console.log('intro self-check done');
+
+/* ── 표정 ──────────────────────────────────────────────
+   카메라가 읽은 얼굴 근육을 캐릭터 표정 하나로 접는 자리(assets/face/mimic.js).
+   카메라도 DOM 도 안 타는 순수 함수라 여기서 같이 돈다 — 검사 러너를 새로 세우지 않는다. */
+const face = pairs => faceFrom(Object.entries(pairs).map(([categoryName, score]) => ({ categoryName, score })));
+assert.equal(face({}), 'neutre', '아무 값도 없으면 무표정');
+assert.equal(face({ mouthSmileLeft: .5, mouthSmileRight: .5 }), 'heureux', '웃으면 기쁨');
+assert.equal(face({ mouthSmileLeft: .7, mouthSmileRight: .7, jawOpen: .5 }), 'hilare',
+             '크게 웃으며 입을 벌리면 함박웃음 — 기쁨보다 먼저 걸린다');
+assert.equal(face({ jawOpen: .6, eyeWideLeft: .4, eyeWideRight: .4 }), 'surpris', '입 벌리고 눈 크게 뜨면 놀람');
+assert.equal(face({ browDownLeft: .7, browDownRight: .7, mouthFrownLeft: .3, mouthFrownRight: .3 }), 'colere',
+             '눈썹을 내리고 입꼬리를 내리면 골남 — 시무룩보다 먼저 걸린다');
+assert.equal(face({ mouthFrownLeft: .4, mouthFrownRight: .4 }), 'triste', '입꼬리만 내리면 시무룩');
+assert.equal(face({ eyeBlinkLeft: .8, eyeBlinkRight: .8 }), 'somnolent', '두 눈을 감으면 졸림');
+assert.equal(face({ eyeBlinkLeft: .9, eyeBlinkRight: 0 }), 'neutre', '한쪽만 감은 건 표정이 아니다 — 좌우를 평균한다');
+assert.equal(face({ browInnerUp: .4 }), 'curieux', '눈썹만 살짝 올리면 호기심');
+/* 없는 근육 이름이 와도 0 으로 읽어야 한다 — 모델이 갈리면 이름이 바뀔 수 있다 */
+assert.equal(face({ noSuchShape: 1 }), 'neutre', '모르는 이름은 0 으로 본다');
+
+console.log('mimic self-check done');
 
 /* ── 로그인 ────────────────────────────────────────── */
 const KEY = 'test-key';

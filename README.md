@@ -14,6 +14,10 @@ A typing drill for place names. v0.6.266 (`VER=2.66`) — Seoul's 25 districts o
 
 - My Account opens a separate `/account/` page. Only a newly created account opens it automatically after sign-in; returning users go home. The relay reports whether the account was actually created, so this does not depend on browser storage.
 - Security settings use the Figma card layout while retaining passkey registration and recovery codes. Device history, login alerts, account deletion, and session-wide sign-out remain unavailable until server support exists.
+- Account delete is real: `POST /auth/erase` (needs login, body `{sure:true}`) removes every row tied to you — `board`, `ladder`, `played`, `ticket`, `profile`, `intro`, `passkey`, `recovery`, `pending`, `sso`, then the `user` row itself, in one D1 batch so a half-deleted account cannot survive a failure. The session token is stateless and still verifies afterwards, but points at nothing; signing in again creates a fresh account. `ERASE` in `relay/worker.mjs` is the list, and `relay/test.mjs` reads `schema.sql` and fails if a table with a `who` column is missing from it — add a table, add it there.
+- Nickname, bio (60 characters), character and language are stored on the account, not just in the browser. `POST /auth/profile` writes them and `GET /auth/me` returns them; renaming also renames your rows in `board` and `ladder`. The browser copy stays as a mirror so a game still knows your name when the relay is down.
+- The account character is the same creature as the sign-in bot — it runs on `assets/bloub`, so it breathes, blinks and follows the cursor, and the shape, expression and colour you save are what the ranked bot wears. The engine's own eight shapes, sixteen expressions and twelve colours replace the four hand-drawn CSS ones; `assets/bloub/engine.js` is patched only to export those three tables.
+- "Mimic with camera" on the account page drives the character from your face. This is the one place the repo loads code it does not own: the MediaPipe Face Landmarker, pinned at `@mediapipe/tasks-vision@1.0.1` on jsdelivr, because its wasm is 11 MB and only this button needs it. The 3.6 MB model is vendored at `assets/face/face_landmarker.task` instead, so the piece most likely to change silently is ours. Nothing is fetched until the button is pressed, everything runs in the browser, the video never leaves the device and is never stored, and `_headers` opens `camera=(self)` for `/account/*` alone — the site-wide policy is still `camera=()`. The blendshape-to-expression mapping is pure and is checked in `relay/test.mjs`.
 
 ## What's new in 0.6.266
 
@@ -446,7 +450,9 @@ The same Worker adds two more paths. A board is **course plus time limit**. One 
     POST /auth/log    second step: clear it with a passkey → session token
     POST /auth/code   second step: {b,t,code} clear it with a recovery code → session token
     POST /auth/codes  reissue recovery codes (needs login; auto-issued only when the account has none yet; old codes all die)
-    GET  /auth/me     what the account screen shows (needs login) → {keys, codes} counts only, never `who` or a provider id
+    GET  /auth/me     what the account screen shows (needs login) → {keys, codes} counts, plus {profile} — never `who` or a provider id
+    POST /auth/erase  delete the account and everything tied to it (needs login, {sure:true}) → {gone}
+    POST /auth/profile save the account screen's fields (needs login) → {name, bio, face, lang}; renaming also renames your rows in `board` and `ladder`
 
     cd relay
     wrangler d1 create rt-board                              # paste the id into wrangler.toml

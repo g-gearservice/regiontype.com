@@ -1,5 +1,47 @@
 [
   {
+    "v": "0.6.285",
+    "date": "2026-09-24",
+    "ko": "계정을 직접 지울 수 있습니다. 내 계정의 ‘계정 삭제’를 누르면 무엇이 사라지는지 확인한 뒤, 순위표 기록과 경쟁전 점수, 닉네임과 소개, 캐릭터, 패스키와 복구 코드까지 남김없이 지웁니다. 되돌릴 수는 없고, 다시 로그인하면 새 계정으로 시작합니다.",
+    "en": "You can now delete your own account. Account delete on My Account confirms what goes, then erases everything tied to you — leaderboard and ranked scores, nickname and bio, character, passkeys and recovery codes. It cannot be undone; signing in again starts a fresh account."
+  },
+  {
+    "v": "0.6.284",
+    "date": "2026-09-24",
+    "ko": "처음 가입하면 짧은 안내가 한 장씩 뜹니다 — 어디에서 저희를 보셨는지, 권하실 마음이 있는지 세 가지를 여쭙고, 이어서 함께 다닐 캐릭터와 그 이름, 닉네임, 아이디, 새소식 알림, 계정 비공개를 하나씩 정합니다. 숫자 키로 고르고 Enter 로 넘어가며, 건너뛴 항목은 저장하지 않습니다. 아이디가 생겼습니다 — 영문 소문자·숫자·밑줄 3~16자로, 다른 사람과 겹치지 않습니다. 내 계정에서도 아이디와 새소식 알림·계정 비공개를 바꿀 수 있습니다. 패스키에는 이제 계정 번호 대신 아이디가 걸리고, 같은 기기에 같은 계정의 패스키가 두 줄로 쌓이지 않습니다.",
+    "en": "Signing up for the first time now opens a short guide, one question at a time: three about where you found us and whether you would recommend us, then your character and its name, your nickname, your ID, news notifications and whether to keep the account private. Number keys choose, Enter moves on, and anything you skip is not saved. IDs are new — 3 to 16 lowercase letters, digits or underscores, and no two people share one. You can change your ID, notifications and privacy from your account page too. Passkeys now carry your ID instead of an account number, and one device no longer stacks two passkeys for the same account."
+  },
+  {
+    "v": "0.6.283",
+    "date": "2026-09-24",
+    "ko": "홈에 앉힌 경쟁전 봇을 다시 집어 옮길 수 있습니다. 봇을 끌면 지도까지 같이 끌려가 봇이 제자리에 붙어 있던 것을 고쳤습니다.",
+    "en": "You can pick the ranked bot back up and move it. Dragging the bot used to drag the map along with it, so the bot looked stuck in place."
+  },
+  {
+    "v": "0.6.282",
+    "date": "2026-09-24",
+    "ko": "내 계정의 닉네임·소개·캐릭터·언어가 이제 계정에 저장됩니다 — 기기를 바꿔도 로그인하면 그대로 따라옵니다. 소개는 60자까지 적을 수 있고, 닉네임을 바꾸면 이미 올라간 순위표와 경쟁전의 이름도 같이 바뀝니다. 캐릭터는 로그인 화면의 그록봇과 같은 몸이 되어 숨 쉬고 깜빡이고, 큰 캐릭터도 고르는 칸의 작은 얼굴들도 모두 커서를 바라봅니다. 모양 여덟·표정 열여섯·색 열두 가지에서 고르면 저장 단추 없이 바로 저장되고, 그 모습을 경쟁전 봇이 그대로 입습니다. '카메라로 따라 하기'를 누르면 캐릭터에 입이 생겨 내 얼굴을 따라 합니다 — 입을 벌리고 오무리고 활짝 웃고, 혀를 내밀면 메롱까지 합니다. 고개를 돌리거나 갸웃하는 것, 볼을 부풀리는 것도 따라 하고 움직임은 실물보다 크게 과장합니다. 영상은 이 기기 밖으로 나가지 않고 저장되지도 않으며, 카메라를 끄면 입은 사라지고 고른 모습으로 돌아갑니다. 화면은 한 치수 크게 키우고 군더더기 설명은 걷어냈습니다.",
+    "en": "Your nickname, bio, character and language now live on your account — sign in on another device and they follow you. The bio takes up to 60 characters, and changing your nickname renames your existing leaderboard and ranked entries too. The character is now the same creature as the sign-in bot: it breathes, blinks, and both the large one and every small face in the picker watch your cursor. Pick from eight shapes, sixteen expressions and twelve colours — there is no save button, it saves as you pick, and the ranked bot wears what you chose. Press Mimic with camera and the character grows a mouth that copies yours — it opens, puckers, grins, and sticks its tongue out when you do. It follows your head turn, tilt and puffed cheeks too, exaggerated so the movement reads. The video never leaves your device and is never stored; turn the camera off and the mouth goes away. The screen is a size larger, with the redundant help text removed."
+  },
+  {
+    "v": "0.6.276",
+    "date": "2026-09-23",
+    "ko": "점수가 타자 속도로 바뀌었습니다. 판 중에도, 결과에도, 순위표에도 분당 글자 수(타/분)나 분당 낱말 수(WPM)로 보입니다. 설정에 게임 탭이 생겨 둘 중 하나를 고를 수 있고, 기록은 늘 같은 값으로 저장돼 단위가 다른 사람끼리도 같은 표에 섭니다.",
+    "en": "Score is now typing speed. It shows during a game, on the result and on the boards as characters per minute or words per minute. Settings gained a Game tab to pick between them; records are always stored the same way, so people on different units share one board."
+  },
+  {
+    "v": "0.6.272",
+    "date": "2026-09-23",
+    "ko": "경쟁전이 생겼습니다. 상단 로고를 잡고 아래로 끌면 빨간 Grok 봇이 나오고, 원하는 구역에 놓고 '경쟁전 시작'을 누르면 120초 판으로 LP 와 티어(브론즈~마스터)가 오르내립니다. 상단에 '순위'와 '기록'이 새로 붙었습니다.",
+    "en": "Ranked is here. Grab the top logo and drag it down to bring out the red Grok bot, drop it on a district and press Start ranked — 120-second games move your LP and tier (Bronze to Master). The top bar gained Ranking and Records."
+  },
+  {
+    "v": "0.6.271",
+    "date": "2026-09-23",
+    "ko": "설정에 정책 탭이 생겼습니다. 개인정보처리방침·이용약관·피드백을 거기서 엽니다 — 상단 줄의 '개인정보'와 '피드백' 링크는 뺐습니다.",
+    "en": "Settings gained a Policy tab holding the privacy policy, the terms and feedback — the top bar's Privacy and Feedback links are gone."
+  },
+  {
     "v": "0.6.270",
     "date": "2026-09-23",
     "ko": "지역 카드를 Shift 로 눌러 붙어 있는 구를 여럿 고를 수 있습니다. 한 칸 넘게 떨어진 곳을 누르면 복수 선택이 풀립니다. 소개 페이지는 앱에서 고른 야간 테마를 따라가고, 맨 위에 돌아가기 단추와 맨 아래 '바뀐 것' 목록이 생겼습니다.",

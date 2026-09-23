@@ -208,7 +208,10 @@ async function take(bind, tag, generation) {
   show('vSignin');
 }
 
-/* 토큰을 쥐었으면 여기 볼 것은 없다 — 계정 화면은 독립 페이지다 */
+/* 토큰을 쥐었으면 여기 볼 것은 없다 — 계정 화면은 독립 페이지다.
+   처음 만든 계정은 가입 안내(welcome/)로 보낸다: 캐릭터와 프로필을 한 장씩
+   맞추고 나면 스스로 홈으로 돌아온다. 이미 마친 사람이 그 주소로 와도
+   welcome.js 가 /auth/me 의 intro 를 보고 비켜 준다 */
 function done(tok, generation, isNewAccount = false) {
   if (!current(generation)) return;
   localStorage.setItem(TOKEN_KEY, tok);
@@ -216,7 +219,7 @@ function done(tok, generation, isNewAccount = false) {
   TWO = null;
   say('');
   close();
-  location.assign(isNewAccount ? 'account/' : './');
+  location.assign(isNewAccount ? 'welcome/' : './');
 }
 
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
@@ -463,14 +466,15 @@ function sleepBuddy() {
   while (bots.length > 1) { const b = bots.pop(); unseat(b); b.api.stop(); b.el.remove(); }
   bots.forEach(b => { park(b, false); b.api.stop(); b.api.lookAway(); });
 }
-/* 봇은 커서 쪽을 바라본다. 엔진의 가로축은 화면과 같고 세로축만 반대다. */
+/* 봇은 커서 쪽을 바라본다. 화면 좌표 그대로 넘기면 된다 — 세로축 뒤집기는
+   mountBuddy 의 lookAt 안에서 한 번만 한다(부르는 쪽마다 붙이던 음수를 거뒀다). */
 function buddyLook(e) {
   if (motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   const grip = v => Math.max(-1, Math.min(1, v));
   for (const b of bots) {
     const dx = (e.clientX - (b.x + b.size / 2)) / b.size;
     const dy = (e.clientY - (b.y + b.size / 2)) / b.size;
-    b.api.lookAt(grip(dx), -grip(dy));
+    b.api.lookAt(grip(dx), grip(dy));
   }
 }
 let backgroundState = [];

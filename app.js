@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.70';
+const VER = '2.85';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -99,13 +99,25 @@ function paintUI(then) {
     aboutLink.href = (LANG !== 'ko' && have.split(',').includes(LANG))
       ? `about/${LANG}.html` : 'about/';
   }
+  document.querySelectorAll('.unit').forEach(el => { el.textContent = unitLabel(); });
   if (then) then();
 }
 
 /* ── 설정 ───────────────────────────────────────────── */
 const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+/* ── 타자 속도 ───────────────────────────────────────
+   재는 값은 하나다 — 분당 글자 수(CPM). 낱말 수(WPM)는 그걸 다섯으로 나눈 것이다
+   (한 낱말 = 다섯 글자, 타자 검정의 오랜 자). 그래서 CPM 으로 치는 사람과 WPM 으로
+   치는 사람이 같은 순위표에 서도 값이 어긋나지 않는다 — 저장은 늘 CPM 이고
+   보일 때만 읽는 사람의 단위로 바꾼다.
+   'auto' 는 한국어 화면이면 CPM, 아니면 WPM 이다 */
+const CPW = 5;
+const unitNow = () => (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
+const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
+const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
+const showSpeed = cpm => speedIn(cpm) + ' ' + unitLabel();
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
-              lang: 'auto', country: 'auto' };
+              lang: 'auto', country: 'auto', unit: 'auto' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -814,7 +826,7 @@ async function renderCourses() {
 /* 코스 칸은 지도가 다시 그려질 때마다 새로 나므로 문서에서 받는다 */
 document.addEventListener('click', e => {
   /* 로그인 덮개가 떠 있으면 칸은 배경일 뿐이다 — 호버는 살아 있되 눌리지 않는다 */
-  if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
+  if (document.body.matches('.signing, .setting, .paging')) return;
   const b = e.target.closest('#courseBtns .grid-btn');
   const tile = b && TILE.get(b);
   if (tile) {
@@ -842,7 +854,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
-  if (document.body.classList.contains('signing') || document.body.classList.contains('setting')) return;
+  if (document.body.matches('.signing, .setting, .paging')) return;
   /* 고른 칸이 있으면 먼저 고르기를 멈춰 서울 코스로 돌아가고, 없을 때 펼친 곳을 접는다 */
   if (PICK) { pickTile(null); syncHomeCam(); }
   else closeCourse();
@@ -987,7 +999,7 @@ document.addEventListener('click', e => {
 }, true);
 $('#regions').addEventListener('pointerdown', e => {
   if (e.button || !$('#regions').classList.contains('on')) return;
-  if (e.target.closest('.navbar, .nav-bot, .screen-head, dialog, a, input, textarea, select')) return;
+  if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
   /* 캡처는 문턱을 넘긴 뒤에만. 처음부터 #regions 가 잡으면 칸 버튼의 click 이
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
   GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
@@ -1368,8 +1380,11 @@ async function boot() {
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
 
-async function start(slug, only) {
+/* rk 는 경쟁전 표({id, secs}) — ranked.js 가 중계기에서 받아 넘긴다. 시간은 표가 정한다 */
+async function start(slug, only, rk) {
   const zoom = 3;   // 1배를 없앴다 — 코스는 3배로만 돈다
+  const secs = rk ? rk.secs : opt.time;
+  /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [course, geom] = await load(slug);
   /* only 가 있으면 고른 곳만 친다. 나머지 도트는 배경으로 남아 어디인지 보인다 */
   const pick = only ? course.items.filter(it => only.has(it.name)) : course.items;
@@ -1384,7 +1399,7 @@ async function start(slug, only) {
              aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
   });
   G = { slug, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
-       total: opt.time, left: opt.time, hits: 0, tries: 0, combo: 0, best: 0, score: 0,
+       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0,
        cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
   $('#typein').lang = course.lang || document.documentElement.lang;
 
@@ -1401,11 +1416,13 @@ async function start(slug, only) {
   aim();                              // 첫 목표를 잡고 화면을 맞춘다
   $('#statTotal').textContent = '/' + items.length;
   $('#statCount').textContent = '0';
-  $('#statScore').textContent = '0';
+  $('#statSpeed').textContent = '0';
   $('#statCombo').textContent = '';
   $('#typein').value = '';
   $('#gaugeFill').style.width = '100%';
-  $('#statTime').firstElementChild.textContent = clock(opt.time);
+  $('#statTime').firstElementChild.textContent = clock(secs);
+  $('#play').classList.toggle('is-ranked', !!rk);
+  $('#rkTag').hidden = !rk;
   $('.gauge').classList.remove('warn');
   $('#statTime').classList.remove('warn');
   go('play');
@@ -1678,6 +1695,7 @@ function run() {
   tick = setInterval(() => {
     G.left--;
     $('#gaugeFill').style.width = (G.left / G.total * 100) + '%';
+    $('#statSpeed').textContent = speedIn(cpmNow());
     $('#statTime').firstElementChild.textContent = clock(G.left);
     $('.gauge').classList.toggle('warn', G.left <= 10);
     $('#statTime').classList.toggle('warn', G.left <= 10);
@@ -1779,9 +1797,10 @@ function claim(it) {
   if (it.under) it.under.forEach(c => c.classList.add('under'));
   if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
   G.hits++; G.tries++; G.combo++;
+  G.chars += it.name.replace(/\s/g, '').length;
+  $('#statSpeed').textContent = speedIn(cpmNow());
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
-  $('#statScore').textContent = G.score;
   if (it.tile) { it.tile.classList.remove('pop'); void it.tile.getBBox(); it.tile.classList.add('pop'); }
   const cb = $('#statCombo');
   cb.textContent = G.combo > 1 ? '×' + Math.min(5, G.combo) : '';
@@ -1795,21 +1814,32 @@ function claim(it) {
   aim();
 }
 
+/* 지금까지의 속도. 천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 —
+   여기서 넘겨 보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
+function cpmNow() {
+  const spent = Math.max(1, G.total - G.left);
+  return Math.min(900, G.hits * 30, Math.round(G.chars / spent * 60));
+}
+
 function finish() {
   stop();
   beep(300, .3, 'triangle');
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
   pending = setTimeout(() => {
-    const key = `rt.best.${G.slug}.z${G.zoom}`;
+    G.cpm = cpmNow();
+    /* 옛 열쇠(rt.best.*)는 점수였다 — 속도와 견줄 수 없으니 새 열쇠로 간다 */
+    const key = `rt.fast.${G.slug}.t${G.total}`;
     const prev = Number(localStorage.getItem(key) || 0);
-    $('#rScore').textContent = G.score;
+    $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
     $('#rAcc').textContent = (G.tries ? Math.round(G.hits / G.tries * 100) : 0) + '%';
-    $('#rBest').textContent = G.score > prev ? t('bestNew') : prev ? t('bestPrev', { n: prev }) : '';
-    if (G.score > prev) localStorage.setItem(key, G.score);
+    $('#rBest').textContent = G.cpm > prev ? t('bestNew') : prev ? t('bestPrev', { n: showSpeed(prev) }) : '';
+    if (G.cpm > prev) localStorage.setItem(key, G.cpm);
 
     drawCard();
     board();
+    /* 전적·경쟁전 lp 는 ranked.js 가 올린다 */
+    dispatchEvent(new CustomEvent('rt-finish', { detail: G }));
     go('result');
   }, 1200);
 }
@@ -1840,7 +1870,7 @@ function drawCard() {
     ctx.font = '800 54px system-ui,sans-serif';
     ctx.fillText('regiontype', 70, 100);
     ctx.font = '500 38px system-ui,sans-serif';
-    ctx.fillText(t('cardLine', { title: courseLabel(G.course), zoom: G.zoom, score: G.score }), 70, cv.height - 136);
+    ctx.fillText(t('cardLine', { title: courseLabel(G.course), zoom: G.zoom, speed: showSpeed(G.cpm || 0) }), 70, cv.height - 136);
     ctx.font = '800 76px system-ui,sans-serif';
     ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
     ctx.textAlign = 'right';
@@ -1938,10 +1968,11 @@ const fbPlaceholder = () => {
 };
 fbPlaceholder();
 
-$('#fbOpen').onclick = () => {
+/* 넵바와 설정 정책 탭, 두 곳에서 같은 판을 연다 */
+document.querySelectorAll('[data-fb-open]').forEach(b => b.onclick = () => {
   fbSay(''); fbPlaceholder(); $('#feedback').showModal();
   fbReady();
-};
+});
 $('#fbClose').onclick = () => $('#feedback').close();
 /* dialog 는 배경 클릭으로 닫히지 않는다. 여백은 form 이 갖고 있으니
    dialog 자신이 표적이면 곧 바깥이다. */
@@ -2017,7 +2048,7 @@ function drawRanks(list) {
     li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
     li.querySelector('b').textContent = i + 1;
     li.querySelector('.who').textContent = r.name;
-    li.querySelector('.pt').textContent = r.score + t('scoreUnit');
+    li.querySelector('.pt').textContent = showSpeed(r.cpm);
     if (r.me) {
       li.classList.add('me');
       const tag = document.createElement('span');
@@ -2049,14 +2080,14 @@ async function board() {
   const play = { c: G.slug, t: G.total };
   try {
     const d = inn && me && G.score
-      ? await boardAsk('/score', { ...play, name: me, score: G.score, hits: G.hits, tries: G.tries })
+      ? await boardAsk('/score', { ...play, name: me, score: G.score, cpm: G.cpm, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
     $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
     /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
        않으면 다음에 순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고,
        기능이 고장난 것으로 읽힌다. */
     boardSay(d.rank ? t('nth', { n: d.rank })
-      : G.score ? t('notOnBoard', { n: G.score })
+      : G.score ? t('notOnBoard', { n: showSpeed(G.cpm) })
       : '');
     /* 로그인 → 이름 → 올라감. 한 번에 하나씩만 묻는다 */
     $('#boardIn').hidden = inn;

@@ -26,7 +26,7 @@ const isDev = () => document.documentElement.hasAttribute('data-dev');
    홈(app.js)과 같은 통, 같은 기본값이다. 키 집합이 어긋나면 한쪽이 저장할 때마다
    다른 쪽 값이 지워진다 */
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
-              lang: 'auto', country: 'auto' };
+              lang: 'auto', country: 'auto', unit: 'auto' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -37,6 +37,7 @@ const saveOpt = () => {
   document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
   requestAnimationFrame(syncOptShell);
   document.querySelectorAll('#options .toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+  paintUnit();
   dispatchEvent(new CustomEvent('rt-opt'));
 };
 
@@ -228,6 +229,18 @@ function wireOptsTabs() {
   select(tabs[0], true);
 }
 
+/* ── 타자 속도 단위 ──────────────────────────────────
+   저장되는 값은 늘 CPM 이다(app.js 의 주석). 여기서 고르는 건 화면에 보일 자뿐이라,
+   단위를 바꿔도 이미 올라간 기록은 그대로다. '자동' 이 지금 무엇으로 읽히는지는
+   아래 줄에 적어 준다 — 고른 뒤에 무엇이 달라지는지 보이지 않으면 고를 수가 없다 */
+function paintUnit() {
+  const box = $('#optUnit');
+  if (!box) return;
+  box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === opt.unit)));
+  const now = (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
+  $('#unitNow').textContent = t('unitShown', { unit: t(now === 'wpm' ? 'wpmUnit' : 'cpmUnit') });
+}
+
 /* ── 계정 보안 ──────────────────────────────────────── */
 const toB64u = b => btoa(String.fromCharCode(...new Uint8Array(b)))
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -265,7 +278,13 @@ async function me() {
   if (!tok) return null;
   const r = await fetch(RELAY + '/auth/me', { headers: { authorization: 'Bearer ' + tok } });
   if (tok !== token()) return null;
-  if (r.status === 401) { try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY); } catch {} return null; }
+  /* 토큰이 죽었으면 이 브라우저에 남긴 거울도 통째로 지운다. 이름만 지우고
+     소개·캐릭터를 남기면, 다음 사람이 이 기기로 가입할 때 그 값이 그 사람의
+     공개 프로필로 올라간다(welcome/welcome.js 의 save 참고) */
+  if (r.status === 401) {
+    try { for (const k of [TOKEN_KEY, NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname']) localStorage.removeItem(k); } catch {}
+    return null;
+  }
   return r.ok ? r.json().catch(() => null) : null;
 }
 
@@ -274,12 +293,22 @@ const canPasskey = () => !!(window.PublicKeyCredential && navigator.credentials?
 /* 이 기기에 패스키를 하나 만든다 — 로그인해 있어야 한다(2단계를 얹는 것이다) */
 async function passkeyMake() {
   const d = await ask('/auth/new', {});
-  const name = 'regiontype · ' + d.user.slice(0, 6);
+  /* 열쇠고리(애플 암호·구글 비밀번호 관리자)에 걸릴 이름. 정해 둔 아이디나
+     닉네임이 있으면 그것을 쓴다 — 'regiontype · 55f247' 두 줄이 나란히 있으면
+     같은 계정의 기기 둘인지 계정이 둘인지 사람이 가릴 수가 없다. 계정 id 앞
+     여섯 자는 이름이 아직 없을 때의 마지막 수단으로만 남긴다(그래도 계정마다
+     다른 값이라 두 줄이 서로 다른 계정임은 드러난다).
+     ponytail: 이름을 나중에 바꿔도 이미 걸린 줄은 안 바뀐다 — 그건 열쇠고리가
+     쥔 값이라 우리가 고칠 수 없다. 새로 만드는 줄부터 적용된다. */
+  const name = d.name || ('regiontype · ' + d.user.slice(0, 6));
   const cred = await navigator.credentials.create({ publicKey: {
     challenge: fromB64u(d.challenge),
     rp: d.rp,
-    /* 사람 이름을 안 받는다 — 기기의 패스키 목록에도 난수만 남는다 */
+    /* 사람 이름은 여전히 안 받는다 — 여기 실리는 건 이 사이트에서 고른 표시뿐이다 */
     user: { id: new TextEncoder().encode(d.user), name, displayName: name },
+    /* 이 계정이 이미 가진 열쇠. 같은 기기에서 또 만들려 하면 브라우저가
+       "이미 등록돼 있습니다" 로 막는다 — 한 기기가 한 계정에 두 줄을 쌓지 않는다 */
+    excludeCredentials: (d.keys || []).map(id => ({ type: 'public-key', id: fromB64u(id) })),
     pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
     authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
     attestation: 'none', timeout: 60000,
@@ -369,7 +398,7 @@ function showCodes(codes) {
 
 
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
-const SET_HASH = new Set(['settings', 'language', 'region', 'video', 'audio', 'security', 'version']);
+const SET_HASH = new Set(['settings', 'language', 'region', 'game', 'video', 'audio', 'security', 'policy', 'version']);
 const isSetHash = (h = location.hash) => SET_HASH.has(h.slice(1).toLowerCase());
 const over = () => $('#options');
 let opener = null;
@@ -452,6 +481,8 @@ function wire() {
   document.addEventListener('click', e => {
     const tog = e.target.closest('#options .toggle');
     if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
+    const unit = e.target.closest('#optUnit button');
+    if (unit) { opt.unit = unit.dataset.v; saveOpt(); }
   });
 
   $('#optLang').addEventListener('change', e => {
@@ -461,6 +492,7 @@ function wire() {
     LANG = UI_LANGS.includes(opt.lang) ? opt.lang : LANG;
     document.documentElement.lang = LANG;
     applyI18n(over());
+    paintUnit();
     fillLangPick(); fillRegionPick();
     dispatchEvent(new CustomEvent('rt-opt'));
   });
@@ -536,7 +568,7 @@ function wire() {
   addEventListener('rt-open-settings', () => {});
   addEventListener('keydown', e => {
     if (over().hidden) return;
-    if ($('#codes') && $('#codes').open) return;
+    if (($('#codes') && $('#codes').open) || ($('#feedback') && $('#feedback').open)) return;
     if (e.key === 'Escape') return close();
     if (e.key !== 'Tab') return;
     const items = focusable();
@@ -564,6 +596,7 @@ function wire() {
   LANG = UI_LANGS.includes(opt.lang) ? opt.lang
     : (navigator.languages || []).map(x => x.split('-')[0]).find(x => UI_LANGS.includes(x)) || 'ko';
   applyI18n(over());
+  paintUnit();
   $('#verBuild').textContent = VER;
   $('#verPatch').textContent = VER.replace('.', '');   // 릴리스 C 자리는 VER 에서 점을 뺀 숫자
   /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */

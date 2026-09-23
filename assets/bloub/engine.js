@@ -1642,7 +1642,15 @@ var BotEngine = _BotEngine;
 
 // src/bot/repere.ts
 var DEMI_VIEWBOX = 158;
+/* 저장소 패치: 원본 번들은 엔진만 내보낸다. 계정 화면의 캐릭터 고르기가
+   모양·표정·색의 목록을 그대로 써야 해서 세 표를 함께 연다 — 값은 건드리지 않는다. */
 export {
   BotEngine,
-  DEMI_VIEWBOX
+  DEMI_VIEWBOX,
+  SHAPES,
+  SHAPE_BY_ID,
+  EXPRESSIONS,
+  EXPRESSION_BY_ID,
+  COLORS,
+  COLOR_BY_ID
 };

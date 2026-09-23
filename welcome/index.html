@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>처음 오셨네요 — regiontype</title>
+<link rel="stylesheet" href="../style.css?v=2.84">
+<script>try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');document.documentElement.toggleAttribute('data-night',!!o.night);document.documentElement.dataset.motion=o.motion===false?'off':'on'}catch{}</script>
+<script src="welcome.js?v=2.84" defer></script>
+</head>
+<body class="intro-page">
+
+<div class="intro-rail" aria-hidden="true"><span id="introBar"></span></div>
+
+<main class="intro-shell">
+  <p class="intro-count"><span id="introStep">1</span> / <span id="introTotal">10</span></p>
+
+  <!-- 한 번에 한 장만 보인다. 순서·질문은 welcome.js 의 STEPS 가 쥔다 -->
+  <section class="intro-card" id="introCard" aria-live="polite">
+    <p class="intro-kicker" id="introKicker"></p>
+    <h1 class="intro-ask" id="introAsk"></h1>
+    <p class="intro-note" id="introNote"></p>
+    <div class="intro-body" id="introBody"></div>
+    <p class="intro-say" id="introSay" role="status" aria-live="polite"></p>
+  </section>
+
+  <nav class="intro-acts">
+    <button type="button" class="profile-button" id="introBack">이전</button>
+    <button type="button" class="profile-button intro-next" id="introNext">다음</button>
+    <button type="button" class="intro-skip" id="introSkip">건너뛰기</button>
+  </nav>
+  <p class="intro-help">숫자 키로 고르고 <kbd>Enter</kbd> 로 넘어갑니다.</p>
+</main>
+
+</body>
+</html>
