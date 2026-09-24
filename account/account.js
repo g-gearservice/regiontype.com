@@ -75,23 +75,15 @@ function paint() {
 
    견본은 제 시계를 안 돌린다(still). 스물넷이 저마다 숨 쉬면 프레임을 먹으니,
    대신 이 한 바퀴에서 한 장씩 그려 준다 — 도는 rAF 는 큰 놈 하나와 여기 하나뿐이다.
-   방향은 화면 좌표 그대로 넘긴다(위아래 뒤집기는 mountBuddy 가 한다). */
+   화면 좌표를 그대로 넘기고, 방향과 세기는 mountBuddy 의 lookToward 가 잰다
+   (로그인 화면의 봇과 같은 자 — 화면 너비로 나누던 옛 셈은 고개를 안 돌렸다). */
 function eachLooker(f) {
-  if (me) f(me, $('#character'));
-  for (const key of ['shape', 'expression']) {
-    for (const [id, api] of thumbs[key]) f(api, $(`[data-${key}="${CSS.escape(id)}"]`));
-  }
+  if (me) f(me);
+  for (const key of ['shape', 'expression']) for (const api of thumbs[key].values()) f(api);
 }
 function look() {
   looking = 0;
-  const clamp = v => Math.max(-1, Math.min(1, v));
-  eachLooker((api, el) => {
-    if (!aim) { api.lookAway(); return; }
-    const r = el?.getBoundingClientRect();
-    if (!r?.width) return;
-    api.lookAt(clamp((aim[0] - (r.left + r.width / 2)) / (innerWidth / 2)),
-               clamp((aim[1] - (r.top + r.height / 2)) / (innerHeight / 2)));
-  });
+  eachLooker(api => { if (aim) api.lookToward(aim[0], aim[1]); else api.lookAway(); });
 }
 const lookTo = p => { aim = p; looking ||= requestAnimationFrame(look); };
 addEventListener('pointermove', e => lookTo([e.clientX, e.clientY]), { passive: true });
@@ -150,7 +142,7 @@ const loggedIn = () => !!read('rt.token');
 /* 이 브라우저에 남긴 거울을 통째로 지운다. 로그아웃도, 토큰이 죽은 것을 알아챈
    자리도 같은 손을 쓴다 — 한쪽만 지우면 다음 사람이 이 기기로 가입할 때 남은
    값이 그 사람의 공개 프로필로 올라간다(welcome/welcome.js 의 save 참고). */
-const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname'];
+const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.intro'];
 const forget = () => { for (const k of KEYS) localStorage.removeItem(k); sessionStorage.removeItem('rt.bind'); };
 
 /* ── 서버에 남는 프로필 ────────────────────────────────────
@@ -167,13 +159,28 @@ const mine = () => ({
   bio: read('rt.bio'),
   face: [character.shape, character.expression, character.colour].join(','),
   lang: parse('rt.opt', {}).lang || 'auto',
-  handle: $('#accountId').value.trim().replace(/^@/, '').toLowerCase(),
+  handle: (v => /^[a-z0-9_]{3,16}$/.test(v) ? v : '')(
+    $('#accountId').value.trim().replace(/^@/, '').toLowerCase()),
   botname: read('rt.botname'),
   push: switches.push,
   shut: switches.shut,
 });
+/* 소개(bio)만 비울 수 있다. 닉네임·아이디·캐릭터는 남 앞에 걸리는 값이라 빈 채로
+   저장하지 않는다 — 서버도 빈 닉네임을 400 으로 막지만, 그 전에 여기서 무엇이
+   비었는지 짚어 준다(400 의 말만 보면 어느 칸인지 모른다).
+   캐릭터는 늘 고른 모습이 있어 빌 수가 없다. */
+function blank() {
+  const p = mine();
+  if (!p.name) return '닉네임을 비워 둘 수 없습니다.';
+  /* 아이디는 아직 안 정한 사람이 있다 — 그 경우 서버가 덮지 않으므로 빈 값이
+     올라가도 지워지지 않는다. 칸에 적다 만 것만 막는다 */
+  if ($('#accountId').value.trim() && !p.handle) return '아이디는 영문 소문자·숫자·밑줄 3~16자입니다.';
+  return '';
+}
 function push(done) {
   if (!loggedIn()) { say(done + ' 로그인하면 다른 기기에서도 따라옵니다.'); return; }
+  const gap = blank();
+  if (gap) { say(gap); return; }
   fetch(API + '/auth/profile', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + read('rt.token') },
@@ -288,7 +295,7 @@ $('#accountName').value = read('rt.name');
 $('#accountName').addEventListener('change', e => {
   if (!loggedIn()) { session(); return; }
   const value = e.target.value.replace(/[<>\x00-\x1f\x7f]/g, '').trim().slice(0, 12);
-  if (!value) { e.target.value = read('rt.name'); return; }
+  if (!value) { e.target.value = read('rt.name'); say('닉네임을 비워 둘 수 없습니다.'); return; }
   e.target.value = value;
   if (write('rt.name', value)) push('닉네임을 저장했습니다. 이미 올라간 기록의 이름도 바뀝니다.');
 });

@@ -229,6 +229,25 @@ const BOT = 56;
 const layer = $('#rkLayer'), bubble = $('#rkSay');
 let bot = null, making = null, armed = false, follow = 0, swallow = false;
 
+/* 경쟁전 빛깔은 봇의 빛깔이다 — 물든 칸도, 아래 줄의 '경쟁전 시작'도, 말풍선도
+   모두 --rk-on 을 딴다. 계정 화면에서 고른 색이 없으면 --buddy-ink 가 --ranked 로
+   내려오므로 옛 빨강 그대로다.
+   --rk-ink 는 그 빛깔 위에 얹을 글자색이다. 고를 수 있는 열둘이 먹(#0a0a0c)에서
+   크림(#f1efe9)까지 걸쳐 있어 흰 글자 하나로는 못 덮는다 — 밝기를 재서 고른다. */
+const luma = c => {
+  const hex = /^#?([0-9a-f]{6})$/i.exec(c);
+  const [r, g, b] = hex ? [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16))
+    : (c.match(/\d+/g) || [200, 50, 42]).slice(0, 3).map(Number);
+  return (.2126 * r + .7152 * g + .0722 * b) / 255;
+};
+function paintTint(host) {
+  const ink = getComputedStyle(host).getPropertyValue('--buddy-ink').trim();
+  if (!ink) return;
+  const st = document.documentElement.style;
+  st.setProperty('--rk-on', ink);
+  st.setProperty('--rk-ink', luma(ink) > .55 ? 'var(--on-accent)' : '#fff');
+}
+
 function makeBot() {
   making = making || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href).then(({ mountBuddy }) => {
     const el = document.createElement('div');
@@ -240,6 +259,7 @@ function makeBot() {
     const face = readFace();
     const api = mountBuddy(motion, { calm, shape: face.shape, expression: face.expression });
     if (face.colour) api.setColour(face.colour);
+    paintTint(motion);
     bot = { el, api, x: 0, y: 0, tile: null };
     el.addEventListener('pointerdown', e => {
       if (e.button) return;
@@ -287,6 +307,12 @@ function followFrame() {
   follow = requestAnimationFrame(followFrame);
 }
 const followKick = () => { if (!follow) follow = requestAnimationFrame(followFrame); };
+
+/* 이 봇도 커서를 본다 — 로그인 화면·계정 화면과 같은 자(buddy.js 의 lookToward) */
+addEventListener('pointermove', e => {
+  if (armed && bot && e.pointerType === 'mouse') bot.api.lookToward(e.clientX, e.clientY);
+}, { passive: true });
+document.documentElement.addEventListener('pointerleave', () => { if (armed && bot) bot.api.lookAway(); });
 
 /* 시작하기가 빨개지고 라벨이 바뀐다 — 색만으로 가르지 않는다 */
 function paintPlay() {

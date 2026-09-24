@@ -1,6 +1,9 @@
 :root{
   --bg:#e8edf0; --grid:#dae2e7; --ink:#3c464a; --ink-soft:#5b676e;
   --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
+  /* 칸을 통째로 채울 때 쓰는 짙은 청록. 낮에도 밤에도 같은 값이다 —
+     흰 글자를 얹어 5.89:1 이라 어느 쪽 바탕에서도 글이 읽힌다 */
+  --block-deep:#496a6d;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
   /* 주황 바탕 위의 글자. 시안의 흰 글자는 대비 2.06:1 로 기준에 못 미친다 —
      어두운 먹으로 6.64:1 을 받는다. 야간에도 바탕이 그대로라 값도 그대로다 */
@@ -1300,8 +1303,8 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 
 /* ── 내 계정 ── */
 .account-page{overflow:auto;min-height:100vh;display:flex;flex-direction:column}
-.account-backdrop{position:fixed;top:56px;left:5%;width:90%;height:79vw;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(7,minmax(0,1fr));z-index:-1;pointer-events:none;opacity:.09;filter:blur(16px)}
-.account-backdrop span{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--ink-soft);color:var(--ink);font-size:30px;font-weight:700}
+.map-backdrop{position:fixed;top:56px;left:5%;width:90%;height:79vw;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(7,minmax(0,1fr));z-index:-1;pointer-events:none;opacity:.09;filter:blur(16px)}
+.map-backdrop span{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--ink-soft);color:var(--ink);font-size:30px;font-weight:700}
 .account-shell{width:min(100% - 48px,637px);margin:auto;padding-block:48px}
 .account-heading{display:flex;align-items:center;gap:14px;margin-bottom:22px}
 .account-heading h1{font-size:40px;line-height:1;letter-spacing:-.8px;font-weight:800}
@@ -1495,26 +1498,27 @@ body:is(.signing,.setting,.paging) .rk-layer{opacity:0;visibility:hidden}
 .rk-bot.is-leaving .rk-bot-motion{transform:scale(.4)}
 .rk-say{
   position:absolute;left:0;top:0;width:min(300px,calc(100vw - 32px));
-  background:var(--card);color:var(--ink);border:2px solid var(--ranked);border-radius:14px;
+  background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);border:0;border-radius:14px;
   padding:12px 14px;font-size:14px;line-height:1.55;box-shadow:var(--shadow-lift);
   pointer-events:auto;transition:transform var(--slow) var(--ease-out);
 }
 body:has(.rk-bot.is-held) .rk-say{transition:none}
-.rk-say form{margin-top:10px;font-size:12px;color:var(--ink-soft)}
+.rk-say form{margin-top:10px;font-size:12px;color:inherit;opacity:.8}
 .rk-say form[hidden]{display:none}
 .rk-say form div{display:flex;gap:6px;margin-top:6px}
 .rk-say input{font:inherit;font-size:15px;flex:1;min-width:0;color:var(--ink);background:var(--bg);border:2px solid var(--grid);padding:6px 10px}
-.rk-say input:focus{outline:0;border-color:var(--ranked)}
-.rk-say button{font:inherit;font-weight:700;color:#fff;background:var(--ranked);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.rk-say input:focus{outline:0;border-color:var(--rk-ink,#fff)}
+.rk-say button{font:inherit;font-weight:700;color:var(--rk-on,var(--ranked));background:var(--rk-ink,#fff);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .rk-say button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-/* 봇을 놓은 칸은 가운데서부터 빨갛게 번진다. 두꺼운 먹 테두리를 함께 둘러 색만으로
-   가르지 않는다(스크린리더에는 aria-description '경쟁전'). 끌고 지나가는 칸은 테두리만 */
-#courseBtns .grid-btn.rk-hot{box-shadow:inset 0 0 0 5px var(--ranked)}
+/* 봇을 놓은 칸은 가운데서부터 봇의 빛깔로 번진다(--rk-on, ranked.js 의 paintTint).
+   두꺼운 먹 테두리를 함께 둘러 색만으로 가르지 않는다(스크린리더에는
+   aria-description '경쟁전'). 끌고 지나가는 칸은 테두리만 */
+#courseBtns .grid-btn.rk-hot{box-shadow:inset 0 0 0 5px var(--rk-on,var(--ranked))}
 #courseBtns .grid-btn.is-ranked,
 #courseBtns .grid-btn.is-ranked:hover{
-  color:#fff;
-  background:radial-gradient(circle closest-side,var(--ranked) 98%,transparent 100%) center / 150% 150% no-repeat,var(--block);
+  color:var(--rk-ink,#fff);
+  background:radial-gradient(circle closest-side,var(--rk-on,var(--ranked)) 98%,transparent 100%) center / 150% 150% no-repeat,var(--block);
   box-shadow:inset 0 0 0 5px var(--ink);
   animation:rk-dye var(--si-dur) var(--ease-out);
 }
@@ -1522,27 +1526,53 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 
 /* 아래 줄의 시작하기도 빨개지고 '경쟁전 시작'으로 바뀐다(ranked.js 의 paintPlay) */
 .nav-shape{transition:background-color var(--si-dur) var(--ease-out)}
-body.rk-ready #navBotShape{background:var(--ranked)}
-body.rk-ready #navPlay.is-on{color:#fff}
+body.rk-ready #navBotShape{background:var(--rk-on,var(--ranked))}
+body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 
 /* 경쟁전 판. 게이지가 빨갛고 HUD 에 '경쟁전' 글자가 붙는다 */
-#play.is-ranked .gauge i{background:var(--ranked)}
-.rk-tag{font-size:14px;font-weight:800;color:#fff;background:var(--ranked);padding:4px 10px;border-radius:999px}
+#play.is-ranked .gauge i{background:var(--rk-on,var(--ranked))}
+.rk-tag{font-size:14px;font-weight:800;color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked));padding:4px 10px;border-radius:999px}
 .rk-tag[hidden]{display:none}
 .rk-line.bad{color:var(--bad)}
 
 /* ── 가입 안내(welcome/) ────────────────────────────────────
-   한 번에 한 가지만 묻는 화면. .profile-* 옷을 그대로 입되 글자만 키운다 —
-   물음이 화면의 주인이라 나머지는 물러선다.
-   고른 것은 색만으로 나누지 않는다: 테두리가 굵어지고 배경이 바뀌고
-   aria-pressed 가 같이 선다. */
+   한 번에 한 가지만 묻는 화면. 옷은 이 저장소가 이미 쓰는 것에서 딴다 —
+   새 결을 들이지 않는다.
+
+   고르는 단추는 지도 칸(.grid-btn)의 축소판이다: 번호가 동그란 청록 칸이고,
+   고르면 줄 전체가 주황으로 물든다(.grid-btn:hover 와 같은 짝 — --accent 바탕에
+   --on-accent 글자). 물드는 방식도 경쟁전의 rk-dye 를 따른다 — 짚은 자리에서
+   바깥으로 퍼진다. 다만 background-size 대신 원 하나를 키운다(transform 이라
+   합성기에서 돌고, 중간에 끊어 되돌려도 튀지 않는다).
+
+   색만으로 나누지 않는다: 주황 바탕 + 굵은 테두리 + 번호 칸 반전 + 체크 표시 +
+   aria-pressed 가 함께 선다. */
 .intro-page{--profile-space:18px;min-height:100svh;display:flex;flex-direction:column}
+/* 카드 한 장이 들고 나는 시간. --slow(.2s) 는 이 화면엔 짧다 — 물음이 통째로
+   바뀌는 자리라 한 치수 길게 잡되 300ms 아래에 둔다. 움직임을 끄면 0 이 된다.
+
+   --intro-flood 는 주황이 줄을 덮는 시간, --intro-beat 는 고른 뒤 다음 장으로
+   넘어가기까지 기다리는 시간이다. 기다림이 물듦(.26s)과 번호 칸이 튀는 tilepop
+   (.34s)보다 길어야 고른 것이 다 보이고 넘어간다 — 그래서 셋을 나란히 둔다.
+   welcome.js 가 --intro-beat 를 여기서 읽으므로 ms 로 적는다. */
+.intro-page{--intro-dur:.26s;--intro-from:12px;--intro-flood:.26s;--intro-beat:440ms}
+:root[data-motion="off"] .intro-page{--intro-dur:0s;--intro-flood:0s;--intro-beat:0ms}
+
 .intro-rail{position:fixed;top:0;left:0;right:0;height:3px;background:var(--profile-border);z-index:2}
-.intro-rail span{display:block;height:100%;width:0;background:var(--block-hi);transition:width var(--slow) var(--ease-out)}
+/* width 가 아니라 scaleX 다 — 레이아웃을 다시 재지 않고 합성기에서 돈다 */
+.intro-rail span{display:block;height:100%;width:100%;background:var(--accent);
+  transform:scaleX(var(--at,0));transform-origin:left center;
+  transition:transform var(--si-dur) var(--ease-out)}
+
 .intro-shell{width:min(100% - 48px,640px);margin:auto;padding-block:56px;display:flex;flex-direction:column;gap:18px}
 .intro-count{font-size:12px;color:var(--ink-soft);letter-spacing:.06em}
+/* 카드는 포커스를 받되 테두리를 그리지 않는다 — 탭 차례에 없는 자리라
+   (tabindex="-1") 키보드로 여기에 멈출 일이 없고, 멈춘 것처럼 보여서도 안 된다.
+   보기·단추의 :focus-visible 테두리는 그대로다 */
 .intro-card{display:flex;flex-direction:column;gap:12px}
+.intro-card:focus,.intro-card:focus-visible{outline:none}
 .intro-kicker{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);min-height:1em}
+/* 큰 글자는 자간을 죈다 — 커질수록 낱자가 멀어 보인다 */
 .intro-ask{font-size:30px;line-height:1.25;letter-spacing:-.6px;font-weight:800;margin:0}
 .intro-note,.intro-lede{font-size:14px;line-height:1.6;color:var(--ink-soft)}
 .intro-lede{font-size:16px;color:var(--ink)}
@@ -1550,51 +1580,155 @@ body.rk-ready #navPlay.is-on{color:#fff}
 .intro-say.bad{color:var(--bad)}
 .intro-body{margin-top:4px}
 
+/* 카드가 들고 난다. 앞으로 갈 때는 아래에서 올라오고, '이전' 으로 돌아갈 때는
+   위에서 내려온다 — 왔던 길로 되돌아가는 것이 보여야 어디에 있는지 안 흐려진다.
+   .screen 의 rise 와 같은 결(올라오며 나타남)이되 이 화면의 시간을 쓴다 */
+.intro-card[data-way="back"]{--intro-from:-12px}
+.intro-card.is-in > *{animation:intro-in var(--intro-dur) var(--ease-out) backwards}
+.intro-card.is-in > :nth-child(2){animation-delay:30ms}
+.intro-card.is-in > :nth-child(3){animation-delay:50ms}
+.intro-card.is-in > .intro-body{animation-delay:70ms}
+@keyframes intro-in{from{opacity:0;transform:translateY(var(--intro-from))}}
+/* 고를 것들은 한꺼번에 서지 않고 차례로 선다 */
+.intro-card.is-in .intro-pick,.intro-card.is-in .intro-score{
+  animation:intro-in var(--intro-dur) var(--ease-out) backwards;
+  animation-delay:calc(70ms + var(--i,0) * 26ms)}
+
+/* ── 고르는 단추 ─────────────────────────────────────────── */
 .intro-picks{display:flex;flex-direction:column;gap:8px}
 .intro-yesno{flex-direction:row;flex-wrap:wrap}
 .intro-yesno .intro-pick{flex:1 1 140px}
-.intro-pick{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:2px solid var(--profile-border);border-radius:10px;background:var(--profile-soft);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
-.intro-pick kbd{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--profile-border);font:inherit;font-size:12px;font-weight:700}
-.intro-pick[aria-pressed="true"]{border-color:var(--ink);background:var(--profile-border)}
-.intro-pick[aria-pressed="true"] kbd{background:var(--ink);color:var(--bg)}
-.intro-pick[aria-pressed="true"]::after{content:'✓';margin-left:auto;font-weight:700}
+.intro-pick{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  padding:12px 16px;border:2px solid var(--profile-border);border-radius:12px;
+  background:var(--card);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;
+  transition:background-color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),
+             color var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),
+             box-shadow var(--fast) var(--ease-out)}
+/* 물드는 원. 번호 칸 한가운데에서 출발해 줄을 덮는다(경쟁전 rk-dye 와 같은 뜻) */
+.intro-pick::before{
+  content:'';position:absolute;z-index:0;left:30px;top:50%;
+  width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;
+  background:var(--accent);
+  transform:scale(0);transform-origin:50% 50%;
+  transition:transform var(--intro-flood) var(--ease-out)}
+.intro-pick > *{position:relative;z-index:1}
+/* 번호는 지도 칸이다 — 동그란 청록에 흰 글자 */
+.intro-pick kbd{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--block);color:#fff;font:inherit;font-size:13px;font-weight:700;
+  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.intro-pick .tick{margin-left:auto;font-weight:700;opacity:0;transform:scale(.6);
+  transition:opacity var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
 
+.intro-pick[aria-pressed="true"]{border-color:var(--accent-deep);color:var(--on-accent)}
+.intro-pick[aria-pressed="true"]::before{transform:scale(32)}
+.intro-pick[aria-pressed="true"] kbd{background:var(--on-accent);color:var(--accent);
+  animation:tilepop .34s var(--ease-out)}
+.intro-pick[aria-pressed="true"] .tick{opacity:1;transform:scale(1)}
+
+/* 누르는 그 순간 반응한다 — 떼기를 기다리지 않는다 */
+.intro-pick:active,.intro-score:active{transform:scale(.985)}
+@media (hover:hover) and (pointer:fine){
+  /* 짚으면 칸이 통째로 찬다. 번호 칸은 뒤집혀 흰 동그라미가 된다 — 같은 청록끼리
+     겹쳐 번호가 묻히지 않게. 고른 것(주황)과는 색이 달라 둘이 안 헷갈린다 */
+  .intro-pick:not([aria-pressed="true"]):hover{
+    background:var(--block-deep);border-color:var(--block-deep);color:#fff;box-shadow:var(--shadow)}
+  .intro-pick:not([aria-pressed="true"]):hover kbd{background:#fff;color:var(--block-deep)}
+}
+
+/* ── 0‥10 자 ─────────────────────────────────────────────── */
 .intro-scale{display:flex;flex-wrap:wrap;gap:6px}
-.intro-score{flex:1 1 42px;min-width:42px;min-height:44px;border:2px solid var(--profile-border);border-radius:8px;background:var(--profile-soft);color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer}
-.intro-score[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
-.intro-ends{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--ink-soft)}
+.intro-score{
+  flex:1 1 42px;min-width:42px;min-height:46px;
+  border:2px solid var(--profile-border);border-radius:10px;background:var(--card);
+  color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),
+             color var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
+.intro-score[aria-pressed="true"]{border-color:var(--accent-deep);background:var(--accent);
+  color:var(--on-accent);animation:tilepop .34s var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .intro-score:not([aria-pressed="true"]):hover{
+    background:var(--block-deep);border-color:var(--block-deep);color:#fff}
+}
+.intro-ends{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--ink-soft)}
 
-.intro-field{display:flex;align-items:center;gap:2px;border:2px solid var(--profile-border);border-radius:10px;background:var(--card);padding:6px 12px}
-.intro-field:focus-within{border-color:var(--ink)}
+/* ── 글 칸 ───────────────────────────────────────────────── */
+.intro-field{display:flex;align-items:center;gap:2px;border:2px solid var(--profile-border);
+  border-radius:12px;background:var(--card);padding:6px 14px;
+  transition:border-color var(--fast) var(--ease-out),box-shadow var(--fast) var(--ease-out)}
+.intro-field:focus-within{border-color:var(--block);box-shadow:var(--shadow)}
 .intro-prefix{font-size:20px;color:var(--ink-soft)}
 .intro-field input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;font-size:20px;padding:6px 2px}
 .intro-field input:focus{outline:none}
 
-.intro-stage{display:flex;align-items:center;justify-content:center;height:180px;border-radius:12px;background:var(--profile-soft);margin-bottom:14px}
+/* ── 캐릭터 ──────────────────────────────────────────────── */
+.intro-stage{display:flex;align-items:center;justify-content:center;height:180px;
+  border-radius:16px;background:var(--profile-soft);margin-bottom:14px}
 .intro-stage .character{width:140px;height:140px}
 .intro-controls{gap:12px}
 .intro-controls fieldset+fieldset{border-top:1px solid var(--profile-border);padding-top:12px}
+.intro-controls .character-choice{transition:transform var(--fast) var(--ease-out),
+  border-color var(--fast) var(--ease-out),background var(--fast) var(--ease-out)}
+.intro-controls .character-choice[aria-pressed="true"]{animation:tilepop .34s var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .intro-controls .character-choice:hover{transform:scale(1.08)}
+}
 
 .intro-recap{display:grid;grid-template-columns:auto 1fr;gap:8px 20px;font-size:15px;align-items:baseline}
 .intro-recap dt{color:var(--ink-soft);font-size:13px}
 .intro-recap dd{margin:0}
 
+/* ── 아래 줄 ─────────────────────────────────────────────── */
 .intro-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.intro-page .profile-button{min-height:38px;padding:8px 22px;font-size:15px}
-.intro-next{margin-right:auto;order:2}
+/* 다음은 이 화면의 주인공이다 — 로그인 문(.si-btns)과 같은 주황을 쓴다 */
+.intro-page .profile-button{min-height:40px;padding:8px 22px;font-size:15px;
+  transition:background var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),
+             box-shadow var(--fast) var(--ease-out)}
+.intro-page .profile-button:active{transform:scale(.97)}
+.intro-next{margin-right:auto;order:2;border:0;background:var(--accent);color:var(--on-accent);
+  box-shadow:var(--shadow)}
 #introBack{order:1}
-.intro-skip{order:3;border:0;background:none;color:var(--ink-soft);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+@media (hover:hover) and (pointer:fine){
+  .intro-next:not(:disabled):hover{background:var(--accent-deep);box-shadow:var(--shadow-lift)}
+}
+.intro-next:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.intro-skip{order:3;border:0;background:none;color:var(--ink-soft);font:inherit;font-size:13px;
+  text-decoration:underline;cursor:pointer;padding:6px 2px}
 .intro-skip:focus-visible,.intro-score:focus-visible,.intro-pick:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
-.intro-help{font-size:12px;color:var(--ink-soft)}
-.intro-help kbd{border:1px solid var(--profile-border);border-radius:4px;padding:0 5px;font:inherit;font-size:11px}
 /* 이 화면 안에서만 — .intro-acts 의 flex 가 hidden 을 이기지 못하게 */
 .intro-page [hidden]{display:none!important}
 
+/* ── 안내를 마치고 홈으로 ────────────────────────────────────
+   페이지가 둘이지만 전환은 브라우저가 맡는다 — 위쪽 @view-transition{navigation:auto}
+   가 이미 켜 둔 교차 문서 전환이고, 여기서는 이 화면 몫의 움직임만 적는다.
+
+   설정 덮개가 아래에서 올라오는 것(opt-rise: translateY(100%) 에서 옴)의 거꾸로다:
+   묻던 카드가 아래로 내려가 비키면 그 자리에 홈이 남는다. 왔던 길로 되돌아가는
+   셈이라 방향이 어긋나지 않는다. 시간도 그 전환과 같은 --si-dur 을 쓴다.
+
+   뒤에 깔린 격자(.map-backdrop)에는 이름을 주지 않는다 — 이름 없는 것들은 root
+   크로스페이드에 함께 실려, 흐린 구 스물다섯이 홈의 진짜 지도로 풀린다. 이름을
+   주면 그 요소가 제 backdrop root 가 되어 블러가 뒤 그림을 잃는다(넵바 띠에서
+   같은 일이 있었다 — 위 #regions > .backdrop-blur 주석). */
+.intro-shell{view-transition-name:rt-intro}
+::view-transition-old(rt-intro){animation:intro-leave var(--si-dur) var(--ease-out) both}
+@keyframes intro-leave{to{transform:translateY(100%);opacity:0}}
+
 @media (pointer:coarse){
-  /* 손가락에는 숫자 키가 없다 — 안내와 번호 칸을 거둔다 */
-  .intro-help,.intro-pick kbd{display:none}
   .intro-ask{font-size:26px}
 }
 @media (prefers-reduced-motion:reduce){
+  /* 움직임은 거두고 뜻은 남긴다 — 물드는 색과 반전은 그대로 서고, 자리만 안 움직인다.
+     볼 움직임이 없으니 고른 뒤 기다리지도 않는다 */
+  .intro-page{--intro-beat:0ms}
+  .intro-card.is-in > *,.intro-card.is-in .intro-pick,.intro-card.is-in .intro-score{animation:none}
+  .intro-pick::before{transition:none}
+  .intro-pick[aria-pressed="true"] kbd,.intro-score[aria-pressed="true"],
+  .intro-controls .character-choice[aria-pressed="true"]{animation:none}
   .intro-rail span{transition:none}
+  .intro-pick:active,.intro-score:active,.intro-page .profile-button:active{transform:none}
+  .intro-controls .character-choice:hover{transform:none}
 }

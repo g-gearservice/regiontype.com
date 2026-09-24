@@ -15,6 +15,7 @@ const VER = new URL(document.currentScript.src).searchParams.get('v') || '';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const API = 'https://g.gearservicevanguard.com';
 
+const DONE_KEY = 'rt.intro';
 const read = (k, d = '') => { try { return localStorage.getItem(k) || d; } catch { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 const parse = (k, d) => { try { return JSON.parse(read(k)) || d; } catch { return d; } };
@@ -43,7 +44,9 @@ const FACE = { shape: 'cercle', expression: 'curieux', colour: 'turquoise' };
 const answer = {
   platform: '', medium: '', nps: null,
   face: { ...FACE }, botname: '', name: '', handle: '',
-  push: false, shut: false,
+  /* null 은 '아직 안 골랐다' 다 — false(아니요)와 다르다. 이 둘을 뭉개면
+     고르지 않고 지나간 사람을 붙잡을 수 없다 */
+  push: null, shut: null,
 };
 
 /* 캐릭터 말 이름. account.js 와 같은 표다 — 늘리는 자리가 둘이라 값이 갈리면
@@ -62,29 +65,33 @@ const KO = {
 
 /* ── 물을 것 ───────────────────────────────────────────────
    한 장이 한 항목이다. kind 가 어떤 몸을 그릴지 정하고, key 는 answer 의 칸이다.
-   여기 순서를 바꾸면 화면 순서가 바뀐다 — 다른 곳에 번호를 적어 두지 않았다. */
+   여기 순서를 바꾸면 화면 순서가 바뀐다 — 다른 곳에 번호를 적어 두지 않았다.
+
+   skip:true 인 장만 건너뛸 수 있다. 설문 셋이 그렇다 — 안 알려 주셔도 그만이다.
+   프로필(캐릭터·이름·아이디·스위치 둘)은 계정에 남아 남 앞에 걸리는 값이라
+   비워 둔 채 지나가지 못한다. 캐릭터는 늘 고른 모습이 있어 따로 막을 것이 없다. */
 const STEPS = [
   { kind: 'hello' },
-  { kind: 'pick', key: 'platform', kicker: '설문 1/3',
+  { kind: 'pick', skip: true, key: 'platform', kicker: '설문 1/3',
     ask: 'regiontype 을 어디에서 보셨나요?',
-    note: '딱 세 가지만 묻습니다. 어디에 더 나가야 할지 정하는 데만 씁니다.',
+    note: '',
     list: [
       ['search', '검색 (구글·네이버 등)'], ['youtube', '유튜브'],
       ['instagram', '인스타그램'], ['x', 'X (트위터)'],
       ['tiktok', '틱톡'], ['community', '커뮤니티·카페'],
       ['friend', '친구·지인'], ['etc', '그 밖에'],
     ] },
-  { kind: 'pick', key: 'medium', kicker: '설문 2/3',
+  { kind: 'pick', skip: true, key: 'medium', kicker: '설문 2/3',
     ask: '어떤 모습으로 만나셨나요?',
     note: '',
     list: [
       ['video', '영상'], ['post', '글·게시물'], ['comment', '댓글'],
-      ['result', '검색 결과'], ['ad', '광고'], ['direct', '주소를 직접 쳤다'],
-      ['etc', '그 밖에'],
+      ['result', '검색 결과'], ['ad', '광고'], ['etc', '그 밖에'],
     ] },
-  { kind: 'scale', key: 'nps', kicker: '설문 3/3',
-    ask: '이곳을 친구에게 권하시겠어요?',
-    note: '0 은 전혀 아니다, 10 은 꼭 권하겠다 입니다.' },
+  /* 0 과 10 이 무슨 뜻인지는 자 양끝의 말이 한다(drawScale 의 .intro-ends) —
+     설명을 한 줄 더 얹으면 같은 말을 두 번 하는 것이다 */
+  { kind: 'scale', skip: true, key: 'nps', kicker: '설문 3/3',
+    ask: '이곳을 친구에게 권하시겠어요?', note: '' },
   { kind: 'face', kicker: '프로필 1/6',
     ask: '함께 다닐 캐릭터를 고르세요.',
     note: '여기서 고른 모습이 경쟁전에서도 그대로 나옵니다. 나중에 언제든 바꿉니다.' },
@@ -120,21 +127,72 @@ let claimed = '';               // 서버가 받아 준 아이디. 다시 물으
 /* ── 그리기 ────────────────────────────────────────────── */
 const body = () => $('#introBody');
 
+/* 고르면 다음 장으로 넘어간다. 칠하는 것은 즉시(누른 그 프레임에) 하고, 넘어가는
+   것만 한 박자 뒤다 — 그 사이에 주황이 번지고 번호 칸이 한 번 튄다. 이 박자가
+   짧으면 무엇을 골랐는지 보기도 전에 화면이 바뀐다.
+
+   길이는 여기 적지 않고 CSS 의 --intro-beat 에서 읽는다. 물드는 시간과 튀는
+   시간이 거기 있으니, 그 옆에 둬야 한 쪽만 고쳐 어긋나지 않는다. 움직임을 끄면
+   그 값이 0 이 되고 기다림도 같이 사라진다 — 볼 것이 없으니 기다릴 이유도 없다.
+   ms 로 적는다(parseFloat 가 '440ms' 를 440 으로 읽는다 — '.44s' 로 적으면 .44 다). */
+const beat = () => parseFloat(getComputedStyle(document.body).getPropertyValue('--intro-beat')) || 0;
+
+/* 고른 표시만 다시 칠한다. 장을 통째로 다시 그리지 않는 이유가 둘이다:
+   하나, 다시 그리면 등장 애니메이션이 또 돌아 화면이 한 번 끊긴 것처럼 보인다.
+   둘, 새로 만든 단추는 처음부터 고른 모습이라 물드는 것도 튀는 것도 안 보인다 —
+   transition 은 값이 바뀌어야 돌지, 그 값으로 태어나면 돌지 않는다.
+   있던 단추의 aria-pressed 만 뒤집으면 둘 다 제대로 돈다. */
+function repaint(s) {
+  const now = String(s.kind === 'scale' ? answer.nps : answer[s.key]);
+  body().querySelectorAll('[data-val]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.val === now));
+  });
+}
+
+let beating = 0;
+function chose(key, value) {
+  answer[key] = value;
+  repaint(STEPS[at]);
+  clearTimeout(beating);
+  const wait = still() ? 0 : beat();
+  /* 박자 도중에 다른 것을 골라도 된다 — 위에서 이미 지웠으니 새로 센다 */
+  if (!wait) return next();
+  beating = setTimeout(next, wait);
+}
+
+/* 카드는 왔던 방향으로 들고 난다 — 앞으로 가면 아래에서 올라오고 '이전' 이면
+   위에서 내려온다. 같은 요소를 다시 쓰므로(제목·설명) 클래스를 떼고 레이아웃을
+   한 번 읽어 애니메이션을 처음부터 다시 태운다. */
+let way = 'fwd';
 function draw() {
   const s = STEPS[at];
   $('#introStep').textContent = at + 1;
-  $('#introBar').style.width = ((at + 1) / STEPS.length * 100) + '%';
+  /* 레일은 폭이 아니라 scaleX 다 — 매 장마다 레이아웃을 다시 재지 않는다 */
+  $('#introBar').style.setProperty('--at', (at + 1) / STEPS.length);
   $('#introKicker').textContent = s.kicker || '';
   $('#introNote').textContent = s.note || '';
   $('#introBack').hidden = at === 0;
-  $('#introSkip').hidden = !['pick', 'scale', 'text', 'yesno'].includes(s.kind);
+  $('#introSkip').hidden = !s.skip;
   $('#introNext').textContent = s.kind === 'done' ? '시작하기' : s.kind === 'hello' ? '시작' : '다음';
   say('');
   body().replaceChildren();
   ({ hello: drawHello, pick: drawPick, scale: drawScale, face: drawFace,
      text: drawText, yesno: drawYesno, done: drawDone })[s.kind](s);
-  /* 화면이 바뀌면 손이 갈 첫 자리로 옮긴다 — 키보드만으로도 끝까지 간다 */
-  (body().querySelector('input, button') || $('#introNext')).focus();
+  const card = $('#introCard');
+  card.dataset.way = way;
+  card.classList.remove('is-in');
+  void card.offsetWidth;            // 여기서 한 번 읽어야 애니메이션이 되감긴다
+  card.classList.add('is-in');
+  /* 포커스는 첫 단추가 아니라 카드가 받는다. 단추에 얹으면 짚지도 않았는데
+     테두리가 그려져 '이미 이것을 골랐다' 거나 '어서 누르라' 는 말처럼 보인다
+     (로그인 덮개도 같은 까닭으로 첫 화면에서는 포커스를 안 옮긴다 — auth.js 의 live).
+     카드는 tabindex="-1" 이라 탭 차례에는 안 들어가고 테두리도 안 그린다. 대신
+     장이 바뀐 것을 읽어 주는 자리가 되고, 탭을 누르면 거기서부터 보기로 이어진다.
+
+     글 칸만 예외다 — 거기서는 바로 치기 시작해야 하고, 글 칸의 테두리는 재촉이
+     아니라 '여기에 친다' 는 표시다. 화면이 튀지 않게 스크롤은 건드리지 않는다. */
+  const typing = STEPS[at].kind === 'text' && body().querySelector('input');
+  (typing || card).focus({ preventScroll: true });
 }
 
 function drawHello() {
@@ -157,12 +215,19 @@ function drawPick(s) {
     b.type = 'button';
     b.className = 'intro-pick';
     b.setAttribute('aria-pressed', String(answer[s.key] === id));
+    b.dataset.val = id;
     const key = document.createElement('kbd');
     key.textContent = i < 9 ? String(i + 1) : '·';
     const text = document.createElement('span');
     text.textContent = label;
-    b.append(key, text);
-    b.onclick = () => { answer[s.key] = id; draw(); next(); };
+    /* 체크는 색 말고 또 하나의 표시다 — 색만으로 고른 것을 나누지 않는다 */
+    const tick = document.createElement('span');
+    tick.className = 'tick';
+    tick.textContent = '✓';
+    tick.setAttribute('aria-hidden', 'true');
+    b.append(key, text, tick);
+    b.style.setProperty('--i', i);   // 차례로 서게 하는 번호
+    b.onclick = () => chose(s.key, id);
     box.append(b);
   });
   body().append(box);
@@ -179,7 +244,9 @@ function drawScale(s) {
     b.textContent = String(n);
     b.setAttribute('aria-label', n + '점');
     b.setAttribute('aria-pressed', String(answer.nps === n));
-    b.onclick = () => { answer.nps = n; draw(); next(); };
+    b.dataset.val = String(n);
+    b.style.setProperty('--i', n);
+    b.onclick = () => chose('nps', n);
     box.append(b);
   }
   const ends = document.createElement('p');
@@ -199,9 +266,13 @@ function drawYesno(s) {
     b.type = 'button';
     b.className = 'intro-pick';
     b.setAttribute('aria-pressed', String(answer[s.key] === v));
+    b.dataset.val = String(v);
     const key = document.createElement('kbd'); key.textContent = String(i + 1);
     const text = document.createElement('span'); text.textContent = label;
-    b.append(key, text);
+    const tick = document.createElement('span');
+    tick.className = 'tick'; tick.textContent = '✓'; tick.setAttribute('aria-hidden', 'true');
+    b.append(key, text, tick);
+    b.style.setProperty('--i', i);
     b.onclick = () => pickYesno(s, v);
     box.append(b);
   });
@@ -211,12 +282,11 @@ function drawYesno(s) {
 /* 알림은 고른 그 자리에서 브라우저에게도 묻는다 — 나중에 한꺼번에 물으면
    무엇 때문에 묻는지 모르는 창이 뜬다. 거절해도 넘어간다(값만 끈다). */
 async function pickYesno(s, v) {
-  answer[s.key] = v;
   if (s.key === 'push' && v) {
     if (!('Notification' in window)) {
       answer.push = false;
+      repaint(s);
       say('이 브라우저는 알림을 지원하지 않습니다. 이 항목은 꺼 둡니다.');
-      draw();
       return;
     }
     say('브라우저에 알림 권한을 묻고 있습니다…');
@@ -224,13 +294,12 @@ async function pickYesno(s, v) {
     try { ok = await Notification.requestPermission(); } catch {}
     answer.push = ok === 'granted';
     if (!answer.push) {
+      repaint(s);
       say('알림이 허용되지 않았습니다. 나중에 설정에서 다시 켤 수 있습니다.');
-      draw();
       return;
     }
   }
-  draw();
-  next();
+  chose(s.key, v);
 }
 
 function drawText(s) {
@@ -289,10 +358,10 @@ function drawDone() {
   const rows = [
     ['캐릭터', `${KO[answer.face.colour] || ''} ${KO[answer.face.shape] || ''} · ${KO[answer.face.expression] || ''}`
       + (answer.botname ? ` — ${answer.botname}` : '')],
-    ['닉네임', answer.name || '(안 정함)'],
-    ['아이디', answer.handle ? '@' + answer.handle : '(안 정함)'],
-    ['알림', answer.push ? '받음' : '안 받음'],
-    ['계정', answer.shut ? '비공개' : '공개'],
+    ['닉네임', answer.name],
+    ['아이디', '@' + answer.handle],
+    ['알림', answer.push === true ? '받음' : '안 받음'],
+    ['계정', answer.shut === true ? '비공개' : '공개'],
   ];
   for (const [k, v] of rows) {
     const dt = document.createElement('dt'); dt.textContent = k;
@@ -417,17 +486,32 @@ async function claimHandle() {
    공개 프로필이 된다(가족·공용 PC). 가입 안내에는 소개 칸 자체가 없으므로
    소개는 빈 값으로 시작한다 — 내 계정에서 적으면 된다. */
 const save = () => post('/auth/profile', {
-  name: answer.name || '익명',
+  name: answer.name,
   bio: '',
   face: answer.face,
   lang: parse('rt.opt', {}).lang || 'auto',
   handle: answer.handle,
   botname: answer.botname,
-  push: answer.push,
-  shut: answer.shut,
+  push: answer.push === true,
+  shut: answer.shut === true,
 });
 
+/* 그 장을 채웠는가. 못 채웠으면 무엇이 빠졌는지 그 자리에서 말한다 —
+   '다음' 이 말없이 안 눌리면 고장으로 보인다 */
+function missing(s) {
+  if (s.skip) return '';
+  if (s.kind === 'text' && !answer[s.key]) return {
+    botname: '캐릭터 이름을 지어 주세요.',
+    name: '닉네임을 적어 주세요.',
+    handle: '아이디를 정해 주세요.',
+  }[s.key] || '이 칸을 채워 주세요.';
+  if (s.kind === 'yesno' && answer[s.key] === null) return '둘 중 하나를 골라 주세요.';
+  return '';
+}
+
 async function next() {
+  clearTimeout(beating);
+  way = 'fwd';
   const s = STEPS[at];
   if (s.kind === 'text') {
     const input = $('#introInput');
@@ -438,8 +522,16 @@ async function next() {
     /* 다듬은 값을 칸에도 되돌려 적는다 — 'AB' 를 치고 막혔는데 칸엔 'AB' 가
        남아 있으면, 무엇이 저장될 값인지 사람이 알 수 없다 */
     if (input) input.value = answer[s.key];
-    if (s.key === 'handle' && !(await claimHandle())) return;
   }
+  const gap = missing(s);
+  if (gap) {
+    say(gap, true);
+    /* 못 채운 그 칸으로 데려다 준다 — 여기서는 테두리가 옳다. 무엇을 고쳐야
+       하는지 가리키는 것이지 재촉이 아니다 */
+    (body().querySelector('input, button') || $('#introNext')).focus({ preventScroll: true });
+    return;
+  }
+  if (s.kind === 'text' && s.key === 'handle' && !(await claimHandle())) return;
   if (s.kind === 'face') dropFace();
   if (s.kind === 'done') return finish();
   at = Math.min(at + 1, STEPS.length - 1);
@@ -448,18 +540,22 @@ async function next() {
 }
 
 function back() {
+  clearTimeout(beating);
+  way = 'back';
   if (STEPS[at].kind === 'face') dropFace();
   at = Math.max(at - 1, 0);
   draw();
 }
 
-/* 건너뛰기는 진짜로 비운다 — 아이디만 예외다(서버가 빈 값으로 덮지 않는다) */
+/* 건너뛰기는 진짜로 비운다. 설문 셋에만 있다(STEPS 의 skip) — 프로필은
+   비워 둔 채 지나갈 수 없으므로 이 손이 닿지 않는다 */
 function skip() {
+  clearTimeout(beating);
+  way = 'fwd';
   const s = STEPS[at];
+  if (!s.skip) return;
   if (s.kind === 'pick') answer[s.key] = '';
   if (s.kind === 'scale') answer.nps = null;
-  if (s.kind === 'yesno') answer[s.key] = false;
-  if (s.kind === 'text') answer[s.key] = '';
   at = Math.min(at + 1, STEPS.length - 1);
   draw();
 }
@@ -481,7 +577,14 @@ async function finish() {
     say('저장하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.', true);
     return;
   }
-  location.replace('../');
+  /* 마쳤다는 표를 이 브라우저에도 남긴다 — 뒤로 가기로 돌아오면 중계기에
+     묻기 전에 바로 비키려는 것이다(아래 들어오는 문). 원본은 서버의 intro 다 */
+  write(DONE_KEY, '1');
+  /* replace 가 아니라 assign 이다. 바꿔치기(replace) navigation 에는 브라우저가
+     교차 문서 View Transition 을 걸지 않는다 — 카드가 내려가며 홈이 드러나는
+     그 전환이 통째로 사라진다(Navigation API 의 history:'replace' 도 같다).
+     그래서 기록을 한 칸 쌓는 assign 으로 가고, 뒤로 돌아오는 길은 위의 표로 막는다. */
+  location.assign('../');
 }
 
 /* ── 손잡이 ────────────────────────────────────────────── */
@@ -504,31 +607,31 @@ addEventListener('keydown', e => {
   const n = Number(e.key);
   if (s.kind === 'pick' && n >= 1 && n <= s.list.length) {
     e.preventDefault();
-    answer[s.key] = s.list[n - 1][0];
-    draw();
-    next();
+    chose(s.key, s.list[n - 1][0]);
   } else if (s.kind === 'yesno' && (n === 1 || n === 2)) {
     e.preventDefault();
     pickYesno(s, n === 1);
   } else if (s.kind === 'scale') {
     e.preventDefault();
-    answer.nps = n;          // 10 은 단추로 고른다 — 키 하나로는 못 친다
-    draw();
-    next();
+    chose('nps', n);         // 10 은 단추로 고른다 — 키 하나로는 못 친다
   }
 });
 
 /* ── 들어오는 문 ───────────────────────────────────────── */
 (async () => {
   if (!token()) { location.replace('../'); return; }
+  /* 이미 마친 사람은 여기 머물 이유가 없다. 이 브라우저에 표가 있으면 중계기에
+     묻기도 전에 비킨다 — 뒤로 가기로 돌아왔을 때 설문이 한 번 번쩍이지 않는다.
+     여기서는 replace 다: 뒤로 가기가 이 자리를 다시 밟게 두지 않는다 */
+  if (read(DONE_KEY)) { location.replace('../'); return; }
   draw();
-  /* 이미 마친 사람은 여기 머물 이유가 없다. 안내를 보여 준 뒤에 묻는다 —
-     중계기가 느려도 첫 장은 바로 뜬다 */
+  /* 표가 없으면(기기를 바꿨거나 저장소를 지웠거나) 서버에 묻는다. 그 사이에도
+     첫 장은 이미 떠 있다 — 중계기가 느려도 빈 화면을 보이지 않는다 */
   try {
     const r = await fetch(API + '/auth/me', { headers: { authorization: 'Bearer ' + token() } });
     if (r.status === 401) { location.replace('../'); return; }
     const d = await r.json();
-    if (d.intro) { location.replace('../account/'); return; }
+    if (d.intro) { write(DONE_KEY, '1'); location.replace('../'); return; }
     /* 다시 들어온 사람은 하다 만 자리에서 잇는다 */
     const p = d.profile;
     if (p) {
@@ -536,8 +639,8 @@ addEventListener('keydown', e => {
       answer.handle = p.handle || '';
       claimed = answer.handle;
       answer.botname = p.botname || '';
-      answer.push = !!p.push;
-      answer.shut = !!p.shut;
+      answer.push = p.push == null ? null : !!p.push;
+      answer.shut = p.shut == null ? null : !!p.shut;
       const [shape, expression, colour] = String(p.face || '').split(',');
       if (shape) answer.face = { shape, expression, colour };
       if (STEPS[at].kind !== 'face') draw();

@@ -70,13 +70,13 @@
 }
 </script>
 
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=2.85">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=2.85">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=2.85">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=2.88">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=2.88">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=2.88">
 <!-- 앱에서 고른 야간 테마를 그대로 쓴다. 같은 출처라 rt.opt 를 그냥 읽으면 된다.
      첫 그림 전에 붙여야 밝은 화면이 한 번 번쩍이지 않는다 -->
 <script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
-<link rel="stylesheet" href="../style.css?v=2.85">
+<link rel="stylesheet" href="../style.css?v=2.88">
 <!-- Cette page est un texte à lire : elle n'applique pas les règles d'écran fixe de
      l'application (overflow:hidden, position:fixed). Les tokens et les polices sont
      hérités tels quels de style.css, seule la mise en page du document est redéfinie.
@@ -217,7 +217,7 @@
 <!-- 바뀐 것 목록은 data/changes.json 한 곳에 둔다 — 스물여섯 장을 따로 고치지 않는다.
      그 나라 말이 없으면 영어로 적는다 -->
 <script>
-fetch('../data/changes.json?v=2.85').then(r => r.json()).then(list => {
+fetch('../data/changes.json?v=2.88').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const ul = document.getElementById('changes');
   if (!ul) return;

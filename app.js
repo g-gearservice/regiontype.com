@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.85';
+const VER = '2.88';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1399,7 +1399,7 @@ async function start(slug, only, rk) {
              aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
   });
   G = { slug, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
-       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0,
+       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, spent: 0,
        cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
   $('#typein').lang = course.lang || document.documentElement.lang;
 
@@ -1798,6 +1798,7 @@ function claim(it) {
   if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
   G.hits++; G.tries++; G.combo++;
   G.chars += it.name.replace(/\s/g, '').length;
+  G.spent = G.total - G.left;      // 친 시간은 여기서 멈춘다 — cpmNow 참고
   $('#statSpeed').textContent = speedIn(cpmNow());
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -1814,10 +1815,13 @@ function claim(it) {
   aim();
 }
 
-/* 지금까지의 속도. 천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 —
-   여기서 넘겨 보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
+/* 지금까지의 속도. 나눌 시간은 '판이 흐른 시간'이 아니라 '마지막으로 맞힌 때까지'다
+   (G.spent, claim 이 찍는다) — 모르는 곳 앞에서 손 놓고 있는 동안 이미 친 속도가
+   깎여 내려가면 안 된다. 다 맞히면 둘이 같은 값이다.
+   천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 — 여기서 넘겨
+   보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
 function cpmNow() {
-  const spent = Math.max(1, G.total - G.left);
+  const spent = Math.max(1, G.spent || (G.total - G.left));
   return Math.min(900, G.hits * 30, Math.round(G.chars / spent * 60));
 }
 

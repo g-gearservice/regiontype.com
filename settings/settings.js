@@ -282,7 +282,7 @@ async function me() {
      소개·캐릭터를 남기면, 다음 사람이 이 기기로 가입할 때 그 값이 그 사람의
      공개 프로필로 올라간다(welcome/welcome.js 의 save 참고) */
   if (r.status === 401) {
-    try { for (const k of [TOKEN_KEY, NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname']) localStorage.removeItem(k); } catch {}
+    try { for (const k of [TOKEN_KEY, NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname', 'rt.intro']) localStorage.removeItem(k); } catch {}
     return null;
   }
   return r.ok ? r.json().catch(() => null) : null;

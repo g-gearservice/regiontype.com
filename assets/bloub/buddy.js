@@ -121,6 +121,19 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
       );
       paintNow();
     },
+    /* 화면의 한 점을 본다. 제 몸 한가운데에서 그 점까지의 방향을 재고, 몸 하나쯤
+       떨어지면 고개를 다 돌린다. 세기만 줄이고 방향은 그대로 두는 것이 요점이다 —
+       축마다 따로 자르면(옛 계정 화면) 멀리 있는 커서가 죄다 네 귀퉁이로 몰려
+       고개는 안 돌고 눈알만 평면으로 미끄러진다. */
+    lookToward(x, y) {
+      const r = host.getBoundingClientRect();
+      if (!r.width) return;
+      const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+      const len = Math.hypot(dx, dy);
+      if (!len) return;
+      const k = Math.min(1, len / r.width);
+      this.lookAt(dx / len * k, dy / len * k);
+    },
     lookAway() {
       if (calm()) return;
       engine.setLook(null, clock());
