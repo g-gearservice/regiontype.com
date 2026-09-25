@@ -10,12 +10,6 @@
 https://:worker.:account.workers.dev/*
   X-Robots-Tag: noindex
 
-# 계정 화면의 '카메라로 따라 하기' 한 곳에서만 카메라를 연다. 위의 전역 규칙은
-# camera=() 그대로다 — 나머지 화면은 물어볼 길조차 없다. 켤 때 브라우저가 사람에게
-# 다시 묻고, 영상은 이 기기 안에서만 돈다(assets/face/mimic.js).
-/account/*
-  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
-
 # signin/index.html 은 해시를 그대로 홈에 넘기고 비키는 인라인 스크립트 한 줄이
 # 전부다 — script-src 'self' 만으로는 그 한 줄이 막혀 SSO 착지가 끊긴다.
 # ★ 그 스크립트를 고치면 이 해시도 같이 고친다(위 welcome 쪽 명령과 같다).

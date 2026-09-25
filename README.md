@@ -12,12 +12,11 @@ A typing drill for place names. v0.6.266 (`VER=2.66`) — Seoul's 25 districts o
 
 ## Unreleased
 
-- My Account opens a separate `/account/` page. Only a newly created account opens it automatically after sign-in; returning users go home. The relay reports whether the account was actually created, so this does not depend on browser storage.
+- My Account is an overlay on the home screen (`#account`), like Settings, Ranking and Records — closing it leaves home exactly as it was. `account/account.js` loads on first open; `/account/` only forwards to `/#account`. A newly created account goes through the welcome survey after sign-in; returning users go home. The relay reports whether the account was actually created, so this does not depend on browser storage.
 - Security settings use the Figma card layout while retaining passkey registration and recovery codes. Device history, login alerts, account deletion, and session-wide sign-out remain unavailable until server support exists.
 - Account delete is real: `POST /auth/erase` (needs login, body `{sure:true}`) removes every row tied to you — `board`, `ladder`, `played`, `ticket`, `profile`, `intro`, `passkey`, `recovery`, `pending`, `sso`, then the `user` row itself, in one D1 batch so a half-deleted account cannot survive a failure. The session token is stateless and still verifies afterwards, but points at nothing; signing in again creates a fresh account. `ERASE` in `relay/worker.mjs` is the list, and `relay/test.mjs` reads `schema.sql` and fails if a table with a `who` column is missing from it — add a table, add it there.
 - Nickname, bio (60 characters), character and language are stored on the account, not just in the browser. `POST /auth/profile` writes them and `GET /auth/me` returns them; renaming also renames your rows in `board` and `ladder`. The browser copy stays as a mirror so a game still knows your name when the relay is down.
 - The account character is the same creature as the sign-in bot — it runs on `assets/bloub`, so it breathes, blinks and follows the cursor, and the shape, expression and colour you save are what the ranked bot wears. The engine's own eight shapes, sixteen expressions and twelve colours replace the four hand-drawn CSS ones; `assets/bloub/engine.js` is patched only to export those three tables.
-- "Mimic with camera" on the account page drives the character from your face. This is the one place the repo loads code it does not own: the MediaPipe Face Landmarker, pinned at `@mediapipe/tasks-vision@1.0.1` on jsdelivr, because its wasm is 11 MB and only this button needs it. The 3.6 MB model is vendored at `assets/face/face_landmarker.task` instead, so the piece most likely to change silently is ours. Nothing is fetched until the button is pressed, everything runs in the browser, the video never leaves the device and is never stored, and `_headers` opens `camera=(self)` for `/account/*` alone — the site-wide policy is still `camera=()`. The blendshape-to-expression mapping is pure and is checked in `relay/test.mjs`.
 
 ## What's new in 0.6.266
 
@@ -334,7 +333,7 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
     about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
     auth.js                  sign-in overlay on the home screen: Google SSO, passkey second step, and recovery codes
     signin/                  provider callback landing route; forwards its hash to the home screen
-    account/                 separate account page with browser-local character preferences
+    account/                 My Account overlay script; index.html only forwards to /#account
     settings/                settings overlay script and hash-passthrough landing route
     wrangler.toml            the site as a Cloudflare Worker with static assets (no script, no build)
     _headers / _redirects    security headers and folder-index rewrites, applied by Cloudflare

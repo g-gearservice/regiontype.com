@@ -69,9 +69,7 @@ const siteRules = key => [
     test: p => h(p, 'referrer-policy') === 'strict-origin-when-cross-origin' ? ''
              : `다른 값이다: ${h(p, 'referrer-policy') || '없음'}` },
   { id: `${key}-permissions`, need: `probe:${key}`, sev: 'low',
-    /* /account/* 한 곳만 _headers 에서 camera=(self) 로 연다 — 계정 화면의 '카메라로
-       따라 하기'가 쓴다. 여기서 보는 페이지들은 그 예외 밖이라 문턱은 그대로다. */
-    want: '카메라·마이크·위치·결제·USB 를 아무에게도 주지 않는다(계정 화면만 예외)',
+    want: '카메라·마이크·위치·결제·USB 를 아무에게도 주지 않는다',
     test: p => {
       const v = h(p, 'permissions-policy');
       if (!v) return 'Permissions-Policy 가 없다';

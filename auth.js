@@ -219,6 +219,10 @@ function done(tok, generation, isNewAccount = false) {
   TWO = null;
   say('');
   close();
+  /* 새 계정이면 가입 안내를 마치고 돌아온 첫 홈에서 봇이 꺼내 달라고 조른다(ranked.js) */
+  if (isNewAccount) localStorage.setItem('rt.rescue', '1');
+  /* 로그인하고 돌아온 홈에서는 봇이 다시 나와 인사한다(ranked.js 의 greetIn) */
+  sessionStorage.removeItem('rt.greeted');
   location.assign(isNewAccount ? 'welcome/' : './');
 }
 

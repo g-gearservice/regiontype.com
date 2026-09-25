@@ -70,13 +70,13 @@
 }
 </script>
 
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=2.88">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=2.88">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=2.88">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=3.08">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.08">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.08">
 <!-- 앱에서 고른 야간 테마를 그대로 쓴다. 같은 출처라 rt.opt 를 그냥 읽으면 된다.
      첫 그림 전에 붙여야 밝은 화면이 한 번 번쩍이지 않는다 -->
 <script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
-<link rel="stylesheet" href="../style.css?v=2.88">
+<link rel="stylesheet" href="../style.css?v=3.08">
 <!-- 이 페이지는 읽는 글이라 앱의 고정 화면 규칙(overflow:hidden, position:fixed)을
      쓰지 않는다. 토큰과 글꼴은 style.css 것을 그대로 물려받고, 문서 배치만 덧쓴다.
      app.js 는 부르지 않는다 — 지도도 게임 루프도 여기엔 없다. -->
@@ -106,6 +106,9 @@
   .doc a.cta{display:inline-block;margin-top:12px;background:var(--accent-text);color:var(--bg);
        text-decoration:none;font-weight:800;font-size:20px;padding:11px 24px;border-radius:6px}
   .doc footer{margin-top:64px;color:var(--ink-soft);font-size:14px;line-height:1.8}
+  .howto figure{margin:8px 0 20px}
+  .howto img{display:block;width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+  .howto h3{font-size:20px;font-weight:800;margin:36px 0 12px}
 </style>
 </head>
 <body>
@@ -190,23 +193,8 @@
 
   <h2>Como jogar</h2>
 
-  <p>É preciso um teclado físico. Como o jeito é digitar os nomes, com teclado de tela não
-  funciona direito. Abra no PC ou no notebook.</p>
-
-  <ul>
-    <li><strong>Escolher o percurso</strong> — os 25 distritos de Seul, ou um distrito e
-    os bairros administrativos dentro dele. Na lista de regiões, vire o cartão para
-    escolher.</li>
-    <li><strong>Nome visível · oculto</strong> — “visível” deixa na tela o nome que você
-    tem de digitar agora; “oculto” faz você lembrar dele olhando só o mapa. Na primeira
-    vez, dar uma volta com “visível” e só depois passar para “oculto” costuma funcionar
-    melhor.</li>
-    <li><strong>Tempo limite</strong> — de 1 a 5 minutos. Curto, vira treino de
-    velocidade; longo, vira treino de completar tudo até o fim.</li>
-  </ul>
-
-  <p>No fim aparecem a pontuação, os lugares visitados e a precisão, junto com a lista dos
-  que ficaram de fora. O resultado pode ser salvo como imagem.</p>
+  <!-- 플레이 방법은 data/howto.json 한 곳에 둔다 — 그림은 assets/howto/. 그 나라 말이 없으면 영어 -->
+  <div class="howto" id="howto"></div>
 
   <h2>Novidades</h2>
 
@@ -216,7 +204,32 @@
 <!-- 바뀐 것 목록은 data/changes.json 한 곳에 둔다 — 스물여섯 장을 따로 고치지 않는다.
      그 나라 말이 없으면 영어로 적는다 -->
 <script>
-fetch('../data/changes.json?v=2.88').then(r => r.json()).then(list => {
+fetch('../data/howto.json?v=3.08').then(r => r.json()).then(list => {
+  const lang = document.documentElement.lang;
+  const box = document.getElementById('howto');
+  if (!box) return;
+  for (const s of list) {
+    const c = s[lang] || s.en;
+    const h = document.createElement('h3');
+    h.textContent = c.h;
+    box.append(h);
+    if (s.img) {
+      const f = document.createElement('figure');
+      const img = document.createElement('img');
+      img.src = '../assets/howto/' + s.img + '?v=3.08';
+      img.alt = (s.alt && (s.alt[lang] || s.alt.en)) || '';
+      img.loading = 'lazy';
+      f.append(img);
+      box.append(f);
+    }
+    for (const t of c.p) {
+      const p = document.createElement('p');
+      p.textContent = t;
+      box.append(p);
+    }
+  }
+}).catch(() => {});
+fetch('../data/changes.json?v=3.08').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const ul = document.getElementById('changes');
   if (!ul) return;

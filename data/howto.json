@@ -1,0 +1,155 @@
+[
+  {
+    "ko": {
+      "h": "준비",
+      "p": [
+        "물리 키보드가 필요합니다. 지명을 직접 쳐서 맞히는 방식이라 화면 키보드로는 제대로 돌아가지 않습니다. PC나 노트북에서 열어 주세요.",
+        "홈 화면은 마우스로 끌어 옮기고, 휠이나 + · − 키로 확대·축소합니다."
+      ]
+    },
+    "en": {
+      "h": "Before you start",
+      "p": [
+        "You need a physical keyboard. You answer by typing each place name yourself, so an on-screen keyboard won't really work. Open it on a PC or laptop.",
+        "On the home screen, drag with the mouse to move around and use the wheel or the + and − keys to zoom."
+      ]
+    }
+  },
+  {
+    "img": "pick.svg",
+    "alt": {
+      "ko": "홈의 동그란 칸 중 마포구를 누르면 주황 테두리가 생기고, 한 번 더 누르면 마포구 안의 행정동 칸들이 펼쳐진다",
+      "en": "Pressing the Mapo-gu tile on the home screen outlines it in orange; pressing it again spreads out the neighbourhood tiles inside Mapo-gu"
+    },
+    "ko": {
+      "h": "1. 코스 고르기",
+      "p": [
+        "홈의 동그란 칸 하나하나가 코스입니다. 칸을 누르면 골라지고, 고른 곳의 이름이 아래 막대 밑에 뜹니다.",
+        "같은 칸을 한 번 더 누르면 그 안의 행정동으로 들어갑니다. 서울 25개 자치구 안에 행정동이 423개 있습니다.",
+        "Shift 를 누른 채 이웃한 칸을 여러 개 누르면 그 곳들만 모아 칠 수 있습니다. Esc 를 누르면 고른 것이 풀립니다.",
+        "아무 칸도 고르지 않고 시작하면 전체 코스(서울 25개 자치구)를 칩니다."
+      ]
+    },
+    "en": {
+      "h": "1. Pick a course",
+      "p": [
+        "Every round tile on the home screen is a course. Press one to pick it; its name appears under the bottom bar.",
+        "Press the same tile again to step into the neighbourhoods (administrative dongs) inside it — Seoul's 25 districts hold 423 of them.",
+        "Hold Shift and press several neighbouring tiles to play just those places together. Press Esc to clear your pick.",
+        "Start without picking anything and you play the whole course (all 25 districts of Seoul)."
+      ]
+    }
+  },
+  {
+    "img": "type.svg",
+    "alt": {
+      "ko": "플레이 화면. 지도에서 마포구가 주황으로 빛나고, 아래 이름 줄 가운데에 마포구, 양옆에 영등포구와 서대문구가 흐리게 보인다. 입력줄에 마포구를 치고 Space 를 누른다",
+      "en": "The play screen. Mapo-gu glows orange on the map; the name row shows Mapo-gu in the middle with Yeongdeungpo-gu and Seodaemun-gu faded on either side. Mapo-gu is typed into the input and Space is pressed"
+    },
+    "ko": {
+      "h": "2. 시작하고 치기",
+      "p": [
+        "아래 막대의 시작하기를 누르면 카운트다운 뒤 판이 시작됩니다. 따로 누를 곳 없이 바로 치면 됩니다.",
+        "코스는 이웃한 곳을 따라 차례로 이어집니다. 지도에서 주황으로 빛나는 곳이 지금 칠 곳이고, 아래 이름 줄 가운데에 그 이름이, 양옆에 방금 친 곳과 다음 곳이 흐리게 보입니다.",
+        "이름을 치고 Space 를 누르면 확정됩니다. 이름에 띄어쓰기가 들어 있는 코스에서는 Enter 로 확정합니다.",
+        "이름보다 길게는 쳐지지 않습니다. 틀리면 입력줄이 흔들리며 비워지니 다시 치면 됩니다."
+      ]
+    },
+    "en": {
+      "h": "2. Start and type",
+      "p": [
+        "Press Play in the bottom bar; after a countdown the round begins. Just start typing — there's nothing else to click.",
+        "A course runs from one neighbouring place to the next. The place glowing orange on the map is the one to type now; its name sits in the middle of the name row, with the place you just typed and the next one faded on either side.",
+        "Type the name and press Space to confirm. In courses whose names contain spaces, confirm with Enter instead.",
+        "You can't type past the length of the name. A wrong answer shakes the input line and clears it — just type it again."
+      ]
+    }
+  },
+  {
+    "ko": {
+      "h": "3. 점수와 시간",
+      "p": [
+        "연달아 맞히면 위쪽 줄에 콤보(×2 … ×5)가 붙습니다. 한 번 틀리면 콤보가 끊깁니다.",
+        "점수는 타자 속도로 봅니다 — 분당 친 글자 수(타/분)이고, 설정의 게임 탭에서 WPM 으로 바꿔 볼 수 있습니다. 속도는 마지막으로 맞힌 때까지의 시간으로 나누므로, 막혀서 머뭇거려도 이미 친 속도가 깎이지 않습니다.",
+        "한 판은 기본 2분입니다. 위쪽 게이지가 남은 시간을 보여 줍니다."
+      ]
+    },
+    "en": {
+      "h": "3. Score and time",
+      "p": [
+        "Answer several in a row and a combo (×2 … ×5) appears in the top row. One wrong answer breaks it.",
+        "Your score is your typing speed — characters per minute (CPM), which you can switch to WPM in the Game tab of Settings. Speed is divided by the time up to your last correct answer, so stalling on a hard one doesn't eat the speed you already earned.",
+        "A round lasts 2 minutes by default. The gauge at the top shows the time left."
+      ]
+    }
+  },
+  {
+    "img": "result.svg",
+    "alt": {
+      "ko": "결과 화면. 왼쪽 카드에 들른 곳은 청록, 놓친 곳은 빨간 점선으로 표시되고, 오른쪽에 속도·들른 곳·정확도 숫자와 이미지 저장·다시 하기 버튼이 있다",
+      "en": "The result screen. The card on the left marks visited places in teal and missed ones with a red dashed ring; on the right are speed, places visited and accuracy, with Save image and Play again buttons"
+    },
+    "ko": {
+      "h": "4. 결과 보기",
+      "p": [
+        "판이 끝나면 속도, 들른 곳 수, 정확도, 내 최고 기록이 나옵니다. 카드에는 들른 곳이 칠해지고 놓친 곳이 따로 표시됩니다.",
+        "결과 카드는 이미지로 저장할 수 있고, 다시 하기로 같은 코스를 한 판 더 칩니다. 로그인해 있으면 기록이 남아 넵바의 기록에서 다시 볼 수 있습니다."
+      ]
+    },
+    "en": {
+      "h": "4. Read your result",
+      "p": [
+        "When the round ends you see your speed, places visited, accuracy and your personal best. The card colours in the places you visited and marks the ones you missed.",
+        "You can save the result card as an image, or press Play again for another round on the same course. If you're signed in, the game is saved and shows up under Records in the top bar."
+      ]
+    }
+  },
+  {
+    "img": "ranked.svg",
+    "alt": {
+      "ko": "경쟁전 켜기. 시작하기를 0.6초 꾹 누르면 주황 알약이 빨갛게 차오르고, 다 차면 빨간 경쟁전 시작 버튼으로 바뀐다",
+      "en": "Turning on ranked. Holding Play for 0.6 seconds fills the orange pill with red; once full it becomes the red Start ranked button"
+    },
+    "ko": {
+      "h": "5. 경쟁전",
+      "p": [
+        "다른 사람과 겨루려면 로그인한 뒤 시작하기를 꾹(약 0.6초) 누르세요. 버튼이 빨갛게 차오르며 '경쟁전 시작'으로 바뀝니다. 키보드로는 Space 를 누르고 있으면 됩니다.",
+        "'경쟁전 시작'을 한 번 더 누르면 지금 고른 코스로 경쟁전이 시작됩니다. 다시 꾹 누르거나 Esc 를 누르면 경쟁전이 풀립니다.",
+        "경쟁전은 120초이고, 그동안 친 점수로 LP 가 오르내립니다. 정확도가 80%보다 낮으면 이겨도 LP 를 잃고, 중간에 나가면 25 LP 를 잃습니다.",
+        "배치 5판을 마치면 순위표에 오르고, LP 100마다 브론즈 · 실버 · 골드 · 플래티넘 · 다이아몬드 · 마스터로 티어가 오릅니다."
+      ]
+    },
+    "en": {
+      "h": "5. Ranked",
+      "p": [
+        "To compete, sign in and press and hold Play (about 0.6 seconds). The button fills with red and turns into 'Start ranked'. On a keyboard, hold Space.",
+        "Press 'Start ranked' once more to start a ranked round on the course you've picked. Hold again or press Esc to turn ranked off.",
+        "A ranked round lasts 120 seconds and your score moves your LP. Below 80% accuracy you lose LP even when you win, and leaving midway costs 25 LP.",
+        "After 5 placement games you join the table, and every 100 LP moves you up a tier: Bronze, Silver, Gold, Platinum, Diamond, Master."
+      ]
+    }
+  },
+  {
+    "img": "helper.svg",
+    "alt": {
+      "ko": "도우미 봇이 화면 귀퉁이에서 자고 있다가, 커서를 올리자 깨어나 말풍선을 띄운다",
+      "en": "The helper bot sleeps in a corner of the screen and wakes up with a speech bubble when the cursor points at it"
+    },
+    "ko": {
+      "h": "6. 도우미 봇",
+      "p": [
+        "사이트에 들어오거나 로그인하면 도우미 봇이 로고 뒤에서 먼저 나와 인사하고, 홈 화면 귀퉁이로 가서 잡니다. 가리키거나 누르면 깨어납니다.",
+        "봇이 가리는 곳이 있으면 끌어서 원하는 자리로 옮기세요. 키보드로는 봇에 초점을 두고 화살표 키(Shift 와 함께면 크게)로 옮깁니다.",
+        "경쟁전에 로그인이나 이름이 필요할 때처럼, 할 일이 생기면 봇이 먼저 말을 겁니다."
+      ]
+    },
+    "en": {
+      "h": "6. The helper bot",
+      "p": [
+        "When you open the site or sign in, the helper bot pops out from behind the logo to say hello, then goes to sleep in a corner of the home screen. Point at it or press it to wake it up.",
+        "If the bot is in the way, drag it wherever you like. On a keyboard, focus the bot and use the arrow keys (hold Shift for bigger steps).",
+        "When something needs your attention — say ranked needs you to sign in or pick a name — the bot speaks up first."
+      ]
+    }
+  }
+]

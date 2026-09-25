@@ -70,13 +70,13 @@
 }
 </script>
 
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=2.88">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=2.88">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=2.88">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=3.08">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.08">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.08">
 <!-- 앱에서 고른 야간 테마를 그대로 쓴다. 같은 출처라 rt.opt 를 그냥 읽으면 된다.
      첫 그림 전에 붙여야 밝은 화면이 한 번 번쩍이지 않는다 -->
 <script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
-<link rel="stylesheet" href="../style.css?v=2.88">
+<link rel="stylesheet" href="../style.css?v=3.08">
 <!-- Esta página es texto para leer, así que no usa las reglas de pantalla fija de la
      aplicación (overflow:hidden, position:fixed). Los tokens y las tipografías se heredan
      tal cual de style.css; solo se sobrescribe la maquetación del documento. app.js no se
@@ -107,6 +107,9 @@
   .doc a.cta{display:inline-block;margin-top:12px;background:var(--accent-text);color:var(--bg);
        text-decoration:none;font-weight:800;font-size:20px;padding:11px 24px;border-radius:6px}
   .doc footer{margin-top:64px;color:var(--ink-soft);font-size:14px;line-height:1.8}
+  .howto figure{margin:8px 0 20px}
+  .howto img{display:block;width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+  .howto h3{font-size:20px;font-weight:800;margin:36px 0 12px}
 </style>
 </head>
 <body>
@@ -191,22 +194,8 @@
 
   <h2>Cómo se juega</h2>
 
-  <p>Hace falta un teclado físico. Como los nombres se escriben a mano, un teclado en
-  pantalla no funciona bien. Ábrelo en un ordenador de sobremesa o portátil.</p>
-
-  <ul>
-    <li><strong>Elegir recorrido</strong> — los 25 distritos de Seúl, o un distrito y los
-    dong administrativos que contiene. Gira una tarjeta en la lista de regiones para
-    elegir.</li>
-    <li><strong>Nombres visibles · ocultos</strong> — «Visible» mantiene en pantalla el
-    nombre que toca escribir; «oculto» obliga a recordarlo solo con el mapa. Si es la
-    primera vez, conviene dar una vuelta en «visible» antes de pasar a «oculto».</li>
-    <li><strong>Tiempo límite</strong> — de uno a cinco minutos. Corto, se practica la
-    velocidad; largo, se practica completar el recorrido entero.</li>
-  </ul>
-
-  <p>Al terminar aparecen la puntuación, los lugares alcanzados y la precisión, junto con la
-  lista de los que se quedaron sin escribir. El resultado se puede guardar como imagen.</p>
+  <!-- 플레이 방법은 data/howto.json 한 곳에 둔다 — 그림은 assets/howto/. 그 나라 말이 없으면 영어 -->
+  <div class="howto" id="howto"></div>
 
   <h2>Novedades</h2>
 
@@ -216,7 +205,32 @@
 <!-- 바뀐 것 목록은 data/changes.json 한 곳에 둔다 — 스물여섯 장을 따로 고치지 않는다.
      그 나라 말이 없으면 영어로 적는다 -->
 <script>
-fetch('../data/changes.json?v=2.88').then(r => r.json()).then(list => {
+fetch('../data/howto.json?v=3.08').then(r => r.json()).then(list => {
+  const lang = document.documentElement.lang;
+  const box = document.getElementById('howto');
+  if (!box) return;
+  for (const s of list) {
+    const c = s[lang] || s.en;
+    const h = document.createElement('h3');
+    h.textContent = c.h;
+    box.append(h);
+    if (s.img) {
+      const f = document.createElement('figure');
+      const img = document.createElement('img');
+      img.src = '../assets/howto/' + s.img + '?v=3.08';
+      img.alt = (s.alt && (s.alt[lang] || s.alt.en)) || '';
+      img.loading = 'lazy';
+      f.append(img);
+      box.append(f);
+    }
+    for (const t of c.p) {
+      const p = document.createElement('p');
+      p.textContent = t;
+      box.append(p);
+    }
+  }
+}).catch(() => {});
+fetch('../data/changes.json?v=3.08').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const ul = document.getElementById('changes');
   if (!ul) return;

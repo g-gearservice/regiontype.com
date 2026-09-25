@@ -2,70 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype</title>
+<!-- 내 계정은 이제 홈 위에 뜨는 덮개다(index.html + account/account.js). 이 자리는
+     /account/ 옛 주소가 살아 있게 #account 로 넘기는 착지대다(settings/ 와 같은 결). -->
 <meta name="robots" content="noindex">
-<title>내 계정 — regiontype</title>
-<link rel="stylesheet" href="../style.css?v=2.88">
-<script>try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');document.documentElement.toggleAttribute('data-night',!!o.night);document.documentElement.dataset.motion=o.motion===false?'off':'on'}catch{}</script>
-<script src="account.js?v=2.88" defer></script>
+<script>
+  /* replace 로 넘긴다 — 뒤로 가기가 이 자리로 되돌아오면 안 된다 */
+  location.replace('../#account');
+</script>
 </head>
-<body class="account-page">
-<div class="map-backdrop" aria-hidden="true">
-  <span style="grid-column:6;grid-row:1">도봉구</span>
-  <span style="grid-column:3;grid-row:2">은평구</span>
-  <span style="grid-column:5;grid-row:2">강북구</span>
-  <span style="grid-column:6;grid-row:2">노원구</span>
-  <span style="grid-column:4;grid-row:3">종로구</span>
-  <span style="grid-column:5;grid-row:3">성북구</span>
-  <span style="grid-column:7;grid-row:3">중랑구</span>
-  <span style="grid-column:1;grid-row:4">강서구</span>
-  <span style="grid-column:3;grid-row:4">마포구</span>
-  <span style="grid-column:4;grid-row:4">서대문구</span>
-  <span style="grid-column:5;grid-row:4">중구</span>
-  <span style="grid-column:6;grid-row:4">동대문구</span>
-  <span style="grid-column:8;grid-row:4">강동구</span>
-  <span style="grid-column:2;grid-row:5">양천구</span>
-  <span style="grid-column:3;grid-row:5">영등포구</span>
-  <span style="grid-column:4;grid-row:5">용산구</span>
-  <span style="grid-column:6;grid-row:5">성동구</span>
-  <span style="grid-column:7;grid-row:5">광진구</span>
-  <span style="grid-column:2;grid-row:6">구로구</span>
-  <span style="grid-column:4;grid-row:6">동작구</span>
-  <span style="grid-column:6;grid-row:6">강남구</span>
-  <span style="grid-column:7;grid-row:6">송파구</span>
-  <span style="grid-column:3;grid-row:7">금천구</span>
-  <span style="grid-column:4;grid-row:7">관악구</span>
-  <span style="grid-column:5;grid-row:7">서초구</span>
-</div>
-<main class="account-shell">
-  <header class="account-heading"><a class="back" href="../" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></a><h1>내 계정</h1></header>
-  <div class="account-layout">
-    <section class="account-character" aria-label="내 캐릭터">
-      <div class="profile-card character-preview"><div id="character" class="character" role="img" aria-label="내 캐릭터"></div><p class="profile-help">My Grok Character</p><div class="character-acts"><button type="button" class="profile-button" id="characterCam" aria-pressed="false">카메라로 따라 하기</button></div></div>
-      <div class="profile-card character-controls">
-        <fieldset><legend class="profile-label">Shape <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
-        <fieldset><legend class="profile-label">Expression <span id="expressionLabel"></span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
-        <fieldset><legend class="profile-label">Colour <span id="colourLabel"></span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
-      </div>
-      <p class="profile-help" id="camSay" role="status" aria-live="polite"></p>
-    </section>
-    <div class="account-details">
-      <section class="profile-section account-bio"><label for="accountBio" class="profile-label">소개</label><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><p class="profile-help"><span id="bioCount">0/60</span></p></section>
-      <section class="profile-section"><h2 class="profile-label">계정</h2>
-        <label class="profile-row" for="accountName"><span>닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" placeholder="닉네임 (최대 12자)"></label>
-        <label class="profile-row" for="accountId"><span>아이디</span><input id="accountId" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="영문 소문자·숫자·밑줄 3~16자"></label>
-        <label class="profile-row" for="accountLanguage"><span>언어</span><select id="accountLanguage" aria-label="언어"><option value="auto">자동</option><option value="ko">한국어</option></select></label>
-      </section>
-      <section class="profile-section"><h2 class="profile-label">설정</h2>
-        <div class="profile-row"><div><strong>새소식 알림</strong><p class="profile-help">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><button type="button" class="profile-switch" id="accountPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
-        <div class="profile-row"><div><strong>계정 비공개</strong><p class="profile-help">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><button type="button" class="profile-switch" id="accountShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
-      </section>
-      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase">계정 삭제</button><a class="profile-button" href="../settings/#security">보안 설정</a></div>
-      <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
-      <p id="accountSession" class="profile-help" role="status"></p>
-      <a id="accountSignin" class="profile-button" href="../signin/" hidden>로그인</a>
-    </div>
-  </div>
-</main>
-</body>
+<body></body>
 </html>

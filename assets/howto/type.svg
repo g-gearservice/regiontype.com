@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 340" font-family="system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" font-weight="700" text-anchor="middle">
+  <!-- 플레이: 지도에서 불 켜진 곳의 이름을 치고 Space 로 확정한다 -->
+  <rect width="640" height="340" rx="18" fill="#e8edf0"/>
+  <!-- 윗줄: 시간 게이지 · 남은 시간 · 들른 곳 · 콤보 -->
+  <rect x="24" y="22" width="300" height="10" rx="5" fill="#dae2e7"/>
+  <rect x="24" y="22" width="190" height="10" rx="5" fill="#6f9a9e"/>
+  <g font-size="18" fill="#3c464a" text-anchor="start">
+    <text x="344" y="33">1:18</text><text x="410" y="33">5<tspan fill="#5b676e" font-size="14">/25</tspan></text>
+  </g>
+  <rect x="478" y="15" width="46" height="24" rx="12" fill="#f0a03c"/>
+  <text x="501" y="32" font-size="15" fill="#232c31">×3</text>
+  <!-- 지도 -->
+  <g fill="#d3dde3" stroke="#e8edf0" stroke-width="3" stroke-linejoin="round">
+    <path d="M70 120l70-24 60 18 18 54-40 40-76-6-40-40z"/>
+    <path d="M218 168l62-30 70 12 20 56-48 32-64-6z"/>
+    <path d="M370 150l66-40 76 14 30 58-52 44-80-10z"/>
+    <path d="M140 96l40-40 80 6 20 76-62 30-60-18z"/>
+  </g>
+  <!-- 이미 친 곳 -->
+  <path d="M70 120l70-24 60 18 18 54-40 40-76-6-40-40z" fill="#6f9a9e" stroke="#e8edf0" stroke-width="3" stroke-linejoin="round"/>
+  <!-- 지금 칠 곳 -->
+  <path d="M218 168l62-30 70 12 20 56-48 32-64-6z" fill="#f0a03c" stroke="#e07a3a" stroke-width="3" stroke-linejoin="round"/>
+  <text x="294" y="192" font-size="17" fill="#232c31">마포구</text>
+  <!-- 이름 줄: 앞 곳 · 지금 · 다음 곳 -->
+  <text x="150" y="272" font-size="20" fill="#5b676e" opacity=".6">영등포구</text>
+  <text x="320" y="276" font-size="34"><tspan fill="#a54f22">마포</tspan><tspan fill="#9aa7ad">구</tspan></text>
+  <text x="490" y="272" font-size="20" fill="#5b676e" opacity=".6">서대문구</text>
+  <!-- 입력줄과 Space 키 -->
+  <rect x="200" y="290" width="240" height="36" rx="18" fill="#f4f8f9" stroke="#dae2e7" stroke-width="2"/>
+  <text x="282" y="314" font-size="18" fill="#3c464a">마포구</text>
+  <rect x="340" y="296" width="86" height="24" rx="6" fill="#3c464a"/>
+  <text x="383" y="313" font-size="13" fill="#fff" font-family="ui-monospace,Menlo,monospace">Space</text>
+</svg>

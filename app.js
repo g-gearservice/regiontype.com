@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.88';
+const VER = '3.08';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -83,8 +83,8 @@ function paintUI(then) {
   if (signinLink) {
     const inn = !!token();
     signinLink.dataset.i18n = inn ? 'accountBtn' : 'signinBtn';
-    /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 별도 계정 페이지로 간다 */
-    signinLink.href = inn ? 'account/' : 'signin/';
+    /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 내 계정 덮개를 연다(ranked.js) */
+    signinLink.href = inn ? '#account' : 'signin/';
   }
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
@@ -1077,7 +1077,7 @@ function zoomPlayAt(mx, my, factor) {
 function mapWheel(e) {
   if (e.target.closest('dialog, input, textarea, select')) return;
   if ($('#regions').classList.contains('on')) {
-    if (e.target.closest('.navbar, .nav-bot, .screen-head')) return;
+    if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer')) return;
     if (!e.target.closest('#regions')) return;
     e.preventDefault();
     zoomHomeAt(e.clientX, e.clientY, wheelZoomFactor(e));
@@ -1166,6 +1166,9 @@ function makeNavFollow(spec) {
     if ($('#signin') && !$('#signin').hidden && nav.contains(signin)) el = signin;
     const setLink = nav.querySelector('a[href^="settings"]');
     if (document.body.classList.contains('setting') && setLink) el = setLink;
+    /* 처음 온 사람에게 봇이 조르는 동안(ranked.js 의 rk-intro) 알약은 로고를 감싼 채 선다 */
+    const introLogo = document.body.classList.contains('rk-intro') && nav.querySelector('.nav-logo');
+    if (introLogo) el = introLogo;
     const home = spec.home();
     const t = el || home;
     aim = el || null;
@@ -2260,6 +2263,12 @@ if (location.search.includes('rt=1')) {
     aimNavShape(null);
     console.assert(!logo.classList.contains('is-on') && !shape.classList.contains('is-pill'),
       '손 떼면 로고 점 자리의 원으로 돌아간다');
+    document.body.classList.add('rk-intro');
+    aimNavShape(null);
+    console.assert(logo.classList.contains('is-on') && shape.classList.contains('is-pill'),
+      '봇이 조르는 동안엔 손을 떼도 알약이 로고에 남는다');
+    document.body.classList.remove('rk-intro');
+    aimNavShape(null);
   }
   const play = $('#navPlay'), botShape = $('#navBotShape');
   const set = document.querySelector('#regions .nav-bot a[href="settings/"]');
@@ -2339,4 +2348,5 @@ if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel~="ic
   if (v !== VER) console.warn('[ver] ?v=' + v + ' \u2260 ' + VER, el);
 });
 
-boot();
+/* ranked.js 가 화면 말을 다 읽은 뒤에 봇을 열도록 기다린다 */
+const BOOTED = boot();

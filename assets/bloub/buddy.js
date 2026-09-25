@@ -43,7 +43,9 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
 
   /* 눈은 몸통에 뚫은 구멍이다. 구멍 뒤로 페이지가 비치면 안 되므로 같은 모양의
      바탕(--buddy-paper)을 깔고, 그 위를 마스크로 판 몸통(--buddy-ink)을 올린다 */
-  const paper = el('path', { fill: 'var(--buddy-paper, #fff)' });
+  /* 몸 윤곽은 id 로 밖에서 <use> 할 수 있다 — 경쟁전 봇의 말풍선이 겹치는 곳에 테두리를
+     그릴 때 쓴다(ranked.js). <use> 는 매 프레임 바뀌는 모양을 저절로 따라간다 */
+  const paper = el('path', { id: uid + '-body', fill: 'var(--buddy-paper, #fff)' });
   const inked = el('g', { mask: `url(#${uid})` });
   inked.append(el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' }));
   const body = el('g');
@@ -99,6 +101,7 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
 
   return {
     node: svg,
+    bodyId: uid + '-body',
     start() {
       if (raf) return;
       /* 모션을 줄였으면 시계를 돌리지 않고 한 장만 그린다 — 깜빡임도 시선도 멈춘다.
