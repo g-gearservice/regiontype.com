@@ -70,13 +70,13 @@
 }
 </script>
 
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=2.85">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=2.85">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=2.85">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=3.08">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.08">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.08">
 <!-- 앱에서 고른 야간 테마를 그대로 쓴다. 같은 출처라 rt.opt 를 그냥 읽으면 된다.
      첫 그림 전에 붙여야 밝은 화면이 한 번 번쩍이지 않는다 -->
 <script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
-<link rel="stylesheet" href="../style.css?v=2.85">
+<link rel="stylesheet" href="../style.css?v=3.08">
 <!-- Den här sidan är text att läsa och använder därför inte appens regler för fast
      vy (overflow:hidden, position:fixed). Tokens och typsnitt ärvs från style.css;
      bara dokumentets layout skrivs över. app.js laddas inte — här finns varken karta
@@ -107,6 +107,9 @@
   .doc a.cta{display:inline-block;margin-top:12px;background:var(--accent-text);color:var(--bg);
        text-decoration:none;font-weight:800;font-size:20px;padding:11px 24px;border-radius:6px}
   .doc footer{margin-top:64px;color:var(--ink-soft);font-size:14px;line-height:1.8}
+  .howto figure{margin:8px 0 20px}
+  .howto img{display:block;width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+  .howto h3{font-size:20px;font-weight:800;margin:36px 0 12px}
 </style>
 </head>
 <body>
@@ -190,21 +193,8 @@
 
   <h2>Så spelar du</h2>
 
-  <p>Du behöver ett fysiskt tangentbord. Du skriver namnen själv, så ett
-  skärmtangentbord fungerar inte riktigt. Öppna sidan på en dator eller laptop.</p>
-
-  <ul>
-    <li><strong>Välj bana</strong> — Seouls 25 stadsdelar, eller en stadsdel och de
-    administrativa dong som ligger i den. Vänd ett kort i regionlistan för att välja.</li>
-    <li><strong>Namn synliga · dolda</strong> — ”synliga” låter namnet du skriver stå kvar
-    på skärmen; ”dolda” tvingar dig att minnas det enbart från kartan. Är det första
-    gången, gå ett varv med ”synliga” innan du byter till ”dolda”.</li>
-    <li><strong>Tidsgräns</strong> — från en minut till fem. En kort gräns tränar
-    snabbhet, en lång tränar att hinna hela banan.</li>
-  </ul>
-
-  <p>När tiden är ute får du poäng, hur många platser du hann och din träffsäkerhet,
-  tillsammans med en lista över dem du missade. Resultatet kan sparas som bild.</p>
+  <!-- 플레이 방법은 data/howto.json 한 곳에 둔다 — 그림은 assets/howto/. 그 나라 말이 없으면 영어 -->
+  <div class="howto" id="howto"></div>
 
   <h2>Nyheter</h2>
 
@@ -214,7 +204,32 @@
 <!-- 바뀐 것 목록은 data/changes.json 한 곳에 둔다 — 스물여섯 장을 따로 고치지 않는다.
      그 나라 말이 없으면 영어로 적는다 -->
 <script>
-fetch('../data/changes.json?v=2.85').then(r => r.json()).then(list => {
+fetch('../data/howto.json?v=3.08').then(r => r.json()).then(list => {
+  const lang = document.documentElement.lang;
+  const box = document.getElementById('howto');
+  if (!box) return;
+  for (const s of list) {
+    const c = s[lang] || s.en;
+    const h = document.createElement('h3');
+    h.textContent = c.h;
+    box.append(h);
+    if (s.img) {
+      const f = document.createElement('figure');
+      const img = document.createElement('img');
+      img.src = '../assets/howto/' + s.img + '?v=3.08';
+      img.alt = (s.alt && (s.alt[lang] || s.alt.en)) || '';
+      img.loading = 'lazy';
+      f.append(img);
+      box.append(f);
+    }
+    for (const t of c.p) {
+      const p = document.createElement('p');
+      p.textContent = t;
+      box.append(p);
+    }
+  }
+}).catch(() => {});
+fetch('../data/changes.json?v=3.08').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const ul = document.getElementById('changes');
   if (!ul) return;

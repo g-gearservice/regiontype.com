@@ -219,6 +219,10 @@ function done(tok, generation, isNewAccount = false) {
   TWO = null;
   say('');
   close();
+  /* 새 계정이면 가입 안내를 마치고 돌아온 첫 홈에서 봇이 꺼내 달라고 조른다(ranked.js) */
+  if (isNewAccount) localStorage.setItem('rt.rescue', '1');
+  /* 로그인하고 돌아온 홈에서는 봇이 다시 나와 인사한다(ranked.js 의 greetIn) */
+  sessionStorage.removeItem('rt.greeted');
   location.assign(isNewAccount ? 'welcome/' : './');
 }
 
@@ -466,16 +470,11 @@ function sleepBuddy() {
   while (bots.length > 1) { const b = bots.pop(); unseat(b); b.api.stop(); b.el.remove(); }
   bots.forEach(b => { park(b, false); b.api.stop(); b.api.lookAway(); });
 }
-/* 봇은 커서 쪽을 바라본다. 화면 좌표 그대로 넘기면 된다 — 세로축 뒤집기는
-   mountBuddy 의 lookAt 안에서 한 번만 한다(부르는 쪽마다 붙이던 음수를 거뒀다). */
+/* 봇은 커서 쪽을 바라본다. 화면 좌표 그대로 넘기면 된다 — 방향 재기도 세로축
+   뒤집기도 mountBuddy 의 lookToward 안에서 한 번만 한다. */
 function buddyLook(e) {
   if (motionOff() || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  const grip = v => Math.max(-1, Math.min(1, v));
-  for (const b of bots) {
-    const dx = (e.clientX - (b.x + b.size / 2)) / b.size;
-    const dy = (e.clientY - (b.y + b.size / 2)) / b.size;
-    b.api.lookAt(grip(dx), grip(dy));
-  }
+  for (const b of bots) b.api.lookToward(e.clientX, e.clientY);
 }
 let backgroundState = [];
 function setBackgroundInert(inert) {

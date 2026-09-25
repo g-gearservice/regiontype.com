@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" font-family="system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" font-weight="800">
+  <!-- 결과: 왼쪽은 들른 곳(청록)과 놓친 곳(빨간 테두리)이 찍힌 카드, 오른쪽은 속도·들른 곳·정확도 -->
+  <rect width="640" height="280" rx="18" fill="#e8edf0"/>
+  <rect x="28" y="28" width="330" height="224" rx="12" fill="#f4f8f9"/>
+  <g stroke="#f4f8f9" stroke-width="3">
+    <circle cx="90" cy="90" r="26" fill="#6f9a9e"/><circle cx="146" cy="76" r="26" fill="#6f9a9e"/>
+    <circle cx="202" cy="92" r="26" fill="#6f9a9e"/><circle cx="258" cy="80" r="26" fill="#6f9a9e"/>
+    <circle cx="112" cy="146" r="26" fill="#6f9a9e"/><circle cx="168" cy="136" r="26" fill="#6f9a9e"/>
+    <circle cx="224" cy="150" r="26" fill="#6f9a9e"/><circle cx="290" cy="140" r="26" fill="#d3dde3"/>
+    <circle cx="140" cy="200" r="26" fill="#6f9a9e"/><circle cx="196" cy="206" r="26" fill="#d3dde3"/>
+    <circle cx="252" cy="200" r="26" fill="#6f9a9e"/>
+  </g>
+  <g fill="none" stroke="#c1362b" stroke-width="4" stroke-dasharray="6 5">
+    <circle cx="290" cy="140" r="26"/><circle cx="196" cy="206" r="26"/>
+  </g>
+  <!-- 숫자 셋: 번개(속도) · 핀(들른 곳) · 과녁(정확도) -->
+  <g fill="#3c464a" font-size="34">
+    <text x="440" y="82">312</text><text x="440" y="146">23</text><text x="440" y="210">94%</text>
+  </g>
+  <path d="M404 52l-14 22h10l-6 18 16-24h-10z" fill="#f0a03c"/>
+  <path d="M398 116a10 10 0 0 1 10 10c0 8-10 18-10 18s-10-10-10-18a10 10 0 0 1 10-10z" fill="#6f9a9e"/>
+  <circle cx="398" cy="126" r="3.5" fill="#f4f8f9"/>
+  <g fill="none" stroke="#a54f22" stroke-width="3"><circle cx="398" cy="198" r="12"/><circle cx="398" cy="198" r="5"/></g>
+  <!-- 이미지 저장 · 다시 하기 -->
+  <rect x="390" y="228" width="96" height="32" rx="16" fill="#3c464a"/>
+  <path d="M438 236v12m-6-6 6 6 6-6M428 252h20" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="498" y="228" width="96" height="32" rx="16" fill="#f0a03c"/>
+  <path d="M554 244a8 8 0 1 1-3-6.3M552 232v6h-6" fill="none" stroke="#232c31" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

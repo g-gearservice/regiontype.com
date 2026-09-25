@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" font-family="system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" font-weight="700" text-anchor="middle">
+  <!-- 홈: 칸 하나를 고르고, 같은 칸을 한 번 더 누르면 그 안의 동으로 들어간다 -->
+  <rect width="640" height="320" rx="18" fill="#e8edf0"/>
+  <g stroke="#dae2e7" stroke-width="1"><path d="M0 80H640M0 160H640M0 240H640M160 0V320M320 0V320M480 0V320"/></g>
+  <g fill="#6f9a9e">
+    <circle cx="96" cy="118" r="44"/><circle cx="190" cy="92" r="44"/><circle cx="190" cy="186" r="44"/>
+    <circle cx="96" cy="212" r="44"/>
+  </g>
+  <!-- 고른 칸: 주황 테두리 + 손가락 -->
+  <circle cx="284" cy="140" r="44" fill="#6f9a9e"/>
+  <circle cx="284" cy="140" r="50" fill="none" stroke="#f0a03c" stroke-width="6"/>
+  <g fill="#fff" font-size="17">
+    <text x="96" y="124">강서구</text><text x="190" y="98">양천구</text><text x="190" y="192">구로구</text>
+    <text x="96" y="218">금천구</text><text x="284" y="146">마포구</text>
+  </g>
+  <path d="M298 168l0 44 11-10 9 21 9-4-9-20 15-1z" fill="#3c464a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <text x="284" y="262" font-size="22" fill="#a54f22">×2</text>
+  <!-- 화살표 → 펼쳐진 동 -->
+  <path d="M360 150h52" stroke="#5b676e" stroke-width="5" stroke-linecap="round"/>
+  <path d="M404 138l14 12-14 12" fill="none" stroke="#5b676e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#6f9a9e">
+    <circle cx="470" cy="98" r="30"/><circle cx="534" cy="98" r="30"/><circle cx="598" cy="98" r="30"/>
+    <circle cx="470" cy="162" r="30"/><circle cx="534" cy="162" r="30"/><circle cx="598" cy="162" r="30"/>
+    <circle cx="502" cy="226" r="30"/><circle cx="566" cy="226" r="30"/>
+  </g>
+  <g fill="#fff" font-size="12">
+    <text x="470" y="102">아현동</text><text x="534" y="102">공덕동</text><text x="598" y="102">도화동</text>
+    <text x="470" y="166">용강동</text><text x="534" y="166">대흥동</text><text x="598" y="166">염리동</text>
+    <text x="502" y="230">신수동</text><text x="566" y="230">서강동</text>
+  </g>
+</svg>

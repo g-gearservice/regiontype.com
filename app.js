@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '2.85';
+const VER = '3.08';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -83,8 +83,8 @@ function paintUI(then) {
   if (signinLink) {
     const inn = !!token();
     signinLink.dataset.i18n = inn ? 'accountBtn' : 'signinBtn';
-    /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 별도 계정 페이지로 간다 */
-    signinLink.href = inn ? 'account/' : 'signin/';
+    /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 내 계정 덮개를 연다(ranked.js) */
+    signinLink.href = inn ? '#account' : 'signin/';
   }
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
@@ -1077,7 +1077,7 @@ function zoomPlayAt(mx, my, factor) {
 function mapWheel(e) {
   if (e.target.closest('dialog, input, textarea, select')) return;
   if ($('#regions').classList.contains('on')) {
-    if (e.target.closest('.navbar, .nav-bot, .screen-head')) return;
+    if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer')) return;
     if (!e.target.closest('#regions')) return;
     e.preventDefault();
     zoomHomeAt(e.clientX, e.clientY, wheelZoomFactor(e));
@@ -1166,6 +1166,9 @@ function makeNavFollow(spec) {
     if ($('#signin') && !$('#signin').hidden && nav.contains(signin)) el = signin;
     const setLink = nav.querySelector('a[href^="settings"]');
     if (document.body.classList.contains('setting') && setLink) el = setLink;
+    /* 처음 온 사람에게 봇이 조르는 동안(ranked.js 의 rk-intro) 알약은 로고를 감싼 채 선다 */
+    const introLogo = document.body.classList.contains('rk-intro') && nav.querySelector('.nav-logo');
+    if (introLogo) el = introLogo;
     const home = spec.home();
     const t = el || home;
     aim = el || null;
@@ -1399,7 +1402,7 @@ async function start(slug, only, rk) {
              aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
   });
   G = { slug, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
-       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0,
+       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, spent: 0,
        cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
   $('#typein').lang = course.lang || document.documentElement.lang;
 
@@ -1798,6 +1801,7 @@ function claim(it) {
   if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
   G.hits++; G.tries++; G.combo++;
   G.chars += it.name.replace(/\s/g, '').length;
+  G.spent = G.total - G.left;      // 친 시간은 여기서 멈춘다 — cpmNow 참고
   $('#statSpeed').textContent = speedIn(cpmNow());
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -1814,10 +1818,13 @@ function claim(it) {
   aim();
 }
 
-/* 지금까지의 속도. 천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 —
-   여기서 넘겨 보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
+/* 지금까지의 속도. 나눌 시간은 '판이 흐른 시간'이 아니라 '마지막으로 맞힌 때까지'다
+   (G.spent, claim 이 찍는다) — 모르는 곳 앞에서 손 놓고 있는 동안 이미 친 속도가
+   깎여 내려가면 안 된다. 다 맞히면 둘이 같은 값이다.
+   천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 — 여기서 넘겨
+   보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
 function cpmNow() {
-  const spent = Math.max(1, G.total - G.left);
+  const spent = Math.max(1, G.spent || (G.total - G.left));
   return Math.min(900, G.hits * 30, Math.round(G.chars / spent * 60));
 }
 
@@ -2256,6 +2263,12 @@ if (location.search.includes('rt=1')) {
     aimNavShape(null);
     console.assert(!logo.classList.contains('is-on') && !shape.classList.contains('is-pill'),
       '손 떼면 로고 점 자리의 원으로 돌아간다');
+    document.body.classList.add('rk-intro');
+    aimNavShape(null);
+    console.assert(logo.classList.contains('is-on') && shape.classList.contains('is-pill'),
+      '봇이 조르는 동안엔 손을 떼도 알약이 로고에 남는다');
+    document.body.classList.remove('rk-intro');
+    aimNavShape(null);
   }
   const play = $('#navPlay'), botShape = $('#navBotShape');
   const set = document.querySelector('#regions .nav-bot a[href="settings/"]');
@@ -2335,4 +2348,5 @@ if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel~="ic
   if (v !== VER) console.warn('[ver] ?v=' + v + ' \u2260 ' + VER, el);
 });
 
-boot();
+/* ranked.js 가 화면 말을 다 읽은 뒤에 봇을 열도록 기다린다 */
+const BOOTED = boot();

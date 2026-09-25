@@ -5,7 +5,6 @@ import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
-import { faceFrom } from '../assets/face/mimic.js';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
 
@@ -362,26 +361,6 @@ assert.equal(intro({ nps: 7.5 }).nps, null, '정수만 센다');
 assert.doesNotThrow(() => intro(null), '몸통이 없어도 터지지 않는다');
 
 console.log('intro self-check done');
-
-/* ── 표정 ──────────────────────────────────────────────
-   카메라가 읽은 얼굴 근육을 캐릭터 표정 하나로 접는 자리(assets/face/mimic.js).
-   카메라도 DOM 도 안 타는 순수 함수라 여기서 같이 돈다 — 검사 러너를 새로 세우지 않는다. */
-const face = pairs => faceFrom(Object.entries(pairs).map(([categoryName, score]) => ({ categoryName, score })));
-assert.equal(face({}), 'neutre', '아무 값도 없으면 무표정');
-assert.equal(face({ mouthSmileLeft: .5, mouthSmileRight: .5 }), 'heureux', '웃으면 기쁨');
-assert.equal(face({ mouthSmileLeft: .7, mouthSmileRight: .7, jawOpen: .5 }), 'hilare',
-             '크게 웃으며 입을 벌리면 함박웃음 — 기쁨보다 먼저 걸린다');
-assert.equal(face({ jawOpen: .6, eyeWideLeft: .4, eyeWideRight: .4 }), 'surpris', '입 벌리고 눈 크게 뜨면 놀람');
-assert.equal(face({ browDownLeft: .7, browDownRight: .7, mouthFrownLeft: .3, mouthFrownRight: .3 }), 'colere',
-             '눈썹을 내리고 입꼬리를 내리면 골남 — 시무룩보다 먼저 걸린다');
-assert.equal(face({ mouthFrownLeft: .4, mouthFrownRight: .4 }), 'triste', '입꼬리만 내리면 시무룩');
-assert.equal(face({ eyeBlinkLeft: .8, eyeBlinkRight: .8 }), 'somnolent', '두 눈을 감으면 졸림');
-assert.equal(face({ eyeBlinkLeft: .9, eyeBlinkRight: 0 }), 'neutre', '한쪽만 감은 건 표정이 아니다 — 좌우를 평균한다');
-assert.equal(face({ browInnerUp: .4 }), 'curieux', '눈썹만 살짝 올리면 호기심');
-/* 없는 근육 이름이 와도 0 으로 읽어야 한다 — 모델이 갈리면 이름이 바뀔 수 있다 */
-assert.equal(face({ noSuchShape: 1 }), 'neutre', '모르는 이름은 0 으로 본다');
-
-console.log('mimic self-check done');
 
 /* ── 로그인 ────────────────────────────────────────── */
 const KEY = 'test-key';

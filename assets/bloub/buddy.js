@@ -43,7 +43,9 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
 
   /* 눈은 몸통에 뚫은 구멍이다. 구멍 뒤로 페이지가 비치면 안 되므로 같은 모양의
      바탕(--buddy-paper)을 깔고, 그 위를 마스크로 판 몸통(--buddy-ink)을 올린다 */
-  const paper = el('path', { fill: 'var(--buddy-paper, #fff)' });
+  /* 몸 윤곽은 id 로 밖에서 <use> 할 수 있다 — 경쟁전 봇의 말풍선이 겹치는 곳에 테두리를
+     그릴 때 쓴다(ranked.js). <use> 는 매 프레임 바뀌는 모양을 저절로 따라간다 */
+  const paper = el('path', { id: uid + '-body', fill: 'var(--buddy-paper, #fff)' });
   const inked = el('g', { mask: `url(#${uid})` });
   inked.append(el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' }));
   const body = el('g');
@@ -99,6 +101,7 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
 
   return {
     node: svg,
+    bodyId: uid + '-body',
     start() {
       if (raf) return;
       /* 모션을 줄였으면 시계를 돌리지 않고 한 장만 그린다 — 깜빡임도 시선도 멈춘다.
@@ -120,6 +123,19 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
         clock()
       );
       paintNow();
+    },
+    /* 화면의 한 점을 본다. 제 몸 한가운데에서 그 점까지의 방향을 재고, 몸 하나쯤
+       떨어지면 고개를 다 돌린다. 세기만 줄이고 방향은 그대로 두는 것이 요점이다 —
+       축마다 따로 자르면(옛 계정 화면) 멀리 있는 커서가 죄다 네 귀퉁이로 몰려
+       고개는 안 돌고 눈알만 평면으로 미끄러진다. */
+    lookToward(x, y) {
+      const r = host.getBoundingClientRect();
+      if (!r.width) return;
+      const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+      const len = Math.hypot(dx, dy);
+      if (!len) return;
+      const k = Math.min(1, len / r.width);
+      this.lookAt(dx / len * k, dy / len * k);
     },
     lookAway() {
       if (calm()) return;

@@ -1,4 +1,8 @@
-/* 독립 계정 화면. 프로필 서비스가 없는 항목은 지원 여부를 명시한다. */
+/* 내 계정 덮개의 알맹이. 제 페이지가 아니라 홈(index.html) 위에 뜬다 — 여닫기는
+   ranked.js 가 순위·기록과 같은 손으로 하고, 이 파일은 처음 열 때 실려 한 번만 돈다.
+   다시 열 때마다 rt-account 를 받아 로그인 상태를 새로 읽는다.
+   app.js 와 한 문서라 전부를 한 겹 함수 안에 둔다. 프로필 서비스가 없는 항목은
+   지원 여부를 명시한다. */
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
@@ -75,23 +79,15 @@ function paint() {
 
    견본은 제 시계를 안 돌린다(still). 스물넷이 저마다 숨 쉬면 프레임을 먹으니,
    대신 이 한 바퀴에서 한 장씩 그려 준다 — 도는 rAF 는 큰 놈 하나와 여기 하나뿐이다.
-   방향은 화면 좌표 그대로 넘긴다(위아래 뒤집기는 mountBuddy 가 한다). */
+   화면 좌표를 그대로 넘기고, 방향과 세기는 mountBuddy 의 lookToward 가 잰다
+   (로그인 화면의 봇과 같은 자 — 화면 너비로 나누던 옛 셈은 고개를 안 돌렸다). */
 function eachLooker(f) {
-  if (me) f(me, $('#character'));
-  for (const key of ['shape', 'expression']) {
-    for (const [id, api] of thumbs[key]) f(api, $(`[data-${key}="${CSS.escape(id)}"]`));
-  }
+  if (me) f(me);
+  for (const key of ['shape', 'expression']) for (const api of thumbs[key].values()) f(api);
 }
 function look() {
   looking = 0;
-  const clamp = v => Math.max(-1, Math.min(1, v));
-  eachLooker((api, el) => {
-    if (!aim) { api.lookAway(); return; }
-    const r = el?.getBoundingClientRect();
-    if (!r?.width) return;
-    api.lookAt(clamp((aim[0] - (r.left + r.width / 2)) / (innerWidth / 2)),
-               clamp((aim[1] - (r.top + r.height / 2)) / (innerHeight / 2)));
-  });
+  eachLooker(api => { if (aim) api.lookToward(aim[0], aim[1]); else api.lookAway(); });
 }
 const lookTo = p => { aim = p; looking ||= requestAnimationFrame(look); };
 addEventListener('pointermove', e => lookTo([e.clientX, e.clientY]), { passive: true });
@@ -99,7 +95,7 @@ document.documentElement.addEventListener('pointerleave', () => lookTo(null));
 
 /* 엔진은 미리 부르지 않는다 — 계정 화면에 들어온 사람만 받는다.
    목록도 buddy.js 가 건네는 것만 쓴다: engine.js 를 여기서 또 부르면 판이 둘이 된다 */
-const buddyKit = import(new URL(asset('../assets/bloub/buddy.js'), document.baseURI).href);
+const buddyKit = import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
 buddyKit.then(({ mountBuddy, TABLES }) => {
   lists.shape = TABLES.shapes.map(x => x.id);
   lists.expression = TABLES.expressions.map(x => x.id);
@@ -150,7 +146,7 @@ const loggedIn = () => !!read('rt.token');
 /* 이 브라우저에 남긴 거울을 통째로 지운다. 로그아웃도, 토큰이 죽은 것을 알아챈
    자리도 같은 손을 쓴다 — 한쪽만 지우면 다음 사람이 이 기기로 가입할 때 남은
    값이 그 사람의 공개 프로필로 올라간다(welcome/welcome.js 의 save 참고). */
-const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname'];
+const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.intro', 'rt.rescue'];
 const forget = () => { for (const k of KEYS) localStorage.removeItem(k); sessionStorage.removeItem('rt.bind'); };
 
 /* ── 서버에 남는 프로필 ────────────────────────────────────
@@ -167,13 +163,28 @@ const mine = () => ({
   bio: read('rt.bio'),
   face: [character.shape, character.expression, character.colour].join(','),
   lang: parse('rt.opt', {}).lang || 'auto',
-  handle: $('#accountId').value.trim().replace(/^@/, '').toLowerCase(),
+  handle: (v => /^[a-z0-9_]{3,16}$/.test(v) ? v : '')(
+    $('#accountId').value.trim().replace(/^@/, '').toLowerCase()),
   botname: read('rt.botname'),
   push: switches.push,
   shut: switches.shut,
 });
+/* 소개(bio)만 비울 수 있다. 닉네임·아이디·캐릭터는 남 앞에 걸리는 값이라 빈 채로
+   저장하지 않는다 — 서버도 빈 닉네임을 400 으로 막지만, 그 전에 여기서 무엇이
+   비었는지 짚어 준다(400 의 말만 보면 어느 칸인지 모른다).
+   캐릭터는 늘 고른 모습이 있어 빌 수가 없다. */
+function blank() {
+  const p = mine();
+  if (!p.name) return '닉네임을 비워 둘 수 없습니다.';
+  /* 아이디는 아직 안 정한 사람이 있다 — 그 경우 서버가 덮지 않으므로 빈 값이
+     올라가도 지워지지 않는다. 칸에 적다 만 것만 막는다 */
+  if ($('#accountId').value.trim() && !p.handle) return '아이디는 영문 소문자·숫자·밑줄 3~16자입니다.';
+  return '';
+}
 function push(done) {
   if (!loggedIn()) { say(done + ' 로그인하면 다른 기기에서도 따라옵니다.'); return; }
+  const gap = blank();
+  if (gap) { say(gap); return; }
   fetch(API + '/auth/profile', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + read('rt.token') },
@@ -212,62 +223,6 @@ function keep() {
   keeping = setTimeout(() => push('캐릭터를 저장했습니다.'), 700);
 }
 
-/* ── 카메라로 따라 하기 ────────────────────────────────────
-   켜 두는 동안만 표정과 고개가 카메라를 따르고, 끄면 고른 표정으로 돌아온다.
-   저장하는 값(character)은 건드리지 않는다 — 따라 하는 얼굴은 지나가는 것이고,
-   계정에 남는 것은 사람이 골라 저장한 모습이다. 영상은 기기 밖으로 안 나간다. */
-const camSay = text => { $('#camSay').textContent = text; };
-let cam = null, camBusy = false;
-
-function camOff() {
-  camSay('');
-  cam?.stop();
-  cam = null;
-  /* 갸웃도 부풀림도 카메라를 켠 동안만의 것이다 — 끄면 고른 모습으로 돌아간다 */
-  $('#character').style.transform = '';
-  $('#characterCam').setAttribute('aria-pressed', 'false');
-  $('#characterCam').textContent = '카메라로 따라 하기';
-  if (me) { me.setExpression(character.expression); me.lookAway(); }
-  lookTo(aim);
-}
-$('#characterCam').onclick = async () => {
-  if (cam) { camOff(); return; }
-  if (camBusy) return;
-  if (!navigator.mediaDevices?.getUserMedia) { camSay('이 브라우저에서는 카메라를 쓸 수 없습니다.'); return; }
-  camBusy = true;
-  $('#characterCam').textContent = '카메라 준비 중…';
-  camSay('카메라 권한을 묻고 판정기를 내려받습니다. 영상은 이 기기 안에서만 씁니다.');
-  try {
-    const { startMimic } = await import(new URL(asset('../assets/face/mimic.js'), document.baseURI).href);
-    await buddyKit;
-    cam = await startMimic({
-      base: new URL('../assets/face/', document.baseURI).href,
-      onFace: ({ expression, look, roll, puff }) => {
-        if (!me || !cam) return;
-        me.setExpression(expression);
-        me.lookAt(look[0], look[1]);
-        /* 고개 갸웃과 볼 부풀리기는 몸 전체에 건다 — 엔진이 그리는 실루엣은
-           그대로 두고 바깥에서 돌리고 키운다 */
-        $('#character').style.transform = `rotate(${roll.toFixed(1)}deg) scale(${(1 + puff * .12).toFixed(3)})`;
-      },
-    });
-    $('#characterCam').setAttribute('aria-pressed', 'true');
-    $('#characterCam').textContent = '카메라 끄기';
-    camSay('카메라를 따라 합니다. 여기서 보는 얼굴은 저장되지 않습니다 — 저장되는 건 아래에서 고른 모습입니다.');
-  } catch (err) {
-    camOff();
-    /* getUserMedia 가 거절할 때만 DOMException 이다(권한·기기 없음·다른 앱이 쥠).
-       판정기를 못 받은 것은 보통 TypeError 라, 이름을 하나씩 세지 않고 갈래로 나눈다 */
-    camSay(err instanceof DOMException
-      ? '카메라를 쓰지 못했습니다. 브라우저의 카메라 권한과 연결된 카메라를 확인해 주세요.'
-      : '카메라 기능을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
-  } finally {
-    camBusy = false;
-    if (!cam) $('#characterCam').textContent = '카메라로 따라 하기';
-  }
-};
-/* 화면을 떠나면 카메라도 끈다 — 탭을 두고 나갔는데 불이 켜져 있으면 안 된다 */
-addEventListener('pagehide', () => cam && camOff());
 function session() {
   const inn = loggedIn();
   $('#accountLogout').disabled = !inn;
@@ -288,7 +243,7 @@ $('#accountName').value = read('rt.name');
 $('#accountName').addEventListener('change', e => {
   if (!loggedIn()) { session(); return; }
   const value = e.target.value.replace(/[<>\x00-\x1f\x7f]/g, '').trim().slice(0, 12);
-  if (!value) { e.target.value = read('rt.name'); return; }
+  if (!value) { e.target.value = read('rt.name'); say('닉네임을 비워 둘 수 없습니다.'); return; }
   e.target.value = value;
   if (write('rt.name', value)) push('닉네임을 저장했습니다. 이미 올라간 기록의 이름도 바뀝니다.');
 });
@@ -358,7 +313,7 @@ function saveOption(key, value, quiet) {
 $('#accountLanguage').value = ['ko', 'auto'].includes(opt.lang) ? opt.lang : 'auto';
 $('#accountLanguage').onchange = e => saveOption('lang', e.target.value);
 if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-  fetch(asset('../data/i18n.json')).then(r => r.json()).then(data => {
+  fetch(asset('data/i18n.json')).then(r => r.json()).then(data => {
     for (const code of Object.keys(data).filter(code => code !== 'ko')) {
       const option = document.createElement('option'); option.value = code;
       try { option.textContent = new Intl.DisplayNames([code], {type: 'language'}).of(code); } catch { option.textContent = code; }
@@ -392,7 +347,7 @@ $('#accountErase').onclick = async () => {
       try { localStorage.removeItem(k); } catch {}
     }
     try { sessionStorage.removeItem('rt.bind'); } catch {}
-    location.replace('../');
+    location.replace('./');
   } catch {
     btn.disabled = false;
     say('계정을 지우지 못했습니다. 잠시 후 다시 시도해 주세요 — 계정은 그대로 있습니다.');
@@ -405,7 +360,7 @@ $('#accountLogout').onclick = () => {
   $('#accountName').value = '';
   $('#accountBio').value = '';
   session();
-  location.replace('../');
+  location.replace('./');
 };
 session();
 function syncOptions() {
@@ -414,7 +369,7 @@ function syncOptions() {
   document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
   $('#accountLanguage').value = opt.lang || 'auto';
 }
-addEventListener('pageshow', () => { session(); syncOptions(); });
+addEventListener('rt-account', () => { session(); syncOptions(); });
 addEventListener('storage', e => {
   if (e.key === null || e.key === 'rt.token' || e.key === 'rt.name' || e.key === 'rt.bio') session();
   if (e.key === null || e.key === 'rt.opt') {

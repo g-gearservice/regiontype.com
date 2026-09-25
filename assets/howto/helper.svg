@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 220" font-family="system-ui,-apple-system,sans-serif" font-weight="800" text-anchor="middle">
+  <!-- 도우미 봇: 귀퉁이에서 자다가(z) 가리키거나 누르면 깬다 -->
+  <rect width="640" height="220" rx="18" fill="#e8edf0"/>
+  <rect x="20" y="20" width="600" height="180" rx="12" fill="none" stroke="#dae2e7" stroke-width="2" stroke-dasharray="8 6"/>
+  <!-- 자는 봇 (왼쪽 아래 귀퉁이) -->
+  <rect x="48" y="130" width="52" height="46" rx="20" fill="#c8322a"/>
+  <path d="M62 152q5 4 10 0M78 152q5 4 10 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <text x="112" y="130" font-size="18" fill="#5b676e">z</text><text x="124" y="116" font-size="13" fill="#5b676e">z</text>
+  <!-- 화살표 -->
+  <path d="M200 150h70" stroke="#5b676e" stroke-width="5" stroke-linecap="round"/>
+  <path d="M262 138l14 12-14 12" fill="none" stroke="#5b676e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 깬 봇 + 커서 + 말풍선 -->
+  <rect x="330" y="124" width="56" height="50" rx="22" fill="#c8322a"/>
+  <rect x="345" y="140" width="7" height="12" rx="3.5" fill="#fff"/><rect x="364" y="140" width="7" height="12" rx="3.5" fill="#fff"/>
+  <path d="M378 160l0 36 9-8 7 17 7-3-7-16 12-1z" fill="#3c464a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="408" y="52" width="180" height="52" rx="14" fill="#c8322a"/>
+  <path d="M420 104l-14 18 30-18z" fill="#c8322a"/>
+  <g fill="#fff"><circle cx="470" cy="78" r="5"/><circle cx="498" cy="78" r="5"/><circle cx="526" cy="78" r="5"/></g>
+</svg>

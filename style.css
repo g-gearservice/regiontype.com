@@ -1,6 +1,9 @@
 :root{
   --bg:#e8edf0; --grid:#dae2e7; --ink:#3c464a; --ink-soft:#5b676e;
   --block:#6f9a9e; --block-hi:#5f8d92; --accent:#f0a03c; --accent-deep:#e07a3a;
+  /* 칸을 통째로 채울 때 쓰는 짙은 청록. 낮에도 밤에도 같은 값이다 —
+     흰 글자를 얹어 5.89:1 이라 어느 쪽 바탕에서도 글이 읽힌다 */
+  --block-deep:#496a6d;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
   /* 주황 바탕 위의 글자. 시안의 흰 글자는 대비 2.06:1 로 기준에 못 미친다 —
      어두운 먹으로 6.64:1 을 받는다. 야간에도 바탕이 그대로라 값도 그대로다 */
@@ -773,41 +776,47 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 
 /* 상단 그라디언트 블러 — 블러 세기가 다른 여섯 겹을 각자 다른 띠로 마스크해서 겹친다.
    backdrop-filter 하나에 마스크를 씌우면 블러가 뚝 끊기지만, 이렇게 쌓으면 부드럽게 번진다.
+   겹마다 30% 폭으로 천천히 켜지며 서로 겹친다 — 원본처럼 8~12% 폭에서 뚝 켜면 대비 큰
+   칸(주황 칸·카드)이 지나갈 때 겹의 경계가 가로 계단으로 보인다. 세기도 --blur-k 기본
+   .55 로 낮춰(가장 센 겹 약 18px) 한 겹에서 다음 겹으로 넘는 차이를 작게 한다.
+   띠의 바깥 끝(넵바에서 먼 쪽)은 모든 겹이 투명에서 시작해 흐림이 정확히 0px 이다 —
+   겹의 마스크 시작점을 0% 위로 올리지 않는다. 스크림(::after)도 그 끝에서 투명이다.
+   홈·플레이·설정·계정이 모두 이 한 벌을 쓴다 — 화면마다 따로 고치지 않는다.
    출처: OuterVale, "Blobby Navbar Blur" (codepen.io/OuterVale/pen/emJQXOx) */
 .backdrop-blur{
   position:absolute; top:0; left:0; right:0; z-index:1;
-  display:grid; height:var(--blur-top,100px); pointer-events:none;
+  display:grid; height:var(--blur-top,80px); pointer-events:none;
 }
 .backdrop-blur > span{grid-area:1/1}
 .backdrop-blur > :nth-child(1){
-  backdrop-filter:blur(calc(1px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,1)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent,#000 8%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent,#000 8%);
+  backdrop-filter:blur(calc(1px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
 }
 .backdrop-blur > :nth-child(2){
-  backdrop-filter:blur(calc(4px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,1)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 8%,#000 16%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 8%,#000 16%);
+  backdrop-filter:blur(calc(4px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
 }
 .backdrop-blur > :nth-child(3){
-  backdrop-filter:blur(calc(8px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,1)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 16%,#000 24%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 16%,#000 24%);
+  backdrop-filter:blur(calc(8px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
 }
 .backdrop-blur > :nth-child(4){
-  backdrop-filter:blur(calc(16px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,1)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 24%,#000 36%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 24%,#000 36%);
+  backdrop-filter:blur(calc(16px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
 }
 .backdrop-blur > :nth-child(5){
-  backdrop-filter:blur(calc(24px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,1)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 36%,#000 48%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 36%,#000 48%);
+  backdrop-filter:blur(calc(24px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
 }
 .backdrop-blur > :nth-child(6){
-  backdrop-filter:blur(calc(32px * var(--blur-k,1))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,1)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 48%,#000 60%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 48%,#000 60%);
+  backdrop-filter:blur(calc(32px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55)));
+  mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
+  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
 }
 /* 원본은 검정 스크림이다. 여기 배경은 밝으니 사이트 배경색으로 깐다 */
 .backdrop-blur::after{
@@ -818,7 +827,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    폭을 숫자로 잘라내면 좌우가 절단되어 상자가 된다. */
 .backdrop-blur.bot{
   top:auto; bottom:0;
-  height:var(--blur-bot,220px);
+  height:var(--blur-bot,160px);
   --fade-x:linear-gradient(90deg,
     transparent calc(50% - 400px),
     #000 calc(50% - 230px),
@@ -830,28 +839,28 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   mask-composite:intersect;
 }
 .backdrop-blur.bot > :nth-child(1){
-  -webkit-mask-image:linear-gradient(180deg,transparent,#000 8%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent,#000 8%),var(--fade-x);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 15%),var(--fade-x);
+  mask-image:linear-gradient(180deg,transparent 0%,#000 15%),var(--fade-x);
 }
 .backdrop-blur.bot > :nth-child(2){
-  -webkit-mask-image:linear-gradient(180deg,transparent 8%,#000 16%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 8%,#000 16%),var(--fade-x);
+  -webkit-mask-image:linear-gradient(180deg,transparent 5%,#000 30%),var(--fade-x);
+  mask-image:linear-gradient(180deg,transparent 5%,#000 30%),var(--fade-x);
 }
 .backdrop-blur.bot > :nth-child(3){
-  -webkit-mask-image:linear-gradient(180deg,transparent 16%,#000 24%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 16%,#000 24%),var(--fade-x);
+  -webkit-mask-image:linear-gradient(180deg,transparent 15%,#000 45%),var(--fade-x);
+  mask-image:linear-gradient(180deg,transparent 15%,#000 45%),var(--fade-x);
 }
 .backdrop-blur.bot > :nth-child(4){
-  -webkit-mask-image:linear-gradient(180deg,transparent 24%,#000 36%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 24%,#000 36%),var(--fade-x);
+  -webkit-mask-image:linear-gradient(180deg,transparent 30%,#000 60%),var(--fade-x);
+  mask-image:linear-gradient(180deg,transparent 30%,#000 60%),var(--fade-x);
 }
 .backdrop-blur.bot > :nth-child(5){
-  -webkit-mask-image:linear-gradient(180deg,transparent 36%,#000 48%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 36%,#000 48%),var(--fade-x);
+  -webkit-mask-image:linear-gradient(180deg,transparent 45%,#000 75%),var(--fade-x);
+  mask-image:linear-gradient(180deg,transparent 45%,#000 75%),var(--fade-x);
 }
 .backdrop-blur.bot > :nth-child(6){
-  -webkit-mask-image:linear-gradient(180deg,transparent 48%,#000 60%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 48%,#000 60%),var(--fade-x);
+  -webkit-mask-image:linear-gradient(180deg,transparent 60%,#000 90%),var(--fade-x);
+  mask-image:linear-gradient(180deg,transparent 60%,#000 90%),var(--fade-x);
 }
 .backdrop-blur.bot::after{
   background:linear-gradient(0deg,color-mix(in srgb,var(--bg) 34%,transparent) 60%,transparent);
@@ -1126,6 +1135,25 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 :root[data-motion="off"]::view-transition-old(*),
 :root[data-motion="off"]::view-transition-new(*){animation:none!important}
 
+/* ── 내 계정 여닫기 ─────────────────────────────────────
+   내 계정은 순위·기록처럼 홈 위의 덮개다(#account, body.paging). 홈은 설정 덮개 때와
+   똑같이 칸이 제자리에서 가라앉고 서리가 끼며, 넵바·아래 막대가 빠진다 — 위의
+   body.paging 규칙들이 그대로 한다. 여기는 이 덮개 몫의 움직임만 적는다:
+   본문은 한 화면 아래에서 올라오고(스크롤로 길어 100% 가 아니라 100vh), 머리줄은 왼쪽
+   위에서 대각선으로 내려온다. 곧장 위에서 내려오면 가운데로 빠져 올라가는 넵바와
+   길이 겹친다. 가로는 머리줄 높이(약 104px)와 비슷한 160px 만 비켜 대각선으로 보인다.
+   넵바는 조금 먼저(6할 시간에) 빠져 머리줄에 길을 비운다.
+   닫을 때는 본문을 바로 접고 머리줄만 반 시간에 흐려지며 사라진다 */
+body.paging #account .account-shell{animation:acct-rise var(--si-dur) var(--ease-out)}
+body.paging #account .account-heading{animation:acct-drop var(--si-dur) var(--ease-out)}
+body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(--si-dur) * .6)}
+#account.pg-exit{opacity:1}
+#account.pg-exit :is(.account-shell,.backdrop-blur){opacity:0}
+#account.pg-exit .account-heading{animation:acct-frost calc(var(--si-dur) * .5) var(--ease-out) both}
+@keyframes acct-rise{from{transform:translateY(100vh)}}
+@keyframes acct-drop{from{transform:translate(-160px,-100%)}}
+@keyframes acct-frost{to{filter:blur(16px);opacity:0}}
+
 /* ── 홈 넵바 ─────────────────────────────────────────────
    흐림 띠는 플레이 화면과 같은 .backdrop-blur 를 그대로 쓴다(마크업도 같다).
    띠는 장식이라 --blur-top 으로 높이만 주고, 줄은 그 위에 따로 앉는다 —
@@ -1133,10 +1161,10 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 /* 띠에 view-transition-name 을 주면 안 된다 — 이름이 붙는 순간 그 요소가
    backdrop root 가 되어, 안쪽 여섯 겹의 backdrop-filter 가 뒤에서 가져올 그림을
    잃고 띠가 통째로 사라진다. 나갈 때는 root 크로스페이드에 실려 저절로 흐려진다 */
-#regions > .backdrop-blur:not(.bot){--blur-top:160px; z-index:3}
+#regions > .backdrop-blur:not(.bot){--blur-top:120px; z-index:3}
 #regions > .backdrop-blur.bot{
   z-index:3;
-  --blur-bot:150px;   /* 플레이 기본 220에서 조금 줄여 막대에 붙인다 */
+  --blur-bot:110px;   /* 플레이 기본 160에서 조금 줄여 막대에 붙인다 */
   --fade-x:linear-gradient(90deg,
     transparent calc(50% - 280px),
     #000 calc(50% - 160px),
@@ -1250,9 +1278,20 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .profile-help{font-size:11px;line-height:1.4;color:var(--ink-soft);font-weight:400}
 .profile-card{border:1px solid var(--profile-border);border-radius:12px;background:var(--profile-panel);padding:var(--profile-space)}
 .profile-card hr{border:0;border-top:1px solid var(--profile-border);margin:0}
-/* macOS 'Bordered Neutral' 푸시 버튼 */
-.profile-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:24px;padding:3px 14px;border:1px solid color-mix(in srgb,var(--card) 80%,transparent);border-radius:999px;background:linear-gradient(135deg,var(--profile-border),var(--profile-panel));box-shadow:inset 0 1px 0 var(--card);color:var(--ink);font-family:inherit;font-size:12px;font-weight:600;line-height:1.4;text-decoration:none;white-space:normal;cursor:pointer}
-.profile-button.destructive{background:color-mix(in srgb,var(--bad) 25%,var(--bg));color:var(--bad)}
+/* 사이트의 단추는 이 하나다 — 넵바 칸과 같은 알약, 같은 굵기. 바탕은 카드, 테는 격자
+   색이고, 가리키면 테가 짙어진다. 크기도 하나라 화면마다 따로 키우지 않는다.
+   되돌릴 수 없는 일(.destructive)은 글자와 테가 빨갛고, 가리키면 빨갛게 찬다 —
+   색만으로 가르지 않게 라벨이 그 일을 말한다. 주인공 단추(.intro-next)만 주황으로 찬다 */
+.profile-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 20px;border:2px solid var(--grid);border-radius:999px;background:var(--card);color:var(--ink);font:inherit;font-size:15px;font-weight:700;line-height:1.2;text-align:center;text-decoration:none;white-space:normal;cursor:pointer;
+  transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),color var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
+.profile-button:active:not(:disabled){transform:scale(.97)}
+.profile-button.destructive{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--grid))}
+:root[data-night] .profile-button.destructive{color:#ef7b70}
+@media (hover:hover) and (pointer:fine){
+  .profile-button:not(:disabled):hover{border-color:var(--ink-soft)}
+  .profile-button.destructive:not(:disabled):hover{background:var(--bad);border-color:var(--bad);color:#fff}
+}
+@media (prefers-reduced-motion:reduce){ .profile-button:active:not(:disabled){transform:none} }
 .profile-button:disabled,.profile-switch:disabled{opacity:.55;cursor:not-allowed}
 .profile-button:focus-visible,.profile-switch:focus-visible,.character-choice:focus-visible,.account-heading .back:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 /* 글칸은 주황 테를 두르지 않는다 — 브라우저가 글칸의 클릭을 키보드 초점과 같게
@@ -1299,9 +1338,10 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 #secOut .profile-button{margin-top:12px}
 
 /* ── 내 계정 ── */
-.account-page{overflow:auto;min-height:100vh;display:flex;flex-direction:column}
-.account-backdrop{position:fixed;top:56px;left:5%;width:90%;height:79vw;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(7,minmax(0,1fr));z-index:-1;pointer-events:none;opacity:.09;filter:blur(16px)}
-.account-backdrop span{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--ink-soft);color:var(--ink);font-size:30px;font-weight:700}
+/* 덮개 틀(.pg-over)은 가운데 모으는 flex 라 여기서는 그냥 흐르는 통으로 쓴다 */
+#account:not([hidden]){display:block;padding:0}
+.map-backdrop{position:fixed;top:56px;left:5%;width:90%;height:79vw;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(7,minmax(0,1fr));z-index:-1;pointer-events:none;opacity:.09;filter:blur(16px)}
+.map-backdrop span{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--ink-soft);color:var(--ink);font-size:30px;font-weight:700}
 .account-shell{width:min(100% - 48px,637px);margin:auto;padding-block:48px}
 .account-heading{display:flex;align-items:center;gap:14px;margin-bottom:22px}
 .account-heading h1{font-size:40px;line-height:1;letter-spacing:-.8px;font-weight:800}
@@ -1311,8 +1351,6 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .account-details{flex:1 1 280px;min-width:0}
 .character-preview{position:relative;height:212px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0;overflow:hidden;border:0;background:var(--profile-soft)}
 .character-preview>.profile-help{font-size:14px;color:var(--ink);margin-top:8px}
-.character-acts{display:flex;flex-wrap:wrap;gap:6px;width:100%;margin-top:12px}
-.character-acts .profile-button{flex:1 1 120px}
 /* 몸도 눈도 엔진(assets/bloub)이 SVG 로 낸다 — 예전의 CSS 동그라미 + 눈 두 개는
    로그인 화면의 봇과 따로 놀아 걷어냈다. 고른 색은 account.js 가 --buddy-ink 로 넣는다 */
 .character{position:relative;flex:none;width:120px;height:120px;--buddy-paper:var(--profile-soft)}
@@ -1343,26 +1381,35 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 /* ── 계정 화면만 한 치수 크게 ──────────────────────────────
    .profile-* 는 설정의 보안 탭과 함께 쓰는 옷이라 거기 값은 그대로 두고, 이 화면에서만
    덮어쓴다. 캐릭터를 크게 보자고 보안 탭까지 커질 일은 아니다. */
-.account-page{--profile-space:16px}
+#account{--profile-space:16px}
 .account-shell{width:min(100% - 56px,820px);padding-block:56px}
-.account-heading{gap:16px;margin-bottom:28px}
+.account-heading{gap:16px}
 .account-heading h1{font-size:48px}
 .account-heading .back{width:40px;height:48px}
+/* 머리줄은 제 통에 떠 있고 설정이 그 밑으로 지나간다. 폭과 왼쪽 선은 본문 통과 같다.
+   본문은 머리줄(위 여백 + 48px)과 그 아래 틈 28px 만큼 내려 시작한다 */
+#account{--acct-top:56px}
+.account-heading{position:fixed;z-index:4;top:0;left:50%;translate:-50% 0;margin:0;
+  width:min(100% - 56px,820px);padding-top:var(--acct-top)}
+.account-shell{padding-top:calc(var(--acct-top) + 48px + 28px)}
+/* 위·아래 흐림 띠 — 설정 덮개(#options)와 같은 식으로 뷰포트에 붙인다. 위 띠는
+   머리줄을 다 덮고 조금 더 내려와 지나가는 글이 머리줄 밑에서 흐려진다 */
+#account > .backdrop-blur{position:fixed;left:0;right:0;z-index:3;--fade-x:linear-gradient(#000,#000)}
+#account > .backdrop-blur:not(.bot){top:0;bottom:auto;--blur-top:calc(var(--acct-top) + 48px + 40px)}
+#account > .backdrop-blur.bot{top:auto;bottom:0;--blur-bot:64px}
 .account-layout{gap:32px}
 .account-character{flex:0 1 300px;gap:16px}
 .account-details{flex:1 1 340px}
 .character-preview{height:280px}
 .character-preview>.profile-help{font-size:17px;margin-top:10px}
 .character{width:168px;height:168px;transition:transform var(--fast) var(--ease-out)}
-.character-acts{gap:8px;margin-top:16px}
-.account-page .profile-label{font-size:13px;margin-bottom:12px}
-.account-page .profile-help{font-size:13px}
-.account-page .profile-button{min-height:32px;padding:6px 18px;font-size:14px}
-.account-page .profile-section{padding:18px 0}
-.account-page .profile-row{margin-top:14px;font-size:15px}
-.account-page .profile-switch{width:66px;height:30px}
-.account-page .profile-switch::after{width:26px;height:26px}
-.account-page .profile-switch[aria-pressed="true"]::after{transform:translateX(36px)}
+#account .profile-label{font-size:13px;margin-bottom:12px}
+#account .profile-help{font-size:13px}
+#account .profile-section{padding:18px 0}
+#account .profile-row{margin-top:14px;font-size:15px}
+#account .profile-switch{width:66px;height:30px}
+#account .profile-switch::after{width:26px;height:26px}
+#account .profile-switch[aria-pressed="true"]::after{transform:translateX(36px)}
 .character-controls{gap:14px}
 .character-controls fieldset+fieldset{padding-top:14px}
 .character-choices{gap:8px}
@@ -1373,12 +1420,14 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .account-details label.profile-row>span{width:130px}
 #accountSay{font-size:13px}
 @media (pointer:coarse){
-  .account-shell{width:min(100% - 40px,637px);padding-block:28px 40px}
+  #account{--acct-top:28px}
+  .account-shell{width:min(100% - 40px,637px);padding-block:calc(var(--acct-top) + 48px + 28px) 40px}
+  .account-heading{width:min(100% - 40px,637px)}
   .account-character{flex:1 1 220px}
   .account-details{flex:2 1 280px}
   .account-details label.profile-row{gap:16px}
   .account-details label.profile-row>span{width:auto}
-  .profile-button{min-height:40px}
+  .profile-button{min-height:44px}
   .character-choice{min-width:38px;height:38px}
   .colour-choices .character-choice{min-width:24px;height:24px}
   #optsSecurity:not([hidden]){margin-top:0;overflow:visible}
@@ -1473,76 +1522,149 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
   .rec-list .where{grid-column:1 / -1}
 }
 
-/* ═══ 경쟁전 ════════════════════════════════════════════
-   로고는 잡을 수 있다 — 호버하면 쥐는 손이 된다(ranked.js) */
-#regions .navbar .nav-logo{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
-body.rk-armed #regions .navbar .nav-logo{cursor:grabbing}
+/* ═══ 도우미 봇 · 경쟁전 ════════════════════════════════
+   봇이 조르는 동안에만 로고를 잡을 수 있다 — 쥐는 손이 되고, 끌어내리면 봇이 나온다(ranked.js) */
+#regions .navbar .nav-logo{user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+body.rk-intro #regions .navbar .nav-logo{cursor:grab}
 .rk-layer{position:fixed;inset:0;z-index:5;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
 .rk-layer[hidden]{display:none}
 /* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */
 body:is(.signing,.setting,.paging) .rk-layer{opacity:0;visibility:hidden}
-.rk-bot{
-  position:absolute;left:0;top:0;width:56px;height:56px;
-  --buddy-ink:var(--ranked);--buddy-paper:var(--on-accent);
-  pointer-events:auto;cursor:grab;touch-action:none;will-change:transform;
-  transition:transform var(--slow) var(--ease-out),opacity var(--si-dur) var(--ease-out);
+/* 처음 온 사람: 넵바 줄만 남기고 홈을 덮는다 — 막의 윗변은 ranked.js 가 넵바 아래에
+   맞춘다. 넵바를 봇 층보다 올려 봇이 로고 알약 뒤에 반쯤 숨는다 */
+.rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
+.rk-dim[hidden]{display:none}
+body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:6}
+body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
+@keyframes rk-peek{
+  0%,100%{transform:translateY(0) rotate(0)}
+  35%{transform:translateY(6px) rotate(-6deg)}
+  65%{transform:translateY(6px) rotate(6deg)}
 }
-.rk-bot.is-held{cursor:grabbing;transition:none;z-index:1}
-.rk-bot.is-leaving{opacity:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){ body.rk-intro .rk-bot-motion{animation:none} }
+:root[data-motion="off"] body.rk-intro .rk-bot-motion{animation:none}
+.rk-bot{
+  position:absolute;left:0;top:0;width:80px;height:80px;padding:0;border:0;background:none;
+  --buddy-ink:var(--ranked);--buddy-paper:var(--on-accent);
+  pointer-events:auto;cursor:pointer;touch-action:none;will-change:transform;z-index:1;
+  transition:transform var(--si-dur) var(--ease-out),opacity var(--si-dur) var(--ease-out);
+}
+.rk-bot:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:50%}
+/* 끌어 옮기는 동안은 손을 바로 따라간다 — 말풍선도 함께 */
+.rk-bot.is-held{cursor:grabbing;transition:none}
+.rk-bot.is-held .rk-bot-motion{transform:scale(1.08) rotate(4deg)}
+body:has(.rk-bot.is-held) .rk-say{transition:none}
 .rk-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out)}
 .rk-bot .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
-.rk-bot.is-held .rk-bot-motion{transform:scale(1.08) rotate(4deg)}
-.rk-bot.is-leaving .rk-bot-motion{transform:scale(.4)}
+.rk-bot:hover .rk-bot-motion{transform:scale(1.06)}
+/* 자는 봇은 눈을 감고, 색만이 아니라 글자(z)로도 잔다고 알린다 */
+.rk-bot.is-asleep::after{
+  content:"z";position:absolute;right:14px;top:8px;
+  font-size:15px;font-weight:800;line-height:1;color:var(--ink-soft);
+}
 .rk-say{
   position:absolute;left:0;top:0;width:min(300px,calc(100vw - 32px));
-  background:var(--card);color:var(--ink);border:2px solid var(--ranked);border-radius:14px;
+  background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);border:0;border-radius:14px;
   padding:12px 14px;font-size:14px;line-height:1.55;box-shadow:var(--shadow-lift);
-  pointer-events:auto;transition:transform var(--slow) var(--ease-out);
+  pointer-events:auto;transition:transform var(--si-dur) var(--ease-out);z-index:0;
 }
-body:has(.rk-bot.is-held) .rk-say{transition:none}
-.rk-say form{margin-top:10px;font-size:12px;color:var(--ink-soft)}
+/* 봇과 말풍선은 같은 빛깔이라 겹치면 봇이 묻힌다. 겹치는 곳에만 어두운 테두리를 깐다:
+   봇 몸 윤곽(<use>)을 말풍선 안 봇 자리에 두껍게 그리고, 말풍선 밖으로 나간 부분은
+   overflow 로 잘린다. 봇이 위에 그려지므로 몸 둘레의 띠만 보인다.
+   봇 몸의 CSS 움직임(호버·잡기·조르기)도 같이 탄다 */
+.rk-say{overflow:hidden}
+.rk-ring{
+  position:absolute;left:var(--ring-x,0);top:var(--ring-y,0);width:80px;height:80px;
+  overflow:visible;pointer-events:none;transform-origin:50% 68%;
+  transition:transform var(--fast) var(--ease-out);
+  --buddy-paper:var(--rk-ring,color-mix(in srgb,var(--ranked) 55%,#000));
+  fill:var(--buddy-paper);stroke:var(--buddy-paper);stroke-width:26;stroke-linejoin:round;
+}
+body:has(.rk-bot:hover) .rk-ring{transform:scale(1.06)}
+body:has(.rk-bot.is-held) .rk-ring{transform:scale(1.08) rotate(4deg);transition:none}
+body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
+@media (prefers-reduced-motion:reduce){ body.rk-intro .rk-ring{animation:none} }
+:root[data-motion="off"] body.rk-intro .rk-ring{animation:none}
+/* 봇 뒤에서 펼쳐진다(ranked.js 의 place·tell). 봇 쪽 끝이 봇 몸 밑에 숨어 있어 그쪽
+   여백을 넓힌다. 펼치는 동안만 잘라 내고, 끝나면 풀어 그림자를 살린다 */
+.rk-say[data-side="right"]{padding-left:38px}
+.rk-say[data-side="left"]{padding-right:38px}
+.rk-say[data-side="down"]{padding-top:34px}
+.rk-say[data-side="up"]{padding-bottom:34px}
+.rk-say.is-open{animation:.42s var(--ease-out) both}
+.rk-say[data-side="right"].is-open{animation-name:rk-open-right}
+.rk-say[data-side="left"].is-open{animation-name:rk-open-left}
+.rk-say[data-side="down"].is-open{animation-name:rk-open-down}
+.rk-say[data-side="up"].is-open{animation-name:rk-open-up}
+@keyframes rk-open-right{from{clip-path:inset(0 100% 0 0 round 14px)}to{clip-path:inset(-40px round 14px)}}
+@keyframes rk-open-left{from{clip-path:inset(0 0 0 100% round 14px)}to{clip-path:inset(-40px round 14px)}}
+@keyframes rk-open-down{from{clip-path:inset(0 0 100% 0 round 14px)}to{clip-path:inset(-40px round 14px)}}
+@keyframes rk-open-up{from{clip-path:inset(100% 0 0 0 round 14px)}to{clip-path:inset(-40px round 14px)}}
+@media (prefers-reduced-motion:reduce){ .rk-say.is-open{animation:none} }
+:root[data-motion="off"] .rk-say.is-open{animation:none}
+.rk-say[hidden]{display:none}
+.rk-say .rk-next{margin-top:8px}
+.rk-say .rk-next[hidden]{display:none}
+.rk-say form{margin-top:10px;font-size:12px;color:inherit;opacity:.8}
 .rk-say form[hidden]{display:none}
 .rk-say form div{display:flex;gap:6px;margin-top:6px}
 .rk-say input{font:inherit;font-size:15px;flex:1;min-width:0;color:var(--ink);background:var(--bg);border:2px solid var(--grid);padding:6px 10px}
-.rk-say input:focus{outline:0;border-color:var(--ranked)}
-.rk-say button{font:inherit;font-weight:700;color:#fff;background:var(--ranked);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.rk-say input:focus{outline:0;border-color:var(--rk-ink,#fff)}
+.rk-say button{font:inherit;font-weight:700;color:var(--rk-on,var(--ranked));background:var(--rk-ink,#fff);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .rk-say button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-/* 봇을 놓은 칸은 가운데서부터 빨갛게 번진다. 두꺼운 먹 테두리를 함께 둘러 색만으로
-   가르지 않는다(스크린리더에는 aria-description '경쟁전'). 끌고 지나가는 칸은 테두리만 */
-#courseBtns .grid-btn.rk-hot{box-shadow:inset 0 0 0 5px var(--ranked)}
-#courseBtns .grid-btn.is-ranked,
-#courseBtns .grid-btn.is-ranked:hover{
-  color:#fff;
-  background:radial-gradient(circle closest-side,var(--ranked) 98%,transparent 100%) center / 150% 150% no-repeat,var(--block);
-  box-shadow:inset 0 0 0 5px var(--ink);
-  animation:rk-dye var(--si-dur) var(--ease-out);
-}
-@keyframes rk-dye{from{background-size:0 0,auto}}
-
-/* 아래 줄의 시작하기도 빨개지고 '경쟁전 시작'으로 바뀐다(ranked.js 의 paintPlay) */
+/* 시작하기를 꾹 누르는 동안 알약이 봇의 빛깔로 차오르고, 다 차면 '경쟁전 시작'으로
+   바뀐다(ranked.js 의 wirePlayHold) — 색만으로 가르지 않고 라벨이 함께 바뀐다 */
+#navPlay{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 .nav-shape{transition:background-color var(--si-dur) var(--ease-out)}
-body.rk-ready #navBotShape{background:var(--ranked)}
-body.rk-ready #navPlay.is-on{color:#fff}
+body.rk-charging #navBotShape{background:var(--rk-on,var(--ranked));transition-duration:.6s}
+body.rk-ready #navBotShape{background:var(--rk-on,var(--ranked))}
+body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 
 /* 경쟁전 판. 게이지가 빨갛고 HUD 에 '경쟁전' 글자가 붙는다 */
-#play.is-ranked .gauge i{background:var(--ranked)}
-.rk-tag{font-size:14px;font-weight:800;color:#fff;background:var(--ranked);padding:4px 10px;border-radius:999px}
+#play.is-ranked .gauge i{background:var(--rk-on,var(--ranked))}
+.rk-tag{font-size:14px;font-weight:800;color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked));padding:4px 10px;border-radius:999px}
 .rk-tag[hidden]{display:none}
 .rk-line.bad{color:var(--bad)}
 
 /* ── 가입 안내(welcome/) ────────────────────────────────────
-   한 번에 한 가지만 묻는 화면. .profile-* 옷을 그대로 입되 글자만 키운다 —
-   물음이 화면의 주인이라 나머지는 물러선다.
-   고른 것은 색만으로 나누지 않는다: 테두리가 굵어지고 배경이 바뀌고
-   aria-pressed 가 같이 선다. */
+   한 번에 한 가지만 묻는 화면. 옷은 이 저장소가 이미 쓰는 것에서 딴다 —
+   새 결을 들이지 않는다.
+
+   고르는 단추는 지도 칸(.grid-btn)의 축소판이다: 번호가 동그란 청록 칸이고,
+   고르면 줄 전체가 주황으로 물든다(.grid-btn:hover 와 같은 짝 — --accent 바탕에
+   --on-accent 글자). 물드는 방식도 경쟁전의 rk-dye 를 따른다 — 짚은 자리에서
+   바깥으로 퍼진다. 다만 background-size 대신 원 하나를 키운다(transform 이라
+   합성기에서 돌고, 중간에 끊어 되돌려도 튀지 않는다).
+
+   색만으로 나누지 않는다: 주황 바탕 + 굵은 테두리 + 번호 칸 반전 + 체크 표시 +
+   aria-pressed 가 함께 선다. */
 .intro-page{--profile-space:18px;min-height:100svh;display:flex;flex-direction:column}
+/* 카드 한 장이 들고 나는 시간. --slow(.2s) 는 이 화면엔 짧다 — 물음이 통째로
+   바뀌는 자리라 한 치수 길게 잡되 300ms 아래에 둔다. 움직임을 끄면 0 이 된다.
+
+   --intro-flood 는 주황이 줄을 덮는 시간, --intro-beat 는 고른 뒤 다음 장으로
+   넘어가기까지 기다리는 시간이다. 기다림이 물듦(.26s)과 번호 칸이 튀는 tilepop
+   (.34s)보다 길어야 고른 것이 다 보이고 넘어간다 — 그래서 셋을 나란히 둔다.
+   welcome.js 가 --intro-beat 를 여기서 읽으므로 ms 로 적는다. */
+.intro-page{--intro-dur:.26s;--intro-from:12px;--intro-flood:.26s;--intro-beat:440ms}
+:root[data-motion="off"] .intro-page{--intro-dur:0s;--intro-flood:0s;--intro-beat:0ms}
+
 .intro-rail{position:fixed;top:0;left:0;right:0;height:3px;background:var(--profile-border);z-index:2}
-.intro-rail span{display:block;height:100%;width:0;background:var(--block-hi);transition:width var(--slow) var(--ease-out)}
+/* width 가 아니라 scaleX 다 — 레이아웃을 다시 재지 않고 합성기에서 돈다 */
+.intro-rail span{display:block;height:100%;width:100%;background:var(--accent);
+  transform:scaleX(var(--at,0));transform-origin:left center;
+  transition:transform var(--si-dur) var(--ease-out)}
+
 .intro-shell{width:min(100% - 48px,640px);margin:auto;padding-block:56px;display:flex;flex-direction:column;gap:18px}
 .intro-count{font-size:12px;color:var(--ink-soft);letter-spacing:.06em}
+/* 카드는 포커스를 받되 테두리를 그리지 않는다 — 탭 차례에 없는 자리라
+   (tabindex="-1") 키보드로 여기에 멈출 일이 없고, 멈춘 것처럼 보여서도 안 된다.
+   보기·단추의 :focus-visible 테두리는 그대로다 */
 .intro-card{display:flex;flex-direction:column;gap:12px}
+.intro-card:focus,.intro-card:focus-visible{outline:none}
 .intro-kicker{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);min-height:1em}
+/* 큰 글자는 자간을 죈다 — 커질수록 낱자가 멀어 보인다 */
 .intro-ask{font-size:30px;line-height:1.25;letter-spacing:-.6px;font-weight:800;margin:0}
 .intro-note,.intro-lede{font-size:14px;line-height:1.6;color:var(--ink-soft)}
 .intro-lede{font-size:16px;color:var(--ink)}
@@ -1550,51 +1672,151 @@ body.rk-ready #navPlay.is-on{color:#fff}
 .intro-say.bad{color:var(--bad)}
 .intro-body{margin-top:4px}
 
+/* 카드가 들고 난다. 앞으로 갈 때는 아래에서 올라오고, '이전' 으로 돌아갈 때는
+   위에서 내려온다 — 왔던 길로 되돌아가는 것이 보여야 어디에 있는지 안 흐려진다.
+   .screen 의 rise 와 같은 결(올라오며 나타남)이되 이 화면의 시간을 쓴다 */
+.intro-card[data-way="back"]{--intro-from:-12px}
+.intro-card.is-in > *{animation:intro-in var(--intro-dur) var(--ease-out) backwards}
+.intro-card.is-in > :nth-child(2){animation-delay:30ms}
+.intro-card.is-in > :nth-child(3){animation-delay:50ms}
+.intro-card.is-in > .intro-body{animation-delay:70ms}
+@keyframes intro-in{from{opacity:0;transform:translateY(var(--intro-from))}}
+/* 고를 것들은 한꺼번에 서지 않고 차례로 선다 */
+.intro-card.is-in .intro-pick,.intro-card.is-in .intro-score{
+  animation:intro-in var(--intro-dur) var(--ease-out) backwards;
+  animation-delay:calc(70ms + var(--i,0) * 26ms)}
+
+/* ── 고르는 단추 ─────────────────────────────────────────── */
 .intro-picks{display:flex;flex-direction:column;gap:8px}
 .intro-yesno{flex-direction:row;flex-wrap:wrap}
 .intro-yesno .intro-pick{flex:1 1 140px}
-.intro-pick{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border:2px solid var(--profile-border);border-radius:10px;background:var(--profile-soft);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
-.intro-pick kbd{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--profile-border);font:inherit;font-size:12px;font-weight:700}
-.intro-pick[aria-pressed="true"]{border-color:var(--ink);background:var(--profile-border)}
-.intro-pick[aria-pressed="true"] kbd{background:var(--ink);color:var(--bg)}
-.intro-pick[aria-pressed="true"]::after{content:'✓';margin-left:auto;font-weight:700}
+.intro-pick{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  padding:12px 16px;border:2px solid var(--profile-border);border-radius:12px;
+  background:var(--card);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;
+  transition:background-color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),
+             color var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),
+             box-shadow var(--fast) var(--ease-out)}
+/* 물드는 원. 번호 칸 한가운데에서 출발해 줄을 덮는다(경쟁전 rk-dye 와 같은 뜻) */
+.intro-pick::before{
+  content:'';position:absolute;z-index:0;left:30px;top:50%;
+  width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;
+  background:var(--accent);
+  transform:scale(0);transform-origin:50% 50%;
+  transition:transform var(--intro-flood) var(--ease-out)}
+.intro-pick > *{position:relative;z-index:1}
+/* 번호는 지도 칸이다 — 동그란 청록에 흰 글자 */
+.intro-pick kbd{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--block);color:#fff;font:inherit;font-size:13px;font-weight:700;
+  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.intro-pick .tick{margin-left:auto;font-weight:700;opacity:0;transform:scale(.6);
+  transition:opacity var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
 
+.intro-pick[aria-pressed="true"]{border-color:var(--accent-deep);color:var(--on-accent)}
+.intro-pick[aria-pressed="true"]::before{transform:scale(32)}
+.intro-pick[aria-pressed="true"] kbd{background:var(--on-accent);color:var(--accent);
+  animation:tilepop .34s var(--ease-out)}
+.intro-pick[aria-pressed="true"] .tick{opacity:1;transform:scale(1)}
+
+/* 누르는 그 순간 반응한다 — 떼기를 기다리지 않는다 */
+.intro-pick:active,.intro-score:active{transform:scale(.985)}
+@media (hover:hover) and (pointer:fine){
+  /* 짚으면 칸이 통째로 찬다. 번호 칸은 뒤집혀 흰 동그라미가 된다 — 같은 청록끼리
+     겹쳐 번호가 묻히지 않게. 고른 것(주황)과는 색이 달라 둘이 안 헷갈린다 */
+  .intro-pick:not([aria-pressed="true"]):hover{
+    background:var(--block-deep);border-color:var(--block-deep);color:#fff;box-shadow:var(--shadow)}
+  .intro-pick:not([aria-pressed="true"]):hover kbd{background:#fff;color:var(--block-deep)}
+}
+
+/* ── 0‥10 자 ─────────────────────────────────────────────── */
 .intro-scale{display:flex;flex-wrap:wrap;gap:6px}
-.intro-score{flex:1 1 42px;min-width:42px;min-height:44px;border:2px solid var(--profile-border);border-radius:8px;background:var(--profile-soft);color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer}
-.intro-score[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
-.intro-ends{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--ink-soft)}
+.intro-score{
+  flex:1 1 42px;min-width:42px;min-height:46px;
+  border:2px solid var(--profile-border);border-radius:10px;background:var(--card);
+  color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),
+             color var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
+.intro-score[aria-pressed="true"]{border-color:var(--accent-deep);background:var(--accent);
+  color:var(--on-accent);animation:tilepop .34s var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .intro-score:not([aria-pressed="true"]):hover{
+    background:var(--block-deep);border-color:var(--block-deep);color:#fff}
+}
+.intro-ends{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--ink-soft)}
 
-.intro-field{display:flex;align-items:center;gap:2px;border:2px solid var(--profile-border);border-radius:10px;background:var(--card);padding:6px 12px}
-.intro-field:focus-within{border-color:var(--ink)}
+/* ── 글 칸 ───────────────────────────────────────────────── */
+.intro-field{display:flex;align-items:center;gap:2px;border:2px solid var(--profile-border);
+  border-radius:12px;background:var(--card);padding:6px 14px;
+  transition:border-color var(--fast) var(--ease-out),box-shadow var(--fast) var(--ease-out)}
+.intro-field:focus-within{border-color:var(--block);box-shadow:var(--shadow)}
 .intro-prefix{font-size:20px;color:var(--ink-soft)}
 .intro-field input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;font-size:20px;padding:6px 2px}
 .intro-field input:focus{outline:none}
 
-.intro-stage{display:flex;align-items:center;justify-content:center;height:180px;border-radius:12px;background:var(--profile-soft);margin-bottom:14px}
+/* ── 캐릭터 ──────────────────────────────────────────────── */
+.intro-stage{display:flex;align-items:center;justify-content:center;height:180px;
+  border-radius:16px;background:var(--profile-soft);margin-bottom:14px}
 .intro-stage .character{width:140px;height:140px}
 .intro-controls{gap:12px}
 .intro-controls fieldset+fieldset{border-top:1px solid var(--profile-border);padding-top:12px}
+.intro-controls .character-choice{transition:transform var(--fast) var(--ease-out),
+  border-color var(--fast) var(--ease-out),background var(--fast) var(--ease-out)}
+.intro-controls .character-choice[aria-pressed="true"]{animation:tilepop .34s var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .intro-controls .character-choice:hover{transform:scale(1.08)}
+}
 
 .intro-recap{display:grid;grid-template-columns:auto 1fr;gap:8px 20px;font-size:15px;align-items:baseline}
 .intro-recap dt{color:var(--ink-soft);font-size:13px}
 .intro-recap dd{margin:0}
 
+/* ── 아래 줄 ─────────────────────────────────────────────── */
 .intro-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.intro-page .profile-button{min-height:38px;padding:8px 22px;font-size:15px}
-.intro-next{margin-right:auto;order:2}
+/* 다음은 이 화면의 주인공이다 — 로그인 문(.si-btns)과 같은 주황을 쓴다 */
+.intro-next{margin-right:auto;order:2;border-color:var(--accent);background:var(--accent);color:var(--on-accent);
+  box-shadow:var(--shadow)}
 #introBack{order:1}
-.intro-skip{order:3;border:0;background:none;color:var(--ink-soft);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+@media (hover:hover) and (pointer:fine){
+  .intro-next:not(:disabled):hover{background:var(--accent-deep);border-color:var(--accent-deep);box-shadow:var(--shadow-lift)}
+}
+.intro-next:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.intro-skip{order:3;border:0;background:none;color:var(--ink-soft);font:inherit;font-size:13px;
+  text-decoration:underline;cursor:pointer;padding:6px 2px}
 .intro-skip:focus-visible,.intro-score:focus-visible,.intro-pick:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
-.intro-help{font-size:12px;color:var(--ink-soft)}
-.intro-help kbd{border:1px solid var(--profile-border);border-radius:4px;padding:0 5px;font:inherit;font-size:11px}
 /* 이 화면 안에서만 — .intro-acts 의 flex 가 hidden 을 이기지 못하게 */
 .intro-page [hidden]{display:none!important}
 
+/* ── 안내를 마치고 홈으로 ────────────────────────────────────
+   페이지가 둘이지만 전환은 브라우저가 맡는다 — 위쪽 @view-transition{navigation:auto}
+   가 이미 켜 둔 교차 문서 전환이고, 여기서는 이 화면 몫의 움직임만 적는다.
+
+   설정 덮개가 아래에서 올라오는 것(opt-rise: translateY(100%) 에서 옴)의 거꾸로다:
+   묻던 카드가 아래로 내려가 비키면 그 자리에 홈이 남는다. 왔던 길로 되돌아가는
+   셈이라 방향이 어긋나지 않는다. 시간도 그 전환과 같은 --si-dur 을 쓴다.
+
+   뒤에 깔린 격자(.map-backdrop)에는 이름을 주지 않는다 — 이름 없는 것들은 root
+   크로스페이드에 함께 실려, 흐린 구 스물다섯이 홈의 진짜 지도로 풀린다. 이름을
+   주면 그 요소가 제 backdrop root 가 되어 블러가 뒤 그림을 잃는다(넵바 띠에서
+   같은 일이 있었다 — 위 #regions > .backdrop-blur 주석). */
+.intro-shell{view-transition-name:rt-intro}
+::view-transition-old(rt-intro){animation:intro-leave var(--si-dur) var(--ease-out) both}
+@keyframes intro-leave{to{transform:translateY(100%);opacity:0}}
+
 @media (pointer:coarse){
-  /* 손가락에는 숫자 키가 없다 — 안내와 번호 칸을 거둔다 */
-  .intro-help,.intro-pick kbd{display:none}
   .intro-ask{font-size:26px}
 }
 @media (prefers-reduced-motion:reduce){
+  /* 움직임은 거두고 뜻은 남긴다 — 물드는 색과 반전은 그대로 서고, 자리만 안 움직인다.
+     볼 움직임이 없으니 고른 뒤 기다리지도 않는다 */
+  .intro-page{--intro-beat:0ms}
+  .intro-card.is-in > *,.intro-card.is-in .intro-pick,.intro-card.is-in .intro-score{animation:none}
+  .intro-pick::before{transition:none}
+  .intro-pick[aria-pressed="true"] kbd,.intro-score[aria-pressed="true"],
+  .intro-controls .character-choice[aria-pressed="true"]{animation:none}
   .intro-rail span{transition:none}
+  .intro-pick:active,.intro-score:active{transform:none}
+  .intro-controls .character-choice:hover{transform:none}
 }

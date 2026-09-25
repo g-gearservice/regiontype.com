@@ -5,11 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>처음 오셨네요 — regiontype</title>
-<link rel="stylesheet" href="../style.css?v=2.84">
+<link rel="stylesheet" href="../style.css?v=3.08">
 <script>try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');document.documentElement.toggleAttribute('data-night',!!o.night);document.documentElement.dataset.motion=o.motion===false?'off':'on'}catch{}</script>
-<script src="welcome.js?v=2.84" defer></script>
+<script src="welcome.js?v=3.08" defer></script>
 </head>
 <body class="intro-page">
+
+<div class="map-backdrop" aria-hidden="true">
+  <span style="grid-column:6;grid-row:1">도봉구</span>
+  <span style="grid-column:3;grid-row:2">은평구</span>
+  <span style="grid-column:5;grid-row:2">강북구</span>
+  <span style="grid-column:6;grid-row:2">노원구</span>
+  <span style="grid-column:4;grid-row:3">종로구</span>
+  <span style="grid-column:5;grid-row:3">성북구</span>
+  <span style="grid-column:7;grid-row:3">중랑구</span>
+  <span style="grid-column:1;grid-row:4">강서구</span>
+  <span style="grid-column:3;grid-row:4">마포구</span>
+  <span style="grid-column:4;grid-row:4">서대문구</span>
+  <span style="grid-column:5;grid-row:4">중구</span>
+  <span style="grid-column:6;grid-row:4">동대문구</span>
+  <span style="grid-column:8;grid-row:4">강동구</span>
+  <span style="grid-column:2;grid-row:5">양천구</span>
+  <span style="grid-column:3;grid-row:5">영등포구</span>
+  <span style="grid-column:4;grid-row:5">용산구</span>
+  <span style="grid-column:6;grid-row:5">성동구</span>
+  <span style="grid-column:7;grid-row:5">광진구</span>
+  <span style="grid-column:2;grid-row:6">구로구</span>
+  <span style="grid-column:4;grid-row:6">동작구</span>
+  <span style="grid-column:6;grid-row:6">강남구</span>
+  <span style="grid-column:7;grid-row:6">송파구</span>
+  <span style="grid-column:3;grid-row:7">금천구</span>
+  <span style="grid-column:4;grid-row:7">관악구</span>
+  <span style="grid-column:5;grid-row:7">서초구</span>
+</div>
 
 <div class="intro-rail" aria-hidden="true"><span id="introBar"></span></div>
 
@@ -17,7 +45,7 @@
   <p class="intro-count"><span id="introStep">1</span> / <span id="introTotal">10</span></p>
 
   <!-- 한 번에 한 장만 보인다. 순서·질문은 welcome.js 의 STEPS 가 쥔다 -->
-  <section class="intro-card" id="introCard" aria-live="polite">
+  <section class="intro-card" id="introCard" tabindex="-1" aria-live="polite">
     <p class="intro-kicker" id="introKicker"></p>
     <h1 class="intro-ask" id="introAsk"></h1>
     <p class="intro-note" id="introNote"></p>
@@ -30,7 +58,6 @@
     <button type="button" class="profile-button intro-next" id="introNext">다음</button>
     <button type="button" class="intro-skip" id="introSkip">건너뛰기</button>
   </nav>
-  <p class="intro-help">숫자 키로 고르고 <kbd>Enter</kbd> 로 넘어갑니다.</p>
 </main>
 
 </body>
