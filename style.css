@@ -1027,7 +1027,7 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .si-bot{
   --bot:44px;
   position:absolute; left:0; top:0; width:var(--bot); height:var(--bot);
-  --buddy-ink:var(--accent); --buddy-paper:var(--on-accent);
+  --buddy-ink:var(--accent);
   pointer-events:auto; cursor:grab; touch-action:none; will-change:transform;
 }
 .si-bot.is-held{cursor:grabbing; z-index:1}
@@ -1353,7 +1353,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .character-preview>.profile-help{font-size:14px;color:var(--ink);margin-top:8px}
 /* 몸도 눈도 엔진(assets/bloub)이 SVG 로 낸다 — 예전의 CSS 동그라미 + 눈 두 개는
    로그인 화면의 봇과 따로 놀아 걷어냈다. 고른 색은 account.js 가 --buddy-ink 로 넣는다 */
-.character{position:relative;flex:none;width:120px;height:120px;--buddy-paper:var(--profile-soft)}
+.character{position:relative;flex:none;width:120px;height:120px}
 .character .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .character-controls{display:flex;flex-direction:column;gap:10px}
 .character-controls fieldset{border:0;min-width:0}
@@ -1362,7 +1362,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 /* 고른 값의 이름은 화면에는 안 보이고 읽기 도구에만 간다 — 고른 칸은 테두리로 보인다 */
 .character-controls legend span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .character-choices{clear:both;display:flex;flex-wrap:wrap;gap:6px}
-.character-choice{position:relative;width:36px;height:36px;flex:none;border:2px solid transparent;border-radius:9px;background:none;padding:0;cursor:pointer;--buddy-paper:var(--profile-soft)}
+.character-choice{position:relative;width:36px;height:36px;flex:none;border:2px solid transparent;border-radius:9px;background:none;padding:0;cursor:pointer}
 .character-choice .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .character-choice[aria-pressed="true"]{border-color:var(--ink);background:var(--profile-border)}
 .colour-choices{flex-wrap:wrap}
@@ -1545,14 +1545,15 @@ body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 :root[data-motion="off"] body.rk-intro .rk-bot-motion{animation:none}
 .rk-bot{
   position:absolute;left:0;top:0;width:80px;height:80px;padding:0;border:0;background:none;
-  --buddy-ink:var(--ranked);--buddy-paper:var(--on-accent);
+  --buddy-ink:var(--ranked);
   pointer-events:auto;cursor:pointer;touch-action:none;will-change:transform;z-index:1;
   transition:transform var(--si-dur) var(--ease-out),opacity var(--si-dur) var(--ease-out);
 }
 /* 고른 색이 없는 봇은 평소엔 브랜드 빛깔, 경쟁전을 켜면(rk-ready) 빨강이다. 몸만 바꾼다 —
    --rk-on(말풍선·게이지)은 paintTint 가 .rk-bot 의 --buddy-ink(빨강)에서 그대로 딴다.
    고른 색은 setColour 가 .rk-bot-motion 에 인라인으로 박으므로 그때는 비켜선다 */
-body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy{--buddy-ink:var(--accent)}
+body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy,
+body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"])::after{--buddy-ink:var(--accent)}
 .rk-bot:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:50%}
 /* 끌어 옮기는 동안은 손을 바로 따라간다 — 말풍선도 함께 */
 .rk-bot.is-held{cursor:grabbing;transition:none}
@@ -1566,7 +1567,8 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 .rk-bot.is-asleep mask path ~ path{opacity:0}
 .rk-bot.is-asleep .rk-bot-motion::after{
   content:"";position:absolute;left:29px;top:38px;width:22px;height:8px;
-  background:#fff;
+  /* 눈 빛깔은 buddy.js 의 EYE 와 같은 식 — 몸 빛깔에 따라 희거나 짙다 */
+  background:oklch(from var(--buddy-ink) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h);
   -webkit-mask:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 8"><path d="M1.5 2q4 4.5 8 0M12.5 2q4 4.5 8 0" fill="none" stroke="%23000" stroke-width="2.4" stroke-linecap="round"/></svg>') center/contain no-repeat;
   mask:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 8"><path d="M1.5 2q4 4.5 8 0M12.5 2q4 4.5 8 0" fill="none" stroke="%23000" stroke-width="2.4" stroke-linecap="round"/></svg>') center/contain no-repeat;
 }

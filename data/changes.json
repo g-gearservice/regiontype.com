@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.6.311",
+    "date": "2026-09-26",
+    "ko": "봇의 눈 색이 몸 색을 따릅니다. 밝은 몸(주황·노랑·초록·회색·크림 등)에는 짙은 눈, 어두운 몸(빨강·보라·갈색·먹 등)에는 흰 눈이 들어가고, 몸 빛깔이 살짝 배어 한 벌로 보입니다. 홈·로그인·내 계정·캐릭터 고르기 어디서나 같고, 경쟁전을 켜 봇이 빨개지면 눈도 함께 바뀝니다.",
+    "en": "The bot's eyes now follow its body colour: dark eyes on light bodies (orange, amber, green, grey, cream…) and white eyes on dark ones (red, violet, brown, ink…), lightly tinted so they match. This holds on home, sign-in, My Account and the character picker, and the eyes switch too when the bot turns red for ranked."
+  },
+  {
     "v": "0.6.310",
     "date": "2026-09-26",
     "ko": "홈의 도우미 봇이 잘 때 작은 점으로 줄어들지 않고, 소개 그림처럼 제 모습 그대로 눈을 감고 잡니다. z 가 오른쪽 위로 떠오르며 작아지고 사라집니다. 움직임을 줄였으면 z 두 개가 멈춰 있습니다. 고른 색이 없는 봇은 평소엔 브랜드 주황이고, 경쟁전을 켜면 빨갛게 바뀝니다.",

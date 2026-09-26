@@ -18,6 +18,8 @@ const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID,
 
 /* 고를 수 있는 것의 목록. 부르는 쪽이 engine.js 를 따로 부르지 않게 여기서 건넨다 —
    두 번 부르면 판이 갈려(한쪽만 ?v=) 같은 사고가 다시 난다. */
+const EYE = 'oklch(from var(--buddy-ink, var(--block)) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
+
 export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS };
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -45,7 +47,11 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
      바탕(--buddy-paper)을 깔고, 그 위를 마스크로 판 몸통(--buddy-ink)을 올린다 */
   /* 몸 윤곽은 id 로 밖에서 <use> 할 수 있다 — 경쟁전 봇의 말풍선이 겹치는 곳에 테두리를
      그릴 때 쓴다(ranked.js). <use> 는 매 프레임 바뀌는 모양을 저절로 따라간다 */
-  const paper = el('path', { id: uid + '-body', fill: 'var(--buddy-paper, #fff)' });
+  /* 눈 빛깔은 몸 빛깔에서 딴다 — OKLCH 밝기 .62 를 넘으면 짙은 눈, 아니면 흰 눈이다.
+     고를 수 있는 열두 색과 브랜드 주황·경쟁전 빨강에서 흰 글자와 짙은 글자의 대비가
+     뒤집히는 자리가 거기다(#e8483f .63 은 짙게, #8b5cf6 .61 은 희게). 몸 빛깔을 조금
+     남겨 눈이 몸과 한 벌로 보이게 한다. --buddy-paper 를 주면 그걸 쓴다(말풍선 테두리) */
+  const paper = el('path', { id: uid + '-body', fill: `var(--buddy-paper, ${EYE})` });
   const inked = el('g', { mask: `url(#${uid})` });
   inked.append(el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' }));
   const body = el('g');
