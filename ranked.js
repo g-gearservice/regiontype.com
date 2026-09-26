@@ -422,13 +422,17 @@ function cornerAt(i) {
 function sleep() {
   hide();
   bot.el.classList.add('is-asleep');
-  bot.api.setState('sleep');
+  /* 엔진의 sleep 은 눈 없는 작은 점이다. 홈 봇은 몸을 그대로 두고 눈만 감는다 —
+     시선을 떨구며 감고(buddy.js 의 doze), 다 감기면 ‿ 가 얹힌다(style.css) */
+  bot.api.setState('idle');
+  bot.api.doze(true);
 }
 function wake() {
   if (!bot || intro || touring) return;
   clearTimeout(nap);
   bot.el.classList.remove('is-asleep');
   bot.api.setState('idle');
+  bot.api.doze(false);
 }
 function doze() {
   if (!bot || intro || touring) return;
@@ -550,6 +554,7 @@ async function tour() {
   bot.api.start();
   bot.el.classList.remove('is-asleep');
   bot.api.setState('idle');
+  bot.api.doze(false);
   next.hidden = false;
   next.focus({ preventScroll: true });
   for (const [key, at] of STEPS) {
@@ -749,7 +754,7 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   line.textContent = '';
   line.classList.remove('bad');
   if (!token()) return;
-  const body = { score: g.score, cpm: g.cpm, hits: g.hits, tries: g.tries };
+  const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
   if (!g.ranked) { ask('/played', { ...body, c: g.slug, t: g.total }).catch(() => {}); return; }
   line.textContent = t('uploading');
   try {

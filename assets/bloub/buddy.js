@@ -18,6 +18,8 @@ const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID,
 
 /* 고를 수 있는 것의 목록. 부르는 쪽이 engine.js 를 따로 부르지 않게 여기서 건넨다 —
    두 번 부르면 판이 갈려(한쪽만 ?v=) 같은 사고가 다시 난다. */
+const EYE = 'oklch(from var(--buddy-ink, var(--block)) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
+
 export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS };
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -45,7 +47,11 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
      바탕(--buddy-paper)을 깔고, 그 위를 마스크로 판 몸통(--buddy-ink)을 올린다 */
   /* 몸 윤곽은 id 로 밖에서 <use> 할 수 있다 — 경쟁전 봇의 말풍선이 겹치는 곳에 테두리를
      그릴 때 쓴다(ranked.js). <use> 는 매 프레임 바뀌는 모양을 저절로 따라간다 */
-  const paper = el('path', { id: uid + '-body', fill: 'var(--buddy-paper, #fff)' });
+  /* 눈 빛깔은 몸 빛깔에서 딴다 — OKLCH 밝기 .62 를 넘으면 짙은 눈, 아니면 흰 눈이다.
+     고를 수 있는 열두 색과 브랜드 주황·경쟁전 빨강에서 흰 글자와 짙은 글자의 대비가
+     뒤집히는 자리가 거기다(#e8483f .63 은 짙게, #8b5cf6 .61 은 희게). 몸 빛깔을 조금
+     남겨 눈이 몸과 한 벌로 보이게 한다. --buddy-paper 를 주면 그걸 쓴다(말풍선 테두리) */
+  const paper = el('path', { id: uid + '-body', fill: `var(--buddy-paper, ${EYE})` });
   const inked = el('g', { mask: `url(#${uid})` });
   inked.append(el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' }));
   const body = el('g');
@@ -60,17 +66,93 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
   const exprOf = id => EXPRESSION_BY_ID.get(id) ?? null;
   const engine = new BotEngine(100, 'idle', radiiOf(shape), exprOf(expression));
   let raf = 0, t0 = 0;
+  /* 잠들기(doze). 엔진의 졸린 눈(somnolent)과 같은 수 — 눈꺼풀은 깜빡임처럼 open 으로
+     내리고, 시선은 아래로 떨군다. 한 번에 감으면 0.45s 모프라 툭 떨어진다. 그래서
+     꾸벅꾸벅 세 번에 나눠 감는다: 살짝 졸고(1.4s) → 더 졸고(1.4s) → 감는다.
+     좌우로 틀지 않아야 감은 눈이 몸 한가운데에 선다 */
+  const somnolent = EXPRESSION_BY_ID.get('somnolent');
+  const lids = open => somnolent.eyes.map(e => ({ ...e, open }));
+  const NODS = [
+    [0, { ...somnolent, gaze: { yaw: 0, pitch: -5, roll: 0 }, eyes: lids(0.62) }],
+    [1400, { ...somnolent, gaze: { yaw: 0, pitch: -9, roll: 0 }, eyes: lids(0.42) }],
+    [2800, { ...somnolent, gaze: { yaw: 0, pitch: -16, roll: 0 }, eyes: lids(0.3) }],
+  ];
+  let awake = null, dozing = false, nods = [];
+
+  /* 엔진의 표정 모프는 0.45s easeOutQuint 라 첫 프레임에 20% 가까이 뛴다 — 깨어 있을
+     때 표정을 바꾸기엔 좋지만 스르르 잠드는 데선 툭 끊겨 보인다. 잠들고 깨는 동안은
+     표정과 시선을 여기서 매 프레임 느리게 들어가 느리게 멈추는 곡선으로 잇는다 */
+  const mix = (a, b, t) => a + (b - a) * t;
+  const blend = (a, b, t) => ({
+    id: b.id,
+    gaze: { yaw: mix(a.gaze.yaw, b.gaze.yaw, t), pitch: mix(a.gaze.pitch, b.gaze.pitch, t), roll: mix(a.gaze.roll, b.gaze.roll, t) },
+    split: mix(a.split, b.split, t),
+    eyes: a.eyes.map((e, i) => {
+      const f = b.eyes[i];
+      return { w: mix(e.w, f.w, t), h: mix(e.h, f.h, t), tilt: mix(e.tilt ?? 0, f.tilt ?? 0, t), open: mix(e.open ?? 1, f.open ?? 1, t) };
+    }),
+  });
+  const REST_LOOK = { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 };
+  const lerpLook = (a, b, t) => ({ yaw: mix(a.yaw, b.yaw, t), pitch: mix(a.pitch, b.pitch, t), mix: mix(a.mix, b.mix, t), spin: mix(a.spin, b.spin, t), wander: mix(a.wander, b.wander, t) });
+  let glide = null;
+  function glideTo(to, now, secs, look) {
+    glide = { ex: [engine.exprAtTime(now), to], lk: look ? [engine.lookAtTime(now), REST_LOOK] : null, at: now, secs };
+  }
+  function glideAt(now) {
+    if (!glide) return;
+    const k = Math.min(1, Math.max(0, (now - glide.at) / glide.secs)), e = ease(k);
+    engine.expr = blend(glide.ex[0], glide.ex[1], e);
+    engine.exprPrev = null;
+    if (glide.lk) engine.setLook(lerpLook(glide.lk[0], glide.lk[1], e), now, 1e-6);
+    if (k >= 1) { engine.expr = glide.ex[1]; glide = null; }
+  }
+
+  /* 감은 눈 ‿. 엔진의 눈 구멍을 매 프레임 ‿ 쪽으로 녹여 낸다 — 따로 그린 ‿ 를
+     바꿔 끼우면 두 그림이 갈리는 자리에서 툭 끊긴다. 눈 구멍(캡슐)과 ‿ 를 같은 수의
+     점으로 늘어놓고(윗변 왼→오, 아랫변 오→왼) 점마다 잇는다. ‿ 는 엔진 눈의 지금
+     한가운데에 서므로, 엔진이 시선을 떨구는 움직임도 끝까지 탄다.
+     단위는 엔진 좌표(몸 반지름 100 ≈ 25px)다. 눈꺼풀 두께 12 ≈ 3px */
+  const ARC_W = 13, ARC_SAG = 12, ARC_T = 6, EDGE = 16;
+  let shutFrom = 0, shutTo = 0, shutAt = 0, shutFor = 1;
+  const ease = k => k < .5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+  const shutAtTime = now => shutFrom + (shutTo - shutFrom) * ease(Math.min(1, Math.max(0, (now - shutAt) / shutFor)));
+  const shut = (to, now, secs) => { shutFrom = shutAtTime(now); shutTo = to; shutAt = now; shutFor = secs; };
+  function melt(eye, p) {
+    const [mx, my, r] = eye.d.match(/-?[\d.]+/g).map(Number);
+    const hw = -mx, hh = r - my;
+    const [a, b, c, d, e, f] = eye.matrix.match(/-?[\d.]+/g).map(Number);
+    const pts = [];
+    for (const side of [-1, 1]) {
+      for (let j = 0; j <= EDGE; j++) {
+        const u = -Math.cos((side < 0 ? j : EDGE - j) / EDGE * Math.PI);   // -1..1, 끝으로 갈수록 촘촘히
+        const lx = u * hw, over = Math.max(0, Math.abs(lx) - (hw - r));
+        const ly = side * (hh - r + Math.sqrt(Math.max(0, r * r - over * over)));
+        const ex = a * lx + c * ly + e, ey = b * lx + d * ly + f;
+        const bow = Math.sqrt(1 - u * u);
+        const ax = e + u * ARC_W, ay = f + ARC_SAG * (bow * bow - .5) + side * ARC_T * bow;
+        pts.push((ex + (ax - ex) * p).toFixed(2) + ' ' + (ey + (ay - ey) * p).toFixed(2));
+      }
+    }
+    return 'M' + pts.join('L') + 'Z';
+  }
 
   function draw(now) {
+    glideAt(now);
     const f = engine.sample(now);
     maskBody.setAttribute('d', f.bodyPath);
     paper.setAttribute('d', f.bodyPath);
     body.setAttribute('opacity', f.bodyAlpha);
+    const p = shutAtTime(now);
     f.eyes.forEach((eye, i) => {
       let node = eyes[i];
       if (!node) { node = eyes[i] = el('path', { fill: '#000' }); mask.append(node); }
-      node.setAttribute('d', eye.d);
-      node.setAttribute('transform', eye.matrix);
+      if (p > 0.001) {
+        node.setAttribute('d', melt(eye, p));
+        node.removeAttribute('transform');
+      } else {
+        node.setAttribute('d', eye.d);
+        node.setAttribute('transform', eye.matrix);
+      }
       node.setAttribute('opacity', eye.alpha);
     });
   }
@@ -114,7 +196,7 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     /* 커서를 따라본다. yaw·pitch 는 절대 방향(도)이고, mix 는 바깥이 방향을
        얼마나 쥐는지다. 원본이 그렇듯 섞는 일은 엔진이 한다 */
     lookAt(dx, dy) {
-      if (calm()) return;
+      if (calm() || dozing) return;
       /* dx·dy 는 화면 좌표다 — 오른쪽이 +, 아래가 +. 엔진의 pitch 는 위가 + 라
          여기서 한 번 뒤집는다. 부르는 쪽마다 음수를 붙이게 두면 한 곳은 꼭 빠뜨린다
          (실제로 계정 화면이 위아래 거꾸로 봤다). */
@@ -149,11 +231,40 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     /* 고른 모양·표정·색을 갈아 끼운다. 모양과 표정은 엔진이 모프로 넘겨 주므로
        툭 끊기지 않는다. 색은 CSS 변수라 엔진을 거치지 않는다 */
     setShape(id) { at(now => engine.setShape(radiiOf(id), now)); },
-    setExpression(id) { at(now => engine.setExpression(exprOf(id), now)); },
+    setExpression(id) {
+      if (dozing) { awake = exprOf(id); return; }
+      at(now => engine.setExpression(exprOf(id), now));
+    },
     setColour(id) {
       const hex = COLOR_BY_ID.get(id)?.hex;
       if (hex) host.style.setProperty('--buddy-ink', hex);
       else host.style.removeProperty('--buddy-ink');
+    },
+    /* 잠들고 깬다. 깰 땐 고른 표정으로 눈을 뜨며 돌아온다. 고른 표정이 없으면(null)
+       엔진은 모프 없이 툭 바꾸므로, 같은 모습인 neutre 를 사이에 끼운다 */
+    doze(on) {
+      if (on === dozing) return;
+      dozing = on;
+      nods.forEach(clearTimeout);
+      if (on) {
+        awake = engine.expr;
+        if (!engine.expr) engine.expr = EXPRESSION_BY_ID.get('neutre');
+        /* 움직임을 줄였으면 곧장 감는다 */
+        const steps = calm() ? NODS.slice(-1).map(([, e]) => [0, e]) : NODS;
+        const last = steps[steps.length - 1][1];
+        /* 꾸벅마다 0.9s 에 걸쳐 스르르 — 첫 꾸벅은 커서를 보던 시선도 함께 거둔다.
+           마지막 꾸벅과 함께 눈 구멍이 같은 0.9s 에 ‿ 로 녹는다 */
+        nods = steps.map(([ms, e]) => setTimeout(() => at(now => {
+          glideTo(e, now, 0.9, e === steps[0][1]);
+          if (e === last) shut(1, now, 0.9);
+        }), ms));
+      } else {
+        /* 깰 땐 ‿ 가 풀리며 눈이 뜬다 — 같은 곡선, 조금 빠르게 */
+        at(now => {
+          glideTo(awake ?? EXPRESSION_BY_ID.get('neutre'), now, 0.5, false);
+          shut(0, now, 0.4);
+        });
+      }
     },
     setState(id) {
       const now = (performance.now() - t0) / 1000;

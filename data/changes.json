@@ -1,5 +1,47 @@
 [
   {
+    "v": "0.6.315",
+    "date": "2026-09-27",
+    "ko": "타자 속도가 치는 동안 실시간으로 바뀝니다. 키를 누를 때마다, 그리고 1초마다 다시 셉니다. 셈은 Monkeytype 과 같습니다 — 시간은 첫 키를 누른 때부터 재고, 확정한 지명의 타수에 지금 치고 있는 입력이 맞는 앞부분이면 그만큼 더합니다. 틀린 입력은 세지 않고, 지명을 찾느라 멈춘 시간도 빼 주지 않습니다. 정확도도 Monkeytype 처럼 키 단위로 셉니다 — 맞게 친 키 ÷ 친 키이고, 지운 키는 세지 않으며, 틀린 이름을 확정한 키는 틀린 키로 칩니다.",
+    "en": "Typing speed now updates live as you type — on every key and once a second. It is counted exactly like Monkeytype: the clock starts at your first keystroke, and the speed is the strokes of the names you have confirmed plus whatever you are typing now, as long as it is a correct start of a name. Wrong input is not counted, and time spent looking for a place on the map is not taken off. Accuracy is now per keystroke like Monkeytype too — correct keys over keys typed; deleted keys are ignored, and confirming a wrong name counts as a wrong key."
+  },
+  {
+    "v": "0.6.314",
+    "date": "2026-09-26",
+    "ko": "위아래 메뉴 버튼을 누른 채 끌면 주황 알약이 손끝 쪽으로 고무줄처럼 늘어나며 끌려가고, 다른 버튼 위로 끌면 그리로 건너갑니다. 놓으면 제자리로 돌아옵니다. 움직임을 줄였으면 늘어나지 않습니다.",
+    "en": "Press and drag a button in the top or bottom menu and the orange pill stretches toward your finger like a rubber band, sliding over to whichever button you drag onto. Let go and it springs back. With reduced motion it stays put."
+  },
+  {
+    "v": "0.6.313",
+    "date": "2026-09-26",
+    "ko": "위아래 메뉴 버튼을 끌어도 브라우저 주소 미리보기가 따라 나오지 않습니다.",
+    "en": "Dragging a button in the top or bottom menu no longer pulls out the browser's link preview."
+  },
+  {
+    "v": "0.6.312",
+    "date": "2026-09-26",
+    "ko": "홈 봇이 잠들 때 시선을 아래로 떨구며 꾸벅꾸벅 좁니다 — 살짝 감았다가, 조금 더 감았다가, 마저 감습니다. 다 감긴 눈은 ‿ 로 내려앉고, 깰 땐 눈을 뜨며 고른 표정으로 돌아옵니다. 자는 동안엔 천천히 숨 쉬듯 몸이 살짝 퍼졌다 오므라들고, 커서를 따라보지 않습니다. 감은 눈의 선을 조금 더 굵게 해 멀리서도 잘 보입니다. 움직임을 줄였으면 숨쉬기와 전환은 멈춥니다.",
+    "en": "When the home bot falls asleep it drops its gaze and nods off in stages — eyes a little heavy, then heavier, then fully closed into ‿; on waking it opens them back into its chosen expression. While asleep it breathes slowly, its body swelling and settling a little, and stops following the cursor. The closed-eye lines are a touch thicker so they read from afar. With reduced motion the breathing and transitions stay still."
+  },
+  {
+    "v": "0.6.311",
+    "date": "2026-09-26",
+    "ko": "봇의 눈 색이 몸 색을 따릅니다. 밝은 몸(주황·노랑·초록·회색·크림 등)에는 짙은 눈, 어두운 몸(빨강·보라·갈색·먹 등)에는 흰 눈이 들어가고, 몸 빛깔이 살짝 배어 한 벌로 보입니다. 홈·로그인·내 계정·캐릭터 고르기 어디서나 같고, 경쟁전을 켜 봇이 빨개지면 눈도 함께 바뀝니다.",
+    "en": "The bot's eyes now follow its body colour: dark eyes on light bodies (orange, amber, green, grey, cream…) and white eyes on dark ones (red, violet, brown, ink…), lightly tinted so they match. This holds on home, sign-in, My Account and the character picker, and the eyes switch too when the bot turns red for ranked."
+  },
+  {
+    "v": "0.6.310",
+    "date": "2026-09-26",
+    "ko": "홈의 도우미 봇이 잘 때 작은 점으로 줄어들지 않고, 소개 그림처럼 제 모습 그대로 눈을 감고 잡니다. z 가 오른쪽 위로 떠오르며 작아지고 사라집니다. 움직임을 줄였으면 z 두 개가 멈춰 있습니다. 고른 색이 없는 봇은 평소엔 브랜드 주황이고, 경쟁전을 켜면 빨갛게 바뀝니다.",
+    "en": "The home helper bot no longer shrinks to a dot when it sleeps — it keeps its shape and closes its eyes, like in the how-to picture, while z's drift up to the right, shrinking and fading. With reduced motion the two z's stay still. A bot with no chosen colour is brand orange, turning red when ranked is armed."
+  },
+  {
+    "v": "0.6.310",
+    "date": "2026-09-26",
+    "ko": "타자 속도를 한컴타자·Monkeytype 과 같은 방식으로 셉니다. 한글은 음절이 아니라 누른 키(자모) 단위로 세고 — 겹모음·겹받침은 두 타, 쌍자음은 한 타 — 지명을 확정하는 스페이스·Enter 도 한 타로 칩니다. 약칭으로 맞혔으면 친 약칭만큼만 셉니다. WPM 은 이 타수를 다섯으로 나눈 값입니다. 단위가 바뀌어 순위표와 내 최고 기록은 새로 시작하고, 경쟁전 티어의 기대 속도도 새 단위(브론즈 100 … 마스터 350 타/분)로 맞췄습니다.",
+    "en": "Typing speed is now counted the way Hancom Taja and Monkeytype count it. Korean is measured in keys pressed (jamo) rather than syllables — compound vowels and final clusters are two strokes, doubled consonants one — and the Space or Enter that confirms a name counts as a stroke too. If you answered with an abbreviation, only what you typed is counted. WPM is these strokes divided by five. Because the unit changed, the leaderboards and your personal bests start fresh, and ranked tier targets are recalibrated to the new unit (Bronze 100 … Master 350 CPM)."
+  },
+  {
     "v": "0.6.308",
     "date": "2026-09-25",
     "ko": "그록봇이 홈의 도우미가 됐습니다. 가입하고 처음 홈에 오면 넵바만 남기고 화면이 어두워지고, 로고 뒤에 숨은 봇이 꺼내 달라고 조릅니다. 로고를 아래로 끌어 꺼내면 화면을 돌아다니며 코스 고르기, 시작하기, 경쟁전, 순위·기록, 설정을 하나씩 소개합니다 — '다음'을 눌러야 넘어갑니다. 다 들으면 네 귀퉁이 중 한 곳에 가서 자고, 가리키거나 누르면 깨어나고, 끌어서 원하는 자리로 옮길 수 있습니다. 말풍선은 봇 뒤에서 펼쳐집니다 — 위에서 내려올 땐 아래로, 왼쪽에 있으면 오른쪽으로, 오른쪽에 있으면 왼쪽으로. 봇과 말풍선이 겹치는 곳에는 봇 빛깔의 어두운 테두리가 둘려 봇이 묻히지 않습니다. 그 뒤로는 사이트에 들어오거나 로그인할 때마다 봇이 먼저 로고 뒤에서 나와 인사합니다. 경쟁전은 이제 시작하기를 꾹 눌러 켭니다. 소개 페이지에 그림을 곁들인 자세한 플레이 방법을 새로 적었습니다. 내 계정의 '카메라로 따라 하기'를 없앴고, 사이트의 단추를 넵바와 같은 알약 모양 하나로 맞췄습니다 — 계정 삭제처럼 되돌릴 수 없는 단추는 빨간 글자와 테로 구분합니다. 내 계정 화면의 제목 줄은 위에 붙어 있고, 캐릭터·프로필 설정이 그 밑으로 흐려지며 지나갑니다. 화면 아래쪽에도 흐림 띠를 깔았습니다. 넵바·아래 막대·플레이 화면·설정·내 계정의 흐림 띠를 한 벌로 다시 짜, 칸이 지나갈 때 보이던 가로 계단 없이 부드럽게 흐려집니다. 홈에서 내 계정으로 갈 때도 설정을 열 때처럼 넘어갑니다 — 넵바는 위로, 아래 막대는 아래로 빠지고 홈의 칸이 제자리에서 가라앉고 서리가 끼는 사이 계정 화면이 아래에서 올라오고 ‘← 내 계정’ 머리줄은 왼쪽 위에서 대각선으로 내려오고, 계정 화면을 떠날 때는 흐려지며 사라집니다. 내 계정은 이제 설정처럼 홈 위에 뜨는 화면이라, 닫으면 홈이 다시 열리지 않고 고른 칸·펼친 구·지도 자리가 그대로 남아 있습니다. 계정에서 바꾼 캐릭터와 말은 돌아온 홈에 바로 입혀집니다.",
