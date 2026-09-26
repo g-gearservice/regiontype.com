@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
-         lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS } from './worker.mjs';
+         lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS,
+         cmPost, cmTarget } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
@@ -638,3 +639,85 @@ assert.equal(tally(check({ 'probe:site': drop('strict-transport-security') }, on
 assert.equal(new Set(RULES.map(r => r.id)).size, RULES.length, '룰 이름은 겹치지 않는다');
 
 console.log('security rule self-check done');
+
+/* ── 커뮤니티 ─────────────────────────────────────────────
+   SQL 이 이 기능의 전부라 흉내가 아니라 진짜 sqlite(node:sqlite)에 schema.sql 을 깔고
+   워커를 그대로 태운다. D1 은 prepare·bind·first·all·run·batch 만 흉내 낸다. */
+{
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(':memory:');
+  db.exec(sql);
+  const stmt = (q, a = []) => ({
+    q, bind: (...b) => stmt(q, b),
+    first: async col => { const r = db.prepare(q).get(...a); return r ? (col ? r[col] : { ...r }) : null; },
+    all: async () => ({ results: db.prepare(q).all(...a).map(r => ({ ...r })) }),
+    run: async () => ({ meta: { changes: Number(db.prepare(q).run(...a).changes) } }),
+  });
+  const DB = { prepare: q => stmt(q), batch: async ss => Promise.all(ss.map(s =>
+    /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
+  const open = { limit: async () => ({ success: true }) };
+  const env = { DB, SESSION_KEY: 'k'.repeat(32), RL_CM: open, RL_CR: open };
+  const A = 'a'.repeat(32), B = 'b'.repeat(32), C = 'c'.repeat(32), D = 'd'.repeat(32);
+  const tok = {}; for (const w of [A, B, C, D]) tok[w] = await sign(env.SESSION_KEY, w);
+  const call = async (path, body, who) => {
+    const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com' + path, {
+      method: body ? 'POST' : 'GET', body: body && JSON.stringify(body),
+      headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
+                 ...(who ? { authorization: 'Bearer ' + tok[who] } : {}) } }), env);
+    return { status: r.status, ...(await r.json()) };
+  };
+  const post = { tag: 'brag', title: '강서구 1분 컷', body: '<img src=x onerror=alert(1)>\n\n\n\n둘째 줄\u202e' };
+
+  assert.equal((await call('/cm/post', post)).status, 401, '로그인 없이는 못 쓴다');
+  const nn = await call('/cm/post', post, A);
+  assert.equal(nn.status, 409, '닉네임이 없으면 못 쓴다'); assert.ok(nn.noname);
+  for (const w of [A, B, C, D]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
+  for (const [w, name, shut] of [[A, '가양', 0], [B, '나리', 0], [C, '다온', 1], [D, '라온', 0]])
+    db.prepare("insert into profile (who, name, at, handle, shut) values (?, ?, 0, ?, ?)").run(w, name, name === '가양' ? 'gayang' : '', shut);
+
+  assert.equal((await call('/cm/post', { ...post, tag: 'spam' }, A)).status, 400, '모르는 주제는 거른다');
+  const made = await call('/cm/post', post, A);
+  assert.equal(made.status, 201);
+  const hid = (await call('/cm/post', { ...post, title: '비공개 사람 글' }, C)).id;
+
+  let list = await call('/cm/list', null, B);
+  assert.equal(list.posts.length, 2);
+  assert.equal(list.posts[1].name, '가양'); assert.equal(list.posts[1].handle, 'gayang');
+  assert.equal(list.posts[0].name, '', '비공개로 둔 사람은 이름이 빈다');
+  assert.ok(list.posts.every(p => !('who' in p)), 'who 는 밖으로 안 나간다');
+  assert.equal(list.posts[1].mine, false);
+  assert.equal((await call('/cm/list?tag=ask')).posts.length, 0, '주제로 거른다');
+
+  let read = await call('/cm/read?id=' + made.id, null, A);
+  assert.ok(read.post.mine);
+  assert.equal(read.post.body, '<img src=x onerror=alert(1)>\n\n둘째 줄', '평문 그대로 두되 빈 줄은 하나, 방향 글자는 지운다');
+
+  assert.equal((await call('/cm/reply', { post: made.id, body: '축하해요' }, B)).status, 201);
+  assert.equal((await call('/cm/reply', { post: 999, body: '허공' }, B)).status, 404, '없는 글엔 댓글이 안 붙는다');
+  let up = await call('/cm/up', { target: 'p' + made.id }, B);
+  assert.deepEqual([up.on, up.n], [true, 1]);
+  up = await call('/cm/up', { target: 'p' + made.id }, B);
+  assert.deepEqual([up.on, up.n], [false, 0], '다시 누르면 거둔다');
+  await call('/cm/up', { target: 'p' + made.id }, D);
+  list = await call('/cm/list');
+  assert.deepEqual([list.posts[1].ups, list.posts[1].replies], [1, 1]);
+
+  assert.equal((await call('/cm/del', { target: 'p' + made.id }, B)).status, 404, '남의 글은 못 지운다');
+  for (const w of [A, B, B, D]) await call('/cm/flag', { target: 'p' + hid }, w);
+  assert.equal((await call('/cm/list')).posts.length, 1, '서로 다른 셋이 신고하면 가려진다 — 한 사람이 여러 번은 한 번');
+  assert.equal((await call('/cm/read?id=' + hid)).status, 404);
+
+  /* 갓 만든 계정의 신고는 세지 않는다 */
+  const fresh = (await call('/cm/post', { ...post, title: '새 계정 신고 표적' }, A)).id;
+  db.prepare('update user set at = ? where id in (?, ?, ?)').run(Date.now(), B, C, D);
+  for (const w of [B, C, D]) await call('/cm/flag', { target: 'p' + fresh }, w);
+  assert.equal((await call('/cm/read?id=' + fresh)).status, 200, '가입 사흘이 안 된 계정 셋으로는 못 가린다');
+  db.prepare('update user set at = 0').run();
+
+  assert.equal((await call('/cm/del', { target: 'p' + made.id }, A)).status, 200);
+  assert.equal(db.prepare('select count(*) as n from reply').get().n, 0, '글을 지우면 댓글도 간다');
+  assert.equal(db.prepare("select count(*) as n from mark where kind = 'up'").get().n, 0, '공감도 간다');
+  assert.equal(cmTarget('p0'), ''); assert.equal(cmTarget("p1 or 1=1"), '');
+  assert.equal(cmPost({ tag: 'chat', title: '제목\n줄', body: ' ' }).ok, false, '빈 본문은 거른다');
+  console.log('community self-check done');
+}

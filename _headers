@@ -33,3 +33,10 @@ https://:worker.:account.workers.dev/*
   Content-Security-Policy: default-src 'none'; script-src 'self' 'sha256-wyy+Y5yhHKyQy2z78TtRRG7+bKKUyGoOjTrLQjOxbus='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+
+# 커뮤니티. 남이 쓴 글을 그리는 유일한 페이지라 인라인 스크립트를 하나도 두지 않는다.
+# ★ 존 규칙(relay/harden-zone.mjs)이 CSP 를 set 으로 덮으면 이 줄은 안 선다 — 첫 방벽은
+#   community.js 가 남의 글을 textContent 로만 그린다는 것이다. 배포 뒤 curl -I 로 확인한다.
+/community/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
+  Referrer-Policy: no-referrer

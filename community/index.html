@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>커뮤니티 — regiontype</title>
+<meta name="description" content="regiontype 을 치는 사람들이 기록을 자랑하고, 묻고, 코스를 제안하는 곳.">
+<link rel="canonical" href="https://regiontype.com/community/">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=3.18">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.18">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.18">
+<link rel="stylesheet" href="../style.css?v=3.18">
+<link rel="stylesheet" href="community.css?v=3.18">
+<!-- 읽는 글이 아니라 쓰는 곳이라 about/ 과 달리 제 스크립트를 둔다. 서버는 relay/ 의
+     /cm/* 다. 글은 평문이고 화면은 textContent 로만 그린다 — innerHTML 을 쓰지 않는다 -->
+<script src="community.js?v=3.18"></script>
+</head>
+<body>
+
+<svg class="grid-bg" aria-hidden="true">
+  <defs>
+    <pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152">
+      <path d="M152 0 V152 H0"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
+</svg>
+
+<header class="cm-top">
+  <a class="logo" href="/">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
+  <a class="cm-me" id="me" href="/#signin">로그인</a>
+</header>
+
+<main class="cm" id="main">
+  <!-- 목록 -->
+  <section id="listView" aria-labelledby="cmTitle">
+    <h1 id="cmTitle">커뮤니티</h1>
+    <p class="cm-lead">기록을 자랑하고, 막힌 지명을 묻고, 다음 코스를 제안하는 곳.</p>
+
+    <div class="cm-bar">
+      <div class="cm-tags" role="group" aria-label="주제로 거르기" id="tags">
+        <button type="button" data-tag="" aria-pressed="true">전체</button>
+        <button type="button" data-tag="brag" aria-pressed="false"><b aria-hidden="true">★</b>자랑</button>
+        <button type="button" data-tag="ask" aria-pressed="false"><b aria-hidden="true">?</b>질문</button>
+        <button type="button" data-tag="idea" aria-pressed="false"><b aria-hidden="true">+</b>제안</button>
+        <button type="button" data-tag="chat" aria-pressed="false"><b aria-hidden="true">~</b>잡담</button>
+      </div>
+      <button type="button" class="profile-button cm-write" id="write">글 쓰기</button>
+    </div>
+
+    <ol class="cm-list" id="list" aria-live="polite"></ol>
+    <p class="cm-say" id="listSay" role="status"></p>
+    <button type="button" class="profile-button cm-more" id="more" hidden>더 보기</button>
+  </section>
+
+  <!-- 글 하나. 주소는 #p12 -->
+  <article id="postView" hidden>
+    <a class="cm-back" href="#">← 목록</a>
+    <p class="cm-tag" id="pTag"></p>
+    <h1 id="pTitle" tabindex="-1"></h1>
+    <p class="cm-meta" id="pMeta"></p>
+    <div class="cm-body" id="pBody"></div>
+    <div class="cm-acts">
+      <button type="button" class="profile-button cm-up" id="pUp" aria-pressed="false">♥ 공감 <span id="pUps">0</span></button>
+      <button type="button" class="profile-button" id="pFlag">신고</button>
+      <button type="button" class="profile-button destructive" id="pDel" hidden>지우기</button>
+    </div>
+
+    <section class="cm-replies" aria-labelledby="rTitle">
+      <h2 id="rTitle">댓글 <span id="rCount">0</span></h2>
+      <ol id="replies"></ol>
+      <form id="replyForm" class="cm-form">
+        <label class="cm-label" for="replyBody">댓글 달기</label>
+        <textarea id="replyBody" rows="3" maxlength="500" required></textarea>
+        <div class="cm-send">
+          <span class="cm-count" id="replyCount">0 / 500</span>
+          <button type="submit" class="profile-button cm-go">댓글 달기</button>
+        </div>
+      </form>
+    </section>
+    <p class="cm-say" id="postSay" role="status"></p>
+  </article>
+</main>
+
+<!-- 글 쓰기. <dialog> 가 초점 가두기와 Esc 닫기를 맡는다 -->
+<dialog id="composer" aria-labelledby="cTitle">
+  <form id="postForm" class="cm-form" method="dialog">
+    <h2 id="cTitle">글 쓰기</h2>
+    <fieldset class="cm-pick">
+      <legend class="cm-label">주제</legend>
+      <label data-tag="brag"><input type="radio" name="tag" value="brag" required><span><b aria-hidden="true">★</b>자랑</span></label>
+      <label data-tag="ask"><input type="radio" name="tag" value="ask"><span><b aria-hidden="true">?</b>질문</span></label>
+      <label data-tag="idea"><input type="radio" name="tag" value="idea"><span><b aria-hidden="true">+</b>제안</span></label>
+      <label data-tag="chat"><input type="radio" name="tag" value="chat"><span><b aria-hidden="true">~</b>잡담</span></label>
+    </fieldset>
+    <label class="cm-label" for="postTitle">제목</label>
+    <input id="postTitle" maxlength="60" required autocomplete="off">
+    <label class="cm-label" for="postBody">내용</label>
+    <textarea id="postBody" rows="8" maxlength="2000" required></textarea>
+    <p class="cm-note">글은 누구나 읽습니다. 연락처·실명은 적지 마세요. 서로 다른 세 사람이 신고하면 가려집니다.</p>
+    <p class="cm-say" id="composeSay" role="status"></p>
+    <div class="cm-send">
+      <span class="cm-count" id="postCount">0 / 2000</span>
+      <button type="button" class="profile-button" id="cancel">닫기</button>
+      <button type="submit" class="profile-button cm-go" value="send">올리기</button>
+    </div>
+  </form>
+</dialog>
+
+</body>
+</html>

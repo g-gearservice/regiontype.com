@@ -131,6 +131,10 @@ function leftAccount() {
   bot.api.setColour(face.colour);
   paintTint(bot.el.querySelector('.rk-bot-motion'));
   bot.el.setAttribute('aria-label', botName());
+  /* 크기가 바뀌었으면 제자리(옮겨 둔 곳이나 귀퉁이)에 다시 선다 */
+  const was = BOT;
+  sizeBot();
+  if (was !== BOT && out && !touring && !intro) { if (spot) moveTo(...spot); else place(...cornerAt(corner)); }
 }
 
 /* ── 순위 ─────────────────────────────────────────────── */
@@ -238,7 +242,7 @@ async function fillRecords() {
     cells.forEach(([k, v]) => {
       const s = document.createElement(k === 'at' ? 'time' : 'span');
       s.className = k; s.textContent = v;
-      if (k === 'lp' && g.delta != null) s.dataset.sign = g.delta > 0 ? 'up' : 'down';
+      if (k === 'lp' && g.delta != null) s.dataset.sign = g.delta > 0 ? 'up' : g.delta < 0 ? 'down' : '';
       if (k === 'at') s.dateTime = new Date(g.at).toISOString();
       li.append(s);
     });
@@ -257,7 +261,18 @@ async function fillRecords() {
    봇을 꺼내는 건 이때뿐이다 — 그 뒤 로고는 그냥 홈 링크다. 자세한 플레이 방법은
    소개 페이지(data/howto.json)가 맡는다.
    ponytail: 대화는 아직 없다 — 누르면 인사만 한다. 오픈라우터를 붙일 때 greet() 에 입력을 연다 */
-const BOT = 80, RESCUE_KEY = 'rt.rescue';
+const RESCUE_KEY = 'rt.rescue';
+/* 봇 크기. 내 계정의 Size(70~130%)가 rt.botsize 에 남긴다 — 이 기기에만 둔다.
+   CSS 는 --bot-scale(계정 미리보기)과 --rk-bot(홈 봇 한 변)을 읽고, 자리 셈은 BOT 를 쓴다 */
+const botScale = () => { try { const v = +localStorage.getItem('rt.botsize'); return v >= .7 && v <= 1.3 ? v : 1; } catch { return 1; } };
+let BOT = 80;
+function sizeBot() {
+  const k = botScale();
+  BOT = Math.round(80 * k);
+  document.documentElement.style.setProperty('--bot-scale', k);
+  document.documentElement.style.setProperty('--rk-bot', BOT + 'px');
+}
+sizeBot();
 const layer = $('#rkLayer'), bubble = $('#rkSay'), dim = $('#rkDim'), next = $('#rkNext');
 const logo = () => $('#regions .navbar .nav-logo');
 const regionsOn = () => $('#regions').classList.contains('on');

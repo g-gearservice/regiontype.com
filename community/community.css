@@ -1,0 +1,115 @@
+/* 커뮤니티. 색·간격은 style.css 의 커스텀 프로퍼티에서 딴다. 앱의 고정 화면 규칙은
+   쓰지 않는다 — 읽는 글처럼 문서가 흐르고 스크롤된다(policy/ 와 같은 결). */
+html,body{height:auto}
+body{overflow:auto}
+/* .profile-button 의 display 가 hidden 속성을 이기지 않게 */
+[hidden]{display:none !important}
+
+/* 주제마다 색 하나와 기호 하나. 색만으로 가르지 않게 기호·라벨이 늘 같이 간다 */
+[data-tag="brag"]{--tag:var(--accent);--on-tag:var(--on-accent)}
+[data-tag="ask"]{--tag:var(--block-deep);--on-tag:#fff}
+[data-tag="idea"]{--tag:var(--ranked);--on-tag:#fff}
+[data-tag="chat"]{--tag:var(--ink-soft);--on-tag:var(--bg)}
+
+.cm-top,.cm{max-width:760px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative;z-index:1}
+.cm-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:32px}
+.cm-top .logo{font-size:28px;color:var(--ink);text-decoration:none}
+.cm-me{display:inline-flex;align-items:center;min-height:40px;padding:6px 16px;border:2px solid var(--grid);border-radius:999px;
+  background:var(--card);color:var(--ink);font-size:15px;font-weight:700;text-decoration:none;max-width:60%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm{padding-top:40px;padding-bottom:96px}
+.cm h1{font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
+.cm h1:focus{outline:none}
+.cm-lead{margin-top:10px;font-size:17px;color:var(--ink-soft)}
+.cm a{color:var(--accent-text)}
+.cm-top a:focus-visible,.cm a:focus-visible,.cm button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* ── 거르기 · 쓰기 ─────────────────────── */
+.cm-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 18px}
+.cm-tags{display:flex;flex-wrap:wrap;gap:8px}
+.cm-tags button,.cm-pick span{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 14px;
+  border:2px solid var(--grid);border-radius:999px;background:transparent;color:var(--ink);
+  font:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out),color var(--fast) var(--ease-out)}
+.cm-tags b,.cm-pick b{font-weight:800;color:var(--tag,var(--ink-soft))}
+/* 고른 것은 먹으로 차고 앞에 ✓ 가 붙는다 — 색이 아니라 채움과 기호로 안다 */
+.cm-tags [aria-pressed="true"],.cm-pick input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.cm-tags [aria-pressed="true"]::before,.cm-pick input:checked + span::before{content:"✓"}
+.cm-tags [aria-pressed="true"] b,.cm-pick input:checked + span b{color:inherit}
+@media (hover:hover) and (pointer:fine){
+  .cm-tags button:not([aria-pressed="true"]):hover,.cm-pick input:not(:checked) + span:hover{border-color:var(--ink-soft)}
+  .cm-card:hover{border-color:var(--ink-soft)}
+}
+.cm-write,.cm-go{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+@media (hover:hover) and (pointer:fine){
+  .cm-write:not(:disabled):hover,.cm-go:not(:disabled):hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+}
+
+/* ── 목록 ─────────────────────────────── */
+.cm-list{list-style:none;display:grid;gap:12px}
+.cm-card{display:grid;gap:6px;padding:18px 20px;border:2px solid transparent;border-radius:16px;
+  background:var(--card);box-shadow:var(--shadow);color:var(--ink) !important;text-decoration:none;
+  transition:border-color var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
+.cm-card:active{transform:scale(.99)}
+.cm-card-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.cm-card-title{font-size:18px;font-weight:800;line-height:1.35;overflow-wrap:anywhere}
+.cm-card-lead{color:var(--ink-soft);font-size:15px;line-height:1.6;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cm-nums{display:flex;gap:14px;font-size:14px;font-weight:700;color:var(--ink-soft)}
+.cm-meta{font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
+.cm-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
+.cm-chip b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--tag);color:var(--on-tag)}
+.cm-say{margin-top:16px;color:var(--ink-soft);min-height:1.5em}
+.cm-more{margin-top:16px;width:100%}
+
+/* ── 글 하나 ──────────────────────────── */
+.cm-back{display:inline-block;margin-bottom:24px;font-weight:700;text-decoration:none}
+#postView h1{margin:10px 0 8px}
+.cm-body{margin:28px 0;font-size:17px;line-height:1.85}
+.cm-body p{white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:14px}
+.cm-acts{display:flex;flex-wrap:wrap;gap:10px;padding-bottom:28px;border-bottom:2px solid var(--land)}
+.cm-up[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cm-up[aria-pressed="true"]::after{content:"· 눌렀음";font-weight:500}
+.cm-replies h2{font-size:20px;font-weight:800;margin:28px 0 8px}
+#replies{list-style:none}
+.cm-reply{padding:14px 0;border-bottom:1px solid var(--land)}
+.cm-reply .cm-meta{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cm-reply-body{margin-top:4px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}
+.cm-small{min-height:32px;padding:2px 10px;border:0;border-radius:8px;background:none;color:var(--ink-soft);
+  font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.cm-small.destructive{color:var(--bad)}
+.cm-small:disabled{cursor:default;opacity:.6}
+
+/* ── 쓰는 칸 ──────────────────────────── */
+.cm-form{display:grid;gap:8px;margin-top:20px}
+.cm-label{font-size:14px;font-weight:700;color:var(--ink-soft)}
+.cm-form input:not([type=radio]),.cm-form textarea{width:100%;padding:12px 14px;border:2px solid var(--grid);border-radius:12px;
+  background:var(--card);color:var(--ink);font:inherit;line-height:1.6;resize:vertical}
+.cm-form input:not([type=radio]):focus-visible,.cm-form textarea:focus-visible{outline:none;border-color:var(--ink-soft);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--ink-soft) 22%,transparent)}
+.cm-send{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.cm-count{margin-right:auto;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.cm-note{font-size:13px;color:var(--ink-soft);line-height:1.6}
+.cm-pick{border:0;display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.cm-pick legend{margin-bottom:8px}
+.cm-pick label{position:relative}
+.cm-pick input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.cm-pick input:focus-visible + span{outline:3px solid var(--accent);outline-offset:3px}
+
+#composer{width:min(640px,calc(100% - 32px));max-height:calc(100% - 32px);margin:auto;padding:28px;border:0;border-radius:20px;
+  background:var(--bg);color:var(--ink);box-shadow:var(--shadow-lift);
+  transition:opacity var(--slow) var(--ease-out),transform var(--slow) var(--ease-out),overlay var(--slow) allow-discrete,display var(--slow) allow-discrete;
+  opacity:0;transform:translateY(8px) scale(.98)}
+#composer[open]{opacity:1;transform:none}
+@starting-style{#composer[open]{opacity:0;transform:translateY(8px) scale(.98)}}
+#composer::backdrop{background:rgba(35,44,49,.45);backdrop-filter:blur(4px)}
+#composer h2{font-size:24px;font-weight:800;margin-bottom:8px}
+#composer .cm-form{margin-top:0}
+:root[data-night] #composer{border:2px solid var(--grid)}
+
+/* 손가락은 과녁이 커야 한다. 갈림은 폭이 아니라 포인터다 */
+@media (pointer:coarse){
+  .cm-tags button,.cm-pick span,.cm-small{min-height:44px}
+  .cm-top{padding-top:20px}
+}
+@media (prefers-reduced-motion:reduce){ .cm-card:active{transform:none} }

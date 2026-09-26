@@ -152,9 +152,9 @@ export const RULES = [
        env.RL_CB 없는 바인딩을 만나 pass() 에서 null 을 받아 '설정 미비'로
        막힌다(악용이 아니라 로그인이 전부 조용히 실패한다). 그래서 나머지
        셋과 같은 sev(high)로 같이 본다. */
-    want: '다섯 창(RL_FB·RL_SC·RL_AU·RL_CB·RL_RK)이 다 붙어 있다',
+    want: '일곱 창(RL_FB·RL_SC·RL_AU·RL_CB·RL_RK·RL_CM·RL_CR)이 다 붙어 있다',
     test: src => {
-      const gone = missing(src, 'RL_FB', 'RL_SC', 'RL_AU', 'RL_CB', 'RL_RK');
+      const gone = missing(src, 'RL_FB', 'RL_SC', 'RL_AU', 'RL_CB', 'RL_RK', 'RL_CM', 'RL_CR');
       return gone.length ? `빠진 레이트리밋 바인딩: ${gone.join(', ')}` : '';
     } },
   { id: 'assets-exclude', need: 'file:.assetsignore', sev: 'high',

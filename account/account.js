@@ -39,7 +39,8 @@ const hexes = new Map();
 const still = () => document.documentElement.dataset.motion === 'off'
   || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-let me = null;            // 큰 미리보기
+let me = null;            // 확대 크기 미리보기
+let real = null;          // 실제 크기 — 홈 봇과 같은 px(--bot-scale)
 const thumbs = { shape: new Map(), expression: new Map() };
 let aim = null, looking = 0, waiting = null;
 
@@ -66,9 +67,11 @@ function paint() {
   $('#character').setAttribute('aria-label',
     `${KO[character.colour]} ${KO[character.shape]} · ${KO[character.expression]}`);
   if (!me) return;
-  me.setShape(character.shape);
-  me.setExpression(character.expression);
-  me.setColour(character.colour);
+  for (const api of [me, real]) {
+    api.setShape(character.shape);
+    api.setExpression(character.expression);
+    api.setColour(character.colour);
+  }
   /* 표정 견본은 지금 고른 모양과 색을 입고 서 있어야 고를 때 비교가 된다 */
   for (const [id, api] of thumbs.expression) { api.setShape(character.shape); api.setColour(character.colour); void id; }
   for (const [id, api] of thumbs.shape) { api.setExpression(character.expression); api.setColour(character.colour); void id; }
@@ -83,6 +86,7 @@ function paint() {
    (로그인 화면의 봇과 같은 자 — 화면 너비로 나누던 옛 셈은 고개를 안 돌렸다). */
 function eachLooker(f) {
   if (me) f(me);
+  if (real) f(real);
   for (const key of ['shape', 'expression']) for (const api of thumbs[key].values()) f(api);
 }
 function look() {
@@ -107,6 +111,8 @@ buddyKit.then(({ mountBuddy, TABLES }) => {
 
   me = mountBuddy($('#character'), { calm: still, shape: character.shape, expression: character.expression });
   me.start();
+  real = mountBuddy($('#characterReal'), { calm: still, shape: character.shape, expression: character.expression });
+  real.start();
 
   for (const key of ['shape', 'expression', 'colour']) {
     for (const id of lists[key]) {
@@ -142,11 +148,27 @@ buddyKit.then(({ mountBuddy, TABLES }) => {
   $('#character').textContent = '캐릭터를 불러오지 못했습니다.';
 });
 
+/* 홈 봇 크기(70~130%). 이 기기에만 둔다 — '실제 크기' 봇이 --bot-scale 로 곧장 커지고 줄며,
+   홈 봇은 계정을 닫을 때 ranked.js 의 leftAccount 가 같은 값으로 다시 세운다 */
+{
+  const size = $('#botSize');
+  const v = +read('rt.botsize');
+  size.value = v >= .7 && v <= 1.3 ? Math.round(v * 100) : 100;
+  const show = () => {
+    /* 화면엔 숫자를 안 두고(실제 크기 봇이 보여 준다) 읽기 도구에만 % 를 준다 */
+    size.setAttribute('aria-valuetext', size.value + '%');
+    document.documentElement.style.setProperty('--bot-scale', size.value / 100);
+  };
+  show();
+  size.addEventListener('input', show);
+  size.addEventListener('change', () => write('rt.botsize', String(size.value / 100)));
+}
+
 const loggedIn = () => !!read('rt.token');
 /* 이 브라우저에 남긴 거울을 통째로 지운다. 로그아웃도, 토큰이 죽은 것을 알아챈
    자리도 같은 손을 쓴다 — 한쪽만 지우면 다음 사람이 이 기기로 가입할 때 남은
    값이 그 사람의 공개 프로필로 올라간다(welcome/welcome.js 의 save 참고). */
-const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.intro', 'rt.rescue'];
+const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue'];
 const forget = () => { for (const k of KEYS) localStorage.removeItem(k); sessionStorage.removeItem('rt.bind'); };
 
 /* ── 서버에 남는 프로필 ────────────────────────────────────
