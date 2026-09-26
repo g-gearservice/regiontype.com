@@ -29,6 +29,25 @@ create table if not exists board (
 -- 판마다 상위 몇 줄만 읽는다. 같은 속도면 먼저 올린 쪽이 앞이다.
 create index if not exists board_top on board (slug, secs, cpm desc, at asc);
 
+-- 타수 순위표. board 와 칸이 같다 — cpm 이 한글을 음절이 아니라 자모(두벌식 키 수)로
+-- 센 분당 타수라는 것만 다르다. 옛 board 의 한국어 기록은 약 2.5배 낮은 단위라 섞지
+-- 않고 여기서 새로 시작한다. board 는 읽지 않지만 /forget·계정 삭제는 계속 지운다.
+-- 이미 있는 DB 에는 이 파일을 다시 적용하면 표가 더해진다(사람이 실행한다):
+--   wrangler d1 execute rt-board --remote --file schema.sql
+create table if not exists speed (
+  slug  text    not null,
+  secs  integer not null,
+  who   text    not null,
+  name  text    not null,
+  cpm   integer not null default 0,   -- 분당 타수(한글은 자모). 화면의 WPM 은 이걸 다섯으로 나눈 것
+  score integer not null,
+  hits  integer not null,
+  acc   integer not null,
+  at    integer not null,
+  primary key (slug, secs, who)
+);
+create index if not exists speed_top on speed (slug, secs, cpm desc, at asc);
+
 -- ── 로그인 ────────────────────────────────────────────────
 -- 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
 -- 1차 인증은 Google·Apple(SSO) 이 하고, 패스키는 계정에 하나라도 있으면 그

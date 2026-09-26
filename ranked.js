@@ -422,7 +422,8 @@ function cornerAt(i) {
 function sleep() {
   hide();
   bot.el.classList.add('is-asleep');
-  bot.api.setState('sleep');
+  /* 엔진의 sleep 은 눈 없는 작은 점이다. 홈 봇은 몸을 그대로 두고 눈만 감는다(style.css) */
+  bot.api.setState('idle');
 }
 function wake() {
   if (!bot || intro || touring) return;

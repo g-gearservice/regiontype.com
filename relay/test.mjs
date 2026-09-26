@@ -42,25 +42,27 @@ assert.equal(allowedOrigin('https://g-gearservice.github.io/regiontype.com'), tr
 assert.equal(allowedOrigin('https://evil.example'), false);
 
 /* ── 경쟁전 lp ─────────────────────────────────────────
-   점수가 아니라 타자 속도(CPM)로 센다 — 코스가 달라도 견줄 수 있는 유일한 값이다 */
+   점수가 아니라 타자 속도(CPM, 분당 타수)로 센다 — 코스가 달라도 견줄 수 있는 유일한 값이다 */
 assert.equal(lpDelta(0, 10, WANT[0], 100), 3, '기대 속도와 같으면 최소 +3');
-assert.equal(lpDelta(0, 10, 90, 100), 20, '브론즈(기대 40)가 90 CPM 이면 +20');
-assert.equal(lpDelta(0, 0, 90, 100), 40, '배치 중엔 두 배');
-assert.equal(lpDelta(0, 10, 90, 85), 12, '정확도 85% 는 얻는 몫을 .6 으로');
-assert.ok(lpDelta(100, 10, 200, 70) < 0, '정확도 80% 아래는 빨라도 잃는다');
-assert.equal(lpDelta(250, 10, 60, 100), -8, '골드(기대 80)가 60 CPM 이면 −8');
-assert.equal(lpDelta(250, 10, 75, 100), -5, '지면 최소 −5');
+assert.equal(lpDelta(0, 10, 150, 100), 20, '브론즈(기대 100)가 150 CPM 이면 +20');
+assert.equal(lpDelta(0, 0, 150, 100), 40, '배치 중엔 두 배');
+assert.equal(lpDelta(0, 10, 150, 85), 12, '정확도 85% 는 얻는 몫을 .6 으로');
+assert.ok(lpDelta(100, 10, 500, 70) < 0, '정확도 80% 아래는 빨라도 잃는다');
+assert.equal(lpDelta(250, 10, 180, 100), -8, '골드(기대 200)가 180 CPM 이면 −8');
+assert.equal(lpDelta(250, 10, 195, 100), -5, '지면 최소 −5');
 assert.equal(lpDelta(3, 10, 0, 100), -3, 'lp 는 0 아래로 안 내려간다');
-assert.equal(lpDelta(900, 10, 200, 100), 24, '마스터 위로는 기대가 140 에서 멈춘다');
-assert.equal(lpDelta(0, 0, 900, 100), 50, '한 판에 ±50 을 넘지 않는다');
+assert.equal(lpDelta(900, 10, 410, 100), 24, '마스터 위로는 기대가 350 에서 멈춘다');
+assert.equal(lpDelta(0, 0, 1500, 100), 50, '한 판에 ±50 을 넘지 않는다');
 
 /* 속도는 맞힌 곳 수에 묶인다 — 한 곳만 치고 아무 속도나 적어 보낼 수 없다 */
 const SME = 'a1b2c3d4e5';
 const sc = { c: 'seoul-gu', t: 120, name: '나', score: 1000, hits: 10, tries: 12 };
 assert.equal(entry({ ...sc, cpm: 120 }, SME).ok, true, '열 곳에 120 CPM 은 통과');
-assert.equal(entry({ ...sc, cpm: 301 }, SME).ok, false, '한 곳당 30 을 넘을 수 없다');
-assert.equal(entry({ ...sc, hits: 25, tries: 25, score: 11500, cpm: 901 }, SME).ok, false,
-             '900 CPM(=180 WPM)이 사람의 천장');
+assert.equal(entry({ ...sc, cpm: 500 }, SME).ok, true, '열 곳에 500 CPM 까지는 통과');
+assert.equal(entry({ ...sc, cpm: 501 }, SME).ok, false, '한 곳당 50 을 넘을 수 없다');
+const big = { c: 'ph-admin', t: 300, name: '나', score: 20000, hits: 40, tries: 40 };
+assert.equal(entry({ ...big, cpm: 1500 }, SME).ok, true, '1500 CPM 까지는 통과');
+assert.equal(entry({ ...big, cpm: 1501 }, SME).ok, false, '1500 CPM(=300 WPM)이 사람의 천장');
 assert.equal(entry({ ...sc, cpm: -1 }, SME).ok, false, '음수 속도는 없다');
 assert.equal(entry({ ...sc }, SME).ok, false, '속도를 안 보내면 거른다');
 assert.equal(entry({ ...sc, cpm: 120 }, SME).cpm, 120, '속도는 그대로 실려 나간다');

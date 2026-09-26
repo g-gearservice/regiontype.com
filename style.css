@@ -1549,6 +1549,10 @@ body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
   pointer-events:auto;cursor:pointer;touch-action:none;will-change:transform;z-index:1;
   transition:transform var(--si-dur) var(--ease-out),opacity var(--si-dur) var(--ease-out);
 }
+/* 고른 색이 없는 봇은 평소엔 브랜드 빛깔, 경쟁전을 켜면(rk-ready) 빨강이다. 몸만 바꾼다 —
+   --rk-on(말풍선·게이지)은 paintTint 가 .rk-bot 의 --buddy-ink(빨강)에서 그대로 딴다.
+   고른 색은 setColour 가 .rk-bot-motion 에 인라인으로 박으므로 그때는 비켜선다 */
+body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy{--buddy-ink:var(--accent)}
 .rk-bot:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:50%}
 /* 끌어 옮기는 동안은 손을 바로 따라간다 — 말풍선도 함께 */
 .rk-bot.is-held{cursor:grabbing;transition:none}
@@ -1557,11 +1561,35 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 .rk-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out)}
 .rk-bot .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .rk-bot:hover .rk-bot-motion{transform:scale(1.06)}
-/* 자는 봇은 눈을 감고, 색만이 아니라 글자(z)로도 잔다고 알린다 */
-.rk-bot.is-asleep::after{
-  content:"z";position:absolute;right:14px;top:8px;
-  font-size:15px;font-weight:800;line-height:1;color:var(--ink-soft);
+/* 자는 봇은 눈을 감고(소개 페이지 helper.svg 의 ‿‿), 색만이 아니라 글자(z)로도
+   잔다고 알린다. 엔진이 뚫는 눈 구멍은 가리고 감은 눈을 몸 한가운데 얹는다 */
+.rk-bot.is-asleep mask path ~ path{opacity:0}
+.rk-bot.is-asleep .rk-bot-motion::after{
+  content:"";position:absolute;left:29px;top:38px;width:22px;height:8px;
+  background:#fff;
+  -webkit-mask:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 8"><path d="M1.5 2q4 4.5 8 0M12.5 2q4 4.5 8 0" fill="none" stroke="%23000" stroke-width="2.4" stroke-linecap="round"/></svg>') center/contain no-repeat;
+  mask:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 8"><path d="M1.5 2q4 4.5 8 0M12.5 2q4 4.5 8 0" fill="none" stroke="%23000" stroke-width="2.4" stroke-linecap="round"/></svg>') center/contain no-repeat;
 }
+.rk-bot-motion{position:relative}
+/* z 두 개가 번갈아 오른쪽 위로 떠오르며 작아지고 사라진다 */
+.rk-bot.is-asleep::before,.rk-bot.is-asleep::after{
+  content:"z";position:absolute;left:58px;top:14px;transform-origin:0 100%;
+  font-size:16px;font-weight:800;line-height:1;color:var(--ink-soft);
+  opacity:0;animation:rk-z 2.8s var(--ease-out) infinite;
+}
+.rk-bot.is-asleep::before{animation-delay:-1.4s}
+@keyframes rk-z{
+  0%{opacity:0;transform:translate(0,0) scale(1)}
+  15%{opacity:1}
+  100%{opacity:0;transform:translate(18px,-26px) scale(.4)}
+}
+/* 움직임을 줄이면 소개 그림처럼 큰 z·작은 z 를 멈춰 둔다 */
+@media (prefers-reduced-motion:reduce){
+  .rk-bot.is-asleep::before,.rk-bot.is-asleep::after{animation:none;opacity:1}
+  .rk-bot.is-asleep::before{transform:translate(11px,-13px) scale(.7)}
+}
+:root[data-motion="off"] .rk-bot.is-asleep::before,:root[data-motion="off"] .rk-bot.is-asleep::after{animation:none;opacity:1}
+:root[data-motion="off"] .rk-bot.is-asleep::before{transform:translate(11px,-13px) scale(.7)}
 .rk-say{
   position:absolute;left:0;top:0;width:min(300px,calc(100vw - 32px));
   background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);border:0;border-radius:14px;

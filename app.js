@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.09';
+const VER = '3.10';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -106,12 +106,24 @@ function paintUI(then) {
 /* ── 설정 ───────────────────────────────────────────── */
 const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 /* ── 타자 속도 ───────────────────────────────────────
-   재는 값은 하나다 — 분당 글자 수(CPM). 낱말 수(WPM)는 그걸 다섯으로 나눈 것이다
+   재는 값은 하나다 — 분당 타수(CPM, 키를 누른 수). 낱말 수(WPM)는 그걸 다섯으로 나눈 것이다
    (한 낱말 = 다섯 글자, 타자 검정의 오랜 자). 그래서 CPM 으로 치는 사람과 WPM 으로
    치는 사람이 같은 순위표에 서도 값이 어긋나지 않는다 — 저장은 늘 CPM 이고
    보일 때만 읽는 사람의 단위로 바꾼다.
+   한글은 음절이 아니라 자모로 센다(keysOf). 한컴타자가 음절에서 자소 단위로 옮겼고,
+   Monkeytype 도 한국어는 Hangul.disassemble 로 풀어 센 뒤 ÷5 한다 — 둘 다 두벌식에서
+   실제로 누르는 키 수다. 확정하는 스페이스·Enter 도 한 타다(Monkeytype 과 같다).
    'auto' 는 한국어 화면이면 CPM, 아니면 WPM 이다 */
 const CPW = 5;
+/* 두벌식 키 수. 쌍자음(ㄲ)·ㅒ·ㅖ 는 Shift 와 함께 한 키, 겹모음(ㅘ)·겹받침(ㄳ)은 두 키.
+   Shift 는 세지 않는다 — hangul-js 의 disassemble 이 푸는 것과 같다 */
+const V2 = [9, 10, 11, 14, 15, 16, 19], T2 = [3, 5, 6, 9, 10, 11, 12, 13, 14, 15, 18];
+const keysOf = s => [...s].reduce((n, ch) => {
+  const c = ch.charCodeAt(0) - 0xAC00;
+  if (c < 0 || c >= 11172) return n + 1;
+  const v = Math.floor(c % 588 / 28), f = c % 28;
+  return n + 1 + (V2.includes(v) ? 2 : 1) + (f === 0 ? 0 : T2.includes(f) ? 2 : 1);
+}, 0);
 const unitNow = () => (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
 const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
@@ -1745,6 +1757,7 @@ function judge(raw) {
   if (!answer) return;
   const hit = matchInput(answer, G.items, G.spacy);
   if (!hit || (G.seq && hit !== target())) return miss();
+  G.chars += keysOf(answer) + 1;   // 친 그대로(약칭이면 약칭) + 확정 키
   claim(hit);
 }
 
@@ -1800,7 +1813,6 @@ function claim(it) {
   if (it.under) it.under.forEach(c => c.classList.add('under'));
   if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
   G.hits++; G.tries++; G.combo++;
-  G.chars += it.name.replace(/\s/g, '').length;
   G.spent = G.total - G.left;      // 친 시간은 여기서 멈춘다 — cpmNow 참고
   $('#statSpeed').textContent = speedIn(cpmNow());
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
@@ -1825,7 +1837,7 @@ function claim(it) {
    보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
 function cpmNow() {
   const spent = Math.max(1, G.spent || (G.total - G.left));
-  return Math.min(900, G.hits * 30, Math.round(G.chars / spent * 60));
+  return Math.min(1500, G.hits * 50, Math.round(G.chars / spent * 60));
 }
 
 function finish() {
@@ -1834,8 +1846,8 @@ function finish() {
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
   pending = setTimeout(() => {
     G.cpm = cpmNow();
-    /* 옛 열쇠(rt.best.*)는 점수였다 — 속도와 견줄 수 없으니 새 열쇠로 간다 */
-    const key = `rt.fast.${G.slug}.t${G.total}`;
+    /* 옛 열쇠(rt.best.* 점수, rt.fast.* 음절 CPM)는 지금 타수와 견줄 수 없다 */
+    const key = `rt.keys.${G.slug}.t${G.total}`;
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
@@ -2196,6 +2208,14 @@ if (location.search.includes('rt=1')) {
   console.assert(adminLabel('경기도') === '경기도', '이미 짧은 이름은 그대로 둔다');
   console.assert(adminLabel('강남구') === '강남구', '자치구가 아닌 구도 그대로');
   console.assert(adminLabel('California') === 'California', '한국 밖 이름은 손대지 않는다');
+
+  /* 타수는 두벌식 키 수다 */
+  console.assert(keysOf('가') === 2, '가 = ㄱㅏ');
+  console.assert(keysOf('까') === 2, '쌍자음은 Shift 를 세지 않아 한 키');
+  console.assert(keysOf('과') === 3, '겹모음 ㅘ 는 ㅗ+ㅏ');
+  console.assert(keysOf('닭') === 4, '겹받침 ㄺ 은 ㄹ+ㄱ');
+  console.assert(keysOf('강남구') === 8, '강남구 = ㄱㅏㅇㄴㅏㅁㄱㅜ');
+  console.assert(keysOf('New York') === 8, '라틴 문자는 한 글자 한 키, 띄어쓰기도 한 키');
 
   /* 안내에 '서울시'가 떠 있어도 어간·줄인 이름·정식 명칭이 모두 맞는다 */
   const mkAdmin = names => names.map(n => ({

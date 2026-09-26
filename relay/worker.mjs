@@ -122,11 +122,11 @@ export function entry(c, who = '') {
   const int = n => Number.isInteger(n) && n >= 0;
   const ok = w.ok && !!name && /^[a-z0-9]{8,64}$/.test(who)
     && int(score) && int(hits) && int(tries) && int(cpm)
-    /* 속도는 분당 글자 수다. 천장 둘은 app.js 의 cpmNow 가 쓰는 것과 같은 값이어야
-       한다 — 한 곳당 30 은 아무리 빨라도 못 넘는 자고(이름이 서른 자일 리 없다),
-       900(=180 WPM)은 사람의 천장이다. 이 둘이 없으면 한 곳만 맞히고 아무 속도나
-       적어 보낼 수 있다 */
-    && cpm <= Math.min(900, hits * 30)
+    /* 속도는 분당 타수(키 수, 한글은 자모)다. 천장 둘은 app.js 의 cpmNow 가 쓰는 것과
+       같은 값이어야 한다 — 한 곳당 50 은 아무리 빨라도 못 넘는 자고(가장 긴 지명이
+       확정 키까지 45타다), 1500(=300 WPM)은 사람의 천장이다. 이 둘이 없으면 한 곳만
+       맞히고 아무 속도나 적어 보낼 수 있다 */
+    && cpm <= Math.min(1500, hits * 50)
     /* 한 곳당 최대 100점 × 콤보 5배. 상한은 둘이 함께 정한다 — 코스에 있는
        곳보다 많이 들를 수 없고, 한 곳을 치는 데 아무리 빨라도 0.5초는 든다. */
     && hits <= tries && tries <= w.secs * 8 && hits <= Math.min(w.size, w.secs * 2)
@@ -200,7 +200,7 @@ const turnstileConfig = (env, o) => env.TURNSTILE_SITEKEY
 const board = (env, w) => env.DB.prepare(
   `select b.who as who, case when p.shut = 1 then '' else b.name end as name,
           b.cpm as cpm, b.score as score, b.hits as hits, b.acc as acc
-     from board b left join profile p on p.who = b.who
+     from speed b left join profile p on p.who = b.who
     where b.slug = ? and b.secs = ? order by b.cpm desc, b.at asc limit ?`
 ).bind(w.slug, w.secs, TOP);
 /* 이름은 서버가 다듬어 저장하므로 브라우저가 자기 줄을 이름으로 찾으면 어긋난다.
@@ -263,17 +263,17 @@ async function dist(req, env, o) {
       env.DB.prepare(
         /* cast 가 없으면 바인딩된 칸 크기가 실수로 읽혀 나눗셈이 소수로 떨어진다 */
         'select cast(score / ? as integer) as b, count(*) as n' +
-        ' from board where slug = ? and secs = ? group by b order by b'
+         ' from speed where slug = ? and secs = ? group by b order by b'
       ).bind(bucket, w.slug, w.secs),
-      env.DB.prepare('select count(*) as n from board where slug = ? and secs = ?').bind(w.slug, w.secs),
-      env.DB.prepare('select score from board where slug = ? and secs = ? and who = ?')
+      env.DB.prepare('select count(*) as n from speed where slug = ? and secs = ?').bind(w.slug, w.secs),
+      env.DB.prepare('select score from speed where slug = ? and secs = ? and who = ?')
         .bind(w.slug, w.secs, me ?? ''),
     ]);
     const score = mine.results[0]?.score ?? null;
     let over = null;
     if (score !== null) {
       const r = await env.DB.prepare(
-        'select count(*) as n from board where slug = ? and secs = ? and score > ?'
+        'select count(*) as n from speed where slug = ? and secs = ? and score > ?'
       ).bind(w.slug, w.secs, score).first('n');
       over = r ?? 0;
     }
@@ -307,21 +307,21 @@ async function post(req, env, o) {
   return safely(o, async () => {
     const [, rank, list] = await env.DB.batch([
       env.DB.prepare(
-        `insert into board (slug, secs, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `insert into speed (slug, secs, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)
          on conflict (slug, secs, who) do update set
            /* 이름만은 기록과 무관하게 바뀐다. 이걸 기록 조건에 묶어두면 잘못 적은
               본명을 지우려고 자기 최고 기록을 깨야 한다 — 사실상 철회 불가가 된다. */
            name  = excluded.name,
-           cpm   = max(board.cpm, excluded.cpm),
-           score = case when excluded.cpm > board.cpm then excluded.score else board.score end,
-           hits  = case when excluded.cpm > board.cpm then excluded.hits else board.hits end,
-           acc   = case when excluded.cpm > board.cpm then excluded.acc  else board.acc  end,
-           at    = case when excluded.cpm > board.cpm then excluded.at   else board.at   end`
+           cpm   = max(speed.cpm, excluded.cpm),
+           score = case when excluded.cpm > speed.cpm then excluded.score else speed.score end,
+           hits  = case when excluded.cpm > speed.cpm then excluded.hits else speed.hits end,
+           acc   = case when excluded.cpm > speed.cpm then excluded.acc  else speed.acc  end,
+           at    = case when excluded.cpm > speed.cpm then excluded.at   else speed.at   end`
       ).bind(e.slug, e.secs, e.who, e.name, e.cpm, e.score, e.hits, e.acc, Date.now()),
       /* coalesce 가 없으면 그 줄이 없을 때 score > NULL 이 NULL 이 되어 조용히 1위가 된다 */
       env.DB.prepare(
-        `select count(*) + 1 as n from board where slug = ? and secs = ? and cpm >
-           coalesce((select cpm from board where slug = ? and secs = ? and who = ?), -1)`
+        `select count(*) + 1 as n from speed where slug = ? and secs = ? and cpm >
+           coalesce((select cpm from speed where slug = ? and secs = ? and who = ?), -1)`
       ).bind(e.slug, e.secs, e.slug, e.secs, e.who),
       board(env, { slug: e.slug, secs: e.secs }),
     ]);
@@ -338,7 +338,7 @@ async function forget(req, env, o) {
   if (ok !== true) return shut(ok, o);
   /* 이름이 걸린 곳은 전부 내린다 — 경쟁전 사다리와 전적도 같은 사람의 것이다 */
   return safely(o, async () => {
-    const [r] = await env.DB.batch(['board', 'ladder', 'played', 'ticket']
+    const [r] = await env.DB.batch(['speed', 'board', 'ladder', 'played', 'ticket']
       .map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(who)));
     return send(200, { gone: r.meta?.changes ?? 0 }, o);
   });
@@ -347,8 +347,8 @@ async function forget(req, env, o) {
 /* ── 경쟁전 ──────────────────────────────────────────────
    혼자 치는 게임이라 맞상대가 없다. 그래서 이긴다·진다를 "이 티어에서 기대하는
    속도를 넘었나"로 정한다(TypeClash 의 티어별 기대 WPM 과 같은 결).
-     속도  = 분당 글자 수(CPM). 코스가 달라도 견줄 수 있는 유일한 값이다
-     기대  = WANT[티어]                       브론즈 40 … 마스터 140 CPM
+     속도  = 분당 타수(CPM). 코스가 달라도 견줄 수 있는 유일한 값이다
+     기대  = WANT[티어]                       브론즈 100 … 마스터 350 CPM
      lp    = (속도 − 기대) × .4 × K × 정확도 배율   K 는 배치 5판 동안 2, 그 뒤 1
    정확도는 얻는 쪽만 깎는다(95%↑ ×1 · 90 ×.8 · 85 ×.6 · 80 ×.4 · 그 아래는 이겨도 잃는다).
    이기면 최소 +3, 지면 최소 −5, 한 판에 ±50 을 넘지 않는다. 탈주는 −25.
@@ -356,9 +356,11 @@ async function forget(req, env, o) {
    제한 시간은 120초로 못 박는다 — 판마다 조건이 같아야 견줄 수 있다. */
 export const RANKED_SECS = 120;
 const STEP = 100, PLACE = 5, QUIT = 25, KEEP = 50, DAY_CAP = 200;
-/* 티어마다 기대하는 속도(CPM). 위로 갈수록 너비가 같아 한 계단이 20 CPM 이다.
+/* 티어마다 기대하는 속도(CPM). 위로 갈수록 너비가 같아 한 계단이 50 CPM 이다.
+   음절로 세던 옛 값(40…140)에 2.5 를 곱했다 — 한국 지명은 확정 키까지 음절당 2.8타,
+   약칭을 치면 그보다 적다.
    ponytail: 서울 코스의 어림값이다. 판이 쌓이면 실제 분포의 분위수로 다시 잡는다 */
-export const WANT = [40, 60, 80, 100, 120, 140];
+export const WANT = [100, 150, 200, 250, 300, 350];
 export function lpDelta(lp, games, cpm, acc) {
   const want = WANT[Math.min(WANT.length - 1, Math.floor(lp / STEP))];
   const raw = (cpm - want) * .4 * (games < PLACE ? 2 : 1);
@@ -1014,7 +1016,7 @@ async function authProfile(req, env, o) {
       ).bind(me, p.name, p.bio, p.face, p.lang, Date.now(), p.handle, p.botname, p.push, p.shut),
       /* 이미 걸려 있는 이름도 같이 고친다 — 한 곳에서 바꿨는데 순위표에 옛 이름이
          남으면 그 이름을 거둘 손잡이가 없는 것과 같다 */
-      env.DB.prepare('update board set name = ? where who = ?').bind(p.name, me),
+      env.DB.prepare('update speed set name = ? where who = ?').bind(p.name, me),
       env.DB.prepare('update ladder set name = ? where who = ?').bind(p.name, me),
     ]);
     return send(200, p, o);
@@ -1058,7 +1060,7 @@ async function authIntro(req, env, o) {
    이 목록이 곧 "이 저장소가 사람에 대해 쥐고 있는 전부" 다. 새 표를 만들면서 여기
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
-export const ERASE = ['board', 'ladder', 'played', 'ticket', 'profile', 'intro',
+export const ERASE = ['speed', 'board', 'ladder', 'played', 'ticket', 'profile', 'intro',
                       'passkey', 'recovery', 'pending', 'sso'];
 
 async function authErase(req, env, o) {
