@@ -656,7 +656,7 @@ console.log('security rule self-check done');
   const DB = { prepare: q => stmt(q), batch: async ss => Promise.all(ss.map(s =>
     /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
   const open = { limit: async () => ({ success: true }) };
-  const env = { DB, SESSION_KEY: 'k'.repeat(32), RL_CM: open, RL_CR: open };
+  const env = { DB, SESSION_KEY: 'k'.repeat(32), RL_CM: open, RL_CR: open, RL_AU: open };
   const A = 'a'.repeat(32), B = 'b'.repeat(32), C = 'c'.repeat(32), D = 'd'.repeat(32);
   const tok = {}; for (const w of [A, B, C, D]) tok[w] = await sign(env.SESSION_KEY, w);
   const call = async (path, body, who) => {
@@ -703,9 +703,21 @@ console.log('security rule self-check done');
   assert.deepEqual([list.posts[1].ups, list.posts[1].replies], [1, 1]);
 
   assert.equal((await call('/cm/del', { target: 'p' + made.id }, B)).status, 404, '남의 글은 못 지운다');
+  const under = (await call('/cm/reply', { post: hid, body: '가려질 글의 댓글' }, B)).id;
   for (const w of [A, B, B, D]) await call('/cm/flag', { target: 'p' + hid }, w);
   assert.equal((await call('/cm/list')).posts.length, 1, '서로 다른 셋이 신고하면 가려진다 — 한 사람이 여러 번은 한 번');
   assert.equal((await call('/cm/read?id=' + hid)).status, 404);
+  assert.equal((await call('/cm/reply', { post: hid, body: '가려진 글에' }, B)).status, 404, '가려진 글엔 댓글이 안 붙는다');
+  assert.equal((await call('/cm/up', { target: 'p' + hid }, D)).status, 404, '가려진 글엔 공감이 안 쌓인다');
+  assert.equal((await call('/cm/flag', { target: 'p' + hid }, C)).status, 404, '가려진 글엔 신고도 더 안 쌓인다');
+  assert.equal((await call('/cm/up', { target: 'r' + under }, D)).status, 404, '가려진 글 밑의 댓글에도 안 쌓인다');
+  assert.equal((await call('/cm/up', null, B)).status, 405);
+  for (const junk of [null, 7, [1]]) {
+    const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/cm/up', {
+      method: 'POST', body: JSON.stringify(junk),
+      headers: { origin: 'https://regiontype.com', 'content-type': 'application/json', authorization: 'Bearer ' + tok[B] } }), env);
+    assert.equal(r.status, 400, JSON.stringify(junk) + ' 몸통은 400 으로 거른다');
+  }
 
   /* 갓 만든 계정의 신고는 세지 않는다 */
   const fresh = (await call('/cm/post', { ...post, title: '새 계정 신고 표적' }, A)).id;
@@ -715,8 +727,14 @@ console.log('security rule self-check done');
   db.prepare('update user set at = 0').run();
 
   assert.equal((await call('/cm/del', { target: 'p' + made.id }, A)).status, 200);
-  assert.equal(db.prepare('select count(*) as n from reply').get().n, 0, '글을 지우면 댓글도 간다');
+  assert.equal(db.prepare('select count(*) as n from reply where post = ?').get(made.id).n, 0, '글을 지우면 댓글도 간다');
   assert.equal(db.prepare("select count(*) as n from mark where kind = 'up'").get().n, 0, '공감도 간다');
+  /* 계정을 지우면 남의 글에 단 내 댓글을 가리키던 공감·신고 줄도 간다 */
+  const host = (await call('/cm/post', { ...post, title: '남의 글' }, A)).id;
+  const mine = (await call('/cm/reply', { post: host, body: '곧 떠날 댓글' }, D)).id;
+  await call('/cm/up', { target: 'r' + mine }, B);
+  assert.equal((await call('/auth/erase', { sure: true }, D)).status, 200);
+  assert.equal(db.prepare("select count(*) as n from mark where target = ?").get('r' + mine).n, 0, '지운 사람 댓글의 표시는 남지 않는다');
   assert.equal(cmTarget('p0'), ''); assert.equal(cmTarget("p1 or 1=1"), '');
   assert.equal(cmPost({ tag: 'chat', title: '제목\n줄', body: ' ' }).ok, false, '빈 본문은 거른다');
   console.log('community self-check done');

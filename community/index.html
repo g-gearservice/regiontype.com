@@ -3,17 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- 남이 쓴 글을 그리는 유일한 페이지라 CSP 를 페이지 안에 둔다. GitHub Pages 는 _headers 를
+     읽지 않아 거기 적은 줄은 서지 않는다(2026-09-27 curl -I 로 확인 — CSP 헤더 없음).
+     meta 로는 frame-ancestors 가 안 먹으니 그 줄은 뺀다. localhost 는 wrangler dev 로 relay 를
+     띄워 볼 때만 쓰인다(community.js 가 localhost 에서 연 페이지에서만 그리로 보낸다) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com http://localhost:* http://127.0.0.1:*; form-action 'none'; base-uri 'none'">
 <title>커뮤니티 — regiontype</title>
 <meta name="description" content="regiontype 을 치는 사람들이 기록을 자랑하고, 묻고, 코스를 제안하는 곳.">
 <link rel="canonical" href="https://regiontype.com/community/">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=3.18">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.18">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.18">
-<link rel="stylesheet" href="../style.css?v=3.18">
-<link rel="stylesheet" href="community.css?v=3.18">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=3.19">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.19">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.19">
+<link rel="stylesheet" href="../style.css?v=3.19">
+<link rel="stylesheet" href="community.css?v=3.19">
 <!-- 읽는 글이 아니라 쓰는 곳이라 about/ 과 달리 제 스크립트를 둔다. 서버는 relay/ 의
      /cm/* 다. 글은 평문이고 화면은 textContent 로만 그린다 — innerHTML 을 쓰지 않는다 -->
-<script src="community.js?v=3.18"></script>
+<script src="community.js?v=3.19"></script>
 </head>
 <body>
 

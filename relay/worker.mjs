@@ -1084,7 +1084,8 @@ async function authErase(req, env, o) {
     const rows = await env.DB.batch([
       /* 내 글에 남이 단 댓글과 그 표시도 같이 간다 — 글이 없으면 볼 길도 없이 고아로 남는다 */
       env.DB.prepare(`delete from mark where target in (select 'r' || r.id from reply r join post p on p.id = r.post where p.who = ?)
-                        or target in (select 'p' || id from post where who = ?)`).bind(me, me),
+                        or target in (select 'p' || id from post where who = ?)
+                        or target in (select 'r' || id from reply where who = ?)`).bind(me, me, me),
       env.DB.prepare('delete from reply where post in (select id from post where who = ?)').bind(me),
       ...ERASE.map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(me)),
       /* 사람 줄은 맨 끝에 지운다. D1 의 batch 는 한 묶음으로 도니 도중에 엎어지면
@@ -1203,6 +1204,8 @@ async function cmWriter(req, env, o) {
   if (!me) return { no: reply(401, '로그인이 필요합니다.', o) };
   let c;
   try { c = await req.json(); } catch { return { no: reply(400, '읽을 수 없는 내용입니다.', o) }; }
+  /* 'null'·숫자·배열도 JSON 이다 — 그대로 두면 c.target 에서 터져 엉뚱한 503 이 나간다 */
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return { no: reply(400, '읽을 수 없는 내용입니다.', o) };
   const ok = await pass(env.RL_CM, ip(req));
   /* 창은 IP 와 계정 둘 다 센다 — IP 를 갈아 끼우는 한 계정도 분당 8 번에서 멈춘다 */
   const ok2 = ok === true && await pass(env.RL_CM, 'u:' + me);
@@ -1228,7 +1231,8 @@ async function cmWrite(req, env, o, path) {
       const r = cmReply(c);
       if (!r.ok) return reply(400, '댓글이 비어 있습니다.', o);
       const row = await env.DB.prepare(
-        `insert into reply (post, who, body, at) select id, ?, ?, ? from post where id = ? returning id`)
+        `insert into reply (post, who, body, at) select p.id, ?, ?, ? from post p
+           where p.id = ? and not ${hidden("'p' || p.id")} returning id`)
         .bind(me, r.body, now, r.post).first();
       if (!row) return reply(404, '지워진 글입니다.', o);
       return send(201, { id: row.id }, o);
@@ -1242,11 +1246,14 @@ async function cmWrite(req, env, o, path) {
       const had = k === 'up' && await env.DB.prepare(
         "delete from mark where who = ? and kind = 'up' and target = ? returning 1").bind(me, t).first();
       if (!had) {
+        /* 신고로 가려진 글·댓글에는 더 달지 않는다 — 안 보이는 곳에 줄만 쌓인다.
+           hidden() 안의 id 는 user 표와 겹치므로 x.id 로 못 박는다 */
         const tb = kind === 'p' ? 'post' : 'reply';
-        const r = await env.DB.prepare(`insert or ignore into mark (who, kind, target, at)
-                                        select ?, ?, ?, ? from ${tb} where id = ?`)
+        const live = `from ${tb} x where x.id = ? and not ${hidden(`'${kind}' || x.id`)}`
+          + (kind === 'r' ? ` and not ${hidden("'p' || x.post")}` : '');   // 가려진 글 밑의 댓글도
+        const r = await env.DB.prepare(`insert or ignore into mark (who, kind, target, at) select ?, ?, ?, ? ${live}`)
           .bind(me, k, t, now, id).run();
-        const there = r.meta?.changes || await env.DB.prepare(`select 1 from ${tb} where id = ?`).bind(id).first();
+        const there = r.meta?.changes || await env.DB.prepare(`select 1 ${live}`).bind(id).first();
         if (!there) return reply(404, '지워진 글입니다.', o);
       }
       const n = await env.DB.prepare('select count(*) as n from mark where kind = ? and target = ?').bind(k, t).first('n');
