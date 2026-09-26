@@ -35,8 +35,8 @@ https://:worker.:account.workers.dev/*
   Cache-Control: no-store
 
 # 커뮤니티. 남이 쓴 글을 그리는 유일한 페이지라 인라인 스크립트를 하나도 두지 않는다.
-# ★ 존 규칙(relay/harden-zone.mjs)이 CSP 를 set 으로 덮으면 이 줄은 안 선다 — 첫 방벽은
-#   community.js 가 남의 글을 textContent 로만 그린다는 것이다. 배포 뒤 curl -I 로 확인한다.
+# ★ 지금 사이트는 GitHub Pages 라 이 파일을 읽지 않는다 — 실제로 서는 CSP 는
+#   community/index.html 의 <meta http-equiv> 다. 여기 줄은 Workers 로 옮길 때를 위해 같게 둔다.
 /community/*
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
