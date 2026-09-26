@@ -1,5 +1,29 @@
 [
   {
+    "v": "0.6.315",
+    "date": "2026-09-27",
+    "ko": "타자 속도가 치는 동안 실시간으로 바뀝니다. 키를 누를 때마다, 그리고 1초마다 다시 셉니다. 셈은 Monkeytype 과 같습니다 — 시간은 첫 키를 누른 때부터 재고, 확정한 지명의 타수에 지금 치고 있는 입력이 맞는 앞부분이면 그만큼 더합니다. 틀린 입력은 세지 않고, 지명을 찾느라 멈춘 시간도 빼 주지 않습니다. 정확도도 Monkeytype 처럼 키 단위로 셉니다 — 맞게 친 키 ÷ 친 키이고, 지운 키는 세지 않으며, 틀린 이름을 확정한 키는 틀린 키로 칩니다.",
+    "en": "Typing speed now updates live as you type — on every key and once a second. It is counted exactly like Monkeytype: the clock starts at your first keystroke, and the speed is the strokes of the names you have confirmed plus whatever you are typing now, as long as it is a correct start of a name. Wrong input is not counted, and time spent looking for a place on the map is not taken off. Accuracy is now per keystroke like Monkeytype too — correct keys over keys typed; deleted keys are ignored, and confirming a wrong name counts as a wrong key."
+  },
+  {
+    "v": "0.6.314",
+    "date": "2026-09-26",
+    "ko": "위아래 메뉴 버튼을 누른 채 끌면 주황 알약이 손끝 쪽으로 고무줄처럼 늘어나며 끌려가고, 다른 버튼 위로 끌면 그리로 건너갑니다. 놓으면 제자리로 돌아옵니다. 움직임을 줄였으면 늘어나지 않습니다.",
+    "en": "Press and drag a button in the top or bottom menu and the orange pill stretches toward your finger like a rubber band, sliding over to whichever button you drag onto. Let go and it springs back. With reduced motion it stays put."
+  },
+  {
+    "v": "0.6.313",
+    "date": "2026-09-26",
+    "ko": "위아래 메뉴 버튼을 끌어도 브라우저 주소 미리보기가 따라 나오지 않습니다.",
+    "en": "Dragging a button in the top or bottom menu no longer pulls out the browser's link preview."
+  },
+  {
+    "v": "0.6.312",
+    "date": "2026-09-26",
+    "ko": "홈 봇이 잠들 때 시선을 아래로 떨구며 꾸벅꾸벅 좁니다 — 살짝 감았다가, 조금 더 감았다가, 마저 감습니다. 다 감긴 눈은 ‿ 로 내려앉고, 깰 땐 눈을 뜨며 고른 표정으로 돌아옵니다. 자는 동안엔 천천히 숨 쉬듯 몸이 살짝 퍼졌다 오므라들고, 커서를 따라보지 않습니다. 감은 눈의 선을 조금 더 굵게 해 멀리서도 잘 보입니다. 움직임을 줄였으면 숨쉬기와 전환은 멈춥니다.",
+    "en": "When the home bot falls asleep it drops its gaze and nods off in stages — eyes a little heavy, then heavier, then fully closed into ‿; on waking it opens them back into its chosen expression. While asleep it breathes slowly, its body swelling and settling a little, and stops following the cursor. The closed-eye lines are a touch thicker so they read from afar. With reduced motion the breathing and transitions stay still."
+  },
+  {
     "v": "0.6.311",
     "date": "2026-09-26",
     "ko": "봇의 눈 색이 몸 색을 따릅니다. 밝은 몸(주황·노랑·초록·회색·크림 등)에는 짙은 눈, 어두운 몸(빨강·보라·갈색·먹 등)에는 흰 눈이 들어가고, 몸 빛깔이 살짝 배어 한 벌로 보입니다. 홈·로그인·내 계정·캐릭터 고르기 어디서나 같고, 경쟁전을 켜 봇이 빨개지면 눈도 함께 바뀝니다.",

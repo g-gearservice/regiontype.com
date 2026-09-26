@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.11';
+const VER = '3.15';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -115,15 +115,21 @@ const clock = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
    실제로 누르는 키 수다. 확정하는 스페이스·Enter 도 한 타다(Monkeytype 과 같다).
    'auto' 는 한국어 화면이면 CPM, 아니면 WPM 이다 */
 const CPW = 5;
-/* 두벌식 키 수. 쌍자음(ㄲ)·ㅒ·ㅖ 는 Shift 와 함께 한 키, 겹모음(ㅘ)·겹받침(ㄳ)은 두 키.
-   Shift 는 세지 않는다 — hangul-js 의 disassemble 이 푸는 것과 같다 */
-const V2 = [9, 10, 11, 14, 15, 16, 19], T2 = [3, 5, 6, 9, 10, 11, 12, 13, 14, 15, 18];
-const keysOf = s => [...s].reduce((n, ch) => {
+/* 두벌식 키로 푼다. 쌍자음(ㄲ)·ㅒ·ㅖ 는 Shift 와 함께 한 키, 겹모음(ㅘ)·겹받침(ㄳ)은 두 키.
+   Shift 는 세지 않는다 — hangul-js 의 disassemble 이 푸는 것과 같다. 조합 중에 홀로 선
+   자모(ㅘ, ㄳ)도 같이 푼다. 푼 문자열끼리 앞머리를 견주면 조합 중인 '강ㅅ' 도 '강서구'의
+   앞부분으로 읽힌다 */
+const JUNG = 'ㅏ ㅐ ㅑ ㅒ ㅓ ㅔ ㅕ ㅖ ㅗ ㅗㅏ ㅗㅐ ㅗㅣ ㅛ ㅜ ㅜㅓ ㅜㅔ ㅜㅣ ㅠ ㅡ ㅡㅣ ㅣ'.split(' ');
+const JONG = [''].concat('ㄱ ㄲ ㄱㅅ ㄴ ㄴㅈ ㄴㅎ ㄷ ㄹ ㄹㄱ ㄹㅁ ㄹㅂ ㄹㅅ ㄹㅌ ㄹㅍ ㄹㅎ ㅁ ㅂ ㅂㅅ ㅅ ㅆ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ'.split(' '));
+const PAIR = { ㅘ: 'ㅗㅏ', ㅙ: 'ㅗㅐ', ㅚ: 'ㅗㅣ', ㅝ: 'ㅜㅓ', ㅞ: 'ㅜㅔ', ㅟ: 'ㅜㅣ', ㅢ: 'ㅡㅣ',
+               ㄳ: 'ㄱㅅ', ㄵ: 'ㄴㅈ', ㄶ: 'ㄴㅎ', ㄺ: 'ㄹㄱ', ㄻ: 'ㄹㅁ', ㄼ: 'ㄹㅂ', ㄽ: 'ㄹㅅ',
+               ㄾ: 'ㄹㅌ', ㄿ: 'ㄹㅍ', ㅀ: 'ㄹㅎ', ㅄ: 'ㅂㅅ' };
+const jamo = s => [...s.normalize('NFC')].map(ch => {
   const c = ch.charCodeAt(0) - 0xAC00;
-  if (c < 0 || c >= 11172) return n + 1;
-  const v = Math.floor(c % 588 / 28), f = c % 28;
-  return n + 1 + (V2.includes(v) ? 2 : 1) + (f === 0 ? 0 : T2.includes(f) ? 2 : 1);
-}, 0);
+  if (c < 0 || c >= 11172) return PAIR[ch] || ch;
+  return 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'[Math.floor(c / 588)] + JUNG[Math.floor(c % 588 / 28)] + JONG[c % 28];
+}).join('');
+const keysOf = s => jamo(s).length;
 const unitNow = () => (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
 const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
@@ -1009,6 +1015,10 @@ document.addEventListener('click', e => {
   e.preventDefault();
   e.stopPropagation();
 }, true);
+/* 넵바 링크를 끌면 브라우저가 주소 미리보기를 달고 나온다. 파이어폭스는 -webkit-user-drag 를 몰라 여기서 막는다 */
+$('#regions').addEventListener('dragstart', e => {
+  if (e.target.closest && e.target.closest('.navbar, .nav-bot')) e.preventDefault();
+});
 $('#regions').addEventListener('pointerdown', e => {
   if (e.button || !$('#regions').classList.contains('on')) return;
   if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
@@ -1149,7 +1159,7 @@ function navBotTarget(el) {
 }
 function makeNavFollow(spec) {
   const SPR = { x: sp(0, .05), y: sp(0, .05), w: sp(8, .05), h: sp(8, .05) };
-  let aim = null, on = false, raf = 0, t0 = 0;
+  let aim = null, on = false, raf = 0, t0 = 0, base = null, pull = null;
   function paint() {
     const shape = spec.shape();
     if (!shape) return;
@@ -1207,12 +1217,51 @@ function makeNavFollow(spec) {
     }
     const still = calm() || !on;
     on = true;
+    base = { x, y, w, h };
+    place(still);
+  }
+  /* 누른 채 끌면 알약이 손끝 쪽으로 늘어나며 끌려간다 — iOS 탭 막대의 결. 멀어질수록
+     덜 따라오는 고무줄(Apple rubber band, c .55)이라 아무리 끌어도 칸을 벗어나지 않고,
+     끄는 쪽으로 늘어난 만큼 옆으로는 살짝 홀쭉해진다. 놓으면 같은 스프링으로 돌아온다 */
+  function place(still) {
+    let { x, y, w, h } = base;
+    if (pull && !calm()) {
+      const rb = (d, m) => Math.sign(d) * m * (1 - 1 / (Math.abs(d) * .55 / m + 1));
+      const dx = rb(pull.px - pull.nx - x - w / 2 - pull.ox, 28);
+      const dy = rb(pull.py - pull.ny - y - h / 2 - pull.oy, 14);
+      const ax = Math.abs(dx), ay = Math.abs(dy);
+      const cx = x + w / 2 + dx * .7, cy = y + h / 2 + dy * .7;
+      w += ax * .6 - ay * .3;
+      h += ay * .6 - ax * .2;
+      x = cx - w / 2; y = cy - h / 2;
+    }
     [[SPR.x, x], [SPR.y, y], [SPR.w, w], [SPR.h, h]].forEach(([p, v]) => {
       p.to = v;
       if (still) { p.x = v; p.v = 0; }
     });
     if (still) paint();
     else kick();
+  }
+  function grab(e) {
+    const it = spec.target(e.target);
+    if (e.button || !it || pull || document.body.classList.contains('rk-intro')) return;
+    const nr = spec.nav().getBoundingClientRect(), r = it.getBoundingClientRect();
+    pull = { id: e.pointerId, it, nx: nr.left, ny: nr.top, px: e.clientX, py: e.clientY,
+             ox: e.clientX - r.left - r.width / 2, oy: e.clientY - r.top - r.height / 2 };
+    aimTo(it);
+  }
+  function drag(e) {
+    if (!pull || e.pointerId !== pull.id) return;
+    pull.px = e.clientX; pull.py = e.clientY;
+    /* 다른 칸 위로 끌고 가면 알약이 그 칸으로 건너가 거기서 다시 늘어난다 */
+    const hit = spec.target(document.elementFromPoint(e.clientX, e.clientY));
+    if (hit && hit !== pull.it) { pull.it = hit; pull.ox = pull.oy = 0; aimTo(hit); }
+    else if (base) place(false);
+  }
+  function drop(e, fine) {
+    if (!pull || e.pointerId !== pull.id) return;
+    pull = null;
+    aimTo(fine ? spec.target(document.elementFromPoint(e.clientX, e.clientY)) : null);
   }
   function wire() {
     const nav = spec.nav();
@@ -1224,12 +1273,18 @@ function makeNavFollow(spec) {
       if (!it) return;
       if (fine() || it === document.activeElement) aimTo(it);
     });
+    nav.addEventListener('pointerdown', grab);
+    addEventListener('pointermove', drag);
+    addEventListener('pointerup', e => drop(e, fine()));
+    addEventListener('pointercancel', e => drop(e, false));
     nav.addEventListener('pointerleave', () => {
+      if (pull) return;
       const a = document.activeElement;
       const keep = nav.contains(a) && a.matches(':focus-visible') ? spec.target(a) : null;
       aimTo(keep || null);
     });
     nav.addEventListener('focusin', e => {
+      if (pull) return;
       const it = spec.target(e.target);
       /* 포인터로 연 덮개를 닫아 돌려준 포커스까지 따라가면, 손을 뗐는데도 로그인
          알약이 남는다. 키보드 포커스일 때만 따라가고 포인터는 hover 에 맡긴다. */
@@ -1414,7 +1469,7 @@ async function start(slug, only, rk) {
              aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
   });
   G = { slug, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
-       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, spent: 0,
+       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
        cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
   $('#typein').lang = course.lang || document.documentElement.lang;
 
@@ -1756,7 +1811,9 @@ function judge(raw) {
   const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');
   if (!answer) return;
   const hit = matchInput(answer, G.items, G.spacy);
-  if (!hit || (G.seq && hit !== target())) return miss();
+  G.part = 0; G.typed = 0;
+  if (!hit || (G.seq && hit !== target())) { G.bad++; return miss(); }   // 확정 키도 한 타
+  G.ok++;
   G.chars += keysOf(answer) + 1;   // 친 그대로(약칭이면 약칭) + 확정 키
   claim(hit);
 }
@@ -1765,6 +1822,7 @@ $('#typein').addEventListener('input', e => {
   if (!G || !tick) return;
   const inp = e.target;
   let val = inp.value, composing = e.isComposing;
+  if (!G.t0 && val) G.t0 = performance.now();   // 속도 시계는 첫 키에서 선다 — cpmNow 참고
   /* 제시된 글자 수를 넘겨서는 아예 안 써진다. 넘겨 친 찌꺼기가 남으면 같은
      지명이라도 지워야 할 백스페이스 수가 달라진다. 자모는 한 칸 안에서 합쳐지므로
      길이는 다음 음절을 시작할 때만 늘어난다 — 그 한 음절만 잘라 낸다.
@@ -1781,6 +1839,13 @@ $('#typein').addEventListener('input', e => {
     inp.focus();
   }
   paintTyped(val, composing);
+  G.part = partKeys(val, G.seq ? [target()] : G.items.filter(it => !it.claimed), G.spacy);
+  /* 정확도도 키 단위다(Monkeytype getAccuracy) — 새로 들어온 키가 맞는 앞부분을 이으면
+     맞은 키, 아니면 틀린 키. 지운 키는 어느 쪽에도 안 들어간다 */
+  const len = typedForm(val, G.spacy).length;
+  if (len > G.typed) G[G.part || !len ? 'ok' : 'bad'] += len - G.typed;
+  G.typed = len;
+  $('#statSpeed').textContent = speedIn(cpmNow());
   if (G.spacy) return;                            // 공백이 이름에 있으면 Enter 로 확정
   if (!/\s/.test(val)) return;                   // 스페이스 전에는 판단하지 않는다
   inp.value = '';
@@ -1813,7 +1878,6 @@ function claim(it) {
   if (it.under) it.under.forEach(c => c.classList.add('under'));
   if (it.shrink) it.shrink.forEach(c => c.classList.add('near'));
   G.hits++; G.tries++; G.combo++;
-  G.spent = G.total - G.left;      // 친 시간은 여기서 멈춘다 — cpmNow 참고
   $('#statSpeed').textContent = speedIn(cpmNow());
   G.score += 100 * Math.min(5, G.combo);   // ponytail: 콤보 배율만. 인지도 역수(weight) 데이터 확보되면 항목별 배점으로 교체
   $('#statCount').textContent = G.hits;
@@ -1830,28 +1894,46 @@ function claim(it) {
   aim();
 }
 
-/* 지금까지의 속도. 나눌 시간은 '판이 흐른 시간'이 아니라 '마지막으로 맞힌 때까지'다
-   (G.spent, claim 이 찍는다) — 모르는 곳 앞에서 손 놓고 있는 동안 이미 친 속도가
-   깎여 내려가면 안 된다. 다 맞히면 둘이 같은 값이다.
-   천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 — 여기서 넘겨
-   보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
-function cpmNow() {
-  const spent = Math.max(1, G.spent || (G.total - G.left));
-  return Math.min(1500, G.hits * 50, Math.round(G.chars / spent * 60));
+/* 지금까지의 속도. Monkeytype 의 실시간 WPM 과 같은 셈이다(test-timer.ts timerStep):
+     타수 = 확정한 지명의 타수 + 지금 치는 입력이 맞는 앞부분이면 그 타수(G.part)
+     시간 = 첫 키를 누른 때(G.t0)부터 지금까지, 끝났으면 끝난 때(G.t1)까지 — ms 로 잰다
+   틀린 입력은 타수에 안 들어가고(Monkeytype 의 raw 가 아닌 wpm), 손 놓고 있는 시간도
+   빼 주지 않는다 — 두 사이트 모두 그렇다. 키를 칠 때마다, 그리고 1초마다 다시 센다.
+   끝난 판에만 거는 천장 둘은 중계기(worker.mjs 의 entry)가 보는 것과 같은 값이다 —
+   넘겨 보내면 그 판은 통째로 400 을 받아 순위표에 안 올라간다 */
+/* 치고 있는 입력이 아직 확정 안 된 어느 이름(또는 별칭)의 앞부분이면 그 타수, 아니면 0.
+   Monkeytype 이 칠 중인 낱말을 '맞게 친 데까지'만 쳐 주는 것(countChars 의
+   creditPartial)과 같다. 견주는 모양은 matchInput 과 같게 — 대소문자·띄어쓰기를 접는다 */
+const typedForm = (s, spacy) => jamo((spacy ? String(s) : String(s).replace(/\s/g, '')).toLowerCase());
+function partKeys(raw, items, spacy = false) {
+  const key = s => typedForm(s, spacy);
+  const k = key(raw);
+  if (!k) return 0;
+  return items.some(it => [it.name, ...it.aliases].some(n => key(n).startsWith(k))) ? k.length : 0;
+}
+/* 맞게 친 키 ÷ 친 키. 아무것도 안 쳤으면 0 (Monkeytype 과 같다) */
+const accNow = () => G.ok + G.bad ? Math.floor(G.ok / (G.ok + G.bad) * 100) : 0;
+function cpmNow(done = false) {
+  if (!G.t0) return 0;
+  const ms = Math.max(1000, (G.t1 || performance.now()) - G.t0);
+  const cpm = Math.min(1500, Math.round((G.chars + G.part) / ms * 60000));
+  return done ? Math.min(G.hits * 50, cpm) : cpm;
 }
 
 function finish() {
   stop();
+  G.t1 = performance.now();
   beep(300, .3, 'triangle');
   G.items.filter(i => !i.claimed).forEach(i => i.el.classList.add('miss'));
   pending = setTimeout(() => {
-    G.cpm = cpmNow();
+    G.cpm = cpmNow(true);
+    G.acc = accNow();
     /* 옛 열쇠(rt.best.* 점수, rt.fast.* 음절 CPM)는 지금 타수와 견줄 수 없다 */
     const key = `rt.keys.${G.slug}.t${G.total}`;
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
-    $('#rAcc').textContent = (G.tries ? Math.round(G.hits / G.tries * 100) : 0) + '%';
+    $('#rAcc').textContent = G.acc + '%';
     $('#rBest').textContent = G.cpm > prev ? t('bestNew') : prev ? t('bestPrev', { n: showSpeed(prev) }) : '';
     if (G.cpm > prev) localStorage.setItem(key, G.cpm);
 
@@ -2099,7 +2181,7 @@ async function board() {
   const play = { c: G.slug, t: G.total };
   try {
     const d = inn && me && G.score
-      ? await boardAsk('/score', { ...play, name: me, score: G.score, cpm: G.cpm, hits: G.hits, tries: G.tries })
+      ? await boardAsk('/score', { ...play, name: me, score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
     $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
     /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
@@ -2216,6 +2298,12 @@ if (location.search.includes('rt=1')) {
   console.assert(keysOf('닭') === 4, '겹받침 ㄺ 은 ㄹ+ㄱ');
   console.assert(keysOf('강남구') === 8, '강남구 = ㄱㅏㅇㄴㅏㅁㄱㅜ');
   console.assert(keysOf('New York') === 8, '라틴 문자는 한 글자 한 키, 띄어쓰기도 한 키');
+  console.assert(keysOf('ㅘ') === 2 && keysOf('ㄳ') === 2, '홀로 선 겹자모도 두 키');
+  const gs = [{ name: '강서구', aliases: ['강서'] }];
+  console.assert(partKeys('강ㅅ', gs) === 4, '조합 중인 강ㅅ 은 강서구의 앞 네 타');
+  console.assert(partKeys('갓', gs) === 0, '앞부분이 아니면 0');
+  console.assert(partKeys('ny', [{ name: 'New York', aliases: [] }], true) === 0, '띄어쓰기 이름은 앞에서부터');
+  console.assert(partKeys('new y', [{ name: 'New York', aliases: [] }], true) === 5, '대소문자는 접는다');
 
   /* 안내에 '서울시'가 떠 있어도 어간·줄인 이름·정식 명칭이 모두 맞는다 */
   const mkAdmin = names => names.map(n => ({

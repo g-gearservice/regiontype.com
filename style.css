@@ -969,7 +969,9 @@ body.opts-leaving #regions::after,body.pg-leaving #regions::after{opacity:0}
 :root[data-motion="off"] body.opts-leaving #regions::after{
   backdrop-filter:none;-webkit-backdrop-filter:none;
 }
+/* 칸을 누른 채 끌면 알약이 따라온다(app.js makeNavFollow) — 손가락 끌기를 스크롤·글자 선택이 가로채지 않게 */
 #regions .navbar,#regions .nav-bot{
+  touch-action:none; user-select:none; -webkit-user-select:none;
   transition:transform var(--si-dur) var(--ease-in-out), opacity var(--si-dur) var(--ease-in-out);
 }
 body.signing #regions .navbar,
@@ -1552,8 +1554,7 @@ body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 /* 고른 색이 없는 봇은 평소엔 브랜드 빛깔, 경쟁전을 켜면(rk-ready) 빨강이다. 몸만 바꾼다 —
    --rk-on(말풍선·게이지)은 paintTint 가 .rk-bot 의 --buddy-ink(빨강)에서 그대로 딴다.
    고른 색은 setColour 가 .rk-bot-motion 에 인라인으로 박으므로 그때는 비켜선다 */
-body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy,
-body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"])::after{--buddy-ink:var(--accent)}
+body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy{--buddy-ink:var(--accent)}
 .rk-bot:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:50%}
 /* 끌어 옮기는 동안은 손을 바로 따라간다 — 말풍선도 함께 */
 .rk-bot.is-held{cursor:grabbing;transition:none}
@@ -1563,16 +1564,16 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 .rk-bot .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .rk-bot:hover .rk-bot-motion{transform:scale(1.06)}
 /* 자는 봇은 눈을 감고(소개 페이지 helper.svg 의 ‿‿), 색만이 아니라 글자(z)로도
-   잔다고 알린다. 엔진이 뚫는 눈 구멍은 가리고 감은 눈을 몸 한가운데 얹는다 */
-.rk-bot.is-asleep mask path ~ path{opacity:0}
-.rk-bot.is-asleep .rk-bot-motion::after{
-  content:"";position:absolute;left:29px;top:38px;width:22px;height:8px;
-  /* 눈 빛깔은 buddy.js 의 EYE 와 같은 식 — 몸 빛깔에 따라 희거나 짙다 */
-  background:oklch(from var(--buddy-ink) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h);
-  -webkit-mask:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 8"><path d="M1.5 2q4 4.5 8 0M12.5 2q4 4.5 8 0" fill="none" stroke="%23000" stroke-width="2.4" stroke-linecap="round"/></svg>') center/contain no-repeat;
-  mask:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 8"><path d="M1.5 2q4 4.5 8 0M12.5 2q4 4.5 8 0" fill="none" stroke="%23000" stroke-width="2.4" stroke-linecap="round"/></svg>') center/contain no-repeat;
-}
+   잔다고 알린다. 눈을 감는 일은 통째로 buddy.js 의 doze 가 한다 — 시선을 떨구며
+   꾸벅꾸벅 감고, 마지막엔 눈 구멍 자체가 ‿ 로 녹는다. 여기선 몸과 z 만 움직인다 */
 .rk-bot-motion{position:relative}
+/* 자는 동안은 천천히 숨 쉰다 — 바닥을 딛고 옆으로 살짝 퍼졌다 오므린다.
+   잡으면 손을 따라야 하니 멈춘다 */
+.rk-bot.is-asleep:not(.is-held) .rk-bot-motion{transform-origin:50% 79%;animation:rk-breathe 3.6s ease-in-out infinite}
+@keyframes rk-breathe{
+  0%,100%{transform:none}
+  50%{transform:translateY(1px) scale(1.035,.955)}
+}
 /* z 두 개가 번갈아 오른쪽 위로 떠오르며 작아지고 사라진다 */
 .rk-bot.is-asleep::before,.rk-bot.is-asleep::after{
   content:"z";position:absolute;left:58px;top:14px;transform-origin:0 100%;
@@ -1589,9 +1590,11 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 @media (prefers-reduced-motion:reduce){
   .rk-bot.is-asleep::before,.rk-bot.is-asleep::after{animation:none;opacity:1}
   .rk-bot.is-asleep::before{transform:translate(11px,-13px) scale(.7)}
+  .rk-bot.is-asleep:not(.is-held) .rk-bot-motion{animation:none}
 }
 :root[data-motion="off"] .rk-bot.is-asleep::before,:root[data-motion="off"] .rk-bot.is-asleep::after{animation:none;opacity:1}
 :root[data-motion="off"] .rk-bot.is-asleep::before{transform:translate(11px,-13px) scale(.7)}
+:root[data-motion="off"] .rk-bot.is-asleep:not(.is-held) .rk-bot-motion{animation:none}
 .rk-say{
   position:absolute;left:0;top:0;width:min(300px,calc(100vw - 32px));
   background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);border:0;border-radius:14px;

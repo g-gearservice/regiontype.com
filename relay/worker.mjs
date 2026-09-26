@@ -120,7 +120,10 @@ export function entry(c, who = '') {
      코드를 아는 사람이면 누구나 그 이름으로 올릴 수 있었다. */
   const [score, hits, tries, cpm] = [c.score, c.hits, c.tries, c.cpm].map(Number);
   const int = n => Number.isInteger(n) && n >= 0;
-  const ok = w.ok && !!name && /^[a-z0-9]{8,64}$/.test(who)
+  /* 정확도는 앱이 키 단위로 센 값(맞은 키 ÷ 친 키)이다. 안 실려 오면(옛 앱) 맞힌 곳 ÷
+     시도로 갈음한다. hits·tries 도 앱이 세어 보내는 값이라 믿음의 크기는 같다 */
+  const acc = c.acc === undefined ? (tries ? Math.round(hits / tries * 100) : 0) : Number(c.acc);
+  const ok = w.ok && int(acc) && acc <= 100 && !!name && /^[a-z0-9]{8,64}$/.test(who)
     && int(score) && int(hits) && int(tries) && int(cpm)
     /* 속도는 분당 타수(키 수, 한글은 자모)다. 천장 둘은 app.js 의 cpmNow 가 쓰는 것과
        같은 값이어야 한다 — 한 곳당 50 은 아무리 빨라도 못 넘는 자고(가장 긴 지명이
@@ -131,8 +134,7 @@ export function entry(c, who = '') {
        곳보다 많이 들를 수 없고, 한 곳을 치는 데 아무리 빨라도 0.5초는 든다. */
     && hits <= tries && tries <= w.secs * 8 && hits <= Math.min(w.size, w.secs * 2)
     && score % 100 === 0 && score <= Math.min(hits * 500, w.secs * 1000);
-  return { ...w, name, who, score, hits, tries, cpm, ok,
-           acc: tries ? Math.round(hits / tries * 100) : 0 };
+  return { ...w, name, who, score, hits, tries, cpm, ok, acc };
 }
 
 const head = o => mine(o) ? {

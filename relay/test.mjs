@@ -64,6 +64,10 @@ const big = { c: 'ph-admin', t: 300, name: '나', score: 20000, hits: 40, tries:
 assert.equal(entry({ ...big, cpm: 1500 }, SME).ok, true, '1500 CPM 까지는 통과');
 assert.equal(entry({ ...big, cpm: 1501 }, SME).ok, false, '1500 CPM(=300 WPM)이 사람의 천장');
 assert.equal(entry({ ...sc, cpm: -1 }, SME).ok, false, '음수 속도는 없다');
+assert.equal(entry({ ...sc, cpm: 120 }, SME).acc, 83, '정확도가 안 오면 맞힌 곳 ÷ 시도(옛 앱)');
+assert.equal(entry({ ...sc, cpm: 120, acc: 97 }, SME).acc, 97, '키 단위 정확도는 그대로 실린다');
+assert.equal(entry({ ...sc, cpm: 120, acc: 101 }, SME).ok, false, '정확도는 100 을 넘지 않는다');
+assert.equal(entry({ ...sc, cpm: 120, acc: 9.5 }, SME).ok, false, '정확도는 정수다');
 assert.equal(entry({ ...sc }, SME).ok, false, '속도를 안 보내면 거른다');
 assert.equal(entry({ ...sc, cpm: 120 }, SME).cpm, 120, '속도는 그대로 실려 나간다');
 
