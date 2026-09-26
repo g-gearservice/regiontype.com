@@ -13,5 +13,7 @@
 /policy    /policy/            301
 /terms/    /terms/index.html   200
 /terms     /terms/             301
+/community/ /community/index.html 200
+/community  /community/          301
 /mimi/   /mimi/index.html   200
 /mimi    /mimi/             301

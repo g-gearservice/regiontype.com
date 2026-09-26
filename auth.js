@@ -603,7 +603,8 @@ function wire() {
 
   /* 공급자에게 다녀온 길이 아니면 덮개는 닫힌 채로 둔다 — 홈이 먼저다 */
   const back = backFromSso();
-  if (!back) return;
+  /* 다른 페이지(community/)가 /#signin 으로 보내면 덮개를 연 채로 맞는다 */
+  if (!back) { if (location.hash === '#signin') open(); return; }
   open();
   if (back.s === 'ok') {
     const bind = sessionStorage.getItem(BIND_KEY);

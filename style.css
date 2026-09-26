@@ -117,6 +117,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 .i-arrow-left{--i:url(assets/arrow-back.svg?v=1.31)}
 .i-close{--i:url(assets/close.svg?v=1.31)}
+.i-chevron-left{--i:url(assets/chevron-left.svg?v=3.18)}
 
 /* 아이콘을 품은 버튼은 격자로 가운데 정렬한다 */
 .back,.step,.toggle{display:inline-grid;place-items:center;line-height:1}
@@ -1351,11 +1352,41 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .account-layout{display:flex;flex-wrap:wrap;gap:24px;align-items:start}
 .account-character{display:flex;flex:0 1 220px;flex-direction:column;gap:12px;min-width:0}
 .account-details{flex:1 1 280px;min-width:0}
-.character-preview{position:relative;height:212px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0;overflow:hidden;border:0;background:var(--profile-soft)}
-.character-preview>.profile-help{font-size:14px;color:var(--ink);margin-top:8px}
+/* 제목이 머리 위에 서고, 봇은 남은 칸 한가운데 선다. 크기는 --bot-scale(내 계정의 Size,
+   홈 봇과 같은 값)을 따른다 */
+/* 내 펫 — 실제 크기(홈 봇과 같은 px, --bot-scale 을 따른다) < 확대 크기(고정)를 나란히
+   두고, 바로 밑의 알약 밀대로 홈 봇 크기를 바꾼다. 밀대의 꼬리가 '실제 크기'를 가리킨다 */
+.character-preview{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:16px 14px 18px;overflow:hidden;border:0;background:var(--profile-soft)}
+.character-title{font-size:11px;font-weight:800;letter-spacing:.02em;line-height:1.2;color:var(--ink);text-align:center}
+.pet-compare{display:grid;grid-template-columns:auto auto auto;justify-content:space-around;align-items:end;gap:6px;container-type:inline-size}
+.pet-fig{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;margin:0;min-width:0}
+.pet-fig figcaption{font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap}
+/* 작다(<) 표시 — 두 봇의 아랫단 쪽으로 내려 둔다 */
+.pet-lt{align-self:end;margin-bottom:34px;font-size:22px;color:var(--ink-soft)}
+.character-real{position:relative;flex:none;width:calc(80px * var(--bot-scale,1));height:calc(80px * var(--bot-scale,1));transition:width var(--fast) var(--ease-out),height var(--fast) var(--ease-out)}
+.character-real .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+/* 알약 밀대 — 굵은 테의 알약 길 위에 알약 손잡이. 왼쪽 위로 난 꼬리가 실제 크기를 가리킨다.
+   숫자(%)를 함께 둔다(색·위치만으로 가르지 않는다) */
+.pet-size{position:relative;display:flex;align-items:center;height:40px;padding:0 5px;border:2.5px solid var(--ink);border-radius:999px;background:var(--profile-soft)}
+/* 꼬리는 테 위로 난 윗삼각만 남기고(clip-path) 손잡이보다 위에 둔다 — 안쪽으로 파고들면
+   지나가는 손잡이와 겹쳐 하트처럼 보인다. 테 선까지만 덮어 꼬리와 길이 한 줄로 이어진다 */
+.pet-size::before{
+  content:"";position:absolute;z-index:1;left:calc(25% - 8px);top:-7.5px;width:16px;height:16px;
+  background:var(--profile-soft);border:2.5px solid var(--ink);border-right:0;border-bottom:0;
+  border-radius:10px 2px 0 2px;transform:rotate(45deg);
+  clip-path:polygon(0 0,100% 0,100% 12%,12% 100%,0 100%);pointer-events:none;
+}
+.pet-size input{position:relative;z-index:0;flex:1;min-width:0;height:30px;margin:0;background:none;-webkit-appearance:none;appearance:none;cursor:pointer}
+.pet-size input::-webkit-slider-runnable-track{height:30px;border-radius:999px;background:transparent}
+.pet-size input::-moz-range-track{height:30px;border-radius:999px;background:transparent}
+.pet-size input::-webkit-slider-thumb{-webkit-appearance:none;width:48px;height:30px;border:0;border-radius:999px;background:var(--ink)}
+.pet-size input::-moz-range-thumb{width:48px;height:30px;border:0;border-radius:999px;background:var(--ink)}
+.pet-size input:focus-visible{outline:0}
+.pet-size:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:3px}
+
 /* 몸도 눈도 엔진(assets/bloub)이 SVG 로 낸다 — 예전의 CSS 동그라미 + 눈 두 개는
    로그인 화면의 봇과 따로 놀아 걷어냈다. 고른 색은 account.js 가 --buddy-ink 로 넣는다 */
-.character{position:relative;flex:none;width:120px;height:120px}
+.character{position:relative;flex:none;width:min(112px,44cqi);height:min(112px,44cqi)}
 .character .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .character-controls{display:flex;flex-direction:column;gap:10px}
 .character-controls fieldset{border:0;min-width:0}
@@ -1402,9 +1433,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .account-layout{gap:32px}
 .account-character{flex:0 1 300px;gap:16px}
 .account-details{flex:1 1 340px}
-.character-preview{height:280px}
-.character-preview>.profile-help{font-size:17px;margin-top:10px}
-.character{width:168px;height:168px;transition:transform var(--fast) var(--ease-out)}
+.character-preview{padding:20px 18px 22px}
+.character-title{font-size:14px}
+.character{width:min(128px,44cqi);height:min(128px,44cqi);transition:transform var(--fast) var(--ease-out)}
 #account .profile-label{font-size:13px;margin-bottom:12px}
 #account .profile-help{font-size:13px}
 #account .profile-section{padding:18px 0}
@@ -1490,38 +1521,55 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .tier[data-tier="4"]{--tier:#5b8def}
 .tier[data-tier="5"]{--tier:#b05cd6}
 
+/* 기록은 Mini Metro 결이다 — 단색 면, 둥근 모서리, 부드럽게 떨어지는 그림자.
+   번짐·그라데이션은 쓰지 않는다. 판마다 모드 알약과 LP 알약을 달아
+   색 말고 글자·테두리·화살표로도 읽힌다 */
 .rec-card{
-  display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 16px;
-  background:var(--card);padding:18px 20px;border:2px solid var(--grid);
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px 16px;
+  background:var(--card);padding:22px 24px 18px;border:2px solid var(--grid);
+  border-radius:24px;box-shadow:var(--shadow-lift);
 }
 .rec-card[hidden]{display:none}
-.rec-card .tier{font-size:22px}
-.rec-lp{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-.rec-bar{grid-column:1 / -1;width:100%;height:10px;appearance:none;border:0;background:var(--land);border-radius:999px;overflow:hidden}
+.rec-card .tier{font-size:22px;gap:10px}
+/* 티어 점은 Motorways 의 건물처럼 아랫단이 한 겹 짙다 */
+.rec-card .tier::before{width:1.3em;height:1.3em;box-shadow:inset 0 -.18em 0 color-mix(in srgb,var(--ink) 28%,var(--tier))}
+.rec-lp{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.rec-bar{grid-column:1 / -1;width:100%;height:12px;appearance:none;border:0;background:var(--land);border-radius:999px;overflow:hidden}
 .rec-bar::-webkit-progress-bar{background:var(--land)}
-.rec-bar::-webkit-progress-value{background:var(--ranked)}
-.rec-bar::-moz-progress-bar{background:var(--ranked)}
-.rec-card .pg-help{grid-column:1 / -1}
-.rec-list{list-style:none;display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0}
+.rec-bar::-webkit-progress-value{background:var(--ranked);border-radius:999px}
+.rec-bar::-moz-progress-bar{background:var(--ranked);border-radius:999px}
+.rec-card .pg-help{grid-column:1 / -1;font-weight:700}
+.rec-list{list-style:none;display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:0;padding:2px 2px 10px}
 .rec-list li{
-  display:grid;grid-template-columns:5.5em 1fr auto 3.5em 5em;align-items:baseline;gap:4px 12px;
-  background:var(--card);padding:10px 14px;font-size:15px;border-left:4px solid var(--block);
+  display:grid;grid-template-columns:5.5em 1fr auto 3.5em 5.5em;align-items:center;gap:2px 12px;
+  background:var(--card);padding:12px 14px 12px 12px;font-size:15px;
+  border-radius:18px;box-shadow:var(--shadow);
 }
-/* 경쟁전 줄은 빨간 띠와 '경쟁전' 글자를 함께 단다 */
-.rec-list li[data-mode="ranked"]{border-left-color:var(--ranked)}
-.rec-list .mode{font-size:13px;font-weight:800;color:var(--ink-soft)}
-.rec-list li[data-mode="ranked"] .mode{color:var(--ranked)}
-:root[data-night] .rec-list li[data-mode="ranked"] .mode{color:#ff8a80}
-.rec-list .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rec-list .pt,.rec-list .acc,.rec-list .lp{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+/* 모드 알약 — 경쟁전은 빨강 채움, 일반전은 청록 테두리. 채움·테두리·글자가 함께 간다 */
+.rec-list .mode{
+  grid-row:span 2;justify-self:start;padding:3px 10px 4px;border-radius:999px;
+  font-size:12px;font-weight:800;white-space:nowrap;
+  color:var(--ink);border:2px solid var(--block);
+}
+.rec-list li[data-mode="ranked"] .mode{color:#fff;background:var(--ranked);border-color:var(--ranked)}
+.rec-list .where{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-list .pt,.rec-list .acc,.rec-list .lp{grid-row:span 2;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.rec-list .lp:not(:empty){justify-self:end;padding:3px 10px 4px;border-radius:999px;font-size:13px;color:var(--ink);background:var(--land)}
+.rec-list .lp[data-sign="up"]{color:#fff;background:var(--block-deep)}
+.rec-list .lp[data-sign="down"]{color:#fff;background:var(--ranked)}
 .rec-list .lp[data-sign="up"]::before{content:"▲ ";font-size:.7em}
 .rec-list .lp[data-sign="down"]::before{content:"▼ ";font-size:.7em}
-.rec-list .at{grid-column:2 / -1;font-size:12px;color:var(--ink-soft)}
+.rec-list .at{grid-column:2;grid-row:2;font-size:12px;color:var(--ink-soft)}
 @media (pointer:coarse){
   .pg-over{justify-content:flex-start;padding:84px 20px 40px}
   .pg-over .screen-head{top:20px;left:20px}
-  .rec-list li{grid-template-columns:1fr auto}
-  .rec-list .where{grid-column:1 / -1}
+  .rec-list li{grid-template-columns:auto 1fr auto auto;gap:6px 10px;border-radius:18px}
+  .rec-list .mode{grid-area:1 / 1}
+  .rec-list .where{grid-area:1 / 2 / 2 / 4}
+  .rec-list .lp{grid-area:1 / 4}
+  .rec-list .at{grid-area:2 / 1 / 3 / 3}
+  .rec-list .pt{grid-area:2 / 3}
+  .rec-list .acc{grid-area:2 / 4}
 }
 
 /* ═══ 도우미 봇 · 경쟁전 ════════════════════════════════
@@ -1546,7 +1594,7 @@ body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 @media (prefers-reduced-motion:reduce){ body.rk-intro .rk-bot-motion{animation:none} }
 :root[data-motion="off"] body.rk-intro .rk-bot-motion{animation:none}
 .rk-bot{
-  position:absolute;left:0;top:0;width:80px;height:80px;padding:0;border:0;background:none;
+  position:absolute;left:0;top:0;width:var(--rk-bot,80px);height:var(--rk-bot,80px);padding:0;border:0;background:none;
   --buddy-ink:var(--ranked);
   pointer-events:auto;cursor:pointer;touch-action:none;will-change:transform;z-index:1;
   transition:transform var(--si-dur) var(--ease-out),opacity var(--si-dur) var(--ease-out);
@@ -1576,8 +1624,8 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 }
 /* z 두 개가 번갈아 오른쪽 위로 떠오르며 작아지고 사라진다 */
 .rk-bot.is-asleep::before,.rk-bot.is-asleep::after{
-  content:"z";position:absolute;left:58px;top:14px;transform-origin:0 100%;
-  font-size:16px;font-weight:800;line-height:1;color:var(--ink-soft);
+  content:"z";position:absolute;left:calc(var(--rk-bot,80px) * .725);top:calc(var(--rk-bot,80px) * .175);transform-origin:0 100%;
+  font-size:calc(var(--rk-bot,80px) * .2);font-weight:800;line-height:1;color:var(--ink-soft);
   opacity:0;animation:rk-z 2.8s var(--ease-out) infinite;
 }
 .rk-bot.is-asleep::before{animation-delay:-1.4s}
@@ -1607,7 +1655,7 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
    봇 몸의 CSS 움직임(호버·잡기·조르기)도 같이 탄다 */
 .rk-say{overflow:hidden}
 .rk-ring{
-  position:absolute;left:var(--ring-x,0);top:var(--ring-y,0);width:80px;height:80px;
+  position:absolute;left:var(--ring-x,0);top:var(--ring-y,0);width:var(--rk-bot,80px);height:var(--rk-bot,80px);
   overflow:visible;pointer-events:none;transform-origin:50% 68%;
   transition:transform var(--fast) var(--ease-out);
   --buddy-paper:var(--rk-ring,color-mix(in srgb,var(--ranked) 55%,#000));

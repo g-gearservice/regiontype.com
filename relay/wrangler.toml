@@ -66,6 +66,22 @@ namespace_id = "1005"
   limit = 6
   period = 60
 
+[[ratelimits]]
+# 커뮤니티 쓰기(글·댓글·공감·신고·지우기) 전용 창. 읽기는 세지 않는다
+name = "RL_CM"
+namespace_id = "1006"
+  [ratelimits.simple]
+  limit = 8
+  period = 60
+
+[[ratelimits]]
+# 커뮤니티 읽기(/cm/list·/cm/read). 사람 손으론 닿지 않을 만큼 넉넉하게
+name = "RL_CR"
+namespace_id = "1007"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
 [[routes]]
 pattern = "g.gearservicevanguard.com"
 zone_name = "gearservicevanguard.com"

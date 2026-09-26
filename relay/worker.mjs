@@ -26,6 +26,12 @@
                         만든 패스키·거기서 쓴 복구 코드를 몰라 "남은 비상구" 숫자가 틀릴 수 있다
      GET  /where    이 요청의 나라 코드 (cf.country). 도시는 안 보낸다
 
+     커뮤니티(community/) — 읽기는 누구나, 쓰기는 로그인 + 닉네임
+     GET  /cm/list  ?tag=&before=  글 목록 20개씩
+     GET  /cm/read  ?id=           글 하나와 댓글
+     POST /cm/post  {tag,title,body} · /cm/reply {post,body}
+     POST /cm/up    {target}  공감 켜고 끄기 · /cm/flag {target} 신고 · /cm/del {target} 내 글 지우기
+
        wrangler secret put SESSION_KEY   // 아무 긴 난수. 갈면 모든 세션만 끊긴다 —
                                           // 비상 레버지만 SSO 연결은 안 건드린다
        wrangler secret put SUB_KEY       // 선택. 없으면 SESSION_KEY 로 대신한다.
@@ -1063,7 +1069,7 @@ async function authIntro(req, env, o) {
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
 export const ERASE = ['speed', 'board', 'ladder', 'played', 'ticket', 'profile', 'intro',
-                      'passkey', 'recovery', 'pending', 'sso'];
+                      'passkey', 'recovery', 'pending', 'sso', 'post', 'reply', 'mark'];
 
 async function authErase(req, env, o) {
   const me = await sessionWho(env, req);
@@ -1076,6 +1082,10 @@ async function authErase(req, env, o) {
 
   return safely(o, async () => {
     const rows = await env.DB.batch([
+      /* 내 글에 남이 단 댓글과 그 표시도 같이 간다 — 글이 없으면 볼 길도 없이 고아로 남는다 */
+      env.DB.prepare(`delete from mark where target in (select 'r' || r.id from reply r join post p on p.id = r.post where p.who = ?)
+                        or target in (select 'p' || id from post where who = ?)`).bind(me, me),
+      env.DB.prepare('delete from reply where post in (select id from post where who = ?)').bind(me),
       ...ERASE.map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(me)),
       /* 사람 줄은 맨 끝에 지운다. D1 의 batch 는 한 묶음으로 도니 도중에 엎어지면
          통째로 없던 일이 된다 — 반쯤 지워진 계정이 남지 않는다 */
@@ -1102,6 +1112,158 @@ async function authMe(req, env, o) {
        이걸 보고 안내를 다시 띄울지 정한다 — 두 번 묻지 않기 위한 값 하나다. */
     return send(200, { keys: keys.results[0]?.n ?? 0, codes: codes.results[0]?.n ?? 0,
                        profile: row.results[0] ?? null, intro: !!intro.results[0] }, o);
+  });
+}
+
+/* ── 커뮤니티 ────────────────────────────────────────────
+   사이트 안의 게시판. 읽기는 누구나, 쓰기는 로그인하고 닉네임을 정한 사람만.
+   글은 평문이다 — 서버는 HTML 을 짓지 않고, 화면(community.js)은 textContent 로만
+   그린다. 여기서는 보이지 않는 글자(제어·서식·방향 뒤집기)만 턴다.
+   신고가 FLAGS 개 쌓이면 읽는 쿼리에서 빠진다. 사람 손 검토는 wrangler d1 로 한다.
+   ponytail: 운영자 화면이 없다. 시달리면 mark 에서 flag 순으로 읽는 관리 경로를 연다. */
+export const TAGS = ['brag', 'ask', 'idea', 'chat'];
+const FLAGS = 3, PAGE = 20;
+const CM = { title: 60, body: 2000, reply: 500 };
+/* 여러 줄 글. 줄바꿈만 살리고 나머지 보이지 않는 글자는 지운다. 빈 줄은 하나까지 */
+const prose = (s, n) => String(s ?? '').replace(/\r\n?|[\u2028\u2029]/g, '\n')
+  .replace(/[^\P{C}\n]/gu, '').replace(/[^\S\n]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, n);
+
+export function cmPost(c) {
+  const tag = TAGS.includes(c?.tag) ? c.tag : '';
+  const title = plain(c?.title, CM.title), body = prose(c?.body, CM.body);
+  return { tag, title, body, ok: !!(tag && title && body) };
+}
+export const cmReply = c => {
+  const post = Number(c?.post), body = prose(c?.body, CM.reply);
+  return { post, body, ok: Number.isInteger(post) && post > 0 && !!body };
+};
+/* 공감·신고·지우기의 대상. 'p12' 는 글, 'r40' 은 댓글 */
+export const cmTarget = s => /^[pr][1-9]\d{0,15}$/.test(String(s ?? '')) ? String(s) : '';
+
+/* 글쓴이는 이름·아이디만 보인다. 비공개(shut)면 둘 다 빈다 — 화면이 '익명' 으로 건다.
+   who 는 내보내지 않고 '내 글인가' 하나로 접는다 */
+const AUTHOR = `case when a.shut = 1 then '' else coalesce(a.name, '') end as name,
+                case when a.shut = 1 then '' else coalesce(a.handle, '') end as handle`;
+/* 신고는 가입한 지 사흘 넘은 계정 것만 센다 — 새 계정 셋을 급히 만들어 남의 글을 가리는 길을 좁힌다.
+   가려진 글은 지워지지 않는다. 사람이 mark 를 읽어 신고를 거두면 도로 선다 */
+const FLAG_AGE = 3 * 864e5;
+const hidden = t => `(select count(*) from mark f join user u on u.id = f.who
+   where f.kind = 'flag' and f.target = ${t} and u.at < ${Date.now() - FLAG_AGE}) >= ${FLAGS}`;
+const ups = t => `(select count(*) from mark u where u.kind = 'up' and u.target = ${t})`;
+const mineOf = (rows, me) => rows.map(({ who, ...r }) => ({ ...r, mine: !!me && who === me }));
+
+async function cmList(req, env, o) {
+  const u = new URL(req.url);
+  const tag = TAGS.includes(u.searchParams.get('tag')) ? u.searchParams.get('tag') : '';
+  const before = Number(u.searchParams.get('before')) || 9e15;
+  const me = await sessionWho(env, req);
+  return safely(o, async () => {
+    const { results } = await env.DB.prepare(
+      `select p.id, p.who, p.tag, p.title, substr(p.body, 1, 140) as lead, p.at, ${AUTHOR},
+              ${ups("'p' || p.id")} as ups,
+              (select count(*) from reply r where r.post = p.id) as replies
+         from post p left join profile a on a.who = p.who
+        where p.id < ? and (? = '' or p.tag = ?) and not ${hidden("'p' || p.id")}
+        order by p.id desc limit ?`
+    ).bind(before, tag, tag, PAGE + 1).all();
+    return send(200, { posts: mineOf(results.slice(0, PAGE), me), more: results.length > PAGE }, o);
+  });
+}
+
+async function cmRead(req, env, o) {
+  const id = Number(new URL(req.url).searchParams.get('id'));
+  if (!Number.isInteger(id) || id < 1) return reply(400, '없는 글입니다.', o);
+  const me = await sessionWho(env, req);
+  return safely(o, async () => {
+    const [p, r, m] = await env.DB.batch([
+      env.DB.prepare(
+        `select p.id, p.who, p.tag, p.title, p.body, p.at, ${AUTHOR}, ${ups("'p' || p.id")} as ups
+           from post p left join profile a on a.who = p.who
+          where p.id = ? and not ${hidden("'p' || p.id")}`).bind(id),
+      env.DB.prepare(
+        `select r.id, r.who, r.body, r.at, ${AUTHOR}
+           from reply r left join profile a on a.who = r.who
+          where r.post = ? and not ${hidden("'r' || r.id")} order by r.id limit 200`).bind(id),
+      /* 내가 이 글과 댓글들에 무엇을 눌렀는지. 로그인 안 했으면 빈손이다 */
+      env.DB.prepare(`select kind, target from mark where who = ? and (target = ? or target in
+                        (select 'r' || id from reply where post = ?))`).bind(me ?? '', 'p' + id, id),
+    ]);
+    const post = p.results[0];
+    if (!post) return reply(404, '지워졌거나 가려진 글입니다.', o);
+    const marks = m.results.map(x => x.kind + ':' + x.target);
+    return send(200, { post: { ...mineOf([post], me)[0], upped: marks.includes('up:p' + id) },
+                       replies: mineOf(r.results, me), flagged: marks.filter(x => x.startsWith('flag:')).map(x => x.slice(5)) }, o);
+  });
+}
+
+/* 쓰는 쪽 공통 문. 로그인 → 창 → 닉네임 순이다. 닉네임이 없으면 남 앞에 걸 이름이
+   없다 — 계정을 지운 뒤 남은 토큰도 여기서 걸린다(profile 줄이 없다) */
+async function cmWriter(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return { no: reply(401, '로그인이 필요합니다.', o) };
+  let c;
+  try { c = await req.json(); } catch { return { no: reply(400, '읽을 수 없는 내용입니다.', o) }; }
+  const ok = await pass(env.RL_CM, ip(req));
+  /* 창은 IP 와 계정 둘 다 센다 — IP 를 갈아 끼우는 한 계정도 분당 8 번에서 멈춘다 */
+  const ok2 = ok === true && await pass(env.RL_CM, 'u:' + me);
+  if (ok !== true || ok2 !== true) return { no: shut(ok === true ? ok2 : ok, o) };
+  const named = await env.DB.prepare("select 1 from profile where who = ? and name <> ''").bind(me).first();
+  if (!named) return { no: send(409, { msg: '닉네임을 먼저 정해 주세요.', noname: true }, o) };
+  return { me, c };
+}
+
+async function cmWrite(req, env, o, path) {
+  return safely(o, async () => {
+    const { me, c, no } = await cmWriter(req, env, o);
+    if (no) return no;
+    const now = Date.now();
+    if (path === '/cm/post') {
+      const p = cmPost(c);
+      if (!p.ok) return reply(400, '주제·제목·내용을 모두 채워 주세요.', o);
+      const r = await env.DB.prepare('insert into post (who, tag, title, body, at) values (?, ?, ?, ?, ?) returning id')
+        .bind(me, p.tag, p.title, p.body, now).first();
+      return send(201, { id: r.id }, o);
+    }
+    if (path === '/cm/reply') {
+      const r = cmReply(c);
+      if (!r.ok) return reply(400, '댓글이 비어 있습니다.', o);
+      const row = await env.DB.prepare(
+        `insert into reply (post, who, body, at) select id, ?, ?, ? from post where id = ? returning id`)
+        .bind(me, r.body, now, r.post).first();
+      if (!row) return reply(404, '지워진 글입니다.', o);
+      return send(201, { id: row.id }, o);
+    }
+    const t = cmTarget(c.target);
+    if (!t) return reply(400, '대상이 이상합니다.', o);
+    const [kind, id] = [t[0], Number(t.slice(1))];
+    if (path === '/cm/up' || path === '/cm/flag') {
+      const k = path === '/cm/up' ? 'up' : 'flag';
+      /* 공감은 누를 때마다 켜고 끈다. 신고는 한 번 하면 거두지 않는다 */
+      const had = k === 'up' && await env.DB.prepare(
+        "delete from mark where who = ? and kind = 'up' and target = ? returning 1").bind(me, t).first();
+      if (!had) {
+        const tb = kind === 'p' ? 'post' : 'reply';
+        const r = await env.DB.prepare(`insert or ignore into mark (who, kind, target, at)
+                                        select ?, ?, ?, ? from ${tb} where id = ?`)
+          .bind(me, k, t, now, id).run();
+        const there = r.meta?.changes || await env.DB.prepare(`select 1 from ${tb} where id = ?`).bind(id).first();
+        if (!there) return reply(404, '지워진 글입니다.', o);
+      }
+      const n = await env.DB.prepare('select count(*) as n from mark where kind = ? and target = ?').bind(k, t).first('n');
+      return send(200, k === 'up' ? { on: !had, n } : { on: true }, o);
+    }
+    if (path === '/cm/del') {
+      /* 제 것만 지운다. 글을 지우면 딸린 댓글과 그 표시도 같이 간다 */
+      const tb = kind === 'p' ? 'post' : 'reply';
+      const gone = await env.DB.prepare(`delete from ${tb} where id = ? and who = ? returning id`).bind(id, me).first();
+      if (!gone) return reply(404, '지울 수 없는 글입니다.', o);
+      await env.DB.batch(kind === 'p' ? [
+        env.DB.prepare(`delete from mark where target = ? or target in (select 'r' || id from reply where post = ?)`).bind(t, id),
+        env.DB.prepare('delete from reply where post = ?').bind(id),
+      ] : [env.DB.prepare('delete from mark where target = ?').bind(t)]);
+      return send(200, {}, o);
+    }
+    return reply(405, '받지 않는 요청입니다.', o);
   });
 }
 
@@ -1194,6 +1356,20 @@ export default {
       if (path === '/played' && req.method === 'POST') return playedNormal(req, env, o);
       if (path === '/games' && req.method === 'GET') return myGames(req, env, o);
       if (path === '/ladder' && req.method === 'GET') return ladderTop(req, env, o);
+    }
+    if (path.startsWith('/cm/')) {
+      if (!env.DB) return reply(503, '커뮤니티는 아직 열리지 않았습니다.', o);
+      if (req.method === 'GET') {
+        /* 읽기도 느슨한 창을 둔다. 존 규칙은 POST 만 세서 GET 반복이 D1 읽기를 태운다 */
+        const ok = await pass(env.RL_CR, ip(req));
+        if (ok !== true) return shut(ok, o);
+      }
+      if (path === '/cm/list' && req.method === 'GET') return cmList(req, env, o);
+      if (path === '/cm/read' && req.method === 'GET') return cmRead(req, env, o);
+      if (req.method === 'POST' && ['/cm/post', '/cm/reply', '/cm/up', '/cm/flag', '/cm/del'].includes(path)) {
+        if (!env.SESSION_KEY) return nokey(o);
+        return cmWrite(req, env, o, path);
+      }
     }
     return reply(405, '받지 않는 요청입니다.', o);
   },

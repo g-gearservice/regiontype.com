@@ -1,5 +1,23 @@
 [
   {
+    "v": "0.6.318",
+    "date": "2026-09-27",
+    "ko": "내 계정의 캐릭터 카드가 '내 펫'으로 바뀌었습니다. 홈 봇과 같은 실제 크기와, 고정된 확대 크기를 나란히 놓고 비교할 수 있고, 바로 아래 알약 밀대로 홈 화면 봇 크기를 70%에서 130%까지 직접 맞춥니다. 크기는 이 기기에 저장됩니다.",
+    "en": "The character card on My Account is now 'My pet'. It shows the bot at its real home-screen size next to a fixed zoomed view, and a pill slider right below sets the home bot's size from 70% to 130%. The size is saved on this device."
+  },
+  {
+    "v": "0.6.317",
+    "date": "2026-09-27",
+    "ko": "기록 화면을 둥근 카드와 알약 모양으로 새로 꾸몄습니다. 경쟁전·일반전과 LP 오르내림이 알약 이름표로 보입니다. LP 가 그대로인 판에 내려간 화살표가 붙던 것도 고쳤습니다.",
+    "en": "The records screen is redesigned with rounded cards and pill labels. Ranked/normal and LP changes show as pill tags. Games with no LP change no longer show a down arrow."
+  },
+  {
+    "v": "0.6.316",
+    "date": "2026-09-27",
+    "ko": "사이트 안에 커뮤니티가 생겼습니다. 홈 위쪽의 '커뮤니티'에서 기록을 자랑하고, 막힌 지명을 묻고, 다음 코스를 제안할 수 있습니다. 읽기는 누구나, 글·댓글은 로그인하고 닉네임을 정하면 쓸 수 있습니다. 마음에 드는 글엔 공감을 누르고, 서로 다른 세 사람이 신고한 글은 가려집니다.",
+    "en": "The site now has its own community. Use 'Community' at the top of home to show off records, ask about a place name, or suggest the next course. Anyone can read; posting and replying need sign-in and a nickname. Like the posts you enjoy — a post reported by three different people is hidden."
+  },
+  {
     "v": "0.6.315",
     "date": "2026-09-27",
     "ko": "타자 속도가 치는 동안 실시간으로 바뀝니다. 키를 누를 때마다, 그리고 1초마다 다시 셉니다. 셈은 Monkeytype 과 같습니다 — 시간은 첫 키를 누른 때부터 재고, 확정한 지명의 타수에 지금 치고 있는 입력이 맞는 앞부분이면 그만큼 더합니다. 틀린 입력은 세지 않고, 지명을 찾느라 멈춘 시간도 빼 주지 않습니다. 정확도도 Monkeytype 처럼 키 단위로 셉니다 — 맞게 친 키 ÷ 친 키이고, 지운 키는 세지 않으며, 틀린 이름을 확정한 키는 틀린 키로 칩니다.",

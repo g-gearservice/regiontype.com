@@ -241,3 +241,41 @@ create table if not exists intro (
   nps      integer,
   at       integer not null
 );
+
+-- ── 커뮤니티 ──────────────────────────────────────────────
+-- 사이트 안의 게시판(community/). 읽기는 누구나, 쓰기는 로그인하고 닉네임을 정한
+-- 사람만. 글쓴이 이름은 여기 적지 않는다 — 읽을 때 profile 과 이어 붙인다. 그래야
+-- 닉네임을 바꾸면 옛 글에도 따라가고, 비공개(shut)로 돌리면 옛 글도 가려진다.
+-- 공감·신고·댓글 수는 칸으로 들고 있지 않고 읽을 때 센다 — 계정을 지워 mark·reply
+-- 줄이 빠져도 어긋날 숫자가 없다. 신고가 셋 쌓이면 읽는 쿼리가 그 글을 뺀다.
+--   wrangler d1 execute rt-board --remote --file schema.sql   (표가 더해질 뿐이다)
+create table if not exists post (
+  id    integer primary key autoincrement,
+  who   text    not null,
+  tag   text    not null,             -- 'brag' | 'ask' | 'idea' | 'chat'
+  title text    not null,             -- 60자
+  body  text    not null,             -- 2000자, 줄바꿈 유지
+  at    integer not null
+);
+create index if not exists post_tag on post (tag, id desc);
+create index if not exists post_who on post (who);
+
+create table if not exists reply (
+  id    integer primary key autoincrement,
+  post  integer not null,
+  who   text    not null,
+  body  text    not null,             -- 500자
+  at    integer not null
+);
+create index if not exists reply_post on reply (post, id);
+create index if not exists reply_who on reply (who);
+
+-- 공감(up)과 신고(flag). 한 사람이 한 대상에 한 번. target 은 'p12'(글)·'r40'(댓글)
+create table if not exists mark (
+  who    text    not null,
+  kind   text    not null,
+  target text    not null,
+  at     integer not null,
+  primary key (who, kind, target)
+);
+create index if not exists mark_target on mark (kind, target);
