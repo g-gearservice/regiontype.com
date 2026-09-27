@@ -513,11 +513,17 @@ function botCourses() {
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
 function act(a) {
   if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
+    /* 경쟁전은 꾹 누른 시작하기와 같은 길(go) — 로그인·이름이 없으면 봇이 그걸 조른다 */
+    if (a.ranked) { go(a.course); return; }
     hide();
     doze();
     start(a.course);
+  } else if (a.act === 'set') {
+    /* 설정 통의 주인은 settings.js 다 — 거기서 저장하고 화면에 알린다 */
+    dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { [a.key]: a.value } }));
   } else if (a.act === 'open') {
     if (PAGES.includes(a.page)) { openPage(a.page); return; }
+    if (a.page === 'feedback') { $('[data-fb-open]').click(); return; }
     if (a.page === 'home') { closePage(); return; }
     if (a.page === 'signin') { $('#signinLink').click(); return; }
     /* 설정은 제 손(settings.js)이 링크 click 을 받아 덮개로 연다 */

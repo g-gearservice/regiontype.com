@@ -1281,13 +1281,18 @@ async function cmWrite(req, env, o, path) {
    홈의 Grok 봇이 NVIDIA NIM(OpenAI 꼴 API) 무료 모델에 묻는다. 키(NV_KEY)는 여기에만
    있다 — GH_TOKEN 과 같은 까닭이다. 시스템 말은 여기서만 짓고, 브라우저는 대화와
    고를 수 있는 코스 목록만 보낸다. 봇이 사이트를 움직이는 길(do)은 아래 BOT_ACTS
-   두 가지뿐이고, 여기서 한 번, 브라우저(ranked.js)에서 한 번 더 거른다.
+   (시작·열기·설정)뿐이고, 여기서 한 번, 브라우저(ranked.js)에서 한 번 더 거른다.
        wrangler secret put NV_KEY      // build.nvidia.com 의 API 키 (nvapi-…)
    ponytail: 모델이 JSON 을 약속만 한다(response_format 은 모델마다 달라 안 쓴다).
    못 읽으면 글 전체를 말로만 쓴다 — 틀린 동작보다 동작 없음이 낫다. */
 const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const NV_MODEL = 'deepseek-ai/deepseek-v4.1-flash'; // [vars] NV_MODEL 로 갈 수 있다
-const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account'];
+const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
+/* 봇이 바꿀 수 있는 설정과 그 값. app.js·settings.js 의 DEF 와 같은 키다(lang·country 는
+   개발 중이라 뺀다). time 은 순위표가 판마다 갈리는 그 값들이다 */
+const ONOFF = [true, false];
+export const BOT_SET = { night: ONOFF, sound: ONOFF, motion: ONOFF, grid: ONOFF, hint: ONOFF,
+                         unit: ['auto', 'cpm', 'wpm'], dong: ['admin', 'legal'], time: TIMES };
 const BOT_TURNS = 12, BOT_LINE = 400, BOT_COURSES = 80;
 
 /* 브라우저가 보낸 몸통을 다듬는다. system 은 받지 않는다 — 역할은 user·assistant 둘뿐 */
@@ -1306,12 +1311,23 @@ export function botAsk(c) {
 export function botSystem({ courses, lang, name }) {
   return `You are ${name}, a small round mascot bot living on the home screen of regiontype.com, ` +
     'a typing game where players type place names (districts, provinces) on a map as fast as they can. ' +
-    `Reply in the user's language (site language: ${lang}). Be short, friendly, one to three sentences. ` +
-    'You can control the site. Answer ONLY with one JSON object, no code fence: ' +
-    '{"say":"what you say","do":[actions]}. Actions (do may be empty):\n' +
+    `Reply in the user's language (site language: ${lang}), always politely (in Korean use 존댓말, never 반말). ` +
+    'Be short and friendly, one to three sentences. You can run the whole site for the user.\n' +
+    'Facts: pick a course and press Start for a normal game (time limit from settings). Ranked: ' +
+    '120 seconds, needs sign-in and a leaderboard name; LP goes up or down with the score, accuracy under 80% ' +
+    'loses LP even on a win, leaving mid-game costs 25 LP. Leaderboards are per course and time limit. ' +
+    'Seoul dongs can be administrative (admin) or legal (legal).\n' +
+    'Answer ONLY with one JSON object, no code fence: {"say":"what you say","do":[actions]}. ' +
+    'Actions (do may be empty, at most 3):\n' +
     '{"act":"start","course":"<slug>"} starts a normal game on that course.\n' +
-    `{"act":"open","page":"<${BOT_PAGES.join('|')}>"} opens that screen.\n` +
-    'Only act when the user asks for it. Never invent a slug. Courses (slug: name):\n' +
+    '{"act":"start","course":"<slug>","ranked":true} starts a ranked game on that course.\n' +
+    `{"act":"open","page":"<${BOT_PAGES.join('|')}>"} opens that screen (feedback = the feedback form).\n` +
+    '{"act":"set","key":"<key>","value":<value>} changes a setting: ' +
+    Object.entries(BOT_SET).map(([k, v]) => `${k} ${v.map(x => JSON.stringify(x)).join('|')}`).join('; ') +
+    ' (night = dark mode, motion = animations, grid = background grid, hint = show the place name, ' +
+    'unit = speed unit, dong = Seoul dong kind, time = seconds per game).\n' +
+    'Only act when the user asks. If you cannot do exactly what was asked, say so and ask — never swap in ' +
+    'a different action. Never invent a slug. Courses (slug: name):\n' +
     courses.map(x => `${x.slug}: ${x.label}`).join('\n');
 }
 
@@ -1323,9 +1339,12 @@ export function botAct(text, courses) {
   if (m) try { j = JSON.parse(m[0]); } catch {}
   if (!j || typeof j !== 'object') return { say: cut(raw, BOT_LINE), do: [] };
   const slugs = new Set(courses.map(x => x.slug));
-  const acts = (Array.isArray(j.do) ? j.do : []).slice(0, 2).map(a => {
-    if (a?.act === 'start' && slugs.has(a.course)) return { act: 'start', course: a.course };
+  const acts = (Array.isArray(j.do) ? j.do : []).slice(0, 3).map(a => {
+    if (a?.act === 'start' && slugs.has(a.course)) return { act: 'start', course: a.course, ranked: a.ranked === true };
     if (a?.act === 'open' && BOT_PAGES.includes(a.page)) return { act: 'open', page: a.page };
+    if (a?.act === 'set' && Object.hasOwn(BOT_SET, a.key) && BOT_SET[a.key].includes(a.value)) {
+      return { act: 'set', key: a.key, value: a.value };
+    }
     return null;
   }).filter(Boolean);
   return { say: cut(j.say, BOT_LINE), do: acts };

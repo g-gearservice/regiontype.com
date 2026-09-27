@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS,
-         cmPost, cmTarget, botAsk, botAct, botSystem, onlineId, ONLINE_MS } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botSystem, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
@@ -753,7 +753,14 @@ console.log('security rule self-check done');
   assert.ok(botSystem(a).includes('gangseo: 강서구'));
 
   assert.deepEqual(botAct('{"say":"가자!","do":[{"act":"start","course":"gangseo"}]}', courses),
-    { say: '가자!', do: [{ act: 'start', course: 'gangseo' }] });
+    { say: '가자!', do: [{ act: 'start', course: 'gangseo', ranked: false }] });
+  assert.deepEqual(botAct('{"say":"x","do":[{"act":"start","course":"seoul","ranked":true},{"act":"set","key":"night","value":true},{"act":"set","key":"time","value":60}]}', courses).do,
+    [{ act: 'start', course: 'seoul', ranked: true }, { act: 'set', key: 'night', value: true }, { act: 'set', key: 'time', value: 60 }]);
+  assert.deepEqual(botAct('{"say":"x","do":[{"act":"set","key":"time","value":7},{"act":"set","key":"lang","value":"en"},{"act":"set","key":"night","value":"yes"},{"act":"set","key":"__proto__","value":1}]}', courses).do,
+    [], '모르는 설정·틀린 값은 버린다');
+  assert.equal(botAct('{"say":"x","do":[' + Array(5).fill('{"act":"open","page":"home"}').join(',') + ']}', courses).do.length, 3, '동작은 셋까지');
+  assert.ok(botSystem(a).includes('존댓말') && botSystem(a).includes('"legal"'), '지시문에 말투와 설정 값이 실린다');
+  assert.deepEqual(Object.keys(BOT_SET).sort(), ['dong', 'grid', 'hint', 'motion', 'night', 'sound', 'time', 'unit']);
   assert.deepEqual(botAct('<think>음</think>\n```json\n{"say":"열게요","do":[{"act":"open","page":"ranking"}]}\n```', courses).do,
     [{ act: 'open', page: 'ranking' }], '생각·코드 울타리는 벗긴다');
   assert.deepEqual(botAct('{"say":"x","do":[{"act":"start","course":"mars"},{"act":"open","page":"javascript:alert(1)"},{"act":"eval"}]}', courses).do,
