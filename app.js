@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.27';
+const VER = '3.28';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1020,6 +1020,8 @@ addEventListener('blur', () => aimNudge(null));
 
 /* 홈·플레이 지도를 같은 끌기로 옮긴다. 칸을 눌러 고르는 클릭은 문턱을 넘지 않으면 그대로다 */
 let drag = null, skipClick = false;
+/* 손가락은 누르기만 해도 몇 px 흔들린다 — 마우스 문턱(6px)이면 탭이 끌기로 먹힌다 */
+const slopOf = e => e.pointerType === 'mouse' ? 36 : 196;
 document.addEventListener('click', e => {
   if (!skipClick) return;
   skipClick = false;
@@ -1036,13 +1038,13 @@ $('#regions').addEventListener('pointerdown', e => {
   /* 캡처는 문턱을 넘긴 뒤에만. 처음부터 #regions 가 잡으면 칸 버튼의 click 이
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
   GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
-  drag = { kind: 'home', id: e.pointerId, cx: e.clientX, cy: e.clientY,
+  drag = { kind: 'home', id: e.pointerId, cx: e.clientX, cy: e.clientY, slop: slopOf(e),
            px: GZ.px.x, py: GZ.py.x, moved: false, host: $('#regions') };
 });
 addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
   const sx = e.clientX - drag.cx, sy = e.clientY - drag.cy;
-  if (!drag.moved && sx * sx + sy * sy < 36) return;
+  if (!drag.moved && sx * sx + sy * sy < drag.slop) return;
   if (!drag.moved) {
     drag.moved = true;
     drag.host.classList.add('is-drag');
@@ -1122,11 +1124,41 @@ function mapWheel(e) {
   }
 }
 addEventListener('wheel', mapWheel, { passive: false });
+/* 두 손가락 핀치. gesture* 는 Safari 에만 있어 안드로이드는 포인터 둘의 거리로 잰다.
+   둘째 손가락이 닿으면 한 손가락 끌기는 놓고, 뗀 뒤의 click 은 삼킨다 */
+const fingersOn = new Map();
+let pinchD = 0;
+const pinchSpan = () => { const [a, b] = [...fingersOn.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
+  if (fingersOn.size !== 2) return;
+  if (drag) { if (drag.host) drag.host.classList.remove('is-drag'); drag = null; }
+  pinchD = pinchSpan();
+}, true);
+addEventListener('pointermove', e => {
+  if (!fingersOn.has(e.pointerId)) return;
+  fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
+  if (fingersOn.size !== 2 || !pinchD) return;
+  const d = pinchSpan(), [a, b] = [...fingersOn.values()];
+  const zoomAt = $('#regions').classList.contains('on') ? zoomHomeAt
+    : $('#play').classList.contains('on') ? zoomPlayAt : null;
+  if (zoomAt && d > 0) zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, d / pinchD);
+  pinchD = d;
+}, true);
+const fingerUp = e => {
+  if (!fingersOn.delete(e.pointerId)) return;
+  if (pinchD) { skipClick = true; setTimeout(() => { skipClick = false; }, 350); }
+  if (fingersOn.size < 2) pinchD = 0;
+};
+addEventListener('pointerup', fingerUp, true);
+addEventListener('pointercancel', fingerUp, true);
 function wirePinch(el, zoomAt) {
   let last = 1;
   el.addEventListener('gesturestart', e => { e.preventDefault(); last = 1; });
   el.addEventListener('gesturechange', e => {
     e.preventDefault();
+    if (fingersOn.size > 1) return;   // iOS 터치 핀치는 위의 포인터 쪽이 맡는다(맥 트랙패드만 여기)
     const f = e.scale / last;
     last = e.scale;
     zoomAt(e.clientX, e.clientY, f);
@@ -1467,11 +1499,10 @@ async function start(slug, only, rk) {
   /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
      기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
   if (fingers()) { go('play'); $('#typein').focus(); }
-  // 데스크톱은 3배로만 돈다. 손가락 화면은 세로로 좁아 서울 전체가 폭에 드는 1배다
-  const zoom = fingers() ? 1 : 3;
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [course, geom] = await load(slug);
+  const zoom = playZoom(geom);
   /* only 가 있으면 고른 곳만 친다. 나머지 도트는 배경으로 남아 어디인지 보인다 */
   const pick = only ? course.items.filter(it => only.has(it.name)) : course.items;
   const items = (pick.length ? pick : course.items).map(it => {
@@ -1496,6 +1527,7 @@ async function start(slug, only, rk) {
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
   G.view = [geom.w, geom.h];
+  fitPlayK();
   // 정보 줄을 먼저 비운다 — aim() 이 띄운 첫 목표를 곧바로 지워버리던 순서였다
   $('#fact').classList.remove('on');
   $('#fact').innerHTML = '';
@@ -1514,6 +1546,25 @@ async function start(slug, only, rk) {
   go('play');
   stop();
   countdown(3, run);
+}
+
+/* 데스크톱은 3배로만 돈다. 손가락 화면은 세로로 좁아 1배면 도트가 몇 px 로 뭉개져
+   무엇이 차는지 안 보인다 — 도트 한 알이 화면에서 PHONE_DOT px 가 되게 1~3배 사이에서
+   고른다(.5 단위). 카메라는 데스크톱처럼 aim() 이 목표를 따라간다 */
+const PHONE_DOT = 14;
+/* 테두리·라벨은 --z 로 역보정해 화면상 크기를 지키는데, 폰은 지도 자체가 크게
+   줄어 있어 그것만으로는 테두리가 1px 아래로 사라진다. 줄어든 몫(1/fit)을 --k 로 더 준다 */
+function fitPlayK() {
+  if (!fingers() || !G || !G.view) return;
+  const r = $('#map').getBoundingClientRect(), fit = Math.min(r.width / G.view[0], r.height / G.view[1]);
+  if (fit > 0) $('#map').style.setProperty('--k', (1 / fit).toFixed(3));
+}
+function playZoom(geom) {
+  if (!fingers()) return 3;
+  const r = $('#map').getBoundingClientRect();
+  const fit = Math.min(r.width / geom.w, r.height / geom.h);
+  if (!(fit > 0)) return 1;
+  return Math.min(3, Math.max(1, Math.round(PHONE_DOT / (fit * geom.cell) * 2) / 2));
 }
 
 /* 도트 지도 — 격자 한 칸이 원 하나. */
@@ -1816,7 +1867,7 @@ $('#play').addEventListener('pointerdown', e => {
   if (!p) return;
   const map = $('#map');
   drag = { kind: 'play', id: e.pointerId, x: p.x, y: p.y, tx: G.tx, ty: G.ty,
-           cx: e.clientX, cy: e.clientY, moved: false, host: map };
+           cx: e.clientX, cy: e.clientY, slop: slopOf(e), moved: false, host: map };
   map.setPointerCapture(e.pointerId);
 });
 
@@ -1836,7 +1887,7 @@ $('#typein').addEventListener('blur', markFocus);
    레이아웃을 줄이고, iOS 는 그걸 몰라 visualViewport 로 잰다 */
 if (window.visualViewport) {
   const vv = visualViewport, st = document.documentElement.style;
-  const fitVV = () => { st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); };
+  const fitVV = () => { st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); requestAnimationFrame(fitPlayK); };
   vv.addEventListener('resize', fitVV);
   vv.addEventListener('scroll', fitVV);
 }
