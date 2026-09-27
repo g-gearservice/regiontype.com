@@ -421,7 +421,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 
 /* ── 결과 ─────────────────────────────── */
 .result-wrap{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap}
-#card{width:min(620px,50vw);height:auto;box-shadow:0 12px 28px -18px rgba(40,60,70,.6)}
+#card{width:min(360px,100%);height:auto;box-shadow:0 12px 28px -18px rgba(40,60,70,.6)}
 .scores p{display:flex;align-items:baseline;gap:10px}
 .scores b{font-size:44px;font-weight:800;letter-spacing:-.02em}
 .scores span{color:var(--ink-soft)}
@@ -1354,17 +1354,20 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .pet-lt{align-self:end;margin-bottom:34px;font-size:22px;color:var(--ink-soft)}
 .character-real{position:relative;flex:none;width:calc(80px * var(--bot-scale,1));height:calc(80px * var(--bot-scale,1));transition:width var(--fast) var(--ease-out),height var(--fast) var(--ease-out)}
 .character-real .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
-/* 알약 밀대 — 굵은 테의 알약 길 위에 알약 손잡이. 왼쪽 위로 난 꼬리가 실제 크기를 가리킨다.
-   숫자(%)를 함께 둔다(색·위치만으로 가르지 않는다) */
+/* 알약 밀대 — 굵은 테의 알약 길 위에 알약 손잡이. 테 위로 난 삼각 꼭지가 '실제 크기'
+   글자 바로 아래에서 위를 가리킨다. 숫자(%)는 읽기 도구에 준다(aria-valuetext) */
 .pet-size{position:relative;display:flex;align-items:center;height:40px;padding:0 5px;border:2.5px solid var(--ink);border-radius:999px;background:var(--profile-soft)}
-/* 꼬리는 테 위로 난 윗삼각만 남기고(clip-path) 손잡이보다 위에 둔다 — 안쪽으로 파고들면
-   지나가는 손잡이와 겹쳐 하트처럼 보인다. 테 선까지만 덮어 꼬리와 길이 한 줄로 이어진다 */
-.pet-size::before{
-  content:"";position:absolute;z-index:1;left:calc(25% - 8px);top:-7.5px;width:16px;height:16px;
-  background:var(--profile-soft);border:2.5px solid var(--ink);border-right:0;border-bottom:0;
-  border-radius:10px 2px 0 2px;transform:rotate(45deg);
-  clip-path:polygon(0 0,100% 0,100% 12%,12% 100%,0 100%);pointer-events:none;
+/* 꼭지 = 먹색 삼각(::before) 위에 길 색 삼각(::after)을 겹친 것. 안쪽 삼각이 테 선까지
+   덮어 테와 꼭지가 한 줄 윤곽으로 이어진다(이음새 없음). 두 삼각 모두 밑변이 테 안쪽
+   끝(top:0)에 닿는다 — 안쪽은 45° 빗변에서 테 두께 2.5px 만큼(×√2) 줄인다.
+   가로 자리 --tail-x 는 account.js 가 '실제 크기' 글자 가운데를 재어 넣는다 */
+.pet-size::before,.pet-size::after{
+  content:"";position:absolute;z-index:1;bottom:100%;left:var(--tail-x,25%);
+  transform:translateX(-50%);clip-path:polygon(50% 0,100% 100%,0 100%);pointer-events:none;
 }
+.pet-size::before{width:20px;height:10px;background:var(--ink)}
+/* 안쪽은 1px 더 내려(빗변은 그대로) 테 안쪽 끝의 반 픽셀 선까지 덮는다 */
+.pet-size::after{bottom:calc(100% - 1px);width:14.9px;height:7.45px;background:var(--profile-soft)}
 .pet-size input{position:relative;z-index:0;flex:1;min-width:0;height:30px;margin:0;background:none;-webkit-appearance:none;appearance:none;cursor:pointer}
 .pet-size input::-webkit-slider-runnable-track{height:30px;border-radius:999px;background:transparent}
 .pet-size input::-moz-range-track{height:30px;border-radius:999px;background:transparent}
