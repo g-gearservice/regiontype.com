@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.28';
+const VER = '3.29';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1033,13 +1033,13 @@ $('#regions').addEventListener('dragstart', e => {
   if (e.target.closest && e.target.closest('.navbar, .nav-bot')) e.preventDefault();
 });
 $('#regions').addEventListener('pointerdown', e => {
-  if (e.button || !$('#regions').classList.contains('on')) return;
+  if (e.button || !$('#regions').classList.contains('on') || fingersOn.size > 1) return;
   if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
   /* 캡처는 문턱을 넘긴 뒤에만. 처음부터 #regions 가 잡으면 칸 버튼의 click 이
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
   GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
   drag = { kind: 'home', id: e.pointerId, cx: e.clientX, cy: e.clientY, slop: slopOf(e),
-           px: GZ.px.x, py: GZ.py.x, moved: false, host: $('#regions') };
+           touch: e.pointerType !== 'mouse', px: GZ.px.x, py: GZ.py.x, moved: false, host: $('#regions') };
 });
 addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
@@ -1050,6 +1050,8 @@ addEventListener('pointermove', e => {
     drag.host.classList.add('is-drag');
     if (drag.kind === 'home') { try { drag.host.setPointerCapture(drag.id); } catch {} }
   }
+  (drag.hist || (drag.hist = [])).push([performance.now(), e.clientX, e.clientY]);
+  if (drag.hist.length > 8) drag.hist.shift();
   if (drag.kind === 'play') {
     const p = viewPoint(e);
     if (!p || !G) return;
@@ -1061,7 +1063,45 @@ function dragEnd(e) {
   if (!drag || (e && e.pointerId !== drag.id)) return;
   if (drag.host) drag.host.classList.remove('is-drag');
   if (drag.moved) skipClick = true;
+  if (drag.moved && drag.touch && e && e.type === 'pointerup') fling(drag);
   drag = null;
+}
+/* 손가락으로 튕기고 떼면 그 속도로 조금 더 미끄러진다 — 폰 지도의 관성.
+   멈췄다가 뗐거나 모션을 줄였으면 없다. 마우스 끌기는 예전 그대로 선다 */
+const FLING_MS = 260;
+function fling(d) {
+  const h = d.hist;
+  if (!h || h.length < 2 || calm()) return;
+  const [t1, x1, y1] = h[h.length - 1];
+  if (performance.now() - t1 > 60) return;
+  const f = h.find(s => t1 - s[0] <= 100), dt = t1 - f[0];
+  if (dt < 8) return;
+  const vx = (x1 - f[1]) / dt, vy = (y1 - f[2]) / dt;
+  if (Math.hypot(vx, vy) < .3) return;
+  panBy(d.kind, vx * FLING_MS, vy * FLING_MS, true);
+}
+/* 화면 px 만큼 지도를 민다. glide 면 스프링·전환을 태워 미끄러지게 */
+function panBy(kind, dx, dy, glide) {
+  if (kind === 'home') {
+    if (glide) aimHomeCam(COURSE.px + dx, COURSE.py + dy, COURSE.z);
+    else shiftHome(COURSE.px + dx, COURSE.py + dy);
+    return;
+  }
+  const a = viewPoint({ clientX: 0, clientY: 0 }), b = viewPoint({ clientX: dx, clientY: dy });
+  if (!a || !b) return;
+  look(G.tx + b.x - a.x, G.ty + b.y - a.y);
+  if (glide) followGrid(600); else syncGrid();
+}
+/* 핀치에서 한 손가락이 남으면 그 손가락으로 끌기를 이어 간다 */
+function resumeDrag(kind, id, x, y) {
+  if (kind === 'home') {
+    drag = { kind, id, cx: x, cy: y, px: COURSE.px, py: COURSE.py, touch: true, moved: true, host: $('#regions') };
+  } else {
+    const p = viewPoint({ clientX: x, clientY: y });
+    if (!p) return;
+    drag = { kind, id, x: p.x, y: p.y, tx: G.tx, ty: G.ty, cx: x, cy: y, touch: true, moved: true, host: $('#map') };
+  }
+  drag.host.classList.add('is-drag');
 }
 addEventListener('pointerup', dragEnd);
 addEventListener('pointercancel', dragEnd);
@@ -1127,29 +1167,39 @@ addEventListener('wheel', mapWheel, { passive: false });
 /* 두 손가락 핀치. gesture* 는 Safari 에만 있어 안드로이드는 포인터 둘의 거리로 잰다.
    둘째 손가락이 닿으면 한 손가락 끌기는 놓고, 뗀 뒤의 click 은 삼킨다 */
 const fingersOn = new Map();
-let pinchD = 0;
+let pinchD = 0, pinchM = null;
+const pinchKind = () => $('#regions').classList.contains('on') ? 'home'
+  : $('#play').classList.contains('on') && G && G.cam ? 'play' : null;
 const pinchSpan = () => { const [a, b] = [...fingersOn.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
 addEventListener('pointerdown', e => {
   if (e.pointerType !== 'touch') return;
   fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
   if (fingersOn.size !== 2) return;
   if (drag) { if (drag.host) drag.host.classList.remove('is-drag'); drag = null; }
-  pinchD = pinchSpan();
+  const [a, b] = [...fingersOn.values()];
+  pinchD = pinchSpan(); pinchM = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 }, true);
 addEventListener('pointermove', e => {
   if (!fingersOn.has(e.pointerId)) return;
   fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
   if (fingersOn.size !== 2 || !pinchD) return;
-  const d = pinchSpan(), [a, b] = [...fingersOn.values()];
-  const zoomAt = $('#regions').classList.contains('on') ? zoomHomeAt
-    : $('#play').classList.contains('on') ? zoomPlayAt : null;
-  if (zoomAt && d > 0) zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, d / pinchD);
-  pinchD = d;
+  /* 두 손가락 사이가 벌어진 만큼 확대하고, 가운데가 움직인 만큼 민다 — 지도 앱처럼 */
+  const d = pinchSpan(), [a, b] = [...fingersOn.values()], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const kind = pinchKind();
+  if (kind && d > 0) {
+    (kind === 'home' ? zoomHomeAt : zoomPlayAt)(m[0], m[1], d / pinchD);
+    panBy(kind, m[0] - pinchM[0], m[1] - pinchM[1], false);
+  }
+  pinchD = d; pinchM = m;
 }, true);
 const fingerUp = e => {
   if (!fingersOn.delete(e.pointerId)) return;
-  if (pinchD) { skipClick = true; setTimeout(() => { skipClick = false; }, 350); }
-  if (fingersOn.size < 2) pinchD = 0;
+  if (!pinchD) return;
+  skipClick = true; setTimeout(() => { skipClick = false; }, 350);
+  if (fingersOn.size > 1) return;
+  pinchD = 0;
+  const kind = pinchKind(), [[id, [x, y]] = []] = [...fingersOn];
+  if (kind && id != null) resumeDrag(kind, id, x, y);
 };
 addEventListener('pointerup', fingerUp, true);
 addEventListener('pointercancel', fingerUp, true);
@@ -1862,11 +1912,11 @@ $('#play').addEventListener('pointerdown', e => {
   if (e.target.closest('button, a, input, select, textarea')) return;
   e.preventDefault();
   $('#typein').focus();
-  if (!G || !G.cam || e.button) return;
+  if (!G || !G.cam || e.button || fingersOn.size > 1) return;
   const p = viewPoint(e);
   if (!p) return;
   const map = $('#map');
-  drag = { kind: 'play', id: e.pointerId, x: p.x, y: p.y, tx: G.tx, ty: G.ty,
+  drag = { kind: 'play', id: e.pointerId, x: p.x, y: p.y, tx: G.tx, ty: G.ty, touch: e.pointerType !== 'mouse',
            cx: e.clientX, cy: e.clientY, slop: slopOf(e), moved: false, host: map };
   map.setPointerCapture(e.pointerId);
 });
