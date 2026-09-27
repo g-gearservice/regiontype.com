@@ -8,7 +8,13 @@
 
 # English
 
-A typing drill for place names. v0.7.321 (`VER=3.21`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.7.322 (`VER=3.22`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.7.322
+
+- Ranked mode shows who is on the site right now. Hold Play to arm ranked and a quarter-circle slides out from the bottom-left corner on a diagonal, with a blinking red dot and the live tab count (“now online”). Disarm ranked and it slides back. Each visible tab pings `POST /online` every two minutes with a per-tab random id (not an account or IP); tabs that go to the background stop pinging. Counts older than five minutes drop off. The home bot, if it was sleeping in that corner, moves to the bottom-right while the fan is out and returns when ranked turns off.
+- The relay keeps an `online` D1 table for this count; ranked matchmaking can read the same table later. Deploy already applied the schema and shipped `/online`.
+- Screen readers hear “n people online now.” Reduced-motion skips the slide and the blink.
 
 ## What's new in 0.7.321
 

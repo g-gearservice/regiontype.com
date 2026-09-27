@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.322",
+    "date": "2026-09-27",
+    "ko": "경쟁전을 켜면 왼쪽 아래 모서리에서 '지금 접속' 원이 대각선으로 나옵니다. 깜빡이는 점과 함께 지금 사이트를 보고 있는 탭 수가 보이고, 경쟁전을 끄면 다시 들어갑니다. 각 탭이 2분마다 중계기에 살아 있다고만 알리며, 계정·IP와는 묶이지 않습니다.",
+    "en": "Turn ranked on and a 'now online' fan slides out from the bottom-left corner on a diagonal — a blinking dot and the count of tabs currently on the site. Turn ranked off and it slides back. Each open tab pings the relay every two minutes; the id is a per-tab random, not tied to an account or IP."
+  },
+  {
     "v": "0.7.321",
     "date": "2026-09-27",
     "ko": "홈 봇과 대화할 수 있습니다. 봇을 누르면 말풍선에 입력칸이 열리고, 부탁하면 코스를 시작하거나 순위·기록·설정 같은 화면을 대신 열어 줍니다(NVIDIA의 무료 AI 모델). 설정의 게임 탭에서 서울 동을 행정동과 법정동 가운데 고를 수 있습니다. 법정동은 서울시 '자치구별 동 현황'의 467곳을 경계와 맞춰 25개 구마다 새로 그렸고, 종로·중구의 작은 '가'까지 모두 제자리에 점이 찍힙니다. 순위표는 둘이 따로 섭니다.",
