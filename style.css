@@ -678,6 +678,11 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 @keyframes aimpulse{50%{stroke-opacity:.25}}
 @media (prefers-reduced-motion:reduce){ #map g.target circle{animation:none} }
+/* 폰은 지도가 줄어 있다 — app.js 의 --k 로 그 몫까지 되돌려 테두리·이름이 화면에서 읽히게 */
+@media (pointer:coarse){
+  #map g.target circle{stroke-width:calc(2.4px * var(--k,1) / var(--z,1))}
+  #map text{font-size:calc(14px * var(--k,1) / var(--z,1))}
+}
 
 /* ── 이름 타일 — 비트맵 위에 얹는다 ────────────────────── */
 #map .tiles > g{
