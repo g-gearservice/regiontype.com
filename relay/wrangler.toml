@@ -82,6 +82,31 @@ namespace_id = "1007"
   limit = 120
   period = 60
 
+[[ratelimits]]
+# 봇 대화(/bot/chat). NVIDIA 무료 키는 키 하나에 분당 40 남짓이라 한 IP 가 다 못 먹게
+name = "RL_BT"
+namespace_id = "1008"
+  [ratelimits.simple]
+  limit = 6
+  period = 60
+
+[[ratelimits]]
+# 봇 대화 전체 창. 키는 'all' 하나 — 무료 키 한도(분당 40 남짓) 밑에서 모두가 나눈다
+name = "RL_BA"
+namespace_id = "1009"
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[ratelimits]]
+# 지금 접속(/online). 탭 하나가 2분에 한 번이라, 학교·사무실처럼 IP 하나를 여럿이
+# 써도 걸리지 않게 넉넉히 둔다
+name = "RL_ON"
+namespace_id = "1010"
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
 [[routes]]
 pattern = "g.gearservicevanguard.com"
 zone_name = "gearservicevanguard.com"

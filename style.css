@@ -1576,6 +1576,34 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
    봇이 조르는 동안에만 로고를 잡을 수 있다 — 쥐는 손이 되고, 끌어내리면 봇이 나온다(ranked.js) */
 #regions .navbar .nav-logo{user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
 body.rk-intro #regions .navbar .nav-logo{cursor:grab}
+/* 지금 접속 — 경쟁전을 켜면(rk-ready) 왼쪽 아래 귀퉁이에서 대각선으로 밀려 나오는 부채.
+   빛깔은 경쟁전 빛깔(--rk-on)이고, 점과 숫자는 귀퉁이의 45° 선 위에 눕는다. 봇은 층이
+   위라(.rk-layer) 겹쳐도 가리지 않는다 — 왼쪽 아래에서 자던 봇은 ranked.js 가 비켜 둔다 */
+.rk-live{
+  --r:clamp(128px,12vw,168px);
+  position:fixed;left:0;bottom:0;z-index:4;width:var(--r);height:var(--r);margin:0;
+  background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);
+  border-top-right-radius:100%;pointer-events:none;
+  translate:-100% 100%;transition:translate var(--si-dur) var(--ease-out);
+}
+.rk-live[hidden]{display:none}
+body.rk-ready .rk-live{translate:0 0}
+body:is(.signing,.setting,.paging) .rk-live{translate:-100% 100%}
+.rk-live-in{
+  position:absolute;left:44%;bottom:44%;translate:-50% 50%;rotate:45deg;
+  display:flex;align-items:center;gap:.45em;
+  font-size:calc(var(--r) * .15);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;
+}
+/* 켜져 있다는 점. 빨강 봇 위에서도 보이게 글자색 테를 두른다 */
+.rk-live-in i{
+  width:.62em;height:.62em;border-radius:50%;background:var(--bad);
+  box-shadow:0 0 0 2px color-mix(in srgb,currentColor 80%,transparent);
+  animation:rk-live 2s ease-in-out infinite;
+}
+@keyframes rk-live{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){ .rk-live-in i{animation:none} }
+:root[data-motion="off"] .rk-live-in i{animation:none}
+@media (pointer:coarse){ .rk-live{--r:112px} }
 .rk-layer{position:fixed;inset:0;z-index:5;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
 .rk-layer[hidden]{display:none}
 /* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */

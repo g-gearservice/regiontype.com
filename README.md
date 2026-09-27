@@ -8,9 +8,26 @@
 
 # English
 
-A typing drill for place names. v0.6.266 (`VER=2.66`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.7.321 (`VER=3.21`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
-## Unreleased
+## What's new in 0.7.321
+
+- The home bot talks. Click it (or focus it and press Enter) and a text box opens in its speech bubble; the reply comes from a free NVIDIA NIM model (`deepseek-ai/deepseek-v4.1-flash`) through the relay's new `POST /bot/chat`. The bot can also drive the site: start a course, or open Home, Ranking, Records, Settings, Community, About, Sign-in or My Account. Only those two actions exist, and they are filtered twice — by the relay against the course list the page sent, and again in `ranked.js`. Esc closes the box and returns focus to the bot. The conversation lives only in the tab.
+- Seoul dongs can be played as administrative dongs or legal dongs (Settings → Game). The 467 legal dongs from the Seoul register are drawn for all 25 districts as `data/*-bdong.*.json`; each kind keeps its own leaderboard.
+- The privacy policy lists NVIDIA as a third party: what you type to the bot (the last few lines) goes to its model. The session token is not sent with it.
+- B goes from 6 to 7 for the chatting bot.
+
+## What's new in 0.6.267 – 0.6.319
+
+- 0.6.319: the community CSP lives in the page itself; the relay no longer adds replies, ups or flags to hidden posts, leaves marks behind on account erase, or 503s on non-object bodies.
+- 0.6.318: an in-site community, a redesigned records screen, and "My pet" with real-size vs zoomed bots and a pill slider for the home bot's size.
+- 0.6.315: live typing speed, speed and accuracy counted per keystroke like Monkeytype; the home bot dozes off in stages.
+- 0.6.310 – 0.6.311: speed counted in keystrokes like Hancom Taja; the bot sleeps with closed eyes and drifting z's, and its eyes are tinted to its body colour.
+- 0.6.308: the Grok bot became a draggable home-screen helper with a sign-up rescue tour; ranked starts by holding Play; an illustrated how-to guide.
+- 0.6.285 – 0.6.288: account profile on the server, account deletion, onboarding survey.
+- 0.6.267 – 0.6.270: Turnstile before feedback becomes an issue; the account page and security tab; Shift-click to pick several districts.
+
+Details from that stretch:
 
 - My Account is an overlay on the home screen (`#account`), like Settings, Ranking and Records — closing it leaves home exactly as it was. `account/account.js` loads on first open; `/account/` only forwards to `/#account`. A newly created account goes through the welcome survey after sign-in; returning users go home. The relay reports whether the account was actually created, so this does not depend on browser storage.
 - Security settings use the Figma card layout while retaining passkey registration and recovery codes. Device history, login alerts, account deletion, and session-wide sign-out remain unavailable until server support exists.
@@ -418,6 +435,7 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
     wrangler secret put GH_TOKEN     # fine-grained token with Issues write on that repo
     wrangler secret put TURNSTILE_SITEKEY # public widget key, kept as deploy-time config
     wrangler secret put TURNSTILE_SECRET  # server-side verification secret
+    wrangler secret put NV_KEY       # build.nvidia.com API key (nvapi-…), for the home bot's chat
     wrangler deploy
 
 Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
@@ -431,6 +449,12 @@ It is an open URL that creates issues, so the relay requires both a per-IP windo
 The window is counted with a `ratelimit` binding. **It used to use the Cache API, which `workers.dev` silently ignores** — `put` is dropped and `match` is always empty, so the window never actually ran. A wall that looks closed and is open is worse than no wall. If the binding is missing, the door returns 503 instead of 200.
 
 We never accept a reply address in any shape. A missing field in the UI is not enough — if the relay reads that field, anyone can plant someone else's email on a public issue.
+
+### Bot chat (`relay/` → NVIDIA NIM)
+
+    POST /bot/chat  {msgs, courses, lang, name} → {say, do}
+
+The key stays in the Worker as `NV_KEY`; without it the path answers 503 and the bot says it cannot talk right now. The system prompt is built only in the Worker, and the browser can send only `user` and `assistant` turns (last 12, 400 characters each). The model is asked for one JSON object; `botAct` keeps at most two actions, each `start` with a course from the list the page sent or `open` with a known page. Anything else is dropped, and text that is not JSON is shown as plain speech. Two rate windows guard the free key: `RL_BT` per IP (6 a minute) and `RL_BA` shared by everyone (30 a minute). To try another model, set `NV_MODEL` under `[vars]`.
 
 ### Leaderboard (`relay/` + D1)
 
