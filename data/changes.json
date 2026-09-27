@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.329",
+    "date": "2026-09-28",
+    "ko": "폰 지도 조작이 지도 앱처럼 바뀌었습니다. 핀치는 두 손가락 사이를 붙잡고 확대하며 함께 밀 수 있고, 한 손가락을 떼면 남은 손가락으로 계속 끌 수 있습니다. 튕기고 놓으면 조금 더 미끄러집니다.",
+    "en": "Phone map controls now feel like a maps app: pinching zooms around your fingers and pans as they move, lifting one finger lets you keep dragging with the other, and a flick keeps the map gliding a little."
+  },
+  {
     "v": "0.7.328",
     "date": "2026-09-28",
     "ko": "폰에서 두 손가락으로 지도를 확대·축소할 수 있고(안드로이드 포함), 살짝 흔들린 탭도 눌린 것으로 받습니다. 플레이 화면은 도트가 읽히는 크기로 확대해 목표를 따라가고, 목표 테두리와 지명 글자가 폰에서도 또렷합니다.",
