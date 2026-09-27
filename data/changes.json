@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.324",
+    "date": "2026-09-27",
+    "ko": "폰과 좁은 화면에서도 칠 수 있습니다. '물리 키보드가 필요합니다' 안내 대신 홈이 그대로 열리고, 코스를 고른 뒤 플레이 화면을 누르면 화상 키보드가 떠 한 판을 끝까지 칠 수 있습니다.",
+    "en": "Phones and narrow screens can play now. Instead of the \"physical keyboard needed\" notice the home screen opens as usual; pick a course, tap the play screen to bring up the on-screen keyboard, and type a full round."
+  },
+  {
     "v": "0.7.323",
     "date": "2026-09-27",
     "ko": "홈 봇이 사이트 대부분을 대신 다룹니다. 일반전뿐 아니라 경쟁전도 시작하고, 야간 모드·효과음·애니메이션·그리드·속도 단위·서울 동 구분·제한 시간 같은 설정을 바꾸고, 피드백 창도 엽니다. 늘 존댓말로 답하고, 부탁받은 일을 할 수 없으면 다른 일로 바꿔 하지 않고 먼저 묻습니다.",
