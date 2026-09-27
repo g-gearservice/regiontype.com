@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.19';
+const VER = '3.21';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -135,7 +135,7 @@ const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
 const showSpeed = cpm => speedIn(cpm) + ' ' + unitLabel();
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
-              lang: 'auto', country: 'auto', unit: 'auto' };
+              lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -816,19 +816,21 @@ async function openCourse(host) {
   planCourses();
 }
 
+/* 설정 게임 탭의 동 구분. 법정동이면 구 칸이 법정동 코스(-bdong)를 가리킨다 */
+const dongSlug = slug => opt.dong === 'legal' ? slug.replace(/-dong$/, '-bdong') : slug;
 async function renderCourses() {
   /* 서울만 연다. 설정 지역 탭은 개발 중이라 고른 나라가 홈 지도를 바꾸지 않는다 */
   const [tree, names] = await KR;
   const root = 'seoul-gu';
   openGen++;
   OPEN = null;
-  const was = PICK && PICK.slug;
+  const was = PICK && (PICK.kid ? PICK.parent.name : PICK.name);
   GZ.px.x = GZ.px.to = 0; GZ.px.v = 0;
   GZ.py.x = GZ.py.to = 0; GZ.py.v = 0;
   GZ.cz.x = GZ.cz.to = 1; GZ.cz.v = 0;
   COURSE = { tree, names, root, px: 0, py: 0, z: 1, map: SEOUL_MAP,
     tiles: courseList(root, tree).map(it => {
-    const tile = makeTile(placeName(names, root, it.name), it.slug, false);
+    const tile = makeTile(placeName(names, root, it.name), dongSlug(it.slug), false);
     tile.name = it.name;
     tile.short = placeName(names, root, it.name, true);
     tile.cell = SEOUL_CELLS[it.slug];
@@ -837,7 +839,7 @@ async function renderCourses() {
   }) };
   $('#courseBtns').replaceChildren(...COURSE.tiles.map(tile => tile.el));
   paintCourseHead('');
-  pickTile(COURSE.tiles.find(tile => tile.slug === was) || null);
+  pickTile(COURSE.tiles.find(tile => tile.name === was) || null);
   planCourses(true);
   COURSE.tiles.forEach(paintTile);
 }
@@ -1433,7 +1435,9 @@ async function boot() {
   addEventListener('rt-opt', () => {
     const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
     for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
+    const dong = opt.dong;
     Object.assign(opt, next);
+    if (opt.dong !== dong) renderCourses();
     document.documentElement.toggleAttribute('data-night', opt.night);
     document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
     document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
@@ -2324,6 +2328,10 @@ if (location.search.includes('rt=1')) {
   } };
   console.assert(courseList('kr-admin', tree).map(c => c.slug).join() === 'seoul-gu',
     '칸은 뿌리 바로 아래 코스만, 빈 자리는 뺀다 — 나라 코스는 머리글');
+  { const was = opt.dong;
+    opt.dong = 'legal';
+    console.assert(dongSlug('gangseo-dong') === 'gangseo-bdong' && dongSlug('seoul-gu') === 'seoul-gu', '법정동은 구 코스만 바꾼다');
+    opt.dong = was; }
   console.assert(courseList('seoul-gu', tree).map(c => c.slug).join() === 'gangseo-dong',
     '서울 칸은 자치구 코스만');
   console.assert(courseList('us-admin', null).length === 0, 'tree 없으면 칸 없이 머리글만');

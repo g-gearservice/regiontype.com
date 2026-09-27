@@ -34,10 +34,11 @@ const readFace = () => {
   catch { return {}; }
 };
 
-async function ask(path, body) {
+/* anon — 세션 토큰을 싣지 않는다. 봇 대화는 로그인과 상관없고, 안 보내면 샐 일도 없다 */
+async function ask(path, body, anon) {
   const head = {};
   if (body) head['content-type'] = 'application/json';
-  if (token()) head.authorization = 'Bearer ' + token();
+  if (token() && !anon) head.authorization = 'Bearer ' + token();
   const r = await fetch(RELAY + path, body
     ? { method: 'POST', headers: head, body: JSON.stringify(body) } : { headers: head });
   const d = await r.json().catch(() => ({}));
@@ -260,7 +261,7 @@ async function fillRecords() {
    (키보드는 로고에서 ↓) 나와서 화면 오른쪽에서부터 한 번만 둘러보기를 한다. 로고로
    봇을 꺼내는 건 이때뿐이다 — 그 뒤 로고는 그냥 홈 링크다. 자세한 플레이 방법은
    소개 페이지(data/howto.json)가 맡는다.
-   ponytail: 대화는 아직 없다 — 누르면 인사만 한다. 오픈라우터를 붙일 때 greet() 에 입력을 연다 */
+   누르면 말풍선에 입력칸이 열려 대화한다(아래 '대화' 절). */
 const RESCUE_KEY = 'rt.rescue';
 /* 봇 크기. 내 계정의 Size(70~130%)가 rt.botsize 에 남긴다 — 이 기기에만 둔다.
    CSS 는 --bot-scale(계정 미리보기)과 --rk-bot(홈 봇 한 변)을 읽고, 자리 셈은 BOT 를 쓴다 */
@@ -277,7 +278,7 @@ const layer = $('#rkLayer'), bubble = $('#rkSay'), dim = $('#rkDim'), next = $('
 const logo = () => $('#regions .navbar .nav-logo');
 const regionsOn = () => $('#regions').classList.contains('on');
 const botName = () => { try { return localStorage.getItem('rt.botname') || 'Grok'; } catch { return 'Grok'; } };
-let bot = null, making = null, out = false, intro = false, touring = false, corner = 0, hush = 0, nap = 0;
+let bot = null, making = null, out = false, intro = false, touring = false, corner = 0, hush = 0, nap = 0, chatting = false;
 
 /* 경쟁전 빛깔은 봇의 빛깔이다 — 아래 줄의 '경쟁전 시작'도, 말풍선도 모두 --rk-on 을
    딴다. 계정 화면에서 고른 색이 없으면 --buddy-ink 가 --ranked 로 내려오므로 옛 빨강
@@ -322,7 +323,7 @@ function makeBot() {
     el.addEventListener('click', () => {
       if (dragged) { dragged = false; return; }
       if (intro) pull();
-      else if (!touring) greet();
+      else if (!touring) chat();
     });
     el.addEventListener('pointerdown', e => grab(e));
     el.addEventListener('keydown', e => nudge(e));
@@ -409,9 +410,11 @@ function jump(x, y) {
   void bot.el.offsetWidth;
   bot.el.style.transition = bubble.style.transition = '';
 }
-function tell(key, vars, form) {
-  $('#rkSayText').textContent = t(key, vars);
+function tell(key, vars, form) { speak(t(key, vars), form); }
+function speak(text, form) {
+  $('#rkSayText').textContent = text;
   $('#rkName').hidden = !form;
+  $('#rkChat').hidden = !chatting;
   bubble.hidden = false;
   if (bot) place(bot.x, bot.y);
   unfold();
@@ -427,10 +430,12 @@ function unfold() {
     bubble.classList.add('is-open');
   });
 }
-function hide() { bubble.hidden = true; }
+function hide() { bubble.hidden = true; chatting = false; }
 
-/* 귀퉁이는 넵바 아래 두 곳과 화면 아래 두 곳이다 */
+/* 귀퉁이는 넵바 아래 두 곳과 화면 아래 두 곳이다. 경쟁전을 켜면 왼쪽 아래는 지금 접속
+   부채(#rkLive)가 차지하므로 오른쪽 아래로 비킨다 */
 function cornerAt(i) {
+  if (ranked && i === 2) i = 3;
   const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
   return [i % 2 ? innerWidth - BOT - 20 : 20, i < 2 ? top : innerHeight - BOT - 24];
 }
@@ -453,7 +458,7 @@ function doze() {
   if (!bot || intro || touring) return;
   clearTimeout(nap);
   nap = setTimeout(() => {
-    if (!touring && bubble.hidden && !bot.el.matches(':hover, :focus-visible')) sleep();
+    if (!touring && bubble.hidden && !bot.el.matches(':hover, :focus-within, :focus-visible')) sleep();
   }, 1500);
 }
 /* 떠 있지 않으면 아무 귀퉁이에서 깨어난다 */
@@ -475,7 +480,86 @@ async function say(key, vars, form) {
   clearTimeout(hush);
   if (!form && !touring) hush = setTimeout(() => { hide(); doze(); }, 6000);
 }
-function greet() { say('botHi'); }
+
+/* ── 대화 ── 봇을 누르면 말풍선에 입력칸이 열린다. 중계기(/bot/chat)가 NVIDIA 모델에
+   묻고 {say, do} 를 돌려준다. do 는 중계기가 이미 걸렀지만 여기서도 아는 것만 한다.
+   대화는 이 탭에서만 기억한다(새로고침하면 처음부터) */
+const talk = [];
+let talkReq = 0;
+async function chat() {
+  await summon();
+  wake();
+  clearTimeout(hush);
+  chatting = true;
+  speak(talk.length ? talk[talk.length - 1].content : t('botAsk', { bot: botName() }));
+  $('#rkChatIn').focus({ preventScroll: true });
+}
+function endChat() {
+  if (!chatting) return;
+  hide();
+  bot.el.focus({ preventScroll: true });
+  doze();
+}
+/* 봇이 고를 수 있는 코스 — 홈 칸과 서울 전체. 같은 코스를 치는 칸은 하나로 */
+function botCourses() {
+  const seen = new Set(), list = [];
+  for (const [slug, label] of [[COURSE.root, homeTitle()], ...COURSE.tiles.map(x => [x.slug, x.label])]) {
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    list.push({ slug, label });
+  }
+  return list;
+}
+const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
+function act(a) {
+  if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
+    hide();
+    doze();
+    start(a.course);
+  } else if (a.act === 'open') {
+    if (PAGES.includes(a.page)) { openPage(a.page); return; }
+    if (a.page === 'home') { closePage(); return; }
+    if (a.page === 'signin') { $('#signinLink').click(); return; }
+    /* 설정은 제 손(settings.js)이 링크 click 을 받아 덮개로 연다 */
+    const link = PAGE_LINK[a.page] && document.querySelector(`#regions a[href="${PAGE_LINK[a.page]}"]`);
+    if (link) link.click();
+  }
+}
+async function send(text) {
+  talk.push({ role: 'user', content: text });
+  const my = ++talkReq;
+  speak(t('botThink'));
+  let d;
+  try {
+    d = await ask('/bot/chat', { msgs: talk.slice(-12), courses: botCourses(), lang: document.documentElement.lang, name: botName() }, true);
+  } catch (e) {
+    talk.pop();
+    if (my === talkReq && chatting) speak(t(e.status === 429 ? 'botBusy' : 'botChatFail'));
+    return;
+  }
+  if (my !== talkReq) return;
+  const said = d.say || '👍';
+  talk.push({ role: 'assistant', content: said });
+  if (chatting) speak(said);
+  /* 동작은 말을 보여 준 뒤에 — 무엇을 하려는지 먼저 읽힌다 */
+  (d.do || []).forEach(act);
+}
+function wireChat() {
+  $('#rkChat').addEventListener('submit', e => {
+    e.preventDefault();
+    const inp = $('#rkChatIn'), text = inp.value.trim();
+    if (!text) return;
+    inp.value = '';
+    send(text);
+  });
+  $('#rkChatIn').addEventListener('keydown', e => {
+    /* IME 조합 중인 Esc 는 조합을 끄는 몫이다 */
+    if (e.key !== 'Escape' || e.isComposing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    endChat();
+  });
+}
 
 /* ── 처음 온 사람 ──
    넵바만 밝게 두고 나머지는 .rk-dim 이 덮는다. 봇은 로고 알약 바로 아래에 반쯤
@@ -685,6 +769,9 @@ const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
   ranked = on;
   document.body.classList.toggle('rk-ready', on);
+  if (on) ping();
+  /* 왼쪽 아래에서 자던 봇은 부채를 비켜 주고, 부채가 들어가면 돌아온다 */
+  if (out && bot && !spot && !touring && !intro && corner === 2) place(...cornerAt(corner));
   const play = $('#navPlay');
   play.dataset.i18n = on ? 'rankedStart' : 'start';
   play.textContent = t(play.dataset.i18n);
@@ -783,6 +870,35 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   quitNote = '';
 });
 
+/* ── 지금 접속 ─────────────────────────────────────────
+   사이트가 보이는 동안 2분에 한 번 중계기에 이 탭이 떠 있다고 알리고 접속 수를 받는다
+   (worker.mjs 의 online — 5분 안에 알린 탭 수). id 는 이 탭만의 난수라 로그인과 상관없고
+   아무것도 가리키지 않는다. 새로고침해도 같은 탭이면 같은 id 라 두 번 세지 않는다.
+   숫자는 경쟁전을 켜면 왼쪽 아래에서 나오는 부채에 건다 */
+const ONLINE_PING = 120000;
+let liveId = '', liveTimer = 0;
+try { liveId = sessionStorage.getItem('rt.live') || ''; } catch {}
+if (!/^[0-9a-f]{32}$/.test(liveId)) {
+  liveId = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+  try { sessionStorage.setItem('rt.live', liveId); } catch {}
+}
+async function ping() {
+  clearTimeout(liveTimer);
+  if (document.hidden) return;
+  liveTimer = setTimeout(ping, ONLINE_PING);
+  let d;
+  try { d = await ask('/online', { id: liveId }, true); } catch { return; }
+  const n = Number(d.n);
+  if (!Number.isInteger(n) || n < 1) return;
+  $('#rkLiveN').textContent = n;
+  $('#rkLive').setAttribute('aria-label', t('online', { n }));
+  $('#rkLive').hidden = false;
+}
+/* 숨은 탭은 알리지 않는다 — 5분 조용하면 셈에서 빠지고, 돌아오면 바로 다시 알린다 */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearTimeout(liveTimer); else ping();
+});
+
 /* ── 손잡이 ──────────────────────────────────────────── */
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#"]');
@@ -814,9 +930,11 @@ wireTabs();
 wireLogo();
 wirePlayHold();
 wireStart();
+wireChat();
 /* 가입하고 처음 온 홈이면 조르고, 아니면 귀퉁이에서 자고 있다.
    화면 말(i18n)을 다 읽은 뒤에 연다 */
 BOOTED.then(() => {
+  ping();
   if (!regionsOn()) return;
   let rescue = false;
   try { rescue = !!localStorage.getItem(RESCUE_KEY); } catch {}

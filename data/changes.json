@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.321",
+    "date": "2026-09-27",
+    "ko": "홈 봇과 대화할 수 있습니다. 봇을 누르면 말풍선에 입력칸이 열리고, 부탁하면 코스를 시작하거나 순위·기록·설정 같은 화면을 대신 열어 줍니다(NVIDIA의 무료 AI 모델). 설정의 게임 탭에서 서울 동을 행정동과 법정동 가운데 고를 수 있습니다. 법정동은 서울시 '자치구별 동 현황'의 467곳을 경계와 맞춰 25개 구마다 새로 그렸고, 종로·중구의 작은 '가'까지 모두 제자리에 점이 찍힙니다. 순위표는 둘이 따로 섭니다.",
+    "en": "You can now chat with the home bot. Click it to open a text box in its speech bubble; ask and it will start a course or open screens like Ranking, Records, or Settings for you (a free NVIDIA AI model). The Game tab in Settings now lets you play Seoul neighbourhoods as administrative dongs or legal dongs. The 467 legal dongs from the Seoul city register are drawn for all 25 districts, down to the tiny '-ga' blocks of Jongno and Jung-gu, and each kind keeps its own leaderboard."
+  },
+  {
     "v": "0.6.318",
     "date": "2026-09-27",
     "ko": "내 계정의 캐릭터 카드가 '내 펫'으로 바뀌었습니다. 홈 봇과 같은 실제 크기와, 고정된 확대 크기를 나란히 놓고 비교할 수 있고, 바로 아래 알약 밀대로 홈 화면 봇 크기를 70%에서 130%까지 직접 맞춥니다. 크기는 이 기기에 저장됩니다.",

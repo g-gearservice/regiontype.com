@@ -26,7 +26,7 @@ const isDev = () => document.documentElement.hasAttribute('data-dev');
    홈(app.js)과 같은 통, 같은 기본값이다. 키 집합이 어긋나면 한쪽이 저장할 때마다
    다른 쪽 값이 지워진다 */
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
-              lang: 'auto', country: 'auto', unit: 'auto' };
+              lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -237,6 +237,7 @@ function paintUnit() {
   const box = $('#optUnit');
   if (!box) return;
   box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === opt.unit)));
+  $('#optDong').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === opt.dong)));
   const now = (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
   $('#unitNow').textContent = t('unitShown', { unit: t(now === 'wpm' ? 'wpmUnit' : 'cpmUnit') });
 }
@@ -483,6 +484,8 @@ function wire() {
     if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
     const unit = e.target.closest('#optUnit button');
     if (unit) { opt.unit = unit.dataset.v; saveOpt(); }
+    const dong = e.target.closest('#optDong button');
+    if (dong) { opt.dong = dong.dataset.v; saveOpt(); }
   });
 
   $('#optLang').addEventListener('change', e => {

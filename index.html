@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.19">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.19">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.19">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.21">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.21">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.21">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.19">
+<link rel="stylesheet" href="style.css?v=3.21">
 </head>
 <body>
 
@@ -100,6 +100,9 @@
   <!-- 코스마다 격자 한 칸 버튼. 칸은 app.js 의 renderCourses 가 채운다 -->
   <div id="courseBtns" role="group" data-i18n-aria="pickCourse" aria-label="코스 고르기"></div>
   <p class="course-name" id="courseName" aria-live="polite"></p>
+  <!-- 지금 접속. 경쟁전을 켜면 왼쪽 아래 귀퉁이에서 대각선으로 나온다(ranked.js 의 '지금 접속' 절).
+       첫 숫자를 받기 전에는 숨어 있다 -->
+  <p class="rk-live" id="rkLive" role="img" hidden><span class="rk-live-in" aria-hidden="true"><i></i><b id="rkLiveN"></b></span></p>
   <!-- 도우미 봇과 말풍선. 홈이 보일 때만 산다 — #regions 안에 둬서 플레이 화면에선 저절로 빠진다.
        .rk-dim 은 처음 온 사람에게 넵바만 남기고 홈을 덮는 막이다 -->
   <div class="rk-layer" id="rkLayer" hidden>
@@ -114,6 +117,13 @@
         <div>
           <input id="rkNameIn" maxlength="12" autocomplete="off" spellcheck="false" data-i18n-ph="namePh" placeholder="이름">
           <button type="submit" data-i18n="rankedStart">경쟁전 시작</button>
+        </div>
+      </form>
+      <!-- 봇에게 말 걸기(ranked.js 의 chat). 중계기 /bot/chat 이 NVIDIA 모델에 묻는다 -->
+      <form id="rkChat" hidden>
+        <div>
+          <input id="rkChatIn" maxlength="300" autocomplete="off" data-i18n-aria="botChatIn" aria-label="봇에게 말 걸기" data-i18n-ph="botChatPh" placeholder="무엇이든 물어보세요">
+          <button type="submit" data-i18n="fbSend">보내기</button>
         </div>
       </form>
     </div>
@@ -272,6 +282,16 @@
             </div>
           </dd>
         </dl>
+        <dl class="opts">
+          <dt data-i18n="dongKind">서울 동 구분</dt>
+          <dd>
+            <div class="choice-b" id="optDong" role="group" data-i18n-aria="dongKind" aria-label="서울 동 구분">
+              <button type="button" data-v="admin" aria-pressed="true" data-i18n="dongAdmin">행정동</button>
+              <button type="button" data-v="legal" aria-pressed="false" data-i18n="dongLegal">법정동</button>
+            </div>
+          </dd>
+        </dl>
+        <p class="profile-help" data-i18n="dongHelp">구를 펼쳤을 때 칠 동입니다. 행정동은 주민센터 단위, 법정동은 주소에 쓰는 이름이고 순위표는 따로 섭니다.</p>
         <p class="profile-help" id="unitNow"></p>
         <p class="profile-help" data-i18n="unitHelp">순위표는 늘 같은 값으로 저장하고 보일 때만 이 단위로 바꿉니다 — 단위가 다른 사람끼리도 같은 표에 섭니다.</p>
       </div>
@@ -342,7 +362,7 @@
         <p class="profile-help" data-i18n="policyHelp">새 창이 아니라 이 자리를 떠나 문서로 갑니다.</p>
       </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
-        <p class="ver">regiontype v0.6.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+        <p class="ver">regiontype v0.7.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
       </div>
     </div>
   </div>
@@ -487,9 +507,9 @@
   </form>
 </dialog>
 
-<script src="app.js?v=3.19"></script>
-<script src="auth.js?v=3.19"></script>
-<script src="settings/settings.js?v=3.19"></script>
-<script src="ranked.js?v=3.19"></script>
+<script src="app.js?v=3.21"></script>
+<script src="auth.js?v=3.21"></script>
+<script src="settings/settings.js?v=3.21"></script>
+<script src="ranked.js?v=3.21"></script>
 </body>
 </html>

@@ -30,6 +30,8 @@
      GET  /cm/list  ?tag=&before=  글 목록 20개씩
      GET  /cm/read  ?id=           글 하나와 댓글
      POST /cm/post  {tag,title,body} · /cm/reply {post,body}
+     POST /bot/chat {msgs,courses,lang,name}  홈 봇 대화 → {say, do} (NVIDIA NIM)
+     POST /online   {id}  이 탭이 떠 있다고 알리고 지금 접속 수 {n} 을 받는다
      POST /cm/up    {target}  공감 켜고 끄기 · /cm/flag {target} 신고 · /cm/del {target} 내 글 지우기
 
        wrangler secret put SESSION_KEY   // 아무 긴 난수. 갈면 모든 세션만 끊긴다 —
@@ -50,6 +52,7 @@
        wrangler secret put GH_TOKEN     // 그 저장소의 Issues 쓰기만 가진 세밀 토큰
        wrangler secret put TURNSTILE_SITEKEY // 공개 키지만 배포별 설정으로 둔다
        wrangler secret put TURNSTILE_SECRET  // Turnstile 서버 검증 비밀키
+       wrangler secret put NV_KEY       // build.nvidia.com API 키 — 봇 대화
        wrangler deploy                                                        */
 
 import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac,
@@ -1274,6 +1277,125 @@ async function cmWrite(req, env, o, path) {
   });
 }
 
+/* ── 봇 대화 ────────────────────────────────────────────
+   홈의 Grok 봇이 NVIDIA NIM(OpenAI 꼴 API) 무료 모델에 묻는다. 키(NV_KEY)는 여기에만
+   있다 — GH_TOKEN 과 같은 까닭이다. 시스템 말은 여기서만 짓고, 브라우저는 대화와
+   고를 수 있는 코스 목록만 보낸다. 봇이 사이트를 움직이는 길(do)은 아래 BOT_ACTS
+   두 가지뿐이고, 여기서 한 번, 브라우저(ranked.js)에서 한 번 더 거른다.
+       wrangler secret put NV_KEY      // build.nvidia.com 의 API 키 (nvapi-…)
+   ponytail: 모델이 JSON 을 약속만 한다(response_format 은 모델마다 달라 안 쓴다).
+   못 읽으면 글 전체를 말로만 쓴다 — 틀린 동작보다 동작 없음이 낫다. */
+const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const NV_MODEL = 'deepseek-ai/deepseek-v4.1-flash'; // [vars] NV_MODEL 로 갈 수 있다
+const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account'];
+const BOT_TURNS = 12, BOT_LINE = 400, BOT_COURSES = 80;
+
+/* 브라우저가 보낸 몸통을 다듬는다. system 은 받지 않는다 — 역할은 user·assistant 둘뿐 */
+export function botAsk(c) {
+  const msgs = (Array.isArray(c?.msgs) ? c.msgs : []).slice(-BOT_TURNS)
+    .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
+    .map(m => ({ role: m.role, content: cut(m.content, BOT_LINE) }))
+    .filter(m => m.content);
+  const courses = (Array.isArray(c?.courses) ? c.courses : []).slice(0, BOT_COURSES)
+    .map(x => ({ slug: cut(x?.slug, 40), label: plain(x?.label, 40) }))
+    .filter(x => /^[\w-]+$/.test(x.slug) && x.label);
+  return { msgs, courses, lang: plain(c?.lang, 8) || 'ko', name: plain(c?.name, CAP.botname) || 'Grok',
+           ok: msgs.length > 0 && msgs[msgs.length - 1].role === 'user' };
+}
+
+export function botSystem({ courses, lang, name }) {
+  return `You are ${name}, a small round mascot bot living on the home screen of regiontype.com, ` +
+    'a typing game where players type place names (districts, provinces) on a map as fast as they can. ' +
+    `Reply in the user's language (site language: ${lang}). Be short, friendly, one to three sentences. ` +
+    'You can control the site. Answer ONLY with one JSON object, no code fence: ' +
+    '{"say":"what you say","do":[actions]}. Actions (do may be empty):\n' +
+    '{"act":"start","course":"<slug>"} starts a normal game on that course.\n' +
+    `{"act":"open","page":"<${BOT_PAGES.join('|')}>"} opens that screen.\n` +
+    'Only act when the user asks for it. Never invent a slug. Courses (slug: name):\n' +
+    courses.map(x => `${x.slug}: ${x.label}`).join('\n');
+}
+
+/* 모델의 답을 말과 동작으로 가른다. 모르는 동작·없는 코스는 버린다 */
+export function botAct(text, courses) {
+  const raw = String(text ?? '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  let j = null;
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (m) try { j = JSON.parse(m[0]); } catch {}
+  if (!j || typeof j !== 'object') return { say: cut(raw, BOT_LINE), do: [] };
+  const slugs = new Set(courses.map(x => x.slug));
+  const acts = (Array.isArray(j.do) ? j.do : []).slice(0, 2).map(a => {
+    if (a?.act === 'start' && slugs.has(a.course)) return { act: 'start', course: a.course };
+    if (a?.act === 'open' && BOT_PAGES.includes(a.page)) return { act: 'open', page: a.page };
+    return null;
+  }).filter(Boolean);
+  return { say: cut(j.say, BOT_LINE), do: acts };
+}
+
+async function botChat(req, env, o) {
+  if (!env.NV_KEY) return reply(503, '봇 대화는 아직 열리지 않았습니다.', o);
+  /* IP 창에 더해 모두가 나눠 쓰는 창 하나 — IP 를 돌려 가며 무료 키 한도를 다 먹어
+     모든 사람의 봇을 429 로 만드는 걸 막는다. 이 창에 걸리면 모두가 잠깐 쉰다 */
+  const ok = await pass(env.RL_BT, ip(req));
+  if (ok !== true) return shut(ok, o);
+  const all = await pass(env.RL_BA, 'all');
+  if (all !== true) return shut(all, o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const a = botAsk(c);
+  if (!a.ok) return reply(400, '할 말이 없습니다.', o);
+  let r;
+  try {
+    r = await fetch(NV, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${env.NV_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: env.NV_MODEL || NV_MODEL, max_tokens: 400, temperature: 0.6,
+        messages: [{ role: 'system', content: botSystem(a) }, ...a.msgs] }),
+      signal: AbortSignal.timeout(25000),
+    });
+  } catch { return reply(502, '봇이 대답하지 못했습니다.', o); }
+  if (!r.ok) return reply(r.status === 429 ? 429 : 502, '봇이 대답하지 못했습니다.', o);
+  const d = await r.json().catch(() => null);
+  const out = botAct(d?.choices?.[0]?.message?.content, a.courses);
+  if (!out.say && !out.do.length) return reply(502, '봇이 대답하지 못했습니다.', o);
+  return send(200, out, o);
+}
+
+/* ── 지금 접속 ── 사이트가 보이는 탭마다 ONLINE_PING 에 한 번 {id} 를 두드린다. id 는 탭이
+   지은 난수라 사람도 계정도 가리키지 않는다(who 가 아니다 — 계정을 지워도 지울 줄이 없다).
+   ONLINE_MS 안에 두드린 탭 수가 '지금 접속'이고, 경쟁전 짝 맞추기도 이 표를 읽을 것이다.
+   세기와 지난 줄 걷기는 격리 하나에 ONLINE_FRESH 에 한 번만 한다 — 두드릴 때마다 표를
+   훑으면 D1 읽기가 접속 수의 제곱으로 는다.
+   ponytail: 한 IP 가 창(RL_ON) 안에서 id 를 바꿔 가며 숫자를 부풀릴 수 있다. 짝 맞추기에
+   쓸 때는 로그인한 사람만 센다 */
+export const ONLINE_PING = 120000, ONLINE_MS = 300000, ONLINE_FRESH = 15000;
+export const onlineId = c => {
+  const id = String(c?.id ?? '');
+  return /^[0-9a-f]{32}$/.test(id) ? id : '';
+};
+let onlineNow = { n: 0, at: 0 };
+async function online(req, env, o) {
+  const ok = await pass(env.RL_ON, ip(req));
+  if (ok !== true) return shut(ok, o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const id = onlineId(c);
+  if (!id) return reply(400, '읽을 수 없는 내용입니다.', o);
+  const now = Date.now();
+  const mark = env.DB.prepare('insert into online (id, at) values (?, ?) on conflict (id) do update set at = excluded.at')
+    .bind(id, now);
+  if (now - onlineNow.at < ONLINE_FRESH) {
+    await mark.run();
+    return send(200, { n: Math.max(1, onlineNow.n) }, o);
+  }
+  const [, , row] = await env.DB.batch([
+    mark,
+    env.DB.prepare('delete from online where at < ?').bind(now - ONLINE_MS),
+    env.DB.prepare('select count(*) as n from online'),
+  ]);
+  onlineNow = { n: row.results[0].n, at: now };
+  return send(200, { n: onlineNow.n }, o);
+}
+
 export function regionOf(cf, accept) {
   const c = String(cf?.country || '');
   const country = /^[A-Z]{2}$/.test(c) && c !== 'XX' && c !== 'T1' ? c : '';
@@ -1363,6 +1485,11 @@ export default {
       if (path === '/played' && req.method === 'POST') return playedNormal(req, env, o);
       if (path === '/games' && req.method === 'GET') return myGames(req, env, o);
       if (path === '/ladder' && req.method === 'GET') return ladderTop(req, env, o);
+    }
+    if (path === '/bot/chat' && req.method === 'POST') return botChat(req, env, o);
+    if (path === '/online' && req.method === 'POST') {
+      if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);
+      return online(req, env, o);
     }
     if (path.startsWith('/cm/')) {
       if (!env.DB) return reply(503, '커뮤니티는 아직 열리지 않았습니다.', o);

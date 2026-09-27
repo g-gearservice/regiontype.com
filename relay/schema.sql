@@ -279,3 +279,12 @@ create table if not exists mark (
   primary key (who, kind, target)
 );
 create index if not exists mark_target on mark (kind, target);
+
+-- 지금 접속. 사이트가 보이는 탭 하나가 한 줄이다(worker.mjs 의 online). id 는 탭이 지은 난수라
+-- 사람을 가리키지 않는다 — who 칸이 없으니 계정을 지울 때 걷을 것도 없다. 5분 넘게 조용한
+-- 줄은 중계기가 걷는다.
+create table if not exists online (
+  id  text    primary key,
+  at  integer not null
+);
+create index if not exists online_at on online (at);
