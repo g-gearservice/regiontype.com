@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.24';
+const VER = '3.25';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1955,15 +1955,17 @@ function finish() {
   }, 1200);
 }
 
-/* 결과 카드 — SVG를 그대로 이미지로 굽는다 (16:9) */
+/* 결과 카드 — SVG를 그대로 이미지로 굽는다 (9:16, 스토리용).
+   스토리는 위아래 UI 가 가리므로 글자는 위 250·아래 340 px 안쪽에 둔다 */
 let cardReady = Promise.resolve();
 function drawCard() {
   let done;
   cardReady = new Promise(r => done = r);
   const cv = $('#card'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, pad = 90;
   const css = getComputedStyle(document.body);
   const bg = css.backgroundColor, ink = css.color;
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
   const svg = $('#map').cloneNode(true);
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
@@ -1972,21 +1974,26 @@ function drawCard() {
   svg.insertAdjacentHTML('afterbegin', '<style>' +
     `circle{fill:${land}}g.got circle{fill:${acc}}g.miss circle{fill:${land}}` +
     'text{display:none}</style>');
+  /* 긴 코스 이름이 폭을 넘으면 글씨를 줄인다 */
+  const fit = (txt, weight, size, x, y) => {
+    ctx.font = `${weight} ${size}px system-ui,sans-serif`;
+    const w = ctx.measureText(txt).width;
+    if (w > W - pad * 2) ctx.font = `${weight} ${Math.floor(size * (W - pad * 2) / w)}px system-ui,sans-serif`;
+    ctx.fillText(txt, x, y);
+  };
   const img = new Image();
   img.onload = () => {
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
-    const h = cv.height - 220, w = h * vb[2] / vb[3];
-    ctx.drawImage(img, (cv.width - w) / 2, 140, w, h);
+    const top = 440, bottom = H - 700;                        // 지도 칸
+    let w = W - pad * 2, h = w * vb[3] / vb[2];
+    if (h > bottom - top) { h = bottom - top; w = h * vb[2] / vb[3]; }
+    ctx.drawImage(img, (W - w) / 2, top + (bottom - top - h) / 2, w, h);
     ctx.fillStyle = ink;
-    ctx.font = '800 54px system-ui,sans-serif';
-    ctx.fillText('regiontype', 70, 100);
-    ctx.font = '500 38px system-ui,sans-serif';
-    ctx.fillText(t('cardLine', { title: courseLabel(G.course), zoom: G.zoom, speed: showSpeed(G.cpm || 0) }), 70, cv.height - 136);
-    ctx.font = '800 76px system-ui,sans-serif';
-    ctx.fillText(`${G.hits}/${G.items.length}`, 70, cv.height - 50);
-    ctx.textAlign = 'right';
-    ctx.font = '500 34px system-ui,sans-serif';
-    ctx.fillText('regiontype.com', cv.width - 70, 96);
+    ctx.textAlign = 'center';
+    fit('regiontype', 800, 88, W / 2, 330);
+    fit(`${G.hits}/${G.items.length}`, 800, 150, W / 2, H - 520);
+    fit(t('cardLine', { title: courseLabel(G.course), zoom: G.zoom, speed: showSpeed(G.cpm || 0) }), 500, 44, W / 2, H - 440);
+    fit('regiontype.com', 500, 40, W / 2, H - 370);
     ctx.textAlign = 'left';
     done();
   };
