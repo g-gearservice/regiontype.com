@@ -30,6 +30,15 @@ const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, gr
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
+/* 홈 봇이 바꾸는 설정(ranked.js 의 act). 여기 통을 거쳐야 이 덮개의 opt 가 낡지 않는다 —
+   밖에서 localStorage 만 고치면 다음 토글이 옛 값을 도로 덮어쓴다. 모르는 키·꼴은 버린다 */
+addEventListener('rt-bot-opt', ({ detail }) => {
+  const ok = Object.entries(detail || {}).filter(([k, v]) =>
+    Object.hasOwn(DEF, k) && k !== 'lang' && k !== 'country' && typeof v === typeof DEF[k]);
+  if (!ok.length) return;
+  Object.assign(opt, Object.fromEntries(ok));
+  saveOpt();
+});
 const saveOpt = () => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
   document.documentElement.toggleAttribute('data-night', opt.night);

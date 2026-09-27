@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.323",
+    "date": "2026-09-27",
+    "ko": "홈 봇이 사이트 대부분을 대신 다룹니다. 일반전뿐 아니라 경쟁전도 시작하고, 야간 모드·효과음·애니메이션·그리드·속도 단위·서울 동 구분·제한 시간 같은 설정을 바꾸고, 피드백 창도 엽니다. 늘 존댓말로 답하고, 부탁받은 일을 할 수 없으면 다른 일로 바꿔 하지 않고 먼저 묻습니다.",
+    "en": "The home bot can now run most of the site for you: it starts ranked games as well as normal ones, changes settings such as dark mode, sound, animations, grid, speed unit, Seoul dong kind and time limit, and opens the feedback form. When it cannot do exactly what you asked, it says so instead of doing something else."
+  },
+  {
     "v": "0.7.322",
     "date": "2026-09-27",
     "ko": "경쟁전을 켜면 왼쪽 아래 모서리에서 '지금 접속' 원이 대각선으로 나옵니다. 깜빡이는 점과 함께 지금 사이트를 보고 있는 탭 수가 보이고, 경쟁전을 끄면 다시 들어갑니다. 각 탭이 2분마다 중계기에 살아 있다고만 알리며, 계정·IP와는 묶이지 않습니다.",

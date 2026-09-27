@@ -8,7 +8,13 @@
 
 # English
 
-A typing drill for place names. v0.7.322 (`VER=3.22`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+
+## What's new in 0.7.323
+
+- The home bot can run more of the site: start a ranked game as well as a normal one, change settings (dark mode, sound, animations, grid, hint, speed unit, Seoul dong kind, time limit), and open the feedback form. Settings go through `settings.js` so the overlay stays in sync.
+- The relay filters those actions (`set`, ranked `start`, `feedback`) the same way as before — once on the server, again in the browser. The bot answers politely (formal Korean when the site language is Korean) and asks instead of swapping in a different action when it cannot do exactly what was asked.
+- At most three actions per reply; unknown setting keys or values are dropped.
 
 ## What's new in 0.7.322
 
