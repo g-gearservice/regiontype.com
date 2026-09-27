@@ -312,7 +312,10 @@ function makeBot() {
     const motion = document.createElement('span');
     motion.className = 'rk-bot-motion';
     el.append(motion);
-    bubble.before(el);
+    /* 폰은 떠다니지 않고 아래 시트의 아바타 자리(Apple 지도의 프로필 자리)에 산다 —
+       시트와 함께 움직이고 단추를 가리지 않는다. 누르면 하는 일은 같다 */
+    const slot = fingers() && $('#sheetBot');
+    if (slot) slot.append(el); else bubble.before(el);
     const face = readFace();
     const api = mountBuddy(motion, { calm, shape: face.shape, expression: face.expression });
     if (face.colour) api.setColour(face.colour);
@@ -340,13 +343,14 @@ function makeBot() {
    놓은 자리(spot)에 머물다 창이 바뀌면 화면 안으로 당겨 온다. 조르거나 둘러보는
    동안에는 옮기지 않는다. 키보드는 봇에 초점을 두고 화살표(Shift 면 크게) */
 let spot = null, dragged = false;
+const docked = () => !!bot && bot.el.parentNode === $('#sheetBot');
 const clampXY = (x, y) => [Math.max(0, Math.min(innerWidth - BOT, x)), Math.max(0, Math.min(innerHeight - BOT, y))];
 function moveTo(x, y) {
   spot = clampXY(x, y);
   place(...spot);
 }
 function grab(e) {
-  if (e.button || intro || touring) return;
+  if (e.button || intro || touring || docked()) return;
   const el = bot.el, sx = e.clientX, sy = e.clientY, ox = bot.x, oy = bot.y;
   let moving = false;
   el.setPointerCapture(e.pointerId);
@@ -373,7 +377,7 @@ function grab(e) {
 }
 function nudge(e) {
   const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
-  if (!d || intro || touring) return;
+  if (!d || intro || touring || docked()) return;
   e.preventDefault();
   const step = e.shiftKey ? 96 : 24;
   moveTo(bot.x + d[0] * step, bot.y + d[1] * step);
@@ -388,14 +392,19 @@ function sideOf(cx, cy) {
   return cy > innerHeight / 2 ? 'up' : 'down';
 }
 function place(x, y) {
+  /* 시트에 앉은 봇은 자리를 시트가 정한다 — 재기만 하고, 말풍선은 봇 위로 통째로 띄운다
+     (봇이 시트 층에 있어 말풍선 밑에 숨을 수 없다) */
+  const dock = docked(), r = dock && bot.el.getBoundingClientRect(), size = dock ? r.width : BOT;
+  if (dock) { x = r.left; y = r.top; }
+  else bot.el.style.transform = `translate3d(${x}px,${y}px,0)`;
   bot.x = x; bot.y = y;
-  bot.el.style.transform = `translate3d(${x}px,${y}px,0)`;
-  const cx = x + BOT / 2, cy = y + BOT / 2, side = sideOf(cx, cy);
+  bubble.toggleAttribute('data-dock', dock);
+  const cx = x + size / 2, cy = y + size / 2, side = dock ? 'up' : sideOf(cx, cy);
   const turned = bubble.dataset.side !== side;
   bubble.dataset.side = side;
   const w = bubble.offsetWidth, h = bubble.offsetHeight;
   const bx = side === 'right' ? cx : side === 'left' ? cx - w : cx - w / 2;
-  const by = side === 'down' ? cy : side === 'up' ? cy - h : cy - h / 2;
+  const by = dock ? y - h - 10 : side === 'down' ? cy : side === 'up' ? cy - h : cy - h / 2;
   const fx = Math.max(16, Math.min(innerWidth - w - 16, bx)), fy = Math.max(16, Math.min(innerHeight - h - 16, by));
   bubble.style.transform = `translate3d(${fx}px,${fy}px,0)`;
   /* 테두리는 말풍선 안에서 봇 자리에 선다 */
@@ -727,6 +736,12 @@ addEventListener('pointermove', e => {
   if (out && bot && e.pointerType === 'mouse') bot.api.lookToward(e.clientX, e.clientY);
 }, { passive: true });
 document.documentElement.addEventListener('pointerleave', () => { if (out && bot) bot.api.lookAway(); });
+/* 폰 시트가 움직이면 거기 앉은 봇의 말풍선은 접고 다시 존다(app.js 의 sheetSet) */
+addEventListener('rt-sheet', () => {
+  if (!docked() || bubble.hidden || touring || intro) return;
+  hide();
+  doze();
+});
 addEventListener('resize', () => {
   if (!out || !bot || touring || intro) return;
   if (spot) moveTo(...spot); else place(...cornerAt(corner));

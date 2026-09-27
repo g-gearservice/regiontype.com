@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content,viewport-fit=cover">
 <title>regiontype · 내 동네, 칠 수 있어요?</title>
 <meta name="description" content="서울 내 동네를 치는 타자연습. 25개 자치구, 행정동·법정동 400+.">
 <link rel="canonical" href="https://regiontype.com/">
@@ -43,11 +43,11 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.29">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.29">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.29">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.30">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.30">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.30">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.29">
+<link rel="stylesheet" href="style.css?v=3.30">
 </head>
 <body>
 
@@ -86,14 +86,24 @@
   <span class="backdrop-blur bot" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </span>
-  <!-- 설정·시작·계정은 아래 막대 -->
+  <!-- 설정·시작·계정은 아래 막대. 폰에서는 이 막대가 그대로 Apple 지도의 아래 시트가 된다 —
+       손잡이·코스 이름·봇 자리·펼침 칸(sheet-*)은 폰에서만 보이고, 윗줄 메뉴는 app.js 의
+       sheetDock 이 펼침 칸으로 옮겨 온다. 데스크톱에서는 sheet-* 가 display:none 이다 -->
   <nav class="nav-bot" data-i18n-aria="navDock" aria-label="놀이 메뉴">
     <span class="nav-shape" id="navBotShape" aria-hidden="true"></span>
+    <button type="button" class="sheet-grab" id="sheetGrab" aria-expanded="false" aria-controls="sheetMore" data-i18n-aria="sheetMore" aria-label="메뉴 펼치기"></button>
+    <div class="sheet-head" id="sheetHead"></div>
+    <span class="sheet-bot" id="sheetBot"></span>
     <a class="nav-item" href="settings/" data-i18n="options">설정</a>
     <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start">시작하기</button>
     <!-- 로그인은 홈 덮개를 연다. 로그인해 있으면 라벨과 길이 '내 계정' 으로 바뀐다 -->
     <a class="nav-item" id="signinLink" href="signin/" data-i18n="signinBtn">로그인</a>
+    <div class="sheet-more" id="sheetMore"></div>
   </nav>
+  <!-- 오른쪽 컨트롤 줄(폰만). 지도를 이리저리 옮긴 뒤 한 번에 전체로 돌아온다 -->
+  <div class="map-ctl">
+    <button type="button" class="ctl" id="homeFit" data-i18n-aria="fitAll" aria-label="전체 보기"><i class="i i-fit" aria-hidden="true"></i></button>
+  </div>
   <div class="screen-head">
     <h2 class="head"><button type="button" id="coursePick" aria-pressed="true" aria-label="서울" hidden></button></h2>
   </div>
@@ -134,6 +144,8 @@
 <section id="play" class="screen">
   <div class="hud">
     <button class="back" data-go="regions" data-i18n-aria="quit" aria-label="그만두기"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <!-- 폰에서는 알약 하나로 뜬다. 데스크톱은 display:contents 라 줄이 그대로다 -->
+    <div class="hud-pill">
     <div class="gauge"><i id="gaugeFill"></i></div>
     <div class="stat time" id="statTime"><b>0:00</b></div>
     <div class="stat"><b id="statCount">0</b><span id="statTotal">/25</span></div>
@@ -141,6 +153,11 @@
     <div class="stat"><b id="statSpeed">0</b><span class="unit">타/분</span></div>
     <div class="stat combo" id="statCombo"></div>
     <div class="stat rk-tag" id="rkTag" data-i18n="rankedTab" hidden>경쟁전</div>
+    </div>
+  </div>
+  <!-- 오른쪽 컨트롤 줄(폰만). 지도를 끌어 목표에서 벗어나면 돌아오는 단추가 선다 -->
+  <div class="map-ctl">
+    <button type="button" class="ctl" id="playAim" data-i18n-aria="backToTarget" aria-label="목표로 돌아가기" hidden><i class="i i-aim" aria-hidden="true"></i></button>
   </div>
   <div class="stage">
     <svg id="map" class="rt-map" role="img" data-i18n-aria="mapLabel" aria-label="지역 지도"></svg>
@@ -151,12 +168,15 @@
   <span class="backdrop-blur bot" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </span>
+  <!-- 폰에서는 화상 키보드 바로 위에 붙는 유리 시트. 데스크톱은 display:contents -->
+  <div class="play-sheet">
   <div class="typing" id="typing" aria-hidden="true">
     <div class="q-side is-prev" id="qPrev"></div>
     <div class="q-letters" id="qLetters"></div>
     <div class="q-side is-next" id="qNext"></div>
   </div>
   <div class="fact" id="fact" aria-live="polite"></div>
+  </div>
   <div class="typebar">
     <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-aria="typeName" aria-label="지역 이름 입력">
   </div>
@@ -168,6 +188,8 @@
   <div class="screen-head">
     <button class="back" data-go="regions" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
   </div>
+  <!-- 폰에서는 끝난 지도 위로 올라오는 유리 시트. 데스크톱은 display:contents -->
+  <div class="res-sheet">
   <div class="result-wrap">
     <canvas id="card" width="1080" height="1920"></canvas>
     <div class="scores">
@@ -197,6 +219,7 @@
       </div>
     </form>
     <button type="button" class="board-drop" id="boardDrop" data-i18n="forgetMine" hidden>순위표에서 내 기록 내리기</button>
+  </div>
   </div>
 </section>
 
@@ -502,9 +525,9 @@
   </form>
 </dialog>
 
-<script src="app.js?v=3.29"></script>
-<script src="auth.js?v=3.29"></script>
-<script src="settings/settings.js?v=3.29"></script>
-<script src="ranked.js?v=3.29"></script>
+<script src="app.js?v=3.30"></script>
+<script src="auth.js?v=3.30"></script>
+<script src="settings/settings.js?v=3.30"></script>
+<script src="ranked.js?v=3.30"></script>
 </body>
 </html>

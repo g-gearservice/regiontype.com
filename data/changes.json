@@ -1,5 +1,11 @@
 [
   {
+    "v": "1.0.330",
+    "date": "2026-09-28",
+    "ko": "폰 화면을 지도 앱처럼 새로 짰습니다. 지도가 화면 끝까지 깔리고, 메뉴는 아래 시트를 끌어 올리면 나옵니다. 도우미 봇은 시트 오른쪽 아바타가 됐습니다. 게임 중에는 시간·개수·속도가 위쪽 알약에, 단어는 키보드 바로 위 시트에 뜨고, 지도를 옮겼다면 '목표로' 단추로 돌아옵니다. 결과는 끝난 지도 위로 시트가 올라옵니다.",
+    "en": "The phone layout is rebuilt like a maps app: the map runs edge to edge, and the menu lives in a bottom sheet you pull up. The helper bot is now the avatar at the right of the sheet. In a game, time, count and speed sit in a pill at the top, the word sits in a sheet right above the keyboard, and a Back to target button returns you if you panned away. Results rise in a sheet over the finished map."
+  },
+  {
     "v": "0.7.329",
     "date": "2026-09-28",
     "ko": "폰 지도 조작이 지도 앱처럼 바뀌었습니다. 핀치는 두 손가락 사이를 붙잡고 확대하며 함께 밀 수 있고, 한 손가락을 떼면 남은 손가락으로 계속 끌 수 있습니다. 튕기고 놓으면 조금 더 미끄러집니다. 구역 버튼 위에서 시작한 드래그도 끊기지 않습니다. 폰 한글 키보드로 칠 때 음절을 만드는 중간마다 글자가 좌우로 흔들리던 것을 고쳤습니다.",
