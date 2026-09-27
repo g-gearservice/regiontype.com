@@ -34,9 +34,21 @@ create index if not exists board_top on board (slug, secs, cpm desc, at asc);
 -- 않고 여기서 새로 시작한다. board 는 읽지 않지만 /forget·계정 삭제는 계속 지운다.
 -- 이미 있는 DB 에는 이 파일을 다시 적용하면 표가 더해진다(사람이 실행한다):
 --   wrangler d1 execute rt-board --remote --file schema.sql
+--
+-- ★ 기기(dev) 갈래. 폰 타자는 키보드와 견줄 수 없어 speed·ladder 를 'pc' | 'mobile'
+-- 로 가른다(played·ticket 은 어느 기기 판인지만 적는다). 옛 줄은 전부 pc 다 — 폰은
+-- 막혀 있었다. speed·ladder 는 dev 가 기본 키에 들어가야 해 sqlite 에서 제자리로
+-- 못 바꾼다 — 옮겨 담기는 migrate-dev.sql 이 한 요청으로 한다. 이미 있는 DB 에는
+-- 사람이 순서대로 실행한다(그 사이 옛 워커의 /score·경쟁전은 503 으로 접힌다):
+--   wrangler d1 execute rt-board --remote --command "select (select count(*) from speed where who in (select id from user)) as speed_n, (select count(*) from ladder where who in (select id from user)) as ladder_n"
+--   wrangler d1 execute rt-board --remote --file migrate-dev.sql
+--   wrangler d1 execute rt-board --remote --command "select (select count(*) from speed) as speed_n, (select count(*) from ladder) as ladder_n"
+--   wrangler deploy
+-- 앞뒤 두 숫자가 같으면 끝났다.
 create table if not exists speed (
   slug  text    not null,
   secs  integer not null,
+  dev   text    not null default 'pc',   -- 'pc' | 'mobile'. 순위표가 기기마다 따로 선다
   who   text    not null,
   name  text    not null,
   cpm   integer not null default 0,   -- 분당 타수(한글은 자모). 화면의 WPM 은 이걸 다섯으로 나눈 것
@@ -44,9 +56,9 @@ create table if not exists speed (
   hits  integer not null,
   acc   integer not null,
   at    integer not null,
-  primary key (slug, secs, who)
+  primary key (slug, secs, dev, who)
 );
-create index if not exists speed_top on speed (slug, secs, cpm desc, at asc);
+create index if not exists speed_top on speed (slug, secs, dev, cpm desc, at asc);
 
 -- ── 로그인 ────────────────────────────────────────────────
 -- 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
@@ -152,21 +164,25 @@ create table if not exists pending (
 -- 경쟁전 사다리. 한 사람이 한 줄이고 lp 는 0 에서 시작해 판마다 오르내린다.
 -- 티어는 따로 적지 않는다 — lp 100 마다 한 단계(worker.mjs 의 STEP)라 읽는 쪽이 셈한다.
 -- name 은 순위표(board)와 같은 규칙으로 다듬은 공개 표시다.
+-- 사다리는 기기(dev)마다 따로다 — 한 사람이 pc·mobile 에 한 줄씩. 옮기는 법은 speed 위 주석.
 create table if not exists ladder (
-  who   text primary key,
+  who   text    not null,
+  dev   text    not null default 'pc',   -- 'pc' | 'mobile'
   name  text    not null,
   lp    integer not null default 0,
   games integer not null default 0,
   wins  integer not null default 0,
-  at    integer not null
+  at    integer not null,
+  primary key (who, dev)
 );
-create index if not exists ladder_top on ladder (lp desc, at asc);
+create index if not exists ladder_top on ladder (dev, lp desc, at asc);
 
 -- 판 기록(전적). 경쟁전·일반전 모두. 사람마다 최근 50판만 남긴다.
 -- delta 는 경쟁전에서 오르내린 lp 다(일반전은 null). 탈주는 score 0 · delta 음수 줄이다.
 create table if not exists played (
   who   text    not null,
   mode  text    not null,         -- 'ranked' | 'normal'
+  dev   text    not null default 'pc',   -- 어느 기기 판인지. 하루 lp 뚜껑도 기기마다 센다
   slug  text    not null,
   secs  integer not null,
   cpm   integer not null default 0,   -- 그 판의 타자 속도. 기록 페이지가 이걸 보인다
@@ -184,7 +200,8 @@ create table if not exists ticket (
   who  text primary key,
   id   text    not null,
   slug text    not null,
-  at   integer not null
+  at   integer not null,
+  dev  text    not null default 'pc'   -- 표를 낸 기기. 끝낼 때 몸통이 아니라 이 값으로 사다리를 고른다
 );
 
 -- ── 프로필 ────────────────────────────────────────────────

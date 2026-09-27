@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.26';
+const VER = '3.27';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -86,6 +86,10 @@ function paintUI(then) {
     /* 들어가 있으면 로그인 화면을 한 번 더 지날 이유가 없다 — 내 계정 덮개를 연다(ranked.js) */
     signinLink.href = inn ? '#account' : 'signin/';
   }
+  /* Web Share API 가 있는 기기(대개 폰)는 저장 버튼이 공유 시트를 연다 — 라벨도 그에 맞춘다.
+     언어를 바꿔도 applyI18n 이 이 key 를 다시 읽으니 여기서 한 번만 정하면 된다 */
+  const saveBtn = $('#save');
+  if (saveBtn) saveBtn.dataset.i18n = (typeof navigator.share === 'function') ? 'share' : 'save';
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
   document.title = 'regiontype · ' + t('pageTitle');
@@ -456,8 +460,12 @@ const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05),
 const NUDGE = -10;
 /* 홈 카메라 배율. 핀치와 스마트 포커스가 같이 쓴다. 펼친 동이 넵바에 들어가면
    하한까지 줄이고, 가운데에 작게 뜨면 상한까지 키운다 */
-const HOME_Z = [.42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
+const fingers = () => matchMedia('(pointer:coarse)').matches;
+/* 손가락 화면은 서울 덩이(8칸)가 폭에 다 들어야 해서 하한이 더 낮다 */
+const HOME_Z = [fingers() ? .2 : .42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
 function clampZoom(z, lo, hi) { return Math.max(lo, Math.min(hi, z)); }
+/* 홈의 기본 배율. 데스크톱은 1배, 손가락 화면은 서울 덩이가 좌우 16px 여백 안에 든다 */
+const homeFit = box => fingers() ? Math.min(1, (innerWidth - 32) / box.w) : 1;
 
 function makeTile(label, slug, kid) {
   const el = document.createElement('button');
@@ -613,7 +621,8 @@ function planCourses(snap = false) {
     });
     fold(COURSE.tiles.filter(tile => tile.gone), .02);
     aimGrid(1, GZ.ax.to, GZ.ay.to);
-    if (snap) syncHomeCam(true);
+    /* 손가락 화면의 배율은 칸 크기에서 나온다 — 칸이 바뀌면(첫 syncGrid·회전) 다시 맞춘다 */
+    if (snap || fingers()) syncHomeCam(snap);
     courseKick();
     return;
   }
@@ -964,16 +973,16 @@ function focusHome(snap = false) {
     return;
   }
   if (!PICK || PICK.gone) return;
-  const box = worldBox([PICK]), z = 1;
+  const all = COURSE.tiles.filter(t => !t.kid && !t.gone);
+  const box = worldBox([PICK]), z = homeFit(worldBox(all));
   /* 가둠은 덩이 전체로 잰다 — 가장자리 구를 가운데로 밀어도 지도가 날아가지 않는다 */
-  aimHomeCam(stage.cx - (box.x0 + box.x1) / 2 * z, stage.cy - (box.y0 + box.y1) / 2 * z, z,
-             COURSE.tiles.filter(t => !t.kid && !t.gone), snap);
+  aimHomeCam(stage.cx - (box.x0 + box.x1) / 2 * z, stage.cy - (box.y0 + box.y1) / 2 * z, z, all, snap);
 }
 function restoreHomeView(snap = false) {
   const tiles = COURSE.tiles.filter(t => !t.kid && !t.gone);
   if (!tiles.length) return;
   const box = worldBox(tiles), stage = homeStage();
-  const z = 1;
+  const z = homeFit(box);
   const px = innerWidth / 2 - (box.x0 + box.x1) / 2 * z;
   const head = stage.cy - stage.h / 2;
   const viewH = stage.h;
@@ -1213,10 +1222,9 @@ function makeNavFollow(spec) {
        제 rect 를 그대로 쓰면 알약만 따라 올라가 칸마다 높이가 달라 보인다.
        쉴 때의 점은 줄이 아니라 로고의 점 자리라 손대지 않는다 */
     const ref = pill && nav.querySelector('.nav-item');
-    if (ref) {
-      const rr = ref.getBoundingClientRect();
-      y = (rr.top + rr.bottom) / 2 - nr.top - h / 2;
-    }
+    const rr = ref && ref.getBoundingClientRect();
+    /* 손가락 화면은 로고가 제 줄에 따로 선다 — 같은 줄일 때만 맞춘다 */
+    if (rr && rr.bottom > r.top && rr.top < r.bottom) y = (rr.top + rr.bottom) / 2 - nr.top - h / 2;
     const still = calm() || !on;
     on = true;
     base = { x, y, w, h };
@@ -1456,7 +1464,11 @@ let G = null, tick = null, pending = null;
 
 /* rk 는 경쟁전 표({id, secs}) — ranked.js 가 중계기에서 받아 넘긴다. 시간은 표가 정한다 */
 async function start(slug, only, rk) {
-  const zoom = 3;   // 1배를 없앴다 — 코스는 3배로만 돈다
+  /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
+     기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
+  if (fingers()) { go('play'); $('#typein').focus(); }
+  // 데스크톱은 3배로만 돈다. 손가락 화면은 세로로 좁아 서울 전체가 폭에 드는 1배다
+  const zoom = fingers() ? 1 : 3;
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [course, geom] = await load(slug);
@@ -1639,6 +1651,7 @@ function paintQueue() {
 function setTarget(name) {
   const box = $('#qLetters') || $('#typing');
   box.replaceChildren();
+  box.style.setProperty('--n', [...name].length);   // 손가락 화면에서 긴 이름을 폭에 맞춰 줄인다
   G.want = name;
   for (const ch of name) {
     const el = document.createElement('b');
@@ -1765,6 +1778,7 @@ function countdown(n, done) {
 }
 
 function run() {
+  $('#typein').value = '';   // 카운트다운 동안 미리 친 글자는 세지 않는다
   $('#typein').focus();
   tick = setInterval(() => {
     G.left--;
@@ -1816,6 +1830,16 @@ $('#play').addEventListener('click', e => {
 const markFocus = () => $('#typing').classList.toggle('off', document.activeElement !== $('#typein'));
 $('#typein').addEventListener('focus', markFocus);
 $('#typein').addEventListener('blur', markFocus);
+
+/* 화상 키보드가 뜨면 플레이 화면을 보이는 만큼으로 줄인다(style.css 의 --vvh·--vvt,
+   손가락 화면에서만 읽는다). 안드로이드는 viewport 메타의 interactive-widget 이 이미
+   레이아웃을 줄이고, iOS 는 그걸 몰라 visualViewport 로 잰다 */
+if (window.visualViewport) {
+  const vv = visualViewport, st = document.documentElement.style;
+  const fitVV = () => { st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); };
+  vv.addEventListener('resize', fitVV);
+  vv.addEventListener('scroll', fitVV);
+}
 
 function judge(raw) {
   const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');
@@ -1957,9 +1981,10 @@ function finish() {
 
 /* 결과 카드 — SVG를 그대로 이미지로 굽는다 (9:16, 스토리용).
    스토리는 위아래 UI 가 가리므로 글자는 위 250·아래 340 px 안쪽에 둔다 */
-let cardReady = Promise.resolve();
+let cardReady = Promise.resolve(), cardShot = null;
 function drawCard() {
   let done;
+  cardShot = null;
   cardReady = new Promise(r => done = r);
   const cv = $('#card'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height, pad = 90;
@@ -1981,26 +2006,70 @@ function drawCard() {
     if (w > W - pad * 2) ctx.font = `${weight} ${Math.floor(size * (W - pad * 2) / w)}px system-ui,sans-serif`;
     ctx.fillText(txt, x, y);
   };
+  /* .logo 와 같은 꼴 — region(굵게) + type(가늘게) + 점(accent). textAlign 이 center 라
+     한 번에 못 그리니 폭을 재서 직접 가운데 맞춘다 */
+  const wordmark = (x, y, size) => {
+    const font = w => `${w} ${size}px system-ui,sans-serif`;
+    ctx.font = font(800);
+    const wRegion = ctx.measureText('region').width;
+    ctx.font = font(400);
+    const wType = ctx.measureText('type').width;
+    const dotD = size * .22, gap = size * .06;
+    let cx = x - (wRegion + wType + gap + dotD) / 2;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = ink;
+    ctx.font = font(800);
+    ctx.fillText('region', cx, y);
+    cx += wRegion;
+    ctx.font = font(400);
+    ctx.fillText('type', cx, y);
+    cx += wType + gap;
+    ctx.fillStyle = acc;
+    ctx.beginPath();
+    ctx.arc(cx + dotD / 2, y - size * .32, dotD / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.textAlign = 'center';
+  };
   const img = new Image();
   img.onload = () => {
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
-    const top = 440, bottom = H - 700;                        // 지도 칸
+    const top = 480, bottom = 1150;                           // 지도 칸 — 위는 머릿글, 아래는 점수·CTA 몫
     let w = W - pad * 2, h = w * vb[3] / vb[2];
     if (h > bottom - top) { h = bottom - top; w = h * vb[2] / vb[3]; }
     ctx.drawImage(img, (W - w) / 2, top + (bottom - top - h) / 2, w, h);
     ctx.fillStyle = ink;
     ctx.textAlign = 'center';
-    fit('regiontype', 800, 88, W / 2, 330);
-    fit(`${G.hits}/${G.items.length}`, 800, 150, W / 2, H - 520);
-    fit(t('cardLine', { title: courseLabel(G.course), zoom: G.zoom, speed: showSpeed(G.cpm || 0) }), 500, 44, W / 2, H - 440);
-    fit('regiontype.com', 500, 40, W / 2, H - 370);
+    wordmark(W / 2, 320, 64);
+    /* '내 동네' 로 들어와야 할 머릿글은 코스 이름이다 — regiontype 이 아니라 */
+    ctx.fillStyle = ink;
+    fit(courseLabel(G.course), 800, 76, W / 2, 430);
+    fit(`${G.hits}/${G.items.length}`, 800, 150, W / 2, 1290);
+    fit(t('cardLine', { zoom: G.zoom, speed: showSpeed(G.cpm || 0) }), 500, 38, W / 2, 1370);
+    /* 점수 다음으로 눈에 띄어야 할 한 줄 — 공유 루프의 실제 문구 */
+    fit(t('cardCta'), 700, 54, W / 2, 1470);
     ctx.textAlign = 'left';
-    done();
+    /* 공유 파일은 미리 굽는다 — iOS 는 누른 직후가 아니면 share() 를 막는다 */
+    cv.toBlob(b => { if (b) cardShot = new File([b], `regiontype-${G.slug}.png`, { type: 'image/png' }); done(); }, 'image/png');
   };
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
 }
 
 $('#save').onclick = async () => {
+  /* 공유 시트가 있는 기기(대개 폰)는 인스타 스토리·카톡으로 바로 보낸다. 누른 뒤
+     await 을 거치면 iOS 가 막으므로 미리 구운 cardShot 이 있을 때만 곧장 부른다.
+     취소(AbortError)는 실패가 아니다. 안 되면 옛 다운로드로 돌아간다 */
+  if (cardShot && navigator.canShare && navigator.canShare({ files: [cardShot] })) {
+    try {
+      await navigator.share({
+        files: [cardShot],
+        text: `${courseLabel(G.course)} ${G.hits}/${G.items.length} · ${t('cardCta')}`,
+        url: 'https://regiontype.com',
+      });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
   await cardReady;
   const a = document.createElement('a');
   a.download = `regiontype-${G.slug}.png`;
@@ -2014,6 +2083,8 @@ $('#again').onclick = () => start(G.slug);
    이슈를 대신 만든다 — FEEDBACK_URL 이 그 주소다.
    글만으로는 재현할 수 없어 버전·주소·브라우저를 함께 싣는다. */
 const FEEDBACK_URL = 'https://g.gearservicevanguard.com';
+/* 폰 타수는 키보드와 견줄 수 없다 — 순위표는 기기마다 따로 선다(relay 의 devOf) */
+const DEV = matchMedia('(pointer:coarse)').matches ? 'mobile' : 'pc';
 const fbNote = $('#fbNote');
 const fbSend = $('#fbSend');
 const fbSay = (msg, bad) => { fbNote.textContent = msg; fbNote.classList.toggle('bad', !!bad); };
@@ -2198,8 +2269,8 @@ async function board() {
   const play = { c: G.slug, t: G.total };
   try {
     const d = inn && me && G.score
-      ? await boardAsk('/score', { ...play, name: me, score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
-      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}`);
+      ? await boardAsk('/score', { ...play, dev: DEV, name: me, score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
+      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}`);
     $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
     /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
        않으면 다음에 순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고,
