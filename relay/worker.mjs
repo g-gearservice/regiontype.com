@@ -11,6 +11,8 @@
      POST /played   일반전 한 판을 전적에 남긴다
      GET  /games    내 사다리 줄과 최근 판들 (로그인 필요)
      GET  /ladder   경쟁전 상위 50
+     순위표·사다리는 기기(dev)마다 따로 선다 — 'pc' | 'mobile'. 쓰기는 몸통의 dev,
+     읽기(/top·/ladder·/games)는 ?dev= 로 받는다. 'mobile' 이 아니면 전부 'pc' 다
 
      1차 인증은 Google·Apple(SSO) 이 하고, 패스키는 그 위에 얹는 2단계다.
      POST /auth/new    패스키 만들기 시작 (로그인 필요)   → 챌린지
@@ -111,10 +113,15 @@ export function compose(c) {
   };
 }
 
+/* 기기 갈래. 폰 타자 속도는 키보드와 견줄 수 없어 순위표를 둘로 나눈다. 남이 보낸
+   값이라 'mobile' 이 아니면 전부 'pc' 로 떨어뜨린다 — 옛 앱도 쓰레기 값도 pc 다.
+   줄을 가르는 데만 쓰고 그 밖의 무엇도 이 값을 믿지 않는다 */
+export const devOf = d => d === 'mobile' ? 'mobile' : 'pc';
+
 /* 어느 판인지. 코스 이름과 제한 시간이 둘 다 맞아야 한 줄에 세운다 */
 export function where(c) {
   const slug = cut(c.c, 40), secs = Number(c.t);
-  return { slug, secs, size: SIZE[slug] || 0,
+  return { slug, secs, dev: devOf(c.dev), size: SIZE[slug] || 0,
            ok: Object.hasOwn(SIZE, slug) && TIMES.includes(secs) };
 }
 
@@ -212,8 +219,8 @@ const board = (env, w) => env.DB.prepare(
   `select b.who as who, case when p.shut = 1 then '' else b.name end as name,
           b.cpm as cpm, b.score as score, b.hits as hits, b.acc as acc
      from speed b left join profile p on p.who = b.who
-    where b.slug = ? and b.secs = ? order by b.cpm desc, b.at asc limit ?`
-).bind(w.slug, w.secs, TOP);
+    where b.slug = ? and b.secs = ? and b.dev = ? order by b.cpm desc, b.at asc limit ?`
+).bind(w.slug, w.secs, w.dev, TOP);
 /* 이름은 서버가 다듬어 저장하므로 브라우저가 자기 줄을 이름으로 찾으면 어긋난다.
    난수 id 는 남에게 보일 값이 아니니 여기서 떼고 '나' 표시만 붙여 보낸다. */
 const seen = (rows, who) => rows.map(({ who: w, ...r }) => who ? { ...r, me: w === who } : r);
@@ -274,18 +281,18 @@ async function dist(req, env, o) {
       env.DB.prepare(
         /* cast 가 없으면 바인딩된 칸 크기가 실수로 읽혀 나눗셈이 소수로 떨어진다 */
         'select cast(score / ? as integer) as b, count(*) as n' +
-         ' from speed where slug = ? and secs = ? group by b order by b'
-      ).bind(bucket, w.slug, w.secs),
-      env.DB.prepare('select count(*) as n from speed where slug = ? and secs = ?').bind(w.slug, w.secs),
-      env.DB.prepare('select score from speed where slug = ? and secs = ? and who = ?')
-        .bind(w.slug, w.secs, me ?? ''),
+         ' from speed where slug = ? and secs = ? and dev = ? group by b order by b'
+      ).bind(bucket, w.slug, w.secs, w.dev),
+      env.DB.prepare('select count(*) as n from speed where slug = ? and secs = ? and dev = ?').bind(w.slug, w.secs, w.dev),
+      env.DB.prepare('select score from speed where slug = ? and secs = ? and dev = ? and who = ?')
+        .bind(w.slug, w.secs, w.dev, me ?? ''),
     ]);
     const score = mine.results[0]?.score ?? null;
     let over = null;
     if (score !== null) {
       const r = await env.DB.prepare(
-        'select count(*) as n from speed where slug = ? and secs = ? and score > ?'
-      ).bind(w.slug, w.secs, score).first('n');
+        'select count(*) as n from speed where slug = ? and secs = ? and dev = ? and score > ?'
+      ).bind(w.slug, w.secs, w.dev, score).first('n');
       over = r ?? 0;
     }
     return send(200, { bucket, cap, bins: bins.results,
@@ -295,7 +302,7 @@ async function dist(req, env, o) {
 
 async function top(req, env, o) {
   const u = new URL(req.url);
-  const w = where({ c: u.searchParams.get('c'), t: u.searchParams.get('t') });
+  const w = where({ c: u.searchParams.get('c'), t: u.searchParams.get('t'), dev: u.searchParams.get('dev') });
   if (!w.ok) return reply(400, '없는 판입니다.', o);
   return safely(o, async () => {
     const { results } = await board(env, w).all();
@@ -318,8 +325,8 @@ async function post(req, env, o) {
   return safely(o, async () => {
     const [, rank, list] = await env.DB.batch([
       env.DB.prepare(
-        `insert into speed (slug, secs, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         on conflict (slug, secs, who) do update set
+        `insert into speed (slug, secs, dev, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         on conflict (slug, secs, dev, who) do update set
            /* 이름만은 기록과 무관하게 바뀐다. 이걸 기록 조건에 묶어두면 잘못 적은
               본명을 지우려고 자기 최고 기록을 깨야 한다 — 사실상 철회 불가가 된다. */
            name  = excluded.name,
@@ -328,13 +335,13 @@ async function post(req, env, o) {
            hits  = case when excluded.cpm > speed.cpm then excluded.hits else speed.hits end,
            acc   = case when excluded.cpm > speed.cpm then excluded.acc  else speed.acc  end,
            at    = case when excluded.cpm > speed.cpm then excluded.at   else speed.at   end`
-      ).bind(e.slug, e.secs, e.who, e.name, e.cpm, e.score, e.hits, e.acc, Date.now()),
+      ).bind(e.slug, e.secs, e.dev, e.who, e.name, e.cpm, e.score, e.hits, e.acc, Date.now()),
       /* coalesce 가 없으면 그 줄이 없을 때 score > NULL 이 NULL 이 되어 조용히 1위가 된다 */
       env.DB.prepare(
-        `select count(*) + 1 as n from speed where slug = ? and secs = ? and cpm >
-           coalesce((select cpm from speed where slug = ? and secs = ? and who = ?), -1)`
-      ).bind(e.slug, e.secs, e.slug, e.secs, e.who),
-      board(env, { slug: e.slug, secs: e.secs }),
+        `select count(*) + 1 as n from speed where slug = ? and secs = ? and dev = ? and cpm >
+           coalesce((select cpm from speed where slug = ? and secs = ? and dev = ? and who = ?), -1)`
+      ).bind(e.slug, e.secs, e.dev, e.slug, e.secs, e.dev, e.who),
+      board(env, e),
     ]);
     return send(201, { rank: rank.results[0]?.n ?? null, top: seen(list.results, e.who) }, o);
   });
@@ -364,7 +371,9 @@ async function forget(req, env, o) {
    정확도는 얻는 쪽만 깎는다(95%↑ ×1 · 90 ×.8 · 85 ×.6 · 80 ×.4 · 그 아래는 이겨도 잃는다).
    이기면 최소 +3, 지면 최소 −5, 한 판에 ±50 을 넘지 않는다. 탈주는 −25.
    하루(24시간)에 얻는 lp 는 200 까지다.
-   제한 시간은 120초로 못 박는다 — 판마다 조건이 같아야 견줄 수 있다. */
+   제한 시간은 120초로 못 박는다 — 판마다 조건이 같아야 견줄 수 있다.
+   사다리(lp)는 기기마다 따로다 — 폰 사람은 폰 사람끼리 선다. 기대 속도(WANT)는 아직 같다.
+   기기는 표를 낼 때 정해 표에 적고, 끝낼 때는 몸통이 아니라 표의 것을 쓴다. */
 export const RANKED_SECS = 120;
 const STEP = 100, PLACE = 5, QUIT = 25, KEEP = 50, DAY_CAP = 200;
 /* 티어마다 기대하는 속도(CPM). 위로 갈수록 너비가 같아 한 계단이 50 CPM 이다.
@@ -383,15 +392,15 @@ export function lpDelta(lp, games, cpm, acc) {
 /* 끝난 판이 앞뒤가 맞는지. 표를 낸 코스·시간으로만 본다 — 몸통의 c·t 는 무시한다.
    다 치지 않았으면 120초가 지나야 하고, 다 쳤으면 한 곳에 0.5초는 들었어야 한다 */
 export function rankedCheck(c, tk, now, who) {
-  const e = entry({ ...c, c: tk.slug, t: RANKED_SECS }, who);
+  const e = entry({ ...c, c: tk.slug, t: RANKED_SECS, dev: tk.dev }, who);
   const took = now - tk.at;
   const need = e.hits >= (SIZE[tk.slug] || 0) ? e.hits * 500 : RANKED_SECS * 1000;
   return { ...e, ok: e.ok && c.id === tk.id && took >= need && took <= 10 * 60e3 };
 }
 /* 판 한 줄을 적고 그 사람의 옛 줄을 50 판에서 자른다 */
-const logPlay = (env, who, mode, slug, secs, e, delta, at) => [
-  env.DB.prepare('insert into played (who, mode, slug, secs, cpm, score, hits, acc, delta, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(who, mode, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, at),
+const logPlay = (env, who, mode, dev, slug, secs, e, delta, at) => [
+  env.DB.prepare('insert into played (who, mode, dev, slug, secs, cpm, score, hits, acc, delta, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(who, mode, dev, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, at),
   env.DB.prepare('delete from played where who = ? and rowid not in (select rowid from played where who = ? order by at desc limit ?)')
     .bind(who, who, KEEP),
 ];
@@ -401,28 +410,29 @@ async function rankedStart(req, env, o) {
   if (!me) return reply(401, '경쟁전은 로그인이 필요합니다.', o);
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const slug = cut(c.c, 40), name = plain(c.name, CAP.name);
+  const slug = cut(c.c, 40), name = plain(c.name, CAP.name), dev = devOf(c.dev);
   if (!Object.hasOwn(SIZE, slug) || !name) return reply(400, '시작할 수 없는 판입니다.', o);
   const ok = await pass(env.RL_RK, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
     const now = Date.now(), id = rand(18);
     const [old, row] = await env.DB.batch([
-      env.DB.prepare('select slug from ticket where who = ?').bind(me),
-      env.DB.prepare('select lp from ladder where who = ?').bind(me),
+      env.DB.prepare('select slug, dev from ticket where who = ?').bind(me),
+      /* 탈주는 옛 표를 낸 기기의 사다리에서 깎는다 */
+      env.DB.prepare('select lp from ladder where who = ? and dev = (select dev from ticket where who = ?)').bind(me, me),
     ]);
     const tk = old.results[0], lp = row.results[0]?.lp ?? 0;
     const quit = tk ? -Math.min(QUIT, lp) : 0;
     await env.DB.batch([
-      env.DB.prepare(`insert into ladder (who, name, lp, games, wins, at) values (?, ?, 0, 0, 0, ?)
-                      on conflict (who) do update set name = excluded.name`).bind(me, name, now),
+      env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
+                      on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
       ...(tk ? [
-        env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ?').bind(quit, now, me),
-        ...logPlay(env, me, 'ranked', tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now),
+        env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ? and dev = ?').bind(quit, now, me, tk.dev),
+        ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now),
       ] : []),
-      env.DB.prepare(`insert into ticket (who, id, slug, at) values (?, ?, ?, ?)
-                      on conflict (who) do update set id = excluded.id, slug = excluded.slug, at = excluded.at`)
-        .bind(me, id, slug, now),
+      env.DB.prepare(`insert into ticket (who, id, slug, dev, at) values (?, ?, ?, ?, ?)
+                      on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, at = excluded.at`)
+        .bind(me, id, slug, dev, now),
     ]);
     return send(201, { id, secs: RANKED_SECS, quit }, o);
   });
@@ -439,13 +449,13 @@ async function rankedEnd(req, env, o) {
     const now = Date.now();
     /* 표를 먼저 태운다 — 한 줄을 돌려받은 요청만 이어 간다. 같은 표로 두 번
        동시에 끝내도 한 번만 셈된다 */
-    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, at')
+    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, dev, at')
       .bind(me, cut(c.id, 40)).first();
     if (!tk) return reply(409, '끝낼 경쟁전이 없습니다.', o);
     const [row, day] = await env.DB.batch([
-      env.DB.prepare('select name, lp, games from ladder where who = ?').bind(me),
-      env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and delta > 0 and at > ?")
-        .bind(me, now - 864e5),
+      env.DB.prepare('select name, lp, games from ladder where who = ? and dev = ?').bind(me, tk.dev),
+      env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and dev = ? and delta > 0 and at > ?")
+        .bind(me, tk.dev, now - 864e5),
     ]);
     const lad = row.results[0];
     if (!lad) return reply(409, '끝낼 경쟁전이 없습니다.', o);
@@ -457,12 +467,12 @@ async function rankedEnd(req, env, o) {
        ponytail: 뚜껑은 속도만 늦춘다. 사다리가 시달리면 채점(타건 기록 검증)을 서버로 옮긴다 */
     if (d > 0) d = Math.max(0, Math.min(d, DAY_CAP - (day.results[0]?.n ?? 0)));
     await env.DB.batch([
-      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ?')
-        .bind(d, d > 0 ? 1 : 0, now, me),
-      ...logPlay(env, me, 'ranked', tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now),
+      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ? and dev = ?')
+        .bind(d, d > 0 ? 1 : 0, now, me, tk.dev),
+      ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now),
     ]);
     if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
-    return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1 }, o);
+    return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1, dev: tk.dev }, o);
   });
 }
 
@@ -478,40 +488,42 @@ async function playedNormal(req, env, o) {
   const ok = await pass(env.RL_SC, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
-    await env.DB.batch(logPlay(env, me, 'normal', e.slug, e.secs, e, null, Date.now()));
+    await env.DB.batch(logPlay(env, me, 'normal', e.dev, e.slug, e.secs, e, null, Date.now()));
     return send(201, {}, o);
   });
 }
 
-/* 내 전적 — 사다리 한 줄과 최근 판들. who 는 싣지 않는다 */
+/* 내 전적 — ?dev= 기기의 사다리 한 줄과 최근 판들(기기 무관, 줄마다 dev). who 는 싣지 않는다 */
 async function myGames(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
+  const dev = devOf(new URL(req.url).searchParams.get('dev'));
   return safely(o, async () => {
     const [lad, list, above] = await env.DB.batch([
-      env.DB.prepare('select name, lp, games, wins from ladder where who = ?').bind(me),
-      env.DB.prepare('select mode, slug, secs, cpm, score, hits, acc, delta, at from played where who = ? order by at desc limit ?')
+      env.DB.prepare('select name, lp, games, wins from ladder where who = ? and dev = ?').bind(me, dev),
+      env.DB.prepare('select mode, dev, slug, secs, cpm, score, hits, acc, delta, at from played where who = ? order by at desc limit ?')
         .bind(me, KEEP),
-      env.DB.prepare(`select count(*) + 1 as n from ladder where games >= ? and lp >
-                      coalesce((select lp from ladder where who = ?), 1e9)`).bind(PLACE, me),
+      env.DB.prepare(`select count(*) + 1 as n from ladder where dev = ? and games >= ? and lp >
+                      coalesce((select lp from ladder where who = ? and dev = ?), 1e9)`).bind(dev, PLACE, me, dev),
     ]);
     const r = lad.results[0] || null;
     return send(200, { ladder: r && { ...r, rank: r.games >= PLACE ? above.results[0]?.n ?? null : null },
-                       place: PLACE, step: STEP, games: list.results }, o);
+                       dev, place: PLACE, step: STEP, games: list.results }, o);
   });
 }
 
-/* 경쟁전 순위. 배치 5판을 마친 사람만 오른다 */
+/* 경쟁전 순위. 배치 5판을 마친 사람만 오른다. ?dev= 기기의 사다리만 */
 async function ladderTop(req, env, o) {
   const me = await sessionWho(env, req);
+  const dev = devOf(new URL(req.url).searchParams.get('dev'));
   return safely(o, async () => {
     const { results } = await env.DB.prepare(
       `select l.who as who, case when p.shut = 1 then '' else l.name end as name,
               l.lp as lp, l.games as games, l.wins as wins
          from ladder l left join profile p on p.who = l.who
-        where l.games >= ? order by l.lp desc, l.at asc limit 50`
-    ).bind(PLACE).all();
-    return send(200, { top: seen(results, me), place: PLACE, step: STEP }, o);
+        where l.dev = ? and l.games >= ? order by l.lp desc, l.at asc limit 50`
+    ).bind(dev, PLACE).all();
+    return send(200, { top: seen(results, me), dev, place: PLACE, step: STEP }, o);
   });
 }
 
@@ -1315,7 +1327,8 @@ export function botSystem({ courses, lang, name }) {
     'Be short and friendly, one to three sentences. You can run the whole site for the user.\n' +
     'Facts: pick a course and press Start for a normal game (time limit from settings). Ranked: ' +
     '120 seconds, needs sign-in and a leaderboard name; LP goes up or down with the score, accuracy under 80% ' +
-    'loses LP even on a win, leaving mid-game costs 25 LP. Leaderboards are per course and time limit. ' +
+    'loses LP even on a win, leaving mid-game costs 25 LP. Leaderboards are per course and time limit, ' +
+    'and PC and phone players have separate leaderboards and ranked ladders. ' +
     'Seoul dongs can be administrative (admin) or legal (legal).\n' +
     'Answer ONLY with one JSON object, no code fence: {"say":"what you say","do":[actions]}. ' +
     'Actions (do may be empty, at most 3):\n' +

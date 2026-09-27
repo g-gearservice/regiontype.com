@@ -163,8 +163,9 @@ async function fillRanking() {
   const n = ++rankReq;
   const lad = $('#ladderList'), say = $('#ladderSay');
   lad.replaceChildren(); say.textContent = t('reading');
+  $('#rkDev').textContent = t(DEV === 'mobile' ? 'devMobile' : 'devPc');
   try {
-    const d = await ask('/ladder');
+    const d = await ask(`/ladder?dev=${DEV}`);
     if (n !== rankReq) return;
     lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, tierOf(r.lp))));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
@@ -176,7 +177,7 @@ async function fillRanking() {
   list.replaceChildren(); nsay.textContent = t('reading');
   if (!slug) return;
   try {
-    const d = await ask(`/top?c=${encodeURIComponent(slug)}&t=${opt.time}`);
+    const d = await ask(`/top?c=${encodeURIComponent(slug)}&t=${opt.time}&dev=${DEV}`);
     if (n !== rankReq) return;
     list.replaceChildren(...(d.top || []).map((r, i) => rankRow(i, r.name, showSpeed(r.cpm), r.me)));
     nsay.textContent = (d.top || []).length ? '' : t('ladderEmpty');
@@ -211,7 +212,7 @@ async function fillRecords() {
   if (!token()) { say.textContent = t('recordsOut'); return; }
   say.textContent = t('reading');
   let d;
-  try { d = await ask('/games'); } catch { if (n === recReq) say.textContent = t('boardFail'); return; }
+  try { d = await ask(`/games?dev=${DEV}`); } catch { if (n === recReq) say.textContent = t('boardFail'); return; }
   if (n !== recReq) return;
   const lad = d.ladder;
   if (lad) {
@@ -437,7 +438,11 @@ function hide() { bubble.hidden = true; chatting = false; }
 function cornerAt(i) {
   if (ranked && i === 2) i = 3;
   const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
-  return [i % 2 ? innerWidth - BOT - 20 : 20, i < 2 ? top : innerHeight - BOT - 24];
+  const x = i % 2 ? innerWidth - BOT - 20 : 20;
+  /* 폰은 아래 막대가 폭을 거의 다 먹는다 — 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
+  const dock = $('#regions .nav-bot').getBoundingClientRect();
+  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
+  return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
 }
 function sleep() {
   hide();
@@ -816,7 +821,7 @@ async function go(slug) {
     return;
   }
   let d;
-  try { d = await ask('/ranked/start', { c: slug, name }); }
+  try { d = await ask('/ranked/start', { c: slug, name, dev: DEV }); }
   catch (e) { say(e.status === 401 ? 'rkNeedLogin' : 'rkFail'); return; }
   quitNote = d.quit ? t('rkQuit', { n: -d.quit }) : '';
   setRanked(false);
@@ -863,7 +868,7 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   line.classList.remove('bad');
   if (!token()) return;
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
-  if (!g.ranked) { ask('/played', { ...body, c: g.slug, t: g.total }).catch(() => {}); return; }
+  if (!g.ranked) { ask('/played', { ...body, c: g.slug, t: g.total, dev: DEV }).catch(() => {}); return; }
   line.textContent = t('uploading');
   try {
     const d = await ask('/ranked/end', { ...body, id: g.ranked.id });

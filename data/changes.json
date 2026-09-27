@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.327",
+    "date": "2026-09-27",
+    "ko": "폰에서 제대로 칠 수 있습니다. 홈·게임·결과 화면이 폰 폭에 맞고, 키보드가 올라와도 지도와 단어가 보입니다. 순위표는 PC와 모바일을 따로 셉니다. 결과 카드에 '너도 해봐 · regiontype.com'이 들어가고, 폰에서는 공유 시트로 인스타 스토리·카톡에 바로 보냅니다.",
+    "en": "Phones now play properly: home, game and result screens fit the screen, and the map and word stay visible with the keyboard open. Leaderboards count PC and mobile separately. The result card now says \"Your turn · regiontype.com\", and phones send it straight to Stories or chats through the share sheet."
+  },
+  {
     "v": "0.7.326",
     "date": "2026-09-27",
     "ko": "내 펫의 크기 밀대 꼭지가 위를 가리키는 삼각형이 되어, 봇 크기가 바뀌어도 늘 '실제 크기' 글자 바로 아래에 서고 테와 이음새 없이 이어집니다.",

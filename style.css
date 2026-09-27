@@ -428,6 +428,17 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .scores .best{color:var(--accent-text);font-weight:700;min-height:24px;display:block}
 .scores .menu{margin-top:24px;gap:3px}
 .scores .menu button{font-size:20px;padding:4px 14px 6px}
+/* 폰은 공유 버튼이 첫 화면 안에 있어야 한다 — 카드 높이를 묶고 버튼을 카드 바로 밑으로 */
+@media (pointer:coarse){
+  .result-wrap{flex-direction:column;align-items:center;gap:16px}
+  #card{width:auto;height:min(50vh,440px)}
+  .scores{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:4px 16px}
+  .scores b{font-size:28px}
+  .scores .best{width:100%;text-align:center;min-height:0}
+  .scores .menu{order:-1;flex-direction:row;justify-content:center;width:100%;min-width:0;margin-top:0;gap:8px}
+  .scores .menu :is(#again,#save){white-space:nowrap;font-size:20px;padding:10px 18px 12px}
+  #result{padding-inline:16px}
+}
 .res-head{margin:34px 0 14px;font-size:20px;font-weight:800}
 .res-head span{color:var(--ink-soft);font-weight:500}
 
@@ -707,6 +718,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   display:flex; justify-content:center; gap:2px;
   font-weight:800; font-size:52px; letter-spacing:-.01em; line-height:1.15;
 }
+/* 글자 칸은 줄지 않는다 — 줄면 커서(::before)와 글자가 두 줄로 갈라져 순서가 뒤집혀 보인다 */
+.q-letters b{flex:none}
 .typing b{
   color:var(--ink);
   transition:color .12s var(--ease-out), transform .12s var(--ease-out);
@@ -763,6 +776,26 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 #play > .hud, #play > .typing, #play > .fact, #play > .typebar{position:relative;z-index:2}
 #play > .hud{margin-bottom:auto}
 #play > .typing{margin-top:auto;margin-inline:auto}
+
+/* 손가락 화면의 플레이. 지도는 1배라 viewBox 밖이 없다 — 화면 전체에 깔지 않고
+   hud 와 타이핑 줄 사이에 넣어, 남는 칸에 폭·높이 모두 맞춰 앉힌다. 화상 키보드가
+   뜨면 화면 높이는 보이는 만큼(--vvh, app.js)이라 지도와 카드가 키보드 위에 남는다 */
+@media (pointer:coarse){
+  #play{padding:12px 16px; top:var(--vvt,0px); bottom:auto; height:var(--vvh,100%)}
+  #play > .stage{position:relative; inset:auto; flex:1 1 0; min-height:0; margin:8px 0}
+  /* 지도가 hud·카드 밑으로 안 들어가니 흐림 띠도 필요 없다 — 두면 지도 끝줄만 흐려진다 */
+  #play > .backdrop-blur{display:none}
+  .hud{gap:10px}
+  .stat b, .stat.time b{font-size:22px}
+  .stat.time b{min-width:52px}
+  .combo{font-size:18px; min-width:0}
+  .typing{min-width:0; width:100%; gap:0; min-height:0; padding:6px 0; border-radius:24px}
+  .q-side{flex:1 1 0; min-width:0; padding:0 12px}
+  .q-name{max-width:100%; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* 긴 동 이름(종로1,2,3,4가동)도 한 줄에 든다 — --n 은 글자 수(app.js setTarget) */
+  .q-letters{flex:none; font-size:min(40px, calc((100vw - 112px) / var(--n, 4)))}
+  .fact span{font-size:14px}
+}
 
 /* 상단 그라디언트 블러 — 블러 세기가 다른 여섯 겹을 각자 다른 띠로 마스크해서 겹친다.
    backdrop-filter 하나에 마스크를 씌우면 블러가 뚝 끊기지만, 이렇게 쌓으면 부드럽게 번진다.
@@ -1201,7 +1234,14 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
 @media (pointer:coarse){
   #regions{--dock-gap:20px}
-  #regions .nav-bot{padding:10px 12px}
+  #regions .nav-bot{padding:6px 8px; gap:2px}
+  #regions .nav-bot .nav-item{font-size:18px; padding:14px 16px}
+  #regions .nav-bot .nav-item.is-play{font-size:20px}
+  /* 윗줄은 두 줄로 선다 — 로고가 위, 메뉴 넷이 아래. 좌우 16px 여백 안에 든다 */
+  #regions .navbar{grid-template-columns:auto auto; justify-content:center; row-gap:2px; padding:10px 16px}
+  #regions .navbar .nav-logo{grid-column:1 / -1; grid-row:1; font-size:26px; padding:8px 18px}
+  #regions .navbar .nav-side{grid-row:2; gap:0}
+  #regions .navbar .nav-item{font-size:16px; padding:14px 8px}
 }
 /* 구역 이름은 아래 막대와 같은 x, 막대가 비운 틈에 앉는다. 높이 = --dock-gap */
 #regions .course-name{

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
-         lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS,
+         lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS, devOf,
          cmPost, cmTarget, botAsk, botAct, botSystem, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -738,6 +738,88 @@ console.log('security rule self-check done');
   assert.equal(cmTarget('p0'), ''); assert.equal(cmTarget("p1 or 1=1"), '');
   assert.equal(cmPost({ tag: 'chat', title: '제목\n줄', body: ' ' }).ok, false, '빈 본문은 거른다');
   console.log('community self-check done');
+}
+
+/* ── 기기 갈래 ─────────────────────────────────────────────
+   폰과 키보드는 순위표·사다리가 따로다. 'mobile' 이 아니면 전부 pc — 옛 앱·쓰레기 값도.
+   커뮤니티처럼 진짜 sqlite 에 schema.sql 을 깔고 워커를 그대로 태운다. */
+{
+  assert.equal(devOf('mobile'), 'mobile');
+  for (const junk of [undefined, null, '', 'MOBILE', 'tablet', ['mobile'], { dev: 'mobile' }, "mobile' --"])
+    assert.equal(devOf(junk), 'pc', `${JSON.stringify(junk)} 은 pc 로 떨어진다`);
+
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(':memory:');
+  db.exec(sql);
+  const stmt = (q, a = []) => ({
+    q, bind: (...b) => stmt(q, b),
+    first: async col => { const r = db.prepare(q).get(...a); return r ? (col ? r[col] : { ...r }) : null; },
+    all: async () => ({ results: db.prepare(q).all(...a).map(r => ({ ...r })) }),
+    run: async () => ({ meta: { changes: Number(db.prepare(q).run(...a).changes) } }),
+  });
+  const DB = { prepare: q => stmt(q), batch: async ss => Promise.all(ss.map(s =>
+    /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
+  const open = { limit: async () => ({ success: true }) };
+  const env = { DB, SESSION_KEY: 'k'.repeat(32), RL_SC: open, RL_RK: open, RL_AU: open };
+  const A = 'a'.repeat(32), B = 'b'.repeat(32);
+  const tok = { [A]: await sign(env.SESSION_KEY, A), [B]: await sign(env.SESSION_KEY, B) };
+  const call = async (path, body, who) => {
+    const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com' + path, {
+      method: body ? 'POST' : 'GET', body: body && JSON.stringify(body),
+      headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
+                 ...(who ? { authorization: 'Bearer ' + tok[who] } : {}) } }), env);
+    return { status: r.status, ...(await r.json()) };
+  };
+  const run = { c: 'seoul-gu', t: 120, name: '가양', score: 1000, hits: 10, tries: 12, acc: 90 };
+  const rows = dev => db.prepare('select who, cpm from speed where dev = ? order by cpm desc').all(dev);
+
+  assert.equal((await call('/score', { ...run, cpm: 120 }, A)).status, 201);
+  assert.equal((await call('/score', { ...run, cpm: 130, dev: 'tablet' }, B)).status, 201);
+  assert.equal(rows('pc').length, 2, 'dev 가 없거나 모르는 값이면 pc 로 선다');
+  const m = await call('/score', { ...run, cpm: 300, dev: 'mobile' }, A);
+  assert.equal(m.status, 201);
+  assert.equal(m.rank, 1, '폰 순위는 폰끼리 센다');
+  assert.equal(m.top.length, 1, '폰 기록을 올리면 폰 순위표가 돌아온다');
+  assert.equal(rows('pc').find(r => r.who === A).cpm, 120, '폰 기록이 같은 사람의 pc 줄을 덮지 않는다');
+  assert.deepEqual(rows('mobile').map(r => r.who), [A], 'mobile 은 따로 한 줄');
+
+  const pcTop = await call('/top?c=seoul-gu&t=120');
+  assert.deepEqual(pcTop.top.map(r => r.cpm), [130, 120], 'pc 순위표에 폰 기록(300)이 섞이지 않는다');
+  assert.deepEqual((await call('/top?c=seoul-gu&t=120&dev=junk')).top.map(r => r.cpm), [130, 120]);
+  assert.deepEqual((await call('/top?c=seoul-gu&t=120&dev=mobile')).top.map(r => r.cpm), [300]);
+  assert.equal((await call('/dist', { c: 'seoul-gu', t: 120, dev: 'mobile' }, A)).total, 1, '분포도 기기마다');
+
+  /* 경쟁전: 표를 낸 기기의 사다리에만 셈한다. 끝낼 때 몸통의 dev 는 못 바꾼다 */
+  const start = await call('/ranked/start', { c: 'seoul-gu', name: '가양', dev: 'mobile' }, A);
+  assert.equal(start.status, 201);
+  db.prepare('update ticket set at = at - 130000').run();
+  const end = await call('/ranked/end', { id: start.id, score: 1000, hits: 10, tries: 12, cpm: 200, acc: 100, dev: 'pc' }, A);
+  assert.equal(end.status, 200); assert.equal(end.dev, 'mobile', '끝낼 때는 표의 기기를 쓴다');
+  assert.ok(end.delta > 0);
+  const lad = dev => db.prepare('select lp, games from ladder where who = ? and dev = ?').get(A, dev);
+  assert.equal(lad('mobile').lp, end.delta);
+  assert.equal(lad('pc'), undefined, '폰 판은 pc 사다리를 건드리지 않는다');
+  /* 폰 표를 두고 pc 로 새로 시작하면 탈주는 폰 사다리에서 깎인다 */
+  await call('/ranked/start', { c: 'seoul-gu', name: '가양', dev: 'mobile' }, A);
+  await call('/ranked/start', { c: 'seoul-gu', name: '가양' }, A);
+  assert.equal(lad('mobile').lp, Math.max(0, end.delta - 25));
+  assert.deepEqual([lad('pc').lp, lad('pc').games], [0, 0]);
+  db.prepare('update ladder set games = 5').run();
+  assert.equal((await call('/ladder')).top.length, 1, 'pc 사다리');
+  assert.equal((await call('/ladder?dev=mobile')).top[0].lp, lad('mobile').lp, '폰 사다리는 따로');
+  const games = await call('/games?dev=mobile', null, A);
+  assert.equal(games.ladder.lp, lad('mobile').lp);
+  assert.ok(games.games.every(g => g.dev === 'mobile'), '전적 줄마다 기기가 실린다');
+
+  /* 내리기·지우기는 기기를 가리지 않는다 */
+  assert.equal((await call('/forget', {}, A)).status, 200);
+  for (const tb of ['speed', 'ladder', 'played', 'ticket'])
+    assert.equal(db.prepare(`select count(*) as n from ${tb} where who = ?`).get(A).n, 0, `/forget 은 ${tb} 를 두 기기 다 지운다`);
+  await call('/score', { ...run, cpm: 300, dev: 'mobile' }, B);
+  db.prepare('insert into user (id, at) values (?, 0)').run(B);
+  assert.equal((await call('/auth/erase', { sure: true }, B)).status, 200);
+  assert.equal(db.prepare('select count(*) as n from speed where who = ?').get(B).n, 0, '계정을 지우면 두 기기 줄이 다 간다');
+  console.log('device split self-check done');
 }
 
 /* ── 봇 대화 ── 브라우저는 system 을 못 넣고, 모델은 목록 밖 동작을 못 한다 */
