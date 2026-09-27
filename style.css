@@ -475,17 +475,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .board-join button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (hover:hover) and (pointer:fine){ .board-join button:hover{background:var(--accent)} }
 
-/* ── 모바일 안내 ───────────────────────── */
-#mobile{display:none;position:fixed;inset:0;place-content:center;text-align:center;padding:32px;gap:20px}
-#mobile p{color:var(--ink-soft);line-height:1.7}
-/* 물리 키보드 안내는 홈(body 에 클래스가 없는 쪽)에만 건다 — 설정 덮개(body.setting)는
-   패스키·로그아웃이 있어 폰에서 닿아야 한다. 이 규칙을 넓게 두면 그 판이 백지가 된다 */
-@media (pointer:coarse),(max-width:640px){
-  body:not(.set):not(.setting) .screen{display:none!important}
-  #mobile{display:grid}
-  body.setting #mobile,body.paging #mobile{display:none}
-}
-
 /* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
    잡고, 끌어다 놓으면 그 칸에 남는다. position:relative 를 여기서 주지 않는다 —
    주면 left/top 칸 계산이 흐름 기준이 되어 구석에 앉지 못한다 */

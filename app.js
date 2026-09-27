@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.23';
+const VER = '3.24';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1804,6 +1804,12 @@ $('#play').addEventListener('pointerdown', e => {
   drag = { kind: 'play', id: e.pointerId, x: p.x, y: p.y, tx: G.tx, ty: G.ty,
            cx: e.clientX, cy: e.clientY, moved: false, host: map };
   map.setPointerCapture(e.pointerId);
+});
+
+/* 폰은 pointerdown 의 focus 로는 화상 키보드가 안 뜨는 브라우저가 있다(iOS) —
+   click 에서 한 번 더 부른다. 이미 포커스가 있으면 아무 일도 없다 */
+$('#play').addEventListener('click', e => {
+  if (!e.target.closest('button, a, input, select, textarea')) $('#typein').focus();
 });
 
 /* 지금 칠 수 있는 상태인지 눈에 보이게 한다 */
