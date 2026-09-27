@@ -1061,6 +1061,9 @@ addEventListener('pointermove', e => {
 });
 function dragEnd(e) {
   if (!drag || (e && e.pointerId !== drag.id)) return;
+  /* 터치는 누른 칸(버튼)이 포인터를 저절로 잡는다. 끌기가 캡처를 지도로 옮기면 그 칸이
+     lostpointercapture 를 내는데, 그걸 끝으로 읽으면 칸 위에서 시작한 끌기가 바로 죽는다 */
+  if (e && e.type === 'lostpointercapture' && e.target !== drag.host) return;
   if (drag.host) drag.host.classList.remove('is-drag');
   if (drag.moved) skipClick = true;
   if (drag.moved && drag.touch && e && e.type === 'pointerup') fling(drag);
