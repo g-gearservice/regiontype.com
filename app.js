@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.29';
+const VER = '3.30';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -438,13 +438,14 @@ function courseList(root, tree) {
 }
 
 /* 임계 감쇠 스프링 — Apple 이 이동·재배치에 쓰는 damping 1, response .42.
-   목표만 바꾸면 지금 값과 속도에서 이어 가므로, 펼치는 도중에 접어도 튀지 않는다 */
+   목표만 바꾸면 지금 값과 속도에서 이어 가므로, 펼치는 도중에 접어도 튀지 않는다.
+   손으로 던진 것(폰 시트)만 damping .8 · response .3 으로 살짝 넘친다 */
 const RESPONSE = .42;
 const sp = (x, eps) => ({ x, v: 0, to: x, eps });
-function spStep(p, dt) {
+function spStep(p, dt, resp = RESPONSE, damp = 1) {
   if (p.x === p.to && !p.v) return false;
-  const w = 2 * Math.PI / RESPONSE;
-  p.v += (w * w * (p.to - p.x) - 2 * w * p.v) * dt;
+  const w = 2 * Math.PI / resp;
+  p.v += (w * w * (p.to - p.x) - 2 * damp * w * p.v) * dt;
   p.x += p.v * dt;
   if (Math.abs(p.to - p.x) < p.eps && Math.abs(p.v) < p.eps * 10) { p.x = p.to; p.v = 0; return false; }
   return true;
@@ -509,7 +510,9 @@ function asideTile(tile, on, k = 1) {
   const span = tile.el.firstChild, text = on ? tile.short : tile.label;
   if (span.textContent !== text) span.textContent = text;
   if (!span.scrollWidth) return;   // 숨은 화면에서는 잴 수 없다
-  const f = Math.min(on ? k : 1, tile.el.clientWidth * .86 / span.scrollWidth);
+  /* 폰 한국어는 지도 글자처럼 테를 둘러 칸을 조금 넘겨도 읽힌다 — 네 글자 구가 깨알이
+     되지 않게. 영어는 두 줄로 접혀 이미 들고, 넘기면 옆 칸에 가려 잘린다 */
+  const f = Math.min(on ? k : 1, tile.el.clientWidth * (fingers() && LANG === 'ko' ? 1.1 : .86) / span.scrollWidth);
   const first = !tile.fitted;
   tile.fitted = true;
   if (tile.f.to === f && !first) return;
@@ -1034,7 +1037,7 @@ $('#regions').addEventListener('dragstart', e => {
 });
 $('#regions').addEventListener('pointerdown', e => {
   if (e.button || !$('#regions').classList.contains('on') || fingersOn.size > 1) return;
-  if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
+  if (e.target.closest('.navbar, .nav-bot, .map-ctl, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
   /* 캡처는 문턱을 넘긴 뒤에만. 처음부터 #regions 가 잡으면 칸 버튼의 click 이
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
   GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
@@ -1048,7 +1051,11 @@ addEventListener('pointermove', e => {
   if (!drag.moved) {
     drag.moved = true;
     drag.host.classList.add('is-drag');
-    if (drag.kind === 'home') { try { drag.host.setPointerCapture(drag.id); } catch {} }
+    if (drag.kind === 'home') {
+      try { drag.host.setPointerCapture(drag.id); } catch {}
+      /* 지도를 끌기 시작하면 폰 시트는 접혀 길을 비운다 */
+      if (SHEET.open) sheetSet(false);
+    }
   }
   (drag.hist || (drag.hist = [])).push([performance.now(), e.clientX, e.clientY]);
   if (drag.hist.length > 8) drag.hist.shift();
@@ -1061,6 +1068,9 @@ addEventListener('pointermove', e => {
 });
 function dragEnd(e) {
   if (!drag || (e && e.pointerId !== drag.id)) return;
+  /* 터치는 누른 칸(버튼)이 포인터를 저절로 잡는다. 끌기가 캡처를 지도로 옮기면 그 칸이
+     lostpointercapture 를 내는데, 그걸 끝으로 읽으면 칸 위에서 시작한 끌기가 바로 죽는다 */
+  if (e && e.type === 'lostpointercapture' && e.target !== drag.host) return;
   if (drag.host) drag.host.classList.remove('is-drag');
   if (drag.moved) skipClick = true;
   if (drag.moved && drag.touch && e && e.type === 'pointerup') fling(drag);
@@ -1152,7 +1162,7 @@ function zoomPlayAt(mx, my, factor) {
 function mapWheel(e) {
   if (e.target.closest('dialog, input, textarea, select')) return;
   if ($('#regions').classList.contains('on')) {
-    if (e.target.closest('.navbar, .nav-bot, .screen-head, .rk-layer')) return;
+    if (e.target.closest('.navbar, .nav-bot, .map-ctl, .screen-head, .rk-layer')) return;
     if (!e.target.closest('#regions')) return;
     e.preventDefault();
     zoomHomeAt(e.clientX, e.clientY, wheelZoomFactor(e));
@@ -1412,6 +1422,127 @@ function aimBotShape(el) { navBot.aim(el); }
 function wireNavShape() { navTop.wire(); navBot.wire(); }
 function relayoutNavShapes() { navTop.relayout(); navBot.relayout(); }
 
+/* ── 폰의 아래 시트 ─────────────────────────────────────
+   손가락 화면에서는 아래 막대가 Apple 지도의 아래 시트가 된다(style.css 의 '폰 — Apple
+   지도 결'). 윗줄 메뉴와 설정·로그인은 여기서 시트의 펼침 칸으로 옮긴다 — 같은 요소라
+   href 로 받는 손(settings.js·auth.js·ranked.js)과 키보드 길이 그대로 산다.
+   멈춤은 둘: 접힘(코스 이름·시작하기·봇)과 펼침(나머지 문). 끌면 손을 1:1 로 따라오고
+   끝을 넘으면 고무줄처럼 버틴다. 놓으면 그 속도로 앞을 내다본 자리(Apple 의 project,
+   감속 .998)에서 가까운 멈춤으로 스프링(감쇠 .8 · 반응 .3)을 타고, 도는 중에도 다시
+   잡힌다. 손잡이를 누르거나 Enter 로 여닫고, Esc 로 접는다. 움직임을 줄였으면
+   자리는 바로 옮기고 펼침 칸만 스민다 */
+const SHEET = { el: $('#regions .nav-bot'), y: sp(0, .5), open: false, raf: 0, t: 0, shut: 0, drag: null };
+const sheetOn = () => fingers() && SHEET.el.contains($('#sheetMore').firstChild);
+function sheetDock() {
+  $('#sheetMore').append(...['#regions a[href="#ranking"]', '#regions a[href="#records"]',
+    '#regions a[href="community/"]', '#regions a[href="settings/"]', '#aboutLink', '#signinLink'].map(s => $(s)));
+  $('#sheetHead').append($('#courseName'));
+  $('#sheetMore').inert = true;
+  new ResizeObserver(sheetMeasure).observe(SHEET.el);
+  sheetMeasure();
+}
+/* 접힘은 시작하기 밑변 + 아래 여백(홈 인디케이터 몫 포함)까지만 보이는 자리다 */
+function sheetMeasure() {
+  const el = SHEET.el, play = $('#navPlay');
+  const peek = play.offsetTop + play.offsetHeight + parseFloat(getComputedStyle(el).paddingBottom);
+  SHEET.shut = Math.max(0, el.offsetHeight - peek);
+  document.documentElement.style.setProperty('--sheet-peek', peek + 'px');
+  if (SHEET.drag || SHEET.raf) return;
+  SHEET.y.x = SHEET.y.to = SHEET.open ? 0 : SHEET.shut; SHEET.y.v = 0;
+  sheetPaint();
+}
+function sheetPaint() {
+  const st = SHEET.el.style;
+  st.setProperty('--sheet-y', SHEET.y.x.toFixed(1) + 'px');
+  st.setProperty('--sheet-p', SHEET.shut ? Math.max(0, Math.min(1, 1 - SHEET.y.x / SHEET.shut)).toFixed(3) : '0');
+}
+function sheetFrame(now) {
+  const dt = Math.max(0, Math.min(.034, (now - SHEET.t) / 1000));
+  SHEET.t = now;
+  const busy = spStep(SHEET.y, dt, .3, .8);
+  sheetPaint();
+  SHEET.raf = busy ? requestAnimationFrame(sheetFrame) : 0;
+  SHEET.el.classList.toggle('is-live', busy);
+}
+/* v 는 손을 놓을 때의 속도(px/s) — 스프링이 그 속도에서 이어 받아 이음매가 없다 */
+function sheetSet(open, v = 0) {
+  if (!sheetOn()) return;
+  /* 시트가 움직이면 아바타(봇)의 말풍선은 거둔다 — 붙어 있던 자리가 떠난다(ranked.js) */
+  dispatchEvent(new Event('rt-sheet'));
+  SHEET.open = open;
+  $('#sheetGrab').setAttribute('aria-expanded', String(open));
+  $('#sheetMore').inert = !open;
+  if (!open && $('#sheetMore').contains(document.activeElement)) $('#sheetGrab').focus({ preventScroll: true });
+  SHEET.y.to = open ? 0 : SHEET.shut;
+  if (calm()) {
+    cancelAnimationFrame(SHEET.raf); SHEET.raf = 0;
+    SHEET.y.x = SHEET.y.to; SHEET.y.v = 0;
+    SHEET.el.classList.remove('is-live');
+    sheetPaint();
+    return;
+  }
+  SHEET.y.v = v;
+  if (!SHEET.raf) { SHEET.t = performance.now(); SHEET.el.classList.add('is-live'); SHEET.raf = requestAnimationFrame(sheetFrame); }
+}
+/* 멈춤 너머로 끌면 멀어질수록 덜 따라온다(Apple rubber band, c .55) */
+const band = (d, dim) => d * dim * .55 / (dim + .55 * d);
+SHEET.el.addEventListener('pointerdown', e => {
+  /* 시작하기는 꾹 누르기(경쟁전)가 걸려 있어 끌기와 겹치지 않게 뺀다 */
+  if (!sheetOn() || e.button || e.target.closest('#navPlay, input')) return;
+  SHEET.drag = { id: e.pointerId, y0: e.clientY, from: 0, moved: false, hist: [[performance.now(), e.clientY]] };
+});
+addEventListener('pointermove', e => {
+  const d = SHEET.drag;
+  if (!d || e.pointerId !== d.id) return;
+  if (!d.moved) {
+    if (Math.abs(e.clientY - d.y0) < 8) return;
+    /* 문턱을 넘은 그 자리에서 잡는다 — 스프링이 돌고 있었으면 지금 값에서 멈춰 세운다 */
+    d.moved = true; d.y0 = e.clientY; d.from = SHEET.y.x;
+    dispatchEvent(new Event('rt-sheet'));
+    cancelAnimationFrame(SHEET.raf); SHEET.raf = 0;
+    SHEET.el.classList.add('is-live');
+    try { SHEET.el.setPointerCapture(d.id); } catch {}
+  }
+  d.hist.push([performance.now(), e.clientY]);
+  if (d.hist.length > 8) d.hist.shift();
+  const y = d.from + e.clientY - d.y0, shut = SHEET.shut;
+  SHEET.y.x = SHEET.y.to = y < 0 ? -band(-y, innerHeight) : y > shut ? shut + band(y - shut, innerHeight) : y;
+  SHEET.y.v = 0;
+  sheetPaint();
+});
+const sheetUp = e => {
+  const d = SHEET.drag;
+  if (!d || e.pointerId !== d.id) return;
+  SHEET.drag = null;
+  if (!d.moved) return;
+  /* 끌고 난 뒤의 click 은 칸을 누른 게 아니다 */
+  skipClick = true;
+  setTimeout(() => { skipClick = false; }, 0);
+  const [t1, y1] = d.hist[d.hist.length - 1], f = d.hist.find(s => t1 - s[0] <= 100) || d.hist[0];
+  const v = e.type === 'pointerup' && t1 > f[0] && performance.now() - t1 < 80 ? (y1 - f[1]) / (t1 - f[0]) * 1000 : 0;
+  const end = SHEET.y.x + v / 1000 * .998 / (1 - .998);
+  sheetSet(end < SHEET.shut / 2, v);
+};
+addEventListener('pointerup', sheetUp);
+addEventListener('pointercancel', sheetUp);
+$('#sheetGrab').addEventListener('click', () => sheetSet(!SHEET.open));
+/* Esc 는 펼친 시트부터 접는다 — 칸 고르기를 푸는 것(아래 Esc)보다 앞선다 */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !SHEET.open || !$('#regions').classList.contains('on')) return;
+  if (document.body.matches('.signing, .setting, .paging')) return;
+  e.stopImmediatePropagation();
+  sheetSet(false);
+}, true);
+/* 오른쪽 줄의 전체 보기 — 펼친 구가 있으면 그 덩이, 없으면 서울 전체로 */
+$('#homeFit').addEventListener('click', () => { if (OPEN) focusHome(); else restoreHomeView(); });
+if (fingers()) {
+  sheetDock();
+  /* 결과 시트는 순위표가 늦게 붙어 자란다 — 자랄 때마다 끝난 지도를 그 위 빈 칸에 다시 앉힌다 */
+  new ResizeObserver(() => { if ($('#result').classList.contains('on')) fitResult(); }).observe($('#result .res-sheet'));
+  /* iOS 는 터치 손잡이가 하나도 없으면 :active(누름 반응)를 안 켠다 */
+  document.addEventListener('touchstart', () => {}, { passive: true });
+}
+
 const TZ_COUNTRY = {
   'Asia/Seoul': 'KR', 'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Taipei': 'TW',
   'Asia/Hong_Kong': 'HK', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN',
@@ -1614,7 +1745,7 @@ function playZoom(geom) {
   const r = $('#map').getBoundingClientRect();
   const fit = Math.min(r.width / geom.w, r.height / geom.h);
   if (!(fit > 0)) return 1;
-  return Math.min(3, Math.max(1, Math.round(PHONE_DOT / (fit * geom.cell) * 2) / 2));
+  return Math.min(3, Math.max(1, Math.ceil(PHONE_DOT / (fit * geom.cell) * 2) / 2));
 }
 
 /* 도트 지도 — 격자 한 칸이 원 하나. */
@@ -1788,9 +1919,13 @@ function paintTyped(raw, composing = false) {
      보여 주면 같은 음절이 두 번 찍힌 것처럼 된다. 다 맞혔으면 거기서 끝이다. */
   if (n >= G.want.length) rest = '';
 
-  const ing = composing && rest.length > 0;     // 마지막 한 글자는 아직 만들어지는 중
+  /* 폰 한글 키보드는 isComposing 을 안 주는 일이 많다. 그걸 믿으면 '강ㅅ' 처럼 음절을
+     만드는 중간마다 오타로 읽혀 칸이 음절마다 흔들린다. 두벌식으로 풀어 남은 목표의
+     앞머리면 오타가 아니라 치는 중이다 */
+  const soft = !!rest && jamo(G.want.slice(n)).startsWith(jamo(rest));
+  const ing = soft || (composing && rest.length > 0);   // 마지막 한 글자는 아직 만들어지는 중
   // 그 앞의 것들은 이미 굳은 오타다
-  const bad = rest.length - (ing ? 1 : 0) > 0;
+  const bad = !soft && rest.length - (ing ? 1 : 0) > 0;
 
   /* 칸은 목표 글자 수에 맞춰 만들어져 있다. 오타로 길어지면 그릴 자리가 없어
      화면이 첫 오타 글자에서 굳고 — 아무리 더 쳐도 안 바뀐다 — 버퍼에 몇 자가
@@ -1837,12 +1972,41 @@ function clampCam(tx, ty, W, H, z) {
     Math.min(0, Math.max(H * (1 - z), ty)),
   ];
 }
+/* 폰은 지도가 화면 끝까지 깔리고 머리줄·아래 시트가 그 위에 뜬다. 가려지지 않는 칸
+   (머리줄 밑 ~ 시트 위)을 지도 좌표로 돌려준다 — 목표는 이 칸 한가운데에 서고, 지도는
+   이 칸을 빈틈없이 덮는 데까지만 끌린다. 결과 화면이면 뒤로 단추 밑 ~ 결과 시트 위다.
+   시트 높이는 offsetHeight 로 잰다 — 올라오는 중(transform)에도 앉을 자리는 같다 */
+function viewSpan() {
+  if (!fingers()) return null;
+  const res = $('#result').classList.contains('on');
+  const head = (res ? $('#result .back') : $('#play .hud')).getBoundingClientRect();
+  const sheet = res ? $('#result .res-sheet') : $('#play .play-sheet');
+  const low = (res ? innerHeight : $('#play').getBoundingClientRect().bottom) - sheet.offsetHeight;
+  const a = viewPoint({ clientX: 0, clientY: head.bottom + 8 }), b = viewPoint({ clientX: innerWidth, clientY: low - 8 });
+  return a && b && b.y > a.y ? [a, b] : null;
+}
+/* 길이 len 인 지도가 [a0, a1] 칸을 덮게 t 를 가둔다. 칸보다 작으면 칸 한가운데에 둔다 */
+const fitSpan = (t, a0, a1, len) => len >= a1 - a0 ? Math.min(a0, Math.max(a1 - len, t)) : (a0 + a1 - len) / 2;
 function look(tx, ty) {
   if (!G || !G.cam) return;
-  const [W, H] = G.view, z = G.z || G.zoom;
-  [tx, ty] = clampCam(tx, ty, W, H, z);
+  const [W, H] = G.view, z = G.z || G.zoom, v = viewSpan();
+  if (v) { tx = fitSpan(tx, v[0].x, v[1].x, W * z); ty = fitSpan(ty, v[0].y, v[1].y, H * z); }
+  else [tx, ty] = clampCam(tx, ty, W, H, z);
   G.tx = tx; G.ty = ty;
   G.cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
+  /* 목표에서 끌려 나가면 '목표로' 단추가 선다(폰 오른쪽 줄) */
+  const a = G.aimed, away = !a || z !== a[2] || Math.hypot(tx - a[0], ty - a[1]) > W * .02;
+  $('#playAim').hidden = !away || !target() || !$('#play').classList.contains('on');
+}
+/* 카메라를 지금 목표로 — 폰은 가려지지 않는 칸의 한가운데로 */
+function aimCam() {
+  const t = target(), [W, H] = G.view, z = G.z || G.zoom, v = viewSpan();
+  const [cx, cy] = v ? [(v[0].x + v[1].x) / 2, (v[0].y + v[1].y) / 2] : [W / 2, H / 2];
+  G.aimed = null;
+  look(t ? cx - z * t.at[0] : 0, t ? cy - z * t.at[1] : 0);
+  G.aimed = [G.tx, G.ty, z];
+  $('#playAim').hidden = true;
+  followGrid(600);
 }
 
 /* 현재 목표를 표시하고 카메라를 그리로 옮긴다.
@@ -1859,12 +2023,20 @@ function aim() {
     const show = i.claimed || (opt.hint && (!G.seq || i === t));
     i.label.classList.toggle('on', show);
   });
-  const [W, H] = G.view, z = G.z || G.zoom;
-  let tx = 0, ty = 0;
-  if (t) { tx = W / 2 - z * t.at[0]; ty = H / 2 - z * t.at[1]; }
-  look(tx, ty);
-  followGrid(600);
+  aimCam();
 }
+/* 폰 결과 — 끝난 지도를 결과 시트 위 빈 칸에 통째로 앉힌다 */
+function fitResult() {
+  const v = viewSpan();
+  if (!v || !G || !G.cam) return;
+  const [W, H] = G.view;
+  G.z = Math.min((v[1].x - v[0].x) / W, (v[1].y - v[0].y) / H) * .94;
+  $('#map').style.setProperty('--z', G.z);
+  look(0, 0);
+}
+/* 목표로 — 누르는 동안 입력창의 초점(화상 키보드)을 뺏지 않는다 */
+$('#playAim').addEventListener('pointerdown', e => e.preventDefault());
+$('#playAim').addEventListener('click', () => { if (G && G.cam) aimCam(); });
 
 function countdown(n, done) {
   const el = $('#countdown'); el.classList.add('on');
@@ -1937,7 +2109,16 @@ $('#typein').addEventListener('blur', markFocus);
    레이아웃을 줄이고, iOS 는 그걸 몰라 visualViewport 로 잰다 */
 if (window.visualViewport) {
   const vv = visualViewport, st = document.documentElement.style;
-  const fitVV = () => { st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); requestAnimationFrame(fitPlayK); };
+  /* 키보드가 떠 있으면 시트 밑에 홈 인디케이터 몫(--sab)을 두지 않는다. 판을 치는 중
+     목표에서 끌려 나가 있지 않으면 줄어든 칸에 맞춰 목표를 다시 가운데 둔다 */
+  const fitVV = () => {
+    st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px');
+    if (vv.height < innerHeight * .8) st.setProperty('--sab', '0px'); else st.removeProperty('--sab');
+    requestAnimationFrame(() => {
+      fitPlayK();
+      if (fingers() && G && G.cam && $('#play').classList.contains('on') && $('#playAim').hidden) aimCam();
+    });
+  };
   vv.addEventListener('resize', fitVV);
   vv.addEventListener('scroll', fitVV);
 }
@@ -2076,7 +2257,10 @@ function finish() {
     board();
     /* 전적·경쟁전 lp 는 ranked.js 가 올린다 */
     dispatchEvent(new CustomEvent('rt-finish', { detail: G }));
+    /* 폰 결과는 지도를 뒤에 남긴다 — 입력창도 남으니 화상 키보드를 내린다 */
+    $('#typein').blur();
     go('result');
+    fitResult();
   }, 1200);
 }
 
@@ -2588,6 +2772,10 @@ if (location.search.includes('rt=1')) {
   console.assert(clampZoom(.1, .55, 2.6) === .55, '홈 줌은 칸이 사라질 만큼 줄지 않는다');
   console.assert(clampZoom(9, 1, 8) === 8, '플레이 줌 상한');
   console.assert(clampZoom(3, 1, 8) === 3, '플레이 줌 안쪽은 그대로');
+  console.assert(fitSpan(0, -100, 900, 600) === 100, '폰: 지도가 빈 칸보다 작으면 칸 한가운데');
+  console.assert(fitSpan(50, 0, 500, 1000) === 0 && fitSpan(-900, 0, 500, 1000) === -500,
+    '폰: 지도가 크면 빈 칸을 빈틈없이 덮는 데까지만 끌린다');
+  console.assert(band(100, 800) < 100 && band(1e6, 800) < 800, '시트 고무줄은 멀수록 덜 따라오고 화면을 못 넘는다');
 
   UI_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh'];
   LANG_COUNTRY = buildLangCountry({
