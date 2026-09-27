@@ -161,6 +161,15 @@ buddyKit.then(({ mountBuddy, TABLES }) => {
   };
   show();
   size.addEventListener('input', show);
+  /* 밀대 꼭지는 '실제 크기' 글자 아래에 선다. 봇이 커지고 줄면 칸 폭이 바뀌어 글자가
+     옮겨 가므로, 봇·밀대의 크기가 바뀔 때마다(전이 중에도) 다시 잰다 */
+  const pill = size.parentElement, cap = $('#characterReal').nextElementSibling;
+  const aim = new ResizeObserver(() => {
+    const a = cap.getBoundingClientRect(), b = pill.getBoundingClientRect();
+    pill.style.setProperty('--tail-x', (a.left + a.width / 2 - b.left - parseFloat(getComputedStyle(pill).borderLeftWidth)) + 'px');
+  });
+  aim.observe($('#characterReal'));
+  aim.observe(pill);
   size.addEventListener('change', () => write('rt.botsize', String(size.value / 100)));
 }
 

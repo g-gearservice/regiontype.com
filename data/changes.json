@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.7.326",
+    "date": "2026-09-27",
+    "ko": "내 펫의 크기 밀대 꼭지가 위를 가리키는 삼각형이 되어, 봇 크기가 바뀌어도 늘 '실제 크기' 글자 바로 아래에 서고 테와 이음새 없이 이어집니다.",
+    "en": "On the My pet size slider, the pointer is now an upward triangle that stays under the \"Real size\" label as the bot resizes, and joins the rail's outline without a seam."
+  },
+  {
     "v": "0.7.325",
     "date": "2026-09-27",
     "ko": "결과 화면의 '이미지 저장'이 세로 9:16(1080×1920) 카드로 바뀌었습니다. 인스타그램 스토리·릴스에 잘리지 않고 올라갑니다.",
