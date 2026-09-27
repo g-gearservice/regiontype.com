@@ -1791,9 +1791,13 @@ function paintTyped(raw, composing = false) {
      보여 주면 같은 음절이 두 번 찍힌 것처럼 된다. 다 맞혔으면 거기서 끝이다. */
   if (n >= G.want.length) rest = '';
 
-  const ing = composing && rest.length > 0;     // 마지막 한 글자는 아직 만들어지는 중
+  /* 폰 한글 키보드는 isComposing 을 안 주는 일이 많다. 그걸 믿으면 '강ㅅ' 처럼 음절을
+     만드는 중간마다 오타로 읽혀 칸이 음절마다 흔들린다. 두벌식으로 풀어 남은 목표의
+     앞머리면 오타가 아니라 치는 중이다 */
+  const soft = !!rest && jamo(G.want.slice(n)).startsWith(jamo(rest));
+  const ing = soft || (composing && rest.length > 0);   // 마지막 한 글자는 아직 만들어지는 중
   // 그 앞의 것들은 이미 굳은 오타다
-  const bad = rest.length - (ing ? 1 : 0) > 0;
+  const bad = !soft && rest.length - (ing ? 1 : 0) > 0;
 
   /* 칸은 목표 글자 수에 맞춰 만들어져 있다. 오타로 길어지면 그릴 자리가 없어
      화면이 첫 오타 글자에서 굳고 — 아무리 더 쳐도 안 바뀐다 — 버퍼에 몇 자가

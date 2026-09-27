@@ -2,8 +2,8 @@
   {
     "v": "0.7.329",
     "date": "2026-09-28",
-    "ko": "폰 지도 조작이 지도 앱처럼 바뀌었습니다. 핀치는 두 손가락 사이를 붙잡고 확대하며 함께 밀 수 있고, 한 손가락을 떼면 남은 손가락으로 계속 끌 수 있습니다. 튕기고 놓으면 조금 더 미끄러집니다. 구역 버튼 위에서 시작한 드래그도 끊기지 않습니다.",
-    "en": "Phone map controls now feel like a maps app: pinching zooms around your fingers and pans as they move, lifting one finger lets you keep dragging with the other, and a flick keeps the map gliding a little. Dragging that starts on a district button no longer stops."
+    "ko": "폰 지도 조작이 지도 앱처럼 바뀌었습니다. 핀치는 두 손가락 사이를 붙잡고 확대하며 함께 밀 수 있고, 한 손가락을 떼면 남은 손가락으로 계속 끌 수 있습니다. 튕기고 놓으면 조금 더 미끄러집니다. 구역 버튼 위에서 시작한 드래그도 끊기지 않습니다. 폰 한글 키보드로 칠 때 음절을 만드는 중간마다 글자가 좌우로 흔들리던 것을 고쳤습니다.",
+    "en": "Phone map controls now feel like a maps app: pinching zooms around your fingers and pans as they move, lifting one finger lets you keep dragging with the other, and a flick keeps the map gliding a little. Dragging that starts on a district button no longer stops. Typing Korean on a phone keyboard no longer shakes the word at every half-built syllable."
   },
   {
     "v": "0.7.328",
