@@ -1987,12 +1987,18 @@ function viewSpan() {
   const a = viewPoint({ clientX: 0, clientY: head.bottom + 8 }), b = viewPoint({ clientX: innerWidth, clientY: low - 8 });
   return a && b && b.y > a.y ? [a, b] : null;
 }
-/* 길이 len 인 지도가 [a0, a1] 칸을 덮게 t 를 가둔다. 칸보다 작으면 칸 한가운데에 둔다 */
-const fitSpan = (t, a0, a1, len) => len >= a1 - a0 ? Math.min(a0, Math.max(a1 - len, t)) : (a0 + a1 - len) / 2;
-function look(tx, ty) {
+/* 길이 len 인 지도가 [a0, a1] 칸을 덮게 t 를 가둔다. 칸보다 작으면 칸 한가운데에 둔다.
+   over 는 지도 끝 너머로 비워도 되는 몫(칸 길이의 비율) — 지도 앱처럼 끝을 조금 넘겨 민다.
+   .5 면 지도 맨 끝 점도 칸 한가운데에 선다 */
+const fitSpan = (t, a0, a1, len, over = 0) => {
+  const s = (a1 - a0) * over;
+  return len >= a1 - a0 ? Math.min(a0 + s, Math.max(a1 - len - s, t)) : (a0 + a1 - len) / 2;
+};
+/* 폰에서 손으로 밀 때는 칸의 1/3 은 지도가 덮고 있게(over 2/3), 목표 조준은 .5 */
+function look(tx, ty, over = 2 / 3) {
   if (!G || !G.cam) return;
   const [W, H] = G.view, z = G.z || G.zoom, v = viewSpan();
-  if (v) { tx = fitSpan(tx, v[0].x, v[1].x, W * z); ty = fitSpan(ty, v[0].y, v[1].y, H * z); }
+  if (v) { tx = fitSpan(tx, v[0].x, v[1].x, W * z, over); ty = fitSpan(ty, v[0].y, v[1].y, H * z, over); }
   else [tx, ty] = clampCam(tx, ty, W, H, z);
   G.tx = tx; G.ty = ty;
   G.cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
@@ -2005,7 +2011,7 @@ function aimCam() {
   const t = target(), [W, H] = G.view, z = G.z || G.zoom, v = viewSpan();
   const [cx, cy] = v ? [(v[0].x + v[1].x) / 2, (v[0].y + v[1].y) / 2] : [W / 2, H / 2];
   G.aimed = null;
-  look(t ? cx - z * t.at[0] : 0, t ? cy - z * t.at[1] : 0);
+  look(t ? cx - z * t.at[0] : 0, t ? cy - z * t.at[1] : 0, .5);
   G.aimed = [G.tx, G.ty, z];
   $('#playAim').hidden = true;
   followGrid(600);
@@ -2055,6 +2061,8 @@ function countdown(n, done) {
 function run() {
   $('#typein').value = '';   // 카운트다운 동안 미리 친 글자는 세지 않는다
   $('#typein').focus();
+  /* 폰: 첫 조준은 머리줄이 내려오는 중에 재서 칸이 어긋난다 — 다 앉은 뒤 다시 맞춘다 */
+  if (fingers() && G.cam && $('#playAim').hidden) aimCam();
   tick = setInterval(() => {
     G.left--;
     $('#gaugeFill').style.width = (G.left / G.total * 100) + '%';
@@ -2785,6 +2793,10 @@ if (location.search.includes('rt=1')) {
   console.assert(fitSpan(0, -100, 900, 600) === 100, '폰: 지도가 빈 칸보다 작으면 칸 한가운데');
   console.assert(fitSpan(50, 0, 500, 1000) === 0 && fitSpan(-900, 0, 500, 1000) === -500,
     '폰: 지도가 크면 빈 칸을 빈틈없이 덮는 데까지만 끌린다');
+  console.assert(fitSpan(250, 0, 500, 1000, .5) === 250 && fitSpan(250 - 1000, 0, 500, 1000, .5) === -750,
+    '폰 조준: 지도 맨 끝(0, 1000)의 목표도 칸 한가운데(250)에 선다');
+  console.assert(fitSpan(9999, 0, 500, 1000, 2 / 3) === 500 * 2 / 3 && fitSpan(0, -100, 900, 600, .5) === 100,
+    '폰 끌기: 칸의 1/3 은 지도가 덮고, 작은 지도는 여전히 한가운데');
   console.assert(band(100, 800) < 100 && band(1e6, 800) < 800, '시트 고무줄은 멀수록 덜 따라오고 화면을 못 넘는다');
 
   UI_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh'];
