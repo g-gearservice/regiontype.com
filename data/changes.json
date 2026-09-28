@@ -1,5 +1,11 @@
 [
   {
+    "v": "1.0.333",
+    "date": "2026-09-28",
+    "ko": "폰에서 게임을 시작하면 regiontype 자체 키보드가 뜹니다. 처음부터 두벌식 한글이라 자판을 바꿀 필요가 없고, 다음에 칠 키를 주황 테두리로 짚어 줍니다(경쟁전에서는 꺼짐). 폰 키보드 위 막대가 사라져 지도와 한 줄 소개가 넓게 보입니다. 설정 > 게임에서 폰 기본 키보드로 돌아가거나 키 안내를 끌 수 있습니다.",
+    "en": "Games on phones now open regiontype's own keyboard. It starts in Korean 두벌식, so there's no layout switching, and it outlines the next key in orange (off in ranked games). Without the phone keyboard's toolbar, the map and the one-line description get more room. Settings > Game lets you go back to your phone's keyboard or turn off the key hint."
+  },
+  {
     "v": "1.0.332",
     "date": "2026-09-28",
     "ko": "폰에서 처음 온 사람 안내가 제대로 돕니다. 도우미 봇이 어둡게 가려지지 않고, 단계마다 설명하는 곳에 테두리가 그려지며, 언제든 ✕로 닫거나 바로 시작하기를 누를 수 있습니다. 설정의 보안 탭은 로그아웃 상태에서 로그인 안내만 보이고, 야간 모드에서 고르지 않은 선택지 글자가 또렷해졌습니다.",
