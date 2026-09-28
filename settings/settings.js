@@ -25,7 +25,7 @@ const isDev = () => document.documentElement.hasAttribute('data-dev');
 /* ── 설정 통 ─────────────────────────────────────────
    홈(app.js)과 같은 통, 같은 기본값이다. 키 집합이 어긋나면 한쪽이 저장할 때마다
    다른 쪽 값이 지워진다 */
-const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
+const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true, softkb: true, kbhint: true,
               lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];

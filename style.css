@@ -893,7 +893,32 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   .q-letters{flex:none; font-size:min(40px, calc((100vw - 112px) / var(--n, 4)))}
   #play .fact{min-height:1.4em;padding:0 8px;line-height:1.4}
   .fact span{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 게임 자판 — 시트 맨 아래, 홈 인디케이터 몫은 시트의 아래 여백이 맡는다.
+     키는 사이트의 둥근 칸 결: --card 판에 가는 선, 기능 키는 유리 위 먹 칸 */
+  .softkb{margin:6px -6px 0;display:flex;flex-direction:column;gap:8px;touch-action:manipulation;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .softkb[hidden],#play:not(.on) .softkb{display:none}   /* 결과 화면 뒤에 남은 지도에는 자판이 없다 */
+  .kb-row{display:flex;gap:5px}
+  .kb-row:nth-last-child(3){padding-inline:5%}   /* 가운데 줄(ㅁ~ㅣ, a~l)은 반 칸 들여 선다 */
+  .kb-k{flex:1 1 0;min-width:0;height:46px;border:1px solid var(--glass-line);border-radius:8px;
+    background:var(--card);color:var(--ink);font:inherit;font-size:21px;font-weight:600;line-height:1;
+    box-shadow:0 1px 0 var(--glass-line);position:relative;
+    transition:transform var(--fast) var(--ease-out),background-color var(--fast)}
+  .kb-shift,.kb-back,.kb-enter{flex:1.45 1 0;background:var(--glass-fill);font-size:20px}
+  .kb-space{flex:5 1 0;font-size:15px;color:var(--ink-soft)}
+  .softkb.is-sym .kb-row:first-child .kb-k{height:40px;font-size:17px}   /* 숫자 줄은 조금 낮게 */
+  /* Shift 가 켜지면 판이 먹색으로 차고 글자도 ㄲ·ㅃ 로 바뀐다 */
+  .kb-shift[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .kb-k.down{background:var(--grid);transform:scale(.94)}
+  /* 다음 키 — 주황 테두리 + 밑줄. 색만으로 가르지 않는다 */
+  .kb-k.kb-next{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
+  .kb-k.kb-next::after{content:"";position:absolute;left:30%;right:30%;bottom:5px;height:3px;border-radius:2px;background:var(--accent)}
+  .kb-k:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 }
+/* 게임 자판 설정은 폰에서만 쓴다 */
+@media not all and (pointer:coarse){ .opts-kb{display:none} }
+@media (pointer:coarse) and (prefers-reduced-motion:reduce){ .kb-k.down{transform:none} }
+:root[data-motion="off"] .kb-k.down{transform:none}
 
 /* 상단 그라디언트 블러 — 블러 세기가 다른 여섯 겹을 각자 다른 띠로 마스크해서 겹친다.
    backdrop-filter 하나에 마스크를 씌우면 블러가 뚝 끊기지만, 이렇게 쌓으면 부드럽게 번진다.

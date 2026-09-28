@@ -177,7 +177,7 @@ const unitNow = () => (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (L
 const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
 const showSpeed = cpm => speedIn(cpm) + ' ' + unitLabel();
-const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
+const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true, softkb: true, kbhint: true,
               lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
@@ -1221,7 +1221,7 @@ const pinchKind = () => $('#regions').classList.contains('on') ? 'home'
   : $('#play').classList.contains('on') && G && G.cam ? 'play' : null;
 const pinchSpan = () => { const [a, b] = [...fingersOn.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
 addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'touch') return;
+  if (e.pointerType !== 'touch' || e.target.closest('#softkb')) return;   // 두 엄지로 치는 건 핀치가 아니다
   fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
   if (fingersOn.size !== 2) return;
   if (drag) { if (drag.host) drag.host.classList.remove('is-drag'); drag = null; }
@@ -1706,6 +1706,7 @@ async function boot() {
     requestAnimationFrame(syncGrid);
     LANG = resolveLang();
     paintUI();
+    if (G) syncKb();
   });
   fbPlaceholder();
   paintRegion();
@@ -1720,7 +1721,9 @@ let G = null, tick = null, pending = null;
 async function start(slug, only, rk) {
   /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
      기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
-  if (fingers()) { go('play'); $('#typein').focus(); }
+  /* 게임 자판이 켜져 있으면 기기 키보드가 올라오지 않게 먼저 막는다 — 코스를 못 치는
+     자판이면 syncKb 가 도로 푼다 */
+  if (fingers()) { kbMode(opt.softkb); go('play'); $('#typein').focus(); }
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [course, geom] = await load(slug);
@@ -1763,6 +1766,8 @@ async function start(slug, only, rk) {
   $('#statTime').firstElementChild.textContent = clock(secs);
   $('#play').classList.toggle('is-ranked', !!rk);
   $('#rkTag').hidden = !rk;
+  G.kb = kbFor(items);
+  syncKb();
   $('.gauge').classList.remove('warn');
   $('#statTime').classList.remove('warn');
   go('play');
@@ -2231,6 +2236,146 @@ $('#typein').addEventListener('keydown', e => {
   e.target.value = '';
   judge(val);
 });
+
+/* ── 폰 게임 자판 ─────────────────────────────────────
+   폰은 기기 키보드 대신 이 자판으로 친다(opt.softkb). 누른 키는 입력창 값을 hanPush/hanBack
+   으로 고치고 input 이벤트를 쏜다 — 판정·색칠·속도·글자 수 자르기는 기기 키보드와 같은
+   길을 탄다. 입력창은 초점을 쥔 채 inputmode="none" 으로 기기 키보드만 막는다(블루투스
+   키보드는 그대로 친다). 코스를 이 자판으로 다 칠 수 없으면 기기 키보드로 돌아간다 */
+const KB_ROWS = { ko: ['ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ', 'ㅁㄴㅇㄹㅎㅗㅓㅏㅣ', 'ㅋㅌㅊㅍㅠㅜㅡ'],
+                  en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] };
+const KB_SHIFT = { ㅂ: 'ㅃ', ㅈ: 'ㅉ', ㄷ: 'ㄸ', ㄱ: 'ㄲ', ㅅ: 'ㅆ', ㅐ: 'ㅒ', ㅔ: 'ㅖ' };
+/* 화면 읽기 프로그램이 자모를 이름으로 읽게 */
+const KB_NAME = { ㄱ: '기역', ㄲ: '쌍기역', ㄴ: '니은', ㄷ: '디귿', ㄸ: '쌍디귿', ㄹ: '리을', ㅁ: '미음',
+  ㅂ: '비읍', ㅃ: '쌍비읍', ㅅ: '시옷', ㅆ: '쌍시옷', ㅇ: '이응', ㅈ: '지읒', ㅉ: '쌍지읒', ㅊ: '치읓',
+  ㅋ: '키읔', ㅌ: '티읕', ㅍ: '피읖', ㅎ: '히읗', ㅏ: '아', ㅐ: '애', ㅑ: '야', ㅒ: '얘', ㅓ: '어',
+  ㅔ: '에', ㅕ: '여', ㅖ: '예', ㅗ: '오', ㅛ: '요', ㅜ: '우', ㅠ: '유', ㅡ: '으', ㅣ: '이' };
+const KB_SYM = /^[0-9,.'\-]$/;   // 숫자·문장부호는 코스에 있는 것만 한 줄 더 선다(종로1,2,3,4가동)
+const KB = { el: $('#softkb'), sig: '', shift: false, down: new Map() };
+
+/* 이 코스를 칠 자판 — { lay: 'ko'|'en', sym: '12,' } 또는 null(기기 키보드). 항목마다 이름이나
+   별칭 하나는 자판 글자·공백·코스의 숫자/문장부호로만 되어 있어야 한다(Québec 은 못 친다) */
+function kbFor(items) {
+  const forms = items.map(it => [it.name, ...it.aliases].map(n => String(n).normalize('NFC')));
+  const lay = forms.flat().some(n => /[가-힣]/.test(n)) ? 'ko' : 'en';
+  const letter = lay === 'ko' ? /^[가-힣]$/ : /^[a-z]$/i;
+  const ok = n => [...n].every(c => letter.test(c) || c === ' ' || KB_SYM.test(c));
+  if (!forms.every(f => f.some(ok))) return null;
+  const sym = [...new Set(forms.flat().filter(ok).join(''))].filter(c => KB_SYM.test(c))
+    .sort((a, b) => /\d/.test(b) - /\d/.test(a) || a.localeCompare(b)).join('');   // 숫자 먼저, 부호는 뒤에
+  return { lay, sym };
+}
+function kbBuild(kb) {
+  const key = (k, s, name) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'kb-k'; b.dataset.k = k;
+    if (s) b.dataset.s = s;
+    if (name) b.dataset.name = name;
+    return b;
+  };
+  const act = (a, label, text) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'kb-k kb-' + a; b.dataset.act = a;
+    b.setAttribute('aria-label', t(label)); b.textContent = text;
+    return b;
+  };
+  const row = (...keys) => { const r = document.createElement('div'); r.className = 'kb-row'; r.append(...keys); return r; };
+  const letters = s => [...s].map(k => kb.lay === 'ko' ? key(k, KB_SHIFT[k], 1) : key(k, k.toUpperCase()));
+  const [r1, r2, r3] = KB_ROWS[kb.lay];
+  const shift = act('shift', 'kbShift', '⇧');
+  shift.setAttribute('aria-pressed', 'false');
+  KB.el.replaceChildren(...[
+    kb.sym && row(...[...kb.sym].map(k => key(k))),
+    row(...letters(r1)), row(...letters(r2)),
+    row(shift, ...letters(r3), act('back', 'kbBack', '⌫')),
+    row(act('space', 'kbSpace', t('kbSpace')), ...(G.spacy ? [act('enter', 'kbEnter', '⏎')] : [])),
+  ].filter(Boolean));
+  KB.el.classList.toggle('is-sym', !!kb.sym);
+  KB.shift = false;
+  kbPaint();
+}
+/* Shift 에 따라 글자를 갈아 끼운다 — 켜진 Shift 는 aria-pressed 와 바뀐 글자로 보인다(색만이 아니다) */
+function kbPaint() {
+  KB.el.querySelectorAll('[data-k]').forEach(b => {
+    const k = KB.shift && b.dataset.s || b.dataset.k;
+    b.textContent = k;
+    if (b.dataset.name) b.setAttribute('aria-label', KB_NAME[k] || k);
+  });
+  const s = KB.el.querySelector('.kb-shift');
+  if (s) s.setAttribute('aria-pressed', KB.shift);
+  kbHint();
+}
+/* 다음에 칠 키 — 친 것을 두벌식으로 풀어 목표의 앞머리면 그 다음 자모, 아니면 지우기.
+   다 쳤으면 확정(스페이스, 띄어 쓴 코스는 Enter). 경쟁전·설정에서 끄면 안 뜬다 */
+function kbHint() {
+  KB.el.querySelectorAll('.kb-next').forEach(b => b.classList.remove('kb-next'));
+  if (KB.el.hidden || !opt.kbhint || !G || G.ranked || !G.want) return;
+  /* 영어는 대소문자까지 짚는다 — 판정은 안 가려도 글자 칸 색칠(paintTyped)은 가린다 */
+  const form = s => G.kb && G.kb.lay === 'en' ? (G.spacy ? s : s.replace(/\s/g, '')) : typedForm(s, G.spacy);
+  const typed = form($('#typein').value.replace(/^\s+/, '')), want = form(G.want);
+  const ch = !want.startsWith(typed) ? null : want[typed.length];
+  const b = ch === undefined ? KB.el.querySelector(G.spacy ? '.kb-enter' : '.kb-space')
+    : ch === null ? KB.el.querySelector('.kb-back')
+    : ch === ' ' ? KB.el.querySelector('.kb-space')
+    : [...KB.el.querySelectorAll('[data-k]')].find(x => x.dataset.k === ch || x.dataset.s === ch);
+  if (!b) return;
+  b.classList.add('kb-next');
+  /* 쌍자음·ㅒ·ㅖ·대문자는 Shift 도 같이 짚는다. 켜진 Shift 를 꺼야 할 때도 짚는다 */
+  const up = !!b.dataset.s && ch === b.dataset.s && ch !== b.dataset.k;
+  if (b.dataset.s && up !== KB.shift) KB.el.querySelector('.kb-shift').classList.add('kb-next');
+}
+const kbMode = on => { if (on) $('#typein').inputMode = 'none'; else $('#typein').removeAttribute('inputmode'); };
+/* 자판을 세우거나 거둔다 — 판을 시작할 때, 설정이 바뀔 때. 시트 높이가 바뀌므로 목표를 다시 겨눈다 */
+function syncKb() {
+  const inp = $('#typein'), on = fingers() && opt.softkb && !!G && !!G.kb;
+  if (on) {
+    const sig = G.kb.lay + G.kb.sym + G.spacy + LANG;
+    if (sig !== KB.sig) { KB.sig = sig; kbBuild(G.kb); }
+  }
+  /* 기기 키보드로 돌아갈 때 초점을 놓는다 — 다음 누름의 focus 가 기기 키보드를 띄운다(iOS) */
+  if (!on && inp.inputMode === 'none') { kbMode(false); inp.blur(); }
+  else kbMode(on);
+  KB.el.hidden = !on;
+  kbHint();
+  if (G && G.cam && $('#play').classList.contains('on')) requestAnimationFrame(() => { fitPlayK(); if ($('#playAim').hidden) aimCam(); });
+}
+function kbPress(b) {
+  const inp = $('#typein'), a = b.dataset.act;
+  if (a === 'shift') { KB.shift = !KB.shift; return kbPaint(); }
+  /* Enter 는 입력창의 keydown Enter 와 같은 길로 확정한다 */
+  if (a === 'enter') { inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true })); return kbHint(); }
+  const k = a === 'space' ? ' ' : a === 'back' ? null : KB.shift && b.dataset.s || b.dataset.k;
+  inp.value = k === null ? hanBack(inp.value) : hanPush(inp.value, k);
+  inp.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: k === null ? 'deleteContentBackward' : 'insertText', data: k }));
+  if (KB.shift && !a) { KB.shift = false; kbPaint(); }
+}
+/* 누르면 바로 눌린 모양, 뗄 때 친다(키 위에서 뗐을 때만). 지우기는 길게 누르면 되풀이한다.
+   pointerdown 을 막아 초점은 입력창에 남고, 두 엄지로 쳐도 지도 끌기·핀치가 되지 않는다 */
+KB.el.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  const b = e.target.closest('button');
+  if (!b) return;
+  b.classList.add('down');
+  const d = { b, rep: 0, n: 0 };
+  if (b.dataset.act === 'back') d.rep = setTimeout(function again() { kbPress(b); d.n++; d.rep = setTimeout(again, 70); }, 450);
+  KB.down.set(e.pointerId, d);
+});
+const kbUp = (e, commit) => {
+  const d = KB.down.get(e.pointerId);
+  if (!d) return;
+  KB.down.delete(e.pointerId);
+  clearTimeout(d.rep);
+  d.b.classList.remove('down');
+  const at = document.elementFromPoint(e.clientX, e.clientY);
+  if (commit && !d.n && at && at.closest('button') === d.b) kbPress(d.b);
+};
+KB.el.addEventListener('pointerup', e => kbUp(e, true));
+KB.el.addEventListener('pointercancel', e => kbUp(e, false));
+/* 키보드(Tab·Enter)로 누른 click 은 pointer 가 없다(detail 0) */
+KB.el.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !e.detail) kbPress(b); });
+KB.el.addEventListener('contextmenu', e => e.preventDefault());
+$('#typein').addEventListener('input', kbHint);
+$('#typein').addEventListener('keydown', () => setTimeout(kbHint));
 
 function miss() {
   $('#typein').value = '';
