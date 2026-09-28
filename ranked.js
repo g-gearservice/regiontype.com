@@ -275,11 +275,18 @@ function sizeBot() {
   document.documentElement.style.setProperty('--rk-bot', BOT + 'px');
 }
 sizeBot();
-const layer = $('#rkLayer'), bubble = $('#rkSay'), dim = $('#rkDim'), next = $('#rkNext');
+const layer = $('#rkLayer'), bubble = $('#rkSay'), dim = $('#rkDim'), next = $('#rkNext'), skip = $('#rkSkip');
 const logo = () => $('#regions .navbar .nav-logo');
 const regionsOn = () => $('#regions').classList.contains('on');
 const botName = () => { try { return localStorage.getItem('rt.botname') || 'Grok'; } catch { return 'Grok'; } };
 let bot = null, making = null, out = false, intro = false, touring = false, corner = 0, hush = 0, nap = 0, chatting = false;
+/* aim — 폰 안내에서 말풍선이 가리키는 것(테두리가 둘린다). skipping — 둘러보기를 닫았다 */
+let aim = null, skipping = false;
+function aimAt(el) {
+  if (aim) aim.classList.remove('rk-aim');
+  aim = el || null;
+  if (aim) aim.classList.add('rk-aim');
+}
 
 /* 경쟁전 빛깔은 봇의 빛깔이다 — 아래 줄의 '경쟁전 시작'도, 말풍선도 모두 --rk-on 을
    딴다. 계정 화면에서 고른 색이 없으면 --buddy-ink 가 --ranked 로 내려오므로 옛 빨강
@@ -399,12 +406,18 @@ function place(x, y) {
   else bot.el.style.transform = `translate3d(${x}px,${y}px,0)`;
   bot.x = x; bot.y = y;
   bubble.toggleAttribute('data-dock', dock);
-  const cx = x + size / 2, cy = y + size / 2, side = dock ? 'up' : sideOf(cx, cy);
+  /* 안내 중인 폰은 봇이 시트에 묶여 못 날아간다 — 말풍선이 대신 가리키는 것(aim) 곁에
+     선다. 위쪽 반에 있으면 그 밑에, 아니면 그 위에. 시트 안의 것은 시트 위로 비켜
+     가리지 않는다 */
+  const a = dock && aim && aim.getBoundingClientRect(), inSheet = a && aim.closest('#regions .nav-bot');
+  const low = a && !inSheet && a.top + a.height / 2 < innerHeight / 2;
+  const cx = a ? a.left + a.width / 2 : x + size / 2, cy = y + size / 2, side = dock ? (low ? 'down' : 'up') : sideOf(cx, cy);
   const turned = bubble.dataset.side !== side;
   bubble.dataset.side = side;
   const w = bubble.offsetWidth, h = bubble.offsetHeight;
   const bx = side === 'right' ? cx : side === 'left' ? cx - w : cx - w / 2;
-  const by = dock ? y - h - 10 : side === 'down' ? cy : side === 'up' ? cy - h : cy - h / 2;
+  const by = a ? (low ? a.bottom + 12 : (inSheet ? inSheet.getBoundingClientRect() : a).top - h - 12)
+    : dock ? y - h - 10 : side === 'down' ? cy : side === 'up' ? cy - h : cy - h / 2;
   const fx = Math.max(16, Math.min(innerWidth - w - 16, bx)), fy = Math.max(16, Math.min(innerHeight - h - 16, by));
   bubble.style.transform = `translate3d(${fx}px,${fy}px,0)`;
   /* 테두리는 말풍선 안에서 봇 자리에 선다 */
@@ -584,7 +597,9 @@ function wireChat() {
 /* ── 처음 온 사람 ──
    넵바만 밝게 두고 나머지는 .rk-dim 이 덮는다. 봇은 로고 알약 바로 아래에 반쯤
    숨어(넵바가 봇 층보다 위로 올라간다) 들썩이며 조른다 */
-const INTRO_LOCK = () => [$('#courseBtns'), $('#regions .nav-bot'), $('#regions .screen-head'), $('#courseName')];
+/* 폰은 봇이 시트에 살고 시작하기도 거기 있다 — 시트는 막 위로 올려(style.css) 잠그지
+   않는다. 처음 온 사람이 안내를 안 보고도 바로 시작할 수 있다 */
+const INTRO_LOCK = () => [$('#courseBtns'), fingers() ? null : $('#regions .nav-bot'), $('#regions .screen-head'), $('#courseName')];
 function peekAt() {
   const r = logo().getBoundingClientRect();
   return [r.left + r.width / 2 - BOT / 2, r.bottom - BOT * .35];
@@ -601,7 +616,9 @@ async function beginIntro() {
   if (!intro) return;
   out = true;
   bot.api.start();
-  bot.api.setState('alert');
+  /* 시트의 44px 아바타에서 '!'(alert)는 실오라기로만 보인다 — 폰은 얼굴 그대로 들썩인다 */
+  bot.api.setState(docked() ? 'idle' : 'alert');
+  if (docked()) { aimAt(logo()); skip.hidden = false; }
   tell('botPeek');
   jump(...peekAt());
   requestAnimationFrame(peekFrame);
@@ -621,6 +638,8 @@ function endIntro() {
   try { localStorage.removeItem(RESCUE_KEY); } catch {}
   document.body.classList.remove('rk-intro');
   dim.hidden = true;
+  aimAt(null);
+  skip.hidden = true;
   logo().setAttribute('aria-label', 'regiontype');
   INTRO_LOCK().forEach(n => { if (n) n.inert = false; });
   aimNavShape(null);
@@ -644,14 +663,35 @@ function midTile() {
   return tiles.sort((a, b) => d(a) - d(b))[0] || null;
 }
 const STEPS = [
-  ['tourHi', () => [innerWidth * .72, innerHeight * .36]],
-  ['tourTiles', () => near(midTile())],
-  ['tourPlay', () => near($('#navPlay'))],
-  ['tourRanked', () => near($('#navPlay'))],
-  ['tourBoard', () => near($('#regions .navbar a[href="#ranking"]'))],
-  ['tourSettings', () => near($('#regions .nav-bot a[href="settings/"]'))],
-  ['tourBye', () => [innerWidth / 2 - BOT / 2, innerHeight * .36]],
+  ['tourHi', () => [innerWidth * .72, innerHeight * .36], () => $('#sheetBot')],
+  ['tourTiles', () => near(midTile()), midTile],
+  ['tourPlay', () => near($('#navPlay')), () => $('#navPlay')],
+  ['tourRanked', () => near($('#navPlay')), () => $('#navPlay')],
+  ['tourBoard', () => near($('#regions .navbar a[href="#ranking"]')), () => $('#regions a[href="#ranking"]')],
+  ['tourSettings', () => near($('#regions .nav-bot a[href="settings/"]')), () => $('#regions a[href="settings/"]')],
+  ['tourBye', () => [innerWidth / 2 - BOT / 2, innerHeight * .36], () => $('#sheetBot')],
 ];
+/* 폰 — 셋째 칸이 가리킬 것이다. 순위·설정은 접힌 시트 안에 있으니 시트를 펼쳐 보여 준다 */
+function sheetTo(open) {
+  const g = $('#sheetGrab');
+  if (g && (g.getAttribute('aria-expanded') === 'true') !== open) g.click();
+}
+/* 시트가 스프링으로 오르내리는 동안 말풍선이 따라간다 */
+function follow() {
+  if (!touring) return;
+  if (!bubble.hidden) place(bot.x, bot.y);
+  requestAnimationFrame(follow);
+}
+/* 닫기(폰)·시작하기 — 조르든 둘러보든 거기서 끝내고 봇은 시트에서 존다 */
+function quitTour() {
+  if (intro) {
+    /* 닫기에 있던 초점은 봇이 받는다 — 숨은 버튼에 남기지 않는다 */
+    const held = document.activeElement === skip;
+    endIntro(); settle();
+    if (held) bot.el.focus({ preventScroll: true });
+  }
+  else if (touring) { skipping = true; advance(); }
+}
 let advance = () => {};
 const nextPress = () => new Promise(res => { advance = res; });
 function pull() {
@@ -676,20 +716,27 @@ async function tour() {
   bot.api.doze(false);
   next.hidden = false;
   next.focus({ preventScroll: true });
-  for (const [key, at] of STEPS) {
+  const dock = docked();
+  skip.hidden = !dock;
+  if (dock) follow();
+  for (const [key, at, what] of STEPS) {
+    if (skipping) break;
     /* 날아가는 동안은 입을 다물고, 내려앉은 뒤 말풍선을 펼친다 */
     hide();
+    if (dock) { const el = what && what(); sheetTo(!!el && !!el.closest('#sheetMore')); aimAt(el); }
     place(...at());
     await new Promise(res => setTimeout(res, siDurMs()));
+    if (skipping) break;
     tell(key, { bot: botName() });
     /* 날아가는 동안 말풍선이 숨어 '다음'에서 초점이 빠졌다 — 돌려준다 */
     next.focus({ preventScroll: true });
     await nextPress();
   }
-  next.hidden = true;
-  touring = false;
+  next.hidden = skip.hidden = true;
+  touring = skipping = false;
+  if (dock) { aimAt(null); sheetTo(false); }
   /* '다음'에 있던 초점은 봇이 받는다 — 숨은 버튼에 남기지 않는다 */
-  if (!document.activeElement || document.activeElement === next || document.activeElement === document.body) {
+  if (!document.activeElement || [next, skip, document.body].includes(document.activeElement)) {
     bot.el.focus({ preventScroll: true });
   }
   settle();
@@ -783,6 +830,7 @@ function wireLogo() {
     pull();
   });
   next.addEventListener('click', () => advance());
+  skip.addEventListener('click', quitTour);
 }
 
 /* ── 경쟁전 ────────────────────────────────────────────
@@ -854,6 +902,8 @@ function wireStart() {
     if (!e.target.closest('#navPlay')) return;
     /* 꾹 누른 뒤 손을 떼며 오는 click 은 시작이 아니다 */
     if (swallowPlay) { swallowPlay = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
+    /* 안내 도중에 시작하면 안내는 거기서 끝난다 — 판에서 돌아왔을 때 매달려 있지 않게 */
+    quitTour();
     if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
     e.stopImmediatePropagation();
     go(rankedSlug());

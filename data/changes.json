@@ -1,6 +1,24 @@
 [
   {
-    "v": "1.0.330",
+    "v": "0.8.333",
+    "date": "2026-09-28",
+    "ko": "폰에서 게임을 시작하면 regiontype 자체 키보드가 뜹니다. 처음부터 두벌식 한글이라 자판을 바꿀 필요가 없고, 다음에 칠 키를 주황 테두리로 짚어 줍니다(경쟁전에서는 꺼짐). 폰 키보드 위 막대가 사라져 지도와 한 줄 소개가 넓게 보입니다. 설정 > 게임에서 폰 기본 키보드로 돌아가거나 키 안내를 끌 수 있습니다.",
+    "en": "Games on phones now open regiontype's own keyboard. It starts in Korean 두벌식, so there's no layout switching, and it outlines the next key in orange (off in ranked games). Without the phone keyboard's toolbar, the map and the one-line description get more room. Settings > Game lets you go back to your phone's keyboard or turn off the key hint."
+  },
+  {
+    "v": "0.8.332",
+    "date": "2026-09-28",
+    "ko": "폰에서 처음 온 사람 안내가 제대로 돕니다. 도우미 봇이 어둡게 가려지지 않고, 단계마다 설명하는 곳에 테두리가 그려지며, 언제든 ✕로 닫거나 바로 시작하기를 누를 수 있습니다. 설정의 보안 탭은 로그아웃 상태에서 로그인 안내만 보이고, 야간 모드에서 고르지 않은 선택지 글자가 또렷해졌습니다.",
+    "en": "The first-visit tour now works on phones: the helper bot isn't dimmed, each step outlines what it's describing, and you can close it with ✕ or hit Play at any time. Settings > Security now shows only the sign-in prompt when you're signed out, and unselected choices stay readable in night mode."
+  },
+  {
+    "v": "0.8.331",
+    "date": "2026-09-28",
+    "ko": "아이폰 사파리에 맞췄습니다. 화면 아래 툴바 뒤까지 페이지가 이어지고, 상단 막대 색이 야간 모드를 따르며, 홈 화면에 추가하면 regiontype 아이콘이 붙습니다. 입력창을 눌러도 화면이 확대되지 않습니다. 게임에서 가장자리 구·동도 화면 가운데로 옵니다. 폰 설정 화면은 아이폰 설정처럼 탭 한 줄과 묶음 목록으로 바뀌었고, 네 글자 구 이름이 이웃 이름과 붙지 않습니다.",
+    "en": "Tuned for iPhone Safari: the page runs behind the bottom toolbar, the top bar follows night mode, and Add to Home Screen gets a regiontype icon. Tapping a field no longer zooms the page. In a game, places on the map's edge now come to the middle of the screen. Phone Settings now look like iPhone Settings, with one row of tabs and grouped lists, and four-syllable district names no longer run into their neighbors."
+  },
+  {
+    "v": "0.8.330",
     "date": "2026-09-28",
     "ko": "폰 화면을 지도 앱처럼 새로 짰습니다. 지도가 화면 끝까지 깔리고, 메뉴는 아래 시트를 끌어 올리면 나옵니다. 도우미 봇은 시트 오른쪽 아바타가 됐습니다. 게임 중에는 시간·개수·속도가 위쪽 알약에, 단어는 키보드 바로 위 시트에 뜨고, 지도를 옮겼다면 '목표로' 단추로 돌아옵니다. 결과는 끝난 지도 위로 시트가 올라옵니다.",
     "en": "The phone layout is rebuilt like a maps app: the map runs edge to edge, and the menu lives in a bottom sheet you pull up. The helper bot is now the avatar at the right of the sheet. In a game, time, count and speed sit in a pill at the top, the word sits in a sheet right above the keyboard, and a Back to target button returns you if you panned away. Results rise in a sheet over the finished map."
