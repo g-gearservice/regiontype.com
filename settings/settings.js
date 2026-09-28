@@ -25,7 +25,7 @@ const isDev = () => document.documentElement.hasAttribute('data-dev');
 /* ── 설정 통 ─────────────────────────────────────────
    홈(app.js)과 같은 통, 같은 기본값이다. 키 집합이 어긋나면 한쪽이 저장할 때마다
    다른 쪽 값이 지워진다 */
-const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
+const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true, softkb: true, kbhint: true,
               lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
@@ -191,6 +191,7 @@ function fillRegionPick() {}
    MM 스타일 세로 레일. role="tab" 사이를 화살표/Home/End 로 옮기고, 고른 탭만
    aria-selected="true" · tabindex="0" · 패널 hidden 해제로 남긴다. 고른 탭은
    해시에도 남는다 — 그래야 /settings/#security 딥링크가 산다 */
+const coarse = () => matchMedia('(pointer:coarse)').matches;
 const tabHash = tb => tb.getAttribute('aria-controls').slice(4).toLowerCase();
 let pickTab = () => {};
 function wireOptsTabs() {
@@ -211,10 +212,24 @@ function wireOptsTabs() {
       if (on && panel.id === 'optsSecurity') account();
     });
     if (!keepHash) history.replaceState(null, '', location.pathname + location.search + '#' + tabHash(tab));
+    /* 폰에서는 탭이 가로로 굴리는 한 줄이다 — 고른 칩이 줄 밖에 있으면 끌어온다.
+       scrollIntoView 는 쓰지 않는다: sticky 칩이라 덮개까지 세로로 굴려 버린다 */
+    if (coarse()) {
+      const r = tab.getBoundingClientRect(), b = rail.getBoundingClientRect();
+      if (r.left < b.left || r.right > b.right) rail.scrollLeft += r.left - b.left - 16;
+    }
   };
   rail.addEventListener('click', e => {
     const tab = e.target.closest('[role="tab"]');
     if (tab && tabs.includes(tab)) select(tab);
+  });
+  /* 폰의 토글 줄은 줄 전체가 누름 자리다(iOS 설정 결). 라벨·빈자리를 짚어도 그 줄의
+     토글을 누른다 — 토글 자체와 키보드 길은 그대로라 이벤트를 새로 만들지 않고 click 만 넘긴다 */
+  document.querySelector('#options')?.addEventListener('click', e => {
+    if (!coarse() || e.target.closest('button')) return;
+    const cell = e.target.closest('.opts dt, .opts dd');
+    const dd = cell?.matches('dt') ? cell.nextElementSibling : cell;
+    dd?.querySelector('.toggle')?.click();
   });
   rail.addEventListener('keydown', e => {
     const cur = tabs.indexOf(document.activeElement);
@@ -355,7 +370,7 @@ let securityRequest = 0;
 async function account() {
   const request = ++securityRequest;
   const inn = !!token();
-  $('#secIn').hidden = false;
+  $('#secIn').hidden = !inn;
   $('#secOut').hidden = inn;
   [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')].forEach(b => { b.disabled = !inn; });
   $('#securityState').textContent = inn ? '확인 중' : '로그인 필요';

@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.30';
+const VER = '3.33';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -134,11 +134,50 @@ const jamo = s => [...s.normalize('NFC')].map(ch => {
   return 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'[Math.floor(c / 588)] + JUNG[Math.floor(c % 588 / 28)] + JONG[c % 28];
 }).join('');
 const keysOf = s => jamo(s).length;
+
+/* 폰 자체 키보드의 두벌식 조합기. 상태를 따로 들지 않고 입력창 끝 글자만 보고 잇는다 —
+   시스템 IME 와 같은 결: 갑+ㅅ=값, 값+ㅏ=갑사, 고+ㅏ=과. 지울 때는 자모 하나씩 */
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const VOW = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+const FIN = ['', ...'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ'];
+const MIX = { ㅗㅏ: 'ㅘ', ㅗㅐ: 'ㅙ', ㅗㅣ: 'ㅚ', ㅜㅓ: 'ㅝ', ㅜㅔ: 'ㅞ', ㅜㅣ: 'ㅟ', ㅡㅣ: 'ㅢ',
+              ㄱㅅ: 'ㄳ', ㄴㅈ: 'ㄵ', ㄴㅎ: 'ㄶ', ㄹㄱ: 'ㄺ', ㄹㅁ: 'ㄻ', ㄹㅂ: 'ㄼ', ㄹㅅ: 'ㄽ',
+              ㄹㅌ: 'ㄾ', ㄹㅍ: 'ㄿ', ㄹㅎ: 'ㅀ', ㅂㅅ: 'ㅄ' };
+const SPLIT = Object.fromEntries(Object.entries(MIX).map(([k, v]) => [v, [...k]]));
+const syl = (l, v, t = 0) => String.fromCharCode(0xAC00 + (l * 21 + v) * 28 + t);
+const unsyl = ch => { const c = ch.charCodeAt(0) - 0xAC00;
+  return c >= 0 && c < 11172 ? [Math.floor(c / 588), Math.floor(c % 588 / 28), c % 28] : null; };
+function hanPush(buf, k) {
+  const pre = buf.slice(0, -1), last = buf.slice(-1), s = last && unsyl(last);
+  const vow = VOW.includes(k), fin = FIN.indexOf(k);
+  if (s) {
+    const [l, v, t] = s;
+    if (!vow) {
+      if (!t) return fin > 0 ? pre + syl(l, v, fin) : buf + k;
+      const both = MIX[FIN[t] + k];
+      return both ? pre + syl(l, v, FIN.indexOf(both)) : buf + k;
+    }
+    if (!t) { const both = MIX[VOW[v] + k]; return both ? pre + syl(l, VOW.indexOf(both)) : buf + k; }
+    /* 받침이 다음 글자의 첫소리로 넘어간다 — 겹받침이면 뒤 하나만 */
+    const [keep, move] = SPLIT[FIN[t]] || ['', FIN[t]];
+    return pre + syl(l, v, FIN.indexOf(keep)) + syl(CHO.indexOf(move), VOW.indexOf(k));
+  }
+  if (vow && CHO.includes(last)) return pre + syl(CHO.indexOf(last), VOW.indexOf(k));
+  if (vow && MIX[last + k] && VOW.includes(last)) return pre + MIX[last + k];
+  return buf + k;
+}
+function hanBack(buf) {
+  const pre = buf.slice(0, -1), last = buf.slice(-1), s = last && unsyl(last);
+  if (!s) return SPLIT[last] && VOW.includes(last) ? pre + SPLIT[last][0] : pre;
+  const [l, v, t] = s;
+  if (t) return pre + syl(l, v, SPLIT[FIN[t]] ? FIN.indexOf(SPLIT[FIN[t]][0]) : 0);
+  return pre + (SPLIT[VOW[v]] ? syl(l, VOW.indexOf(SPLIT[VOW[v]][0])) : CHO[l]);
+}
 const unitNow = () => (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
 const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
 const showSpeed = cpm => speedIn(cpm) + ' ' + unitLabel();
-const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true,
+const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true, softkb: true, kbhint: true,
               lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
@@ -510,9 +549,9 @@ function asideTile(tile, on, k = 1) {
   const span = tile.el.firstChild, text = on ? tile.short : tile.label;
   if (span.textContent !== text) span.textContent = text;
   if (!span.scrollWidth) return;   // 숨은 화면에서는 잴 수 없다
-  /* 폰 한국어는 지도 글자처럼 테를 둘러 칸을 조금 넘겨도 읽힌다 — 네 글자 구가 깨알이
-     되지 않게. 영어는 두 줄로 접혀 이미 들고, 넘기면 옆 칸에 가려 잘린다 */
-  const f = Math.min(on ? k : 1, tile.el.clientWidth * (fingers() && LANG === 'ko' ? 1.1 : .86) / span.scrollWidth);
+  /* 폰 한국어는 칸 폭을 거의 다 쓴다 — 네 글자 구가 깨알이 되지 않게. 칸을 넘기면
+     실기기에서 이웃 이름과 붙어 '서대문구중구' 로 읽혀 폭 안에서 멈춘다 */
+  const f = Math.min(on ? k : 1, tile.el.clientWidth * (fingers() && LANG === 'ko' ? .98 : .86) / span.scrollWidth);
   const first = !tile.fitted;
   tile.fitted = true;
   if (tile.f.to === f && !first) return;
@@ -1182,7 +1221,7 @@ const pinchKind = () => $('#regions').classList.contains('on') ? 'home'
   : $('#play').classList.contains('on') && G && G.cam ? 'play' : null;
 const pinchSpan = () => { const [a, b] = [...fingersOn.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
 addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'touch') return;
+  if (e.pointerType !== 'touch' || e.target.closest('#softkb')) return;   // 두 엄지로 치는 건 핀치가 아니다
   fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
   if (fingersOn.size !== 2) return;
   if (drag) { if (drag.host) drag.host.classList.remove('is-drag'); drag = null; }
@@ -1441,12 +1480,14 @@ function sheetDock() {
   new ResizeObserver(sheetMeasure).observe(SHEET.el);
   sheetMeasure();
 }
-/* 접힘은 시작하기 밑변 + 아래 여백(홈 인디케이터 몫 포함)까지만 보이는 자리다 */
+/* 접힘은 시작하기 밑변 + 아래 여백(홈 인디케이터 몫 포함)까지만 보이는 자리다.
+   시트가 Safari 아래 막대 밑으로 내려가 있으면(bottom 이 음수, style.css 의 --under)
+   --sheet-peek(화면 아래에서 잰 높이)에서는 그 몫을 뺀다 */
 function sheetMeasure() {
-  const el = SHEET.el, play = $('#navPlay');
-  const peek = play.offsetTop + play.offsetHeight + parseFloat(getComputedStyle(el).paddingBottom);
+  const el = SHEET.el, play = $('#navPlay'), cs = getComputedStyle(el);
+  const peek = play.offsetTop + play.offsetHeight + parseFloat(cs.paddingBottom);
   SHEET.shut = Math.max(0, el.offsetHeight - peek);
-  document.documentElement.style.setProperty('--sheet-peek', peek + 'px');
+  document.documentElement.style.setProperty('--sheet-peek', peek + Math.min(0, parseFloat(cs.bottom)) + 'px');
   if (SHEET.drag || SHEET.raf) return;
   SHEET.y.x = SHEET.y.to = SHEET.open ? 0 : SHEET.shut; SHEET.y.v = 0;
   sheetPaint();
@@ -1665,6 +1706,7 @@ async function boot() {
     requestAnimationFrame(syncGrid);
     LANG = resolveLang();
     paintUI();
+    if (G) syncKb();
   });
   fbPlaceholder();
   paintRegion();
@@ -1679,7 +1721,9 @@ let G = null, tick = null, pending = null;
 async function start(slug, only, rk) {
   /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
      기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
-  if (fingers()) { go('play'); $('#typein').focus(); }
+  /* 게임 자판이 켜져 있으면 기기 키보드가 올라오지 않게 먼저 막는다 — 코스를 못 치는
+     자판이면 syncKb 가 도로 푼다 */
+  if (fingers()) { kbMode(opt.softkb); go('play'); $('#typein').focus(); }
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [course, geom] = await load(slug);
@@ -1722,6 +1766,8 @@ async function start(slug, only, rk) {
   $('#statTime').firstElementChild.textContent = clock(secs);
   $('#play').classList.toggle('is-ranked', !!rk);
   $('#rkTag').hidden = !rk;
+  G.kb = kbFor(items);
+  syncKb();
   $('.gauge').classList.remove('warn');
   $('#statTime').classList.remove('warn');
   go('play');
@@ -1985,12 +2031,18 @@ function viewSpan() {
   const a = viewPoint({ clientX: 0, clientY: head.bottom + 8 }), b = viewPoint({ clientX: innerWidth, clientY: low - 8 });
   return a && b && b.y > a.y ? [a, b] : null;
 }
-/* 길이 len 인 지도가 [a0, a1] 칸을 덮게 t 를 가둔다. 칸보다 작으면 칸 한가운데에 둔다 */
-const fitSpan = (t, a0, a1, len) => len >= a1 - a0 ? Math.min(a0, Math.max(a1 - len, t)) : (a0 + a1 - len) / 2;
-function look(tx, ty) {
+/* 길이 len 인 지도가 [a0, a1] 칸을 덮게 t 를 가둔다. 칸보다 작으면 칸 한가운데에 둔다.
+   over 는 지도 끝 너머로 비워도 되는 몫(칸 길이의 비율) — 지도 앱처럼 끝을 조금 넘겨 민다.
+   .5 면 지도 맨 끝 점도 칸 한가운데에 선다 */
+const fitSpan = (t, a0, a1, len, over = 0) => {
+  const s = (a1 - a0) * over;
+  return len >= a1 - a0 ? Math.min(a0 + s, Math.max(a1 - len - s, t)) : (a0 + a1 - len) / 2;
+};
+/* 폰에서 손으로 밀 때는 칸의 1/3 은 지도가 덮고 있게(over 2/3), 목표 조준은 .5 */
+function look(tx, ty, over = 2 / 3) {
   if (!G || !G.cam) return;
   const [W, H] = G.view, z = G.z || G.zoom, v = viewSpan();
-  if (v) { tx = fitSpan(tx, v[0].x, v[1].x, W * z); ty = fitSpan(ty, v[0].y, v[1].y, H * z); }
+  if (v) { tx = fitSpan(tx, v[0].x, v[1].x, W * z, over); ty = fitSpan(ty, v[0].y, v[1].y, H * z, over); }
   else [tx, ty] = clampCam(tx, ty, W, H, z);
   G.tx = tx; G.ty = ty;
   G.cam.setAttribute('transform', `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${z})`);
@@ -2003,7 +2055,7 @@ function aimCam() {
   const t = target(), [W, H] = G.view, z = G.z || G.zoom, v = viewSpan();
   const [cx, cy] = v ? [(v[0].x + v[1].x) / 2, (v[0].y + v[1].y) / 2] : [W / 2, H / 2];
   G.aimed = null;
-  look(t ? cx - z * t.at[0] : 0, t ? cy - z * t.at[1] : 0);
+  look(t ? cx - z * t.at[0] : 0, t ? cy - z * t.at[1] : 0, .5);
   G.aimed = [G.tx, G.ty, z];
   $('#playAim').hidden = true;
   followGrid(600);
@@ -2053,6 +2105,8 @@ function countdown(n, done) {
 function run() {
   $('#typein').value = '';   // 카운트다운 동안 미리 친 글자는 세지 않는다
   $('#typein').focus();
+  /* 폰: 첫 조준은 머리줄이 내려오는 중에 재서 칸이 어긋난다 — 다 앉은 뒤 다시 맞춘다 */
+  if (fingers() && G.cam && $('#playAim').hidden) aimCam();
   tick = setInterval(() => {
     G.left--;
     $('#gaugeFill').style.width = (G.left / G.total * 100) + '%';
@@ -2111,9 +2165,12 @@ if (window.visualViewport) {
   const vv = visualViewport, st = document.documentElement.style;
   /* 키보드가 떠 있으면 시트 밑에 홈 인디케이터 몫(--sab)을 두지 않는다. 판을 치는 중
      목표에서 끌려 나가 있지 않으면 줄어든 칸에 맞춰 목표를 다시 가운데 둔다 */
+  /* 가린 게 없으면 셋 다 지운다 — 그때 #play 는 Safari 아래 막대 밑(화면 맨 아래)까지
+     깔리고 시트가 막대 몫(--under)만큼 속을 띄운다. 막대 위에서 끊으면 그 밑이 검은 띠다 */
   const fitVV = () => {
-    st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px');
-    if (vv.height < innerHeight * .8) st.setProperty('--sab', '0px'); else st.removeProperty('--sab');
+    if (innerHeight - vv.height > 1 || vv.offsetTop > 0) {
+      st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); st.setProperty('--sab', '0px');
+    } else for (const k of ['--vvh', '--vvt', '--sab']) st.removeProperty(k);
     requestAnimationFrame(() => {
       fitPlayK();
       if (fingers() && G && G.cam && $('#play').classList.contains('on') && $('#playAim').hidden) aimCam();
@@ -2122,6 +2179,11 @@ if (window.visualViewport) {
   vv.addEventListener('resize', fitVV);
   vv.addEventListener('scroll', fitVV);
 }
+
+/* 브라우저 막대 색(theme-color)은 사이트 야간을 따른다. data-night 를 누가 바꾸든 여기 한 곳 */
+const tintBar = () => { $('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(); };
+new MutationObserver(tintBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-night'] });
+tintBar();
 
 function judge(raw) {
   const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');
@@ -2174,6 +2236,146 @@ $('#typein').addEventListener('keydown', e => {
   e.target.value = '';
   judge(val);
 });
+
+/* ── 폰 게임 자판 ─────────────────────────────────────
+   폰은 기기 키보드 대신 이 자판으로 친다(opt.softkb). 누른 키는 입력창 값을 hanPush/hanBack
+   으로 고치고 input 이벤트를 쏜다 — 판정·색칠·속도·글자 수 자르기는 기기 키보드와 같은
+   길을 탄다. 입력창은 초점을 쥔 채 inputmode="none" 으로 기기 키보드만 막는다(블루투스
+   키보드는 그대로 친다). 코스를 이 자판으로 다 칠 수 없으면 기기 키보드로 돌아간다 */
+const KB_ROWS = { ko: ['ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ', 'ㅁㄴㅇㄹㅎㅗㅓㅏㅣ', 'ㅋㅌㅊㅍㅠㅜㅡ'],
+                  en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'] };
+const KB_SHIFT = { ㅂ: 'ㅃ', ㅈ: 'ㅉ', ㄷ: 'ㄸ', ㄱ: 'ㄲ', ㅅ: 'ㅆ', ㅐ: 'ㅒ', ㅔ: 'ㅖ' };
+/* 화면 읽기 프로그램이 자모를 이름으로 읽게 */
+const KB_NAME = { ㄱ: '기역', ㄲ: '쌍기역', ㄴ: '니은', ㄷ: '디귿', ㄸ: '쌍디귿', ㄹ: '리을', ㅁ: '미음',
+  ㅂ: '비읍', ㅃ: '쌍비읍', ㅅ: '시옷', ㅆ: '쌍시옷', ㅇ: '이응', ㅈ: '지읒', ㅉ: '쌍지읒', ㅊ: '치읓',
+  ㅋ: '키읔', ㅌ: '티읕', ㅍ: '피읖', ㅎ: '히읗', ㅏ: '아', ㅐ: '애', ㅑ: '야', ㅒ: '얘', ㅓ: '어',
+  ㅔ: '에', ㅕ: '여', ㅖ: '예', ㅗ: '오', ㅛ: '요', ㅜ: '우', ㅠ: '유', ㅡ: '으', ㅣ: '이' };
+const KB_SYM = /^[0-9,.'\-]$/;   // 숫자·문장부호는 코스에 있는 것만 한 줄 더 선다(종로1,2,3,4가동)
+const KB = { el: $('#softkb'), sig: '', shift: false, down: new Map() };
+
+/* 이 코스를 칠 자판 — { lay: 'ko'|'en', sym: '12,' } 또는 null(기기 키보드). 항목마다 이름이나
+   별칭 하나는 자판 글자·공백·코스의 숫자/문장부호로만 되어 있어야 한다(Québec 은 못 친다) */
+function kbFor(items) {
+  const forms = items.map(it => [it.name, ...it.aliases].map(n => String(n).normalize('NFC')));
+  const lay = forms.flat().some(n => /[가-힣]/.test(n)) ? 'ko' : 'en';
+  const letter = lay === 'ko' ? /^[가-힣]$/ : /^[a-z]$/i;
+  const ok = n => [...n].every(c => letter.test(c) || c === ' ' || KB_SYM.test(c));
+  if (!forms.every(f => f.some(ok))) return null;
+  const sym = [...new Set(forms.flat().filter(ok).join(''))].filter(c => KB_SYM.test(c))
+    .sort((a, b) => /\d/.test(b) - /\d/.test(a) || a.localeCompare(b)).join('');   // 숫자 먼저, 부호는 뒤에
+  return { lay, sym };
+}
+function kbBuild(kb) {
+  const key = (k, s, name) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'kb-k'; b.dataset.k = k;
+    if (s) b.dataset.s = s;
+    if (name) b.dataset.name = name;
+    return b;
+  };
+  const act = (a, label, text) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'kb-k kb-' + a; b.dataset.act = a;
+    b.setAttribute('aria-label', t(label)); b.textContent = text;
+    return b;
+  };
+  const row = (...keys) => { const r = document.createElement('div'); r.className = 'kb-row'; r.append(...keys); return r; };
+  const letters = s => [...s].map(k => kb.lay === 'ko' ? key(k, KB_SHIFT[k], 1) : key(k, k.toUpperCase()));
+  const [r1, r2, r3] = KB_ROWS[kb.lay];
+  const shift = act('shift', 'kbShift', '⇧');
+  shift.setAttribute('aria-pressed', 'false');
+  KB.el.replaceChildren(...[
+    kb.sym && row(...[...kb.sym].map(k => key(k))),
+    row(...letters(r1)), row(...letters(r2)),
+    row(shift, ...letters(r3), act('back', 'kbBack', '⌫')),
+    row(act('space', 'kbSpace', t('kbSpace')), ...(G.spacy ? [act('enter', 'kbEnter', '⏎')] : [])),
+  ].filter(Boolean));
+  KB.el.classList.toggle('is-sym', !!kb.sym);
+  KB.shift = false;
+  kbPaint();
+}
+/* Shift 에 따라 글자를 갈아 끼운다 — 켜진 Shift 는 aria-pressed 와 바뀐 글자로 보인다(색만이 아니다) */
+function kbPaint() {
+  KB.el.querySelectorAll('[data-k]').forEach(b => {
+    const k = KB.shift && b.dataset.s || b.dataset.k;
+    b.textContent = k;
+    if (b.dataset.name) b.setAttribute('aria-label', KB_NAME[k] || k);
+  });
+  const s = KB.el.querySelector('.kb-shift');
+  if (s) s.setAttribute('aria-pressed', KB.shift);
+  kbHint();
+}
+/* 다음에 칠 키 — 친 것을 두벌식으로 풀어 목표의 앞머리면 그 다음 자모, 아니면 지우기.
+   다 쳤으면 확정(스페이스, 띄어 쓴 코스는 Enter). 경쟁전·설정에서 끄면 안 뜬다 */
+function kbHint() {
+  KB.el.querySelectorAll('.kb-next').forEach(b => b.classList.remove('kb-next'));
+  if (KB.el.hidden || !opt.kbhint || !G || G.ranked || !G.want) return;
+  /* 영어는 대소문자까지 짚는다 — 판정은 안 가려도 글자 칸 색칠(paintTyped)은 가린다 */
+  const form = s => G.kb && G.kb.lay === 'en' ? (G.spacy ? s : s.replace(/\s/g, '')) : typedForm(s, G.spacy);
+  const typed = form($('#typein').value.replace(/^\s+/, '')), want = form(G.want);
+  const ch = !want.startsWith(typed) ? null : want[typed.length];
+  const b = ch === undefined ? KB.el.querySelector(G.spacy ? '.kb-enter' : '.kb-space')
+    : ch === null ? KB.el.querySelector('.kb-back')
+    : ch === ' ' ? KB.el.querySelector('.kb-space')
+    : [...KB.el.querySelectorAll('[data-k]')].find(x => x.dataset.k === ch || x.dataset.s === ch);
+  if (!b) return;
+  b.classList.add('kb-next');
+  /* 쌍자음·ㅒ·ㅖ·대문자는 Shift 도 같이 짚는다. 켜진 Shift 를 꺼야 할 때도 짚는다 */
+  const up = !!b.dataset.s && ch === b.dataset.s && ch !== b.dataset.k;
+  if (b.dataset.s && up !== KB.shift) KB.el.querySelector('.kb-shift').classList.add('kb-next');
+}
+const kbMode = on => { if (on) $('#typein').inputMode = 'none'; else $('#typein').removeAttribute('inputmode'); };
+/* 자판을 세우거나 거둔다 — 판을 시작할 때, 설정이 바뀔 때. 시트 높이가 바뀌므로 목표를 다시 겨눈다 */
+function syncKb() {
+  const inp = $('#typein'), on = fingers() && opt.softkb && !!G && !!G.kb;
+  if (on) {
+    const sig = G.kb.lay + G.kb.sym + G.spacy + LANG;
+    if (sig !== KB.sig) { KB.sig = sig; kbBuild(G.kb); }
+  }
+  /* 기기 키보드로 돌아갈 때 초점을 놓는다 — 다음 누름의 focus 가 기기 키보드를 띄운다(iOS) */
+  if (!on && inp.inputMode === 'none') { kbMode(false); inp.blur(); }
+  else kbMode(on);
+  KB.el.hidden = !on;
+  kbHint();
+  if (G && G.cam && $('#play').classList.contains('on')) requestAnimationFrame(() => { fitPlayK(); if ($('#playAim').hidden) aimCam(); });
+}
+function kbPress(b) {
+  const inp = $('#typein'), a = b.dataset.act;
+  if (a === 'shift') { KB.shift = !KB.shift; return kbPaint(); }
+  /* Enter 는 입력창의 keydown Enter 와 같은 길로 확정한다 */
+  if (a === 'enter') { inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true })); return kbHint(); }
+  const k = a === 'space' ? ' ' : a === 'back' ? null : KB.shift && b.dataset.s || b.dataset.k;
+  inp.value = k === null ? hanBack(inp.value) : hanPush(inp.value, k);
+  inp.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: k === null ? 'deleteContentBackward' : 'insertText', data: k }));
+  if (KB.shift && !a) { KB.shift = false; kbPaint(); }
+}
+/* 누르면 바로 눌린 모양, 뗄 때 친다(키 위에서 뗐을 때만). 지우기는 길게 누르면 되풀이한다.
+   pointerdown 을 막아 초점은 입력창에 남고, 두 엄지로 쳐도 지도 끌기·핀치가 되지 않는다 */
+KB.el.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  const b = e.target.closest('button');
+  if (!b) return;
+  b.classList.add('down');
+  const d = { b, rep: 0, n: 0 };
+  if (b.dataset.act === 'back') d.rep = setTimeout(function again() { kbPress(b); d.n++; d.rep = setTimeout(again, 70); }, 450);
+  KB.down.set(e.pointerId, d);
+});
+const kbUp = (e, commit) => {
+  const d = KB.down.get(e.pointerId);
+  if (!d) return;
+  KB.down.delete(e.pointerId);
+  clearTimeout(d.rep);
+  d.b.classList.remove('down');
+  const at = document.elementFromPoint(e.clientX, e.clientY);
+  if (commit && !d.n && at && at.closest('button') === d.b) kbPress(d.b);
+};
+KB.el.addEventListener('pointerup', e => kbUp(e, true));
+KB.el.addEventListener('pointercancel', e => kbUp(e, false));
+/* 키보드(Tab·Enter)로 누른 click 은 pointer 가 없다(detail 0) */
+KB.el.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !e.detail) kbPress(b); });
+KB.el.addEventListener('contextmenu', e => e.preventDefault());
+$('#typein').addEventListener('input', kbHint);
+$('#typein').addEventListener('keydown', () => setTimeout(kbHint));
 
 function miss() {
   $('#typein').value = '';
@@ -2603,6 +2805,17 @@ $('#boardJoin').onsubmit = e => {
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
+  /* 두벌식 조합기 — 자판을 누른 순서 그대로 쳐서 음절이 맞게 서는지 */
+  const type = keys => [...keys].reduce(hanPush, '');
+  console.assert(type('ㄱㅏㅇㅅㅓㄱㅜ') === '강서구', '두벌식: 강서구');
+  console.assert(type('ㄱㅏㅂㅅ') === '값' && type('ㄱㅏㅂㅅㅏ') === '갑사', '겹받침과 받침 넘김');
+  console.assert(type('ㄱㅗㅏ') === '과' && type('ㅇㅡㅣ') === '의', '겹모음');
+  console.assert(type('ㅈㅜㅇㄹㅣㅁㄷㅗㅇ') === '중림동' && type('ㅇㅕㅇㄷㅡㅇㅍㅗ') === '영등포', '받침 뒤 모음은 새 음절');
+  console.assert(type('ㄷㅏㄹㄱ') === '닭' && type('ㄷㅏㄹㄱㅇㅣ') === '닭이', '겹받침 뒤에 첫소리가 오면 그대로 둔다');
+  console.assert(type('ㅃㅏㄸ') === '빠ㄸ', 'ㄸ·ㅃ·ㅉ 은 받침이 되지 않는다');
+  console.assert(type('abㄱ') === 'abㄱ' && type('ㄱ ㅏ') === 'ㄱ ㅏ', '한글 아닌 것과 공백은 붙이기만');
+  console.assert(['값', '갑', '가', 'ㄱ', ''].every((w, i, a) => i === 0 || hanBack(a[i - 1]) === w), '지우기: 자모 하나씩');
+  console.assert(hanBack('과') === '고' && hanBack('닭') === '달' && hanBack('ㅘ') === 'ㅗ', '겹모음·겹받침 지우기');
   const mk = names => names.map(n => ({ name: n, aliases: [stripSuffix(n)].filter(Boolean), claimed: false }));
   const m = (s, items) => { const r = matchInput(s, items); return r && r.name; };
   const gu = mk(['중구', '중랑구', '강남구', '강서구', '성북구', '성동구']);
@@ -2775,6 +2988,10 @@ if (location.search.includes('rt=1')) {
   console.assert(fitSpan(0, -100, 900, 600) === 100, '폰: 지도가 빈 칸보다 작으면 칸 한가운데');
   console.assert(fitSpan(50, 0, 500, 1000) === 0 && fitSpan(-900, 0, 500, 1000) === -500,
     '폰: 지도가 크면 빈 칸을 빈틈없이 덮는 데까지만 끌린다');
+  console.assert(fitSpan(250, 0, 500, 1000, .5) === 250 && fitSpan(250 - 1000, 0, 500, 1000, .5) === -750,
+    '폰 조준: 지도 맨 끝(0, 1000)의 목표도 칸 한가운데(250)에 선다');
+  console.assert(fitSpan(9999, 0, 500, 1000, 2 / 3) === 500 * 2 / 3 && fitSpan(0, -100, 900, 600, .5) === 100,
+    '폰 끌기: 칸의 1/3 은 지도가 덮고, 작은 지도는 여전히 한가운데');
   console.assert(band(100, 800) < 100 && band(1e6, 800) < 800, '시트 고무줄은 멀수록 덜 따라오고 화면을 못 넘는다');
 
   UI_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh'];

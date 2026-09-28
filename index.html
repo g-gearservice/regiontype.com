@@ -43,11 +43,18 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.30">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.30">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.30">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.33">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.33">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.33">
+<!-- 홈 화면에 올린 아이콘. iOS 는 투명 칸을 검게 칠해서, 파비콘을 바탕색(--bg)에 얹은 판을 쓴다 -->
+<link rel="apple-touch-icon" href="favicon/touch.png?v=3.33">
+<meta name="apple-mobile-web-app-title" content="regiontype">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- 브라우저 막대 색. 사이트 야간(data-night)은 기기 테마를 따르지 않아 media 로 가르지 않고,
+     app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
+<meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.30">
+<link rel="stylesheet" href="style.css?v=3.33">
 </head>
 <body>
 
@@ -122,6 +129,8 @@
       <svg class="rk-ring" id="rkRing" aria-hidden="true"><use></use></svg>
       <p id="rkSayText"></p>
       <button type="button" class="rk-next" id="rkNext" data-i18n="botNext" hidden>다음</button>
+      <!-- 폰에서만 보이는 안내 닫기. 조르기·둘러보기 어디서든 한 번에 빠져나온다 -->
+      <button type="button" class="rk-skip" id="rkSkip" data-i18n-aria="close" aria-label="닫기" hidden><span aria-hidden="true">×</span></button>
       <form id="rkName" hidden>
         <label for="rkNameIn" data-i18n="nameLabel">누구나 보는 순위표에 이 이름이 올라갑니다</label>
         <div>
@@ -176,6 +185,8 @@
     <div class="q-side is-next" id="qNext"></div>
   </div>
   <div class="fact" id="fact" aria-live="polite"></div>
+  <!-- 폰 게임 자판(app.js 의 syncKb). 켜져 있고 코스를 이 자판으로 다 칠 수 있을 때만 선다 -->
+  <div class="softkb" id="softkb" role="group" data-i18n-aria="kbGroup" aria-label="자판" hidden></div>
   </div>
   <div class="typebar">
     <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-aria="typeName" aria-label="지역 이름 입력">
@@ -315,6 +326,16 @@
           </dd>
         </dl>
         <p class="profile-help" data-i18n="dongHelp">구를 펼쳤을 때 칠 동입니다. 행정동은 주민센터 단위, 법정동은 주소에 쓰는 이름이고 순위표는 따로 섭니다.</p>
+        <!-- 폰(pointer:coarse)에서만 보인다 — 게임 자판과 다음 키 표시 (app.js 의 syncKb) -->
+        <div class="opts-kb">
+          <dl class="opts">
+            <dt data-i18n="softKb">게임 자판</dt>
+            <dd><button class="toggle" data-opt="softkb" data-i18n-aria="softKb" aria-label="게임 자판"></button></dd>
+            <dt data-i18n="kbHint">다음 키 표시</dt>
+            <dd><button class="toggle" data-opt="kbhint" data-i18n-aria="kbHint" aria-label="다음 키 표시"></button></dd>
+          </dl>
+          <p class="profile-help" data-i18n="softKbHelp">폰에서는 게임 자판으로 칩니다. 끄면 기기 키보드를 씁니다. 다음 키 표시는 경쟁전에서 늘 꺼집니다.</p>
+        </div>
         <p class="profile-help" id="unitNow"></p>
         <p class="profile-help" data-i18n="unitHelp">순위표는 늘 같은 값으로 저장하고 보일 때만 이 단위로 바꿉니다 — 단위가 다른 사람끼리도 같은 표에 섭니다.</p>
       </div>
@@ -385,7 +406,7 @@
         <p class="profile-help" data-i18n="policyHelp">새 창이 아니라 이 자리를 떠나 문서로 갑니다.</p>
       </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
-        <p class="ver">regiontype v0.7.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+        <p class="ver">regiontype v0.8.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
       </div>
     </div>
   </div>
@@ -525,9 +546,9 @@
   </form>
 </dialog>
 
-<script src="app.js?v=3.30"></script>
-<script src="auth.js?v=3.30"></script>
-<script src="settings/settings.js?v=3.30"></script>
-<script src="ranked.js?v=3.30"></script>
+<script src="app.js?v=3.33"></script>
+<script src="auth.js?v=3.33"></script>
+<script src="settings/settings.js?v=3.33"></script>
+<script src="ranked.js?v=3.33"></script>
 </body>
 </html>

@@ -68,6 +68,25 @@
 @media (prefers-contrast:more){
   :root,:root[data-night]{--glass:var(--card);--glass-thick:var(--card);--glass-blur:none;--glass-line:var(--ink)}
 }
+/* 폰 브라우저 결 — Safari 에서 앱처럼. 데스크톱(pointer:fine)은 하나도 안 받는다.
+   --under: 브라우저 아래 막대가 가린 몫(가장 큰 뷰포트 - 지금 뷰포트). 아래 시트는 그만큼
+   화면 밖으로 내려 막대 밑까지 깔고, 속은 그만큼 띄워 글·단추가 막대에 가리지 않는다.
+   lvh 를 모르는 브라우저는 0 이라 예전 그대로다 */
+html{background:var(--bg)}
+@media (pointer:coarse){
+  :root{--under:0px;color-scheme:light;-webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;overscroll-behavior:none}
+  :root[data-night]{color-scheme:dark}
+  body{overscroll-behavior:none}
+  /* 지도·시트·유리 컨트롤은 길게 눌러도 글 고르기·돋보기·링크 풍선이 뜨지 않는다 */
+  #map,.stage,.play-sheet,.res-sheet,#regions .nav-bot,#regions .navbar,.hud,.map-ctl{
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  :is(.play-sheet,.res-sheet,#regions .nav-bot) :is(input,textarea){-webkit-user-select:text;user-select:text}
+  /* 16px 밑의 입력칸은 Safari 가 들어갈 때 화면을 확대한다. 15px 이던 둘을 올린다 */
+  :root :is(.rk-say input,.account-details :is(input,textarea,select)){font-size:16px}
+}
+@supports (height:1lvh){ @media (pointer:coarse){ :root{--under:calc(100lvh - 100dvh)} } }
 /* 모션을 줄이면 뒤집기도 즉시 전환된다 — 회전은 어지럼의 주 원인 */
 @media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s; --si-dur:0s } }
 :root[data-motion="off"]{ --fast:0s; --slow:0s; --si-dur:0s }
@@ -457,11 +476,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    왼쪽에 두고 점수를 그 옆에, 단추 둘을 그 밑에 편다. 순위표는 시트 안에서 굴린다 */
 .res-sheet{display:contents}
 @media (pointer:coarse){
-  #result{padding:0;justify-content:flex-end;overflow:hidden}
+  #result{padding:0;justify-content:flex-end;overflow:hidden;bottom:calc(-1 * var(--under))}
   #result .screen-head{position:absolute;z-index:2;margin:0;top:calc(env(safe-area-inset-top) + 8px);left:12px}
   .res-sheet{
     display:block;max-height:calc(100% - env(safe-area-inset-top) - 76px);overflow:auto;overscroll-behavior:contain;
-    padding:18px 16px calc(16px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;
+    padding:18px 16px calc(16px + env(safe-area-inset-bottom) + var(--under));border-radius:24px 24px 0 0;
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);border-top:1px solid var(--glass-line);
   }
@@ -706,6 +725,9 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
              background var(--fast) var(--ease-out);
 }
 .choice-b button[aria-pressed="true"]{opacity:1;background:var(--block-hi)}
+/* 밤에는 흐림(opacity .5)이 어두운 바탕과 섞여 글자 대비가 3:1 로 떨어진다 — 흐리게
+   하는 대신 고른 칸(--block-hi)보다 어두운 채움으로 갈라 흰 글자를 그대로 둔다 */
+:root[data-night] .choice-b button:not([aria-pressed="true"]):not(:hover){opacity:1;background:color-mix(in srgb,var(--block) 60%,var(--bg))}
 .choice-b button:focus-visible{outline:3px solid transparent}
 @media (hover:hover) and (pointer:fine){
   .choice-b button:hover{opacity:1;background:var(--accent)}
@@ -837,7 +859,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    소개). 화면 높이는 보이는 만큼(--vvh, app.js)이라 키보드가 떠도 시트가 그 위에 남는다.
    목표를 가운데 둘 때는 app.js 의 viewSpan 이 머리줄과 시트 사이 빈 칸의 한가운데를 쓴다 */
 @media (pointer:coarse){
-  #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0; top:var(--vvt,0px); bottom:auto; height:var(--vvh,100%)}
+  #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0; top:var(--vvt,0px); bottom:auto; height:var(--vvh,calc(100% + var(--under)))}
   /* 흐림 띠 대신 유리가 뜬다 */
   #play > .backdrop-blur{display:none}
   .hud{gap:8px;margin:0}
@@ -858,7 +880,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   .play-sheet{
     display:flex;flex-direction:column;gap:2px;
     position:absolute;left:0;right:0;bottom:0;z-index:2;
-    padding:10px 12px calc(10px + var(--sab,env(safe-area-inset-bottom,0px)));border-radius:24px 24px 0 0;
+    padding:10px 12px calc(10px + var(--sab,calc(env(safe-area-inset-bottom,0px) + var(--under))));border-radius:24px 24px 0 0;
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);border-top:1px solid var(--glass-line);
   }
@@ -871,7 +893,32 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   .q-letters{flex:none; font-size:min(40px, calc((100vw - 112px) / var(--n, 4)))}
   #play .fact{min-height:1.4em;padding:0 8px;line-height:1.4}
   .fact span{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 게임 자판 — 시트 맨 아래, 홈 인디케이터 몫은 시트의 아래 여백이 맡는다.
+     키는 사이트의 둥근 칸 결: --card 판에 가는 선, 기능 키는 유리 위 먹 칸 */
+  .softkb{margin:6px -6px 0;display:flex;flex-direction:column;gap:8px;touch-action:manipulation;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .softkb[hidden],#play:not(.on) .softkb{display:none}   /* 결과 화면 뒤에 남은 지도에는 자판이 없다 */
+  .kb-row{display:flex;gap:5px}
+  .kb-row:nth-last-child(3){padding-inline:5%}   /* 가운데 줄(ㅁ~ㅣ, a~l)은 반 칸 들여 선다 */
+  .kb-k{flex:1 1 0;min-width:0;height:46px;border:1px solid var(--glass-line);border-radius:8px;
+    background:var(--card);color:var(--ink);font:inherit;font-size:21px;font-weight:600;line-height:1;
+    box-shadow:0 1px 0 var(--glass-line);position:relative;
+    transition:transform var(--fast) var(--ease-out),background-color var(--fast)}
+  .kb-shift,.kb-back,.kb-enter{flex:1.45 1 0;background:var(--glass-fill);font-size:20px}
+  .kb-space{flex:5 1 0;font-size:15px;color:var(--ink-soft)}
+  .softkb.is-sym .kb-row:first-child .kb-k{height:40px;font-size:17px}   /* 숫자 줄은 조금 낮게 */
+  /* Shift 가 켜지면 판이 먹색으로 차고 글자도 ㄲ·ㅃ 로 바뀐다 */
+  .kb-shift[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .kb-k.down{background:var(--grid);transform:scale(.94)}
+  /* 다음 키 — 주황 테두리 + 밑줄. 색만으로 가르지 않는다 */
+  .kb-k.kb-next{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
+  .kb-k.kb-next::after{content:"";position:absolute;left:30%;right:30%;bottom:5px;height:3px;border-radius:2px;background:var(--accent)}
+  .kb-k:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 }
+/* 게임 자판 설정은 폰에서만 쓴다 */
+@media not all and (pointer:coarse){ .opts-kb{display:none} }
+@media (pointer:coarse) and (prefers-reduced-motion:reduce){ .kb-k.down{transform:none} }
+:root[data-motion="off"] .kb-k.down{transform:none}
 
 /* 상단 그라디언트 블러 — 블러 세기가 다른 여섯 겹을 각자 다른 띠로 마스크해서 겹친다.
    backdrop-filter 하나에 마스크를 씌우면 블러가 뚝 끊기지만, 이렇게 쌓으면 부드럽게 번진다.
@@ -1583,6 +1630,19 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   :is(.back,.si-close,.ctl,#regions .nav-logo,#regions .nav-bot .nav-item,.sheet-grab,#again,#save):active{transform:scale(.97)}
 
   #regions > .backdrop-blur{display:none}
+  /* iOS 26 Safari 는 상태바·아래 막대 자리를 페이지 대신 단색(가장자리 고정 요소나 body 의
+     배경색)으로 칠한다 — 흐림이 그 밑으로 들어갈 수 없다. 그래서 띠가 가장자리에서 그 색
+     (--bg)으로 녹아들게 해 막대부터 흐림까지 한 장의 그라데이션으로 잇는다. 아래 띠는 막대가
+     가린 몫(--under)만큼 더 내려가 막대 위에서 잘리지 않게 한다 */
+  .backdrop-blur:not(.bot)::after{
+    background:linear-gradient(180deg,var(--bg) 0,color-mix(in srgb,var(--bg) 34%,transparent) 55%,transparent);
+  }
+  .backdrop-blur.bot::after{
+    background:linear-gradient(0deg,var(--bg) 0,color-mix(in srgb,var(--bg) 34%,transparent) 55%,transparent);
+  }
+  :is(.pg-over,#options,#account) > .backdrop-blur.bot{
+    bottom:calc(-1 * var(--under)); height:calc(var(--blur-bot,160px) + var(--under));
+  }
   /* 로고 칩 — 왼쪽 위, 상태 막대 밑 */
   #regions .navbar{
     display:block;right:auto;padding:0;
@@ -1616,9 +1676,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
      펼침: 나머지 문(순위·기록·커뮤니티·설정·소개·로그인). 칸을 끌 때는 transition 을
      끈다(.is-live) — 스프링이 매 프레임 자리를 찍는다 */
   #regions .nav-bot{
-    left:0;right:0;bottom:0;translate:none;
+    left:0;right:0;bottom:calc(-1 * var(--under));translate:none;
     display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 12px;
-    padding:18px 16px calc(12px + env(safe-area-inset-bottom));
+    padding:18px 16px calc(12px + env(safe-area-inset-bottom) + var(--under));
     border-radius:24px 24px 0 0;border-top:1px solid var(--glass-line);
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);
@@ -1646,6 +1706,22 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   /* 봇은 시트의 아바타 자리에 산다 — 떠다니며 단추를 가리지 않는다. 누르면 예전처럼 말을 건다 */
   .sheet-bot .rk-bot{transform:none!important;transition:none}
   .sheet-bot .rk-bot.is-asleep::before,.sheet-bot .rk-bot.is-asleep::after{font-size:11px}
+  /* 처음 온 사람 — 시트(봇·시작하기)는 막 위로 올라 밝게 남는다. 안내가 가리키는 것에는
+     말풍선 빛깔의 테두리를 두르고, 말풍선 단추는 손가락 크기(44px)다. 닫기는 늘 오른쪽 위 */
+  body.rk-intro #regions .nav-bot{z-index:6}
+  /* 조르는 동안 로고는 is-on 이지만 폰엔 그 밑에 깔 알약이 없다 — 글자색도 걷는다(야간에 묻힌다) */
+  #regions .navbar .nav-logo.is-on{color:var(--ink)}
+  .rk-aim{outline:3px solid var(--rk-on,var(--ranked));outline-offset:3px}
+  /* ponytail: 홈 칸은 약 1/3 로 줄어 그려진다 — 테두리를 그만큼 굵게 둔다. 배율 변수가 생기면 그걸로 나눈다 */
+  #courseBtns .grid-btn.rk-aim{outline-width:9px;outline-offset:8px}
+  .rk-say .rk-next{min-height:44px;min-width:64px}
+  .rk-say .rk-skip{
+    display:grid;place-items:center;position:absolute;top:0;right:0;width:44px;height:44px;padding:0;
+    background:none;color:inherit;font-size:24px;font-weight:400;line-height:1;
+  }
+  .rk-say .rk-skip:focus-visible{outline-color:var(--rk-ink,#fff);outline-offset:-6px}
+  .rk-say .rk-skip[hidden]{display:none}
+  .rk-say[data-dock]:has(.rk-skip:not([hidden])){padding-right:44px}
   #navPlay{
     grid-column:1 / -1;justify-content:center;min-height:52px;border-radius:14px;
     font-size:19px;background:var(--accent);color:var(--on-accent);
@@ -1963,6 +2039,7 @@ body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
 .rk-say[hidden]{display:none}
 .rk-say .rk-next{margin-top:8px}
 .rk-say .rk-next[hidden]{display:none}
+.rk-skip{display:none}
 .rk-say form{margin-top:10px;font-size:12px;color:inherit;opacity:.8}
 .rk-say form[hidden]{display:none}
 .rk-say form div{display:flex;gap:6px;margin-top:6px}
@@ -2177,4 +2254,144 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   .intro-rail span{transition:none}
   .intro-pick:active,.intro-score:active{transform:none}
   .intro-controls .character-choice:hover{transform:none}
+}
+
+/* ═══ 폰 — 설정 덮개 (iOS 설정 결) ═══════════════════════════
+   손가락 화면에서만 선다(폭이 아니라 pointer 로 가른다). 데스크톱 규칙은 건드리지 않는다 —
+   이 절은 모두 body:is(.set,.setting) #options 아래라 위의 폰 규칙보다 특이도가 높다.
+   덮개(#options)가 스크롤 통이다. 머리줄(뒤로+제목)과 탭 줄은 그 안에서 sticky 로 붙고,
+   판은 유리 카드에 담긴 무리(grouped inset list)로 흐른다: 라벨 왼쪽, 컨트롤 오른쪽,
+   줄 사이는 머리카락 선. 탭은 가로로 굴리는 한 줄 칩이다 — role=tab·화살표 키는 그대로 */
+@media (pointer:coarse){
+  body:is(.set,.setting) #options{--oh:calc(env(safe-area-inset-top) + 64px)}
+  body:is(.set,.setting) #options.opts-over{
+    padding:0 0 calc(32px + env(safe-area-inset-bottom));justify-content:flex-start;
+    overflow-x:hidden;overscroll-behavior:contain;
+  }
+  /* 위 흐림 띠는 유리 머리줄이 대신한다 — 두 겹이면 탁해진다. 아래 띠는 남긴다 */
+  body:is(.set,.setting) #options > .backdrop-blur:not(.bot){display:none}
+
+  /* 머리줄 — 상태 막대 밑까지 까는 유리. 딱딱한 선 대신 탭 줄 아래 끝이 스며 사라진다 */
+  body:is(.set,.setting) #options .screen-head{
+    position:sticky;top:0;left:auto;z-index:4;flex:none;gap:12px;
+    height:var(--oh);margin:0;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+    background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  }
+  body:is(.set,.setting) #options .head{font-size:32px}
+  body:is(.set,.setting) #options .opts-shell{
+    display:block;width:100%;max-width:none;height:auto;zoom:1;margin:0;top:0;
+  }
+
+  /* 탭 줄 — 머리줄 밑에 붙는 가로 스크롤 칩. 끝이 잘려 보여 더 있음을 알린다 */
+  body:is(.set,.setting) #options .opts-tabs{
+    position:sticky;top:var(--oh);z-index:3;
+    display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:8px;
+    width:auto;margin:0;padding:4px 16px 18px;
+    overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;
+    scrollbar-width:none;
+    background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+    -webkit-mask:linear-gradient(#000 calc(100% - 14px),transparent);mask:linear-gradient(#000 calc(100% - 14px),transparent);
+  }
+  body:is(.set,.setting) #options .opts-tabs::-webkit-scrollbar{display:none}
+  body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab{
+    flex:none;align-self:center;display:inline-flex;align-items:center;gap:6px;
+    min-height:44px;padding:0 16px;border-radius:999px;scroll-snap-align:start;
+    font-size:16px;font-weight:700;text-align:start;
+    color:var(--ink);background:var(--glass-fill);border:1px solid var(--glass-line);box-shadow:none;
+  }
+  /* 고른 칩은 색만으로 서지 않는다 — 채움 · 굵기 · 앞의 체크 표가 함께 간다 */
+  body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab[aria-selected="true"]{
+    background:var(--block-hi);color:#fff;font-weight:800;border-color:var(--block-hi);
+  }
+  body:is(.set,.setting) #options .opts-tab[aria-selected="true"]::before{
+    content:"";width:16px;height:16px;flex:none;background:currentColor;
+    -webkit-mask:url(assets/check-600.svg?v=1.31) center / 100% no-repeat;mask:url(assets/check-600.svg?v=1.31) center / 100% no-repeat;
+  }
+  body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab[data-status="development"]{border:1.5px dashed currentColor}
+  body:is(.set,.setting) #options .opts-tab .opts-tab-status{margin:0;padding:0 6px 1px;border-width:1.5px;font-size:11px}
+  body:is(.set,.setting) #options .opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+  /* 판 — 위에서부터 흐른다. 가운데 모으던 데스크톱 정렬을 푼다 */
+  body:is(.set,.setting) #options .opts-panels{width:auto;display:block;padding:4px 16px 0}
+  body:is(.set,.setting) #options .opts-panel:not([hidden]){display:flex;flex-direction:column;justify-content:flex-start;gap:8px;margin:0;padding:0;overflow:visible}
+  body:is(.set,.setting) #options .opts-panel:focus-visible{outline-offset:2px}
+
+  /* 무리 카드 — 유리 한 장 */
+  /* 목록을 :is() 로 묶지 않는다 — 가장 센 인자(#id)의 특이도를 전부가 얻어 아래 .opts 격자를 이긴다 */
+  body:is(.set,.setting) #options .opts,body:is(.set,.setting) #options .region-grid,
+  body:is(.set,.setting) #optsPolicy .profile-actions,body:is(.set,.setting) #optsVersion .ver{
+    display:block;width:100%;max-width:none;margin:0;padding:0;overflow:hidden;
+    border-radius:14px;border:1px solid var(--glass-line);
+    background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+    box-shadow:var(--glass-hi),var(--glass-sm);
+    font-size:17px;font-weight:600;
+  }
+  /* 줄 사이 머리카락 선 — 왼쪽 여백만큼 들여 긋는다(오른쪽에서 왼쪽 쓰는 말은 거꾸로) */
+  body:is(.set,.setting) #options{--hair:linear-gradient(var(--glass-line),var(--glass-line)) right top / calc(100% - 16px) 1px no-repeat}
+  body:is(.set,.setting) #options:dir(rtl){--hair:linear-gradient(var(--glass-line),var(--glass-line)) left top / calc(100% - 16px) 1px no-repeat}
+
+  /* 한 줄 — 라벨 왼쪽, 컨트롤 오른쪽. 줄 어디를 짚어도 그 줄의 토글이 눌린다(settings.js) */
+  body:is(.set,.setting) #options .opts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0;align-items:stretch}
+  body:is(.set,.setting) #options .opts :is(dt,dd){
+    display:flex;align-items:center;min-height:52px;margin:0;justify-self:stretch;text-align:start;
+  }
+  body:is(.set,.setting) #options .opts dt{padding:8px 12px 8px 16px;font-weight:600;line-height:1.3}
+  body:is(.set,.setting) #options .opts dd{padding:6px 12px 6px 0;justify-content:flex-end;gap:0}
+  body:is(.set,.setting) #options .opts :is(dt:has(+ dd .toggle),dd:has(.toggle)){cursor:pointer}
+  body:is(.set,.setting) #options .opts dt:not(:first-of-type){background:var(--hair)}
+  body:is(.set,.setting) #options .opts dt:not(:first-of-type) + dd{border-top:1px solid var(--glass-line)}
+  body:is(.set,.setting) #options .opts dt:has(+ dd .toggle[aria-pressed="true"]){font-weight:800}
+  body:is(.set,.setting) #options .opts .toggle{width:36px;height:36px;border-width:2.5px}
+  body:is(.set,.setting) #options .opts .toggle::after{font-size:20px}
+
+  /* 게임 판 — 조각 단추는 오른쪽의 작은 세그먼트. 고른 조각은 채움 · 굵기 · 불투명 */
+  body:is(.set,.setting) #optsGame .opts{grid-template-columns:minmax(0,1fr) auto}
+  body:is(.set,.setting) #optsGame .choice-b{gap:2px;border-radius:9px;overflow:hidden}
+  body:is(.set,.setting) #optsGame .choice-b button{min-height:44px;min-width:44px;padding:0 10px;font-size:14px}
+  body:is(.set,.setting) #optsGame .choice-b button[aria-pressed="true"]{font-weight:800}
+  body:is(.set,.setting) #optsGame .choice-b button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+  /* 카드 아래 설명 — iOS 무리의 꼬리말 */
+  body:is(.set,.setting) #options :is(.profile-help,.opts-region-pending){max-width:none;margin:0 0 10px;padding:0 16px;font-size:13px;line-height:1.4}
+  body:is(.set,.setting) #optsGame .profile-help:empty{display:none}
+
+  /* 언어 판 — 대륙 머리말(작은 대문자) 아래 한 장의 카드 */
+  body:is(.set,.setting) #options .opts-lang-pick{
+    display:flex;flex-direction:column;gap:22px;max-width:none;height:auto;max-height:none;
+    margin:0;padding:6px 0 0;overflow:visible;
+  }
+  body:is(.set,.setting) #options .region-group legend{
+    padding:0 16px 6px;margin:0;border:0;font-size:13px;font-weight:600;letter-spacing:.04em;
+  }
+  body:is(.set,.setting) #options .region-opt{
+    justify-content:space-between;gap:12px;min-height:48px;padding:6px 16px;border-radius:0;
+    font-size:17px;font-weight:600;
+  }
+  body:is(.set,.setting) #options .region-opt + .region-opt{background:var(--hair)}
+  body:is(.set,.setting) #options .region-opt span{flex:1;text-align:start}
+  body:is(.set,.setting) #options .region-opt input{width:26px;height:26px;border-width:2px}
+  body:is(.set,.setting) #options .region-opt input::after{font-size:18px}
+  body:is(.set,.setting) #options .region-opt:has(input:checked){font-weight:800}
+  body:is(.set,.setting) #options .region-opt input:focus-visible{outline-offset:2px}
+
+  /* 정책 판 — 문 세 개가 한 카드의 줄이 된다. 오른쪽 꺾쇠는 '딴 데로 간다'는 표시다 */
+  body:is(.set,.setting) #optsPolicy .profile-button{
+    display:flex;width:100%;min-height:48px;justify-content:space-between;padding:6px 16px;
+    border:0;border-radius:0;background:none;font-size:17px;font-weight:600;text-align:start;
+  }
+  body:is(.set,.setting) #optsPolicy .profile-button + .profile-button{background:var(--hair)}
+  body:is(.set,.setting) #optsPolicy .profile-button::after{
+    content:"";width:18px;height:18px;flex:none;background:var(--ink-soft);transform:scaleX(-1);
+    -webkit-mask:url(assets/chevron-left.svg?v=3.18) center / 100% no-repeat;mask:url(assets/chevron-left.svg?v=3.18) center / 100% no-repeat;
+  }
+  body:is(.set,.setting) #optsPolicy .profile-button:dir(rtl)::after{transform:none}
+  body:is(.set,.setting) #optsPolicy .profile-button:focus-visible{outline-offset:-3px}
+  body:is(.set,.setting) #optsPolicy .profile-actions{margin-bottom:6px}
+
+  /* 버전 판 — 한 줄 카드 */
+  body:is(.set,.setting) #optsVersion .ver{padding:14px 16px;font-size:15px;font-weight:600;line-height:1.45;color:var(--ink-soft)}
+
+  /* 보안 판 — 이미 카드 결이라 폭과 여백만 맞춘다 */
+  body:is(.set,.setting) #options .security-content{width:100%}
+  body:is(.set,.setting) #optsSecurity .profile-help{padding:0}
 }
