@@ -510,9 +510,9 @@ function asideTile(tile, on, k = 1) {
   const span = tile.el.firstChild, text = on ? tile.short : tile.label;
   if (span.textContent !== text) span.textContent = text;
   if (!span.scrollWidth) return;   // 숨은 화면에서는 잴 수 없다
-  /* 폰 한국어는 지도 글자처럼 테를 둘러 칸을 조금 넘겨도 읽힌다 — 네 글자 구가 깨알이
-     되지 않게. 영어는 두 줄로 접혀 이미 들고, 넘기면 옆 칸에 가려 잘린다 */
-  const f = Math.min(on ? k : 1, tile.el.clientWidth * (fingers() && LANG === 'ko' ? 1.1 : .86) / span.scrollWidth);
+  /* 폰 한국어는 칸 폭을 거의 다 쓴다 — 네 글자 구가 깨알이 되지 않게. 칸을 넘기면
+     실기기에서 이웃 이름과 붙어 '서대문구중구' 로 읽혀 폭 안에서 멈춘다 */
+  const f = Math.min(on ? k : 1, tile.el.clientWidth * (fingers() && LANG === 'ko' ? .98 : .86) / span.scrollWidth);
   const first = !tile.fitted;
   tile.fitted = true;
   if (tile.f.to === f && !first) return;
