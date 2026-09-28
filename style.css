@@ -1605,6 +1605,19 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   :is(.back,.si-close,.ctl,#regions .nav-logo,#regions .nav-bot .nav-item,.sheet-grab,#again,#save):active{transform:scale(.97)}
 
   #regions > .backdrop-blur{display:none}
+  /* iOS 26 Safari 는 상태바·아래 막대 자리를 페이지 대신 단색(가장자리 고정 요소나 body 의
+     배경색)으로 칠한다 — 흐림이 그 밑으로 들어갈 수 없다. 그래서 띠가 가장자리에서 그 색
+     (--bg)으로 녹아들게 해 막대부터 흐림까지 한 장의 그라데이션으로 잇는다. 아래 띠는 막대가
+     가린 몫(--under)만큼 더 내려가 막대 위에서 잘리지 않게 한다 */
+  .backdrop-blur:not(.bot)::after{
+    background:linear-gradient(180deg,var(--bg) 0,color-mix(in srgb,var(--bg) 34%,transparent) 55%,transparent);
+  }
+  .backdrop-blur.bot::after{
+    background:linear-gradient(0deg,var(--bg) 0,color-mix(in srgb,var(--bg) 34%,transparent) 55%,transparent);
+  }
+  :is(.pg-over,#options,#account) > .backdrop-blur.bot{
+    bottom:calc(-1 * var(--under)); height:calc(var(--blur-bot,160px) + var(--under));
+  }
   /* 로고 칩 — 왼쪽 위, 상태 막대 밑 */
   #regions .navbar{
     display:block;right:auto;padding:0;
