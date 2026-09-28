@@ -1,5 +1,11 @@
 [
   {
+    "v": "1.0.331",
+    "date": "2026-09-28",
+    "ko": "아이폰 사파리에 맞췄습니다. 화면 아래 툴바 뒤까지 페이지가 이어지고, 상단 막대 색이 야간 모드를 따르며, 홈 화면에 추가하면 regiontype 아이콘이 붙습니다. 입력창을 눌러도 화면이 확대되지 않습니다. 게임에서 가장자리 구·동도 화면 가운데로 옵니다. 폰 설정 화면은 아이폰 설정처럼 탭 한 줄과 묶음 목록으로 바뀌었고, 네 글자 구 이름이 이웃 이름과 붙지 않습니다.",
+    "en": "Tuned for iPhone Safari: the page runs behind the bottom toolbar, the top bar follows night mode, and Add to Home Screen gets a regiontype icon. Tapping a field no longer zooms the page. In a game, places on the map's edge now come to the middle of the screen. Phone Settings now look like iPhone Settings, with one row of tabs and grouped lists, and four-syllable district names no longer run into their neighbors."
+  },
+  {
     "v": "1.0.330",
     "date": "2026-09-28",
     "ko": "폰 화면을 지도 앱처럼 새로 짰습니다. 지도가 화면 끝까지 깔리고, 메뉴는 아래 시트를 끌어 올리면 나옵니다. 도우미 봇은 시트 오른쪽 아바타가 됐습니다. 게임 중에는 시간·개수·속도가 위쪽 알약에, 단어는 키보드 바로 위 시트에 뜨고, 지도를 옮겼다면 '목표로' 단추로 돌아옵니다. 결과는 끝난 지도 위로 시트가 올라옵니다.",
