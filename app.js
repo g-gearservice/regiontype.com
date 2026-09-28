@@ -134,6 +134,45 @@ const jamo = s => [...s.normalize('NFC')].map(ch => {
   return 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'[Math.floor(c / 588)] + JUNG[Math.floor(c % 588 / 28)] + JONG[c % 28];
 }).join('');
 const keysOf = s => jamo(s).length;
+
+/* 폰 자체 키보드의 두벌식 조합기. 상태를 따로 들지 않고 입력창 끝 글자만 보고 잇는다 —
+   시스템 IME 와 같은 결: 갑+ㅅ=값, 값+ㅏ=갑사, 고+ㅏ=과. 지울 때는 자모 하나씩 */
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const VOW = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+const FIN = ['', ...'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ'];
+const MIX = { ㅗㅏ: 'ㅘ', ㅗㅐ: 'ㅙ', ㅗㅣ: 'ㅚ', ㅜㅓ: 'ㅝ', ㅜㅔ: 'ㅞ', ㅜㅣ: 'ㅟ', ㅡㅣ: 'ㅢ',
+              ㄱㅅ: 'ㄳ', ㄴㅈ: 'ㄵ', ㄴㅎ: 'ㄶ', ㄹㄱ: 'ㄺ', ㄹㅁ: 'ㄻ', ㄹㅂ: 'ㄼ', ㄹㅅ: 'ㄽ',
+              ㄹㅌ: 'ㄾ', ㄹㅍ: 'ㄿ', ㄹㅎ: 'ㅀ', ㅂㅅ: 'ㅄ' };
+const SPLIT = Object.fromEntries(Object.entries(MIX).map(([k, v]) => [v, [...k]]));
+const syl = (l, v, t = 0) => String.fromCharCode(0xAC00 + (l * 21 + v) * 28 + t);
+const unsyl = ch => { const c = ch.charCodeAt(0) - 0xAC00;
+  return c >= 0 && c < 11172 ? [Math.floor(c / 588), Math.floor(c % 588 / 28), c % 28] : null; };
+function hanPush(buf, k) {
+  const pre = buf.slice(0, -1), last = buf.slice(-1), s = last && unsyl(last);
+  const vow = VOW.includes(k), fin = FIN.indexOf(k);
+  if (s) {
+    const [l, v, t] = s;
+    if (!vow) {
+      if (!t) return fin > 0 ? pre + syl(l, v, fin) : buf + k;
+      const both = MIX[FIN[t] + k];
+      return both ? pre + syl(l, v, FIN.indexOf(both)) : buf + k;
+    }
+    if (!t) { const both = MIX[VOW[v] + k]; return both ? pre + syl(l, VOW.indexOf(both)) : buf + k; }
+    /* 받침이 다음 글자의 첫소리로 넘어간다 — 겹받침이면 뒤 하나만 */
+    const [keep, move] = SPLIT[FIN[t]] || ['', FIN[t]];
+    return pre + syl(l, v, FIN.indexOf(keep)) + syl(CHO.indexOf(move), VOW.indexOf(k));
+  }
+  if (vow && CHO.includes(last)) return pre + syl(CHO.indexOf(last), VOW.indexOf(k));
+  if (vow && MIX[last + k] && VOW.includes(last)) return pre + MIX[last + k];
+  return buf + k;
+}
+function hanBack(buf) {
+  const pre = buf.slice(0, -1), last = buf.slice(-1), s = last && unsyl(last);
+  if (!s) return SPLIT[last] && VOW.includes(last) ? pre + SPLIT[last][0] : pre;
+  const [l, v, t] = s;
+  if (t) return pre + syl(l, v, SPLIT[FIN[t]] ? FIN.indexOf(SPLIT[FIN[t]][0]) : 0);
+  return pre + (SPLIT[VOW[v]] ? syl(l, VOW.indexOf(SPLIT[VOW[v]][0])) : CHO[l]);
+}
 const unitNow = () => (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
 const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
@@ -2621,6 +2660,17 @@ $('#boardJoin').onsubmit = e => {
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
+  /* 두벌식 조합기 — 자판을 누른 순서 그대로 쳐서 음절이 맞게 서는지 */
+  const type = keys => [...keys].reduce(hanPush, '');
+  console.assert(type('ㄱㅏㅇㅅㅓㄱㅜ') === '강서구', '두벌식: 강서구');
+  console.assert(type('ㄱㅏㅂㅅ') === '값' && type('ㄱㅏㅂㅅㅏ') === '갑사', '겹받침과 받침 넘김');
+  console.assert(type('ㄱㅗㅏ') === '과' && type('ㅇㅡㅣ') === '의', '겹모음');
+  console.assert(type('ㅈㅜㅇㄹㅣㅁㄷㅗㅇ') === '중림동' && type('ㅇㅕㅇㄷㅡㅇㅍㅗ') === '영등포', '받침 뒤 모음은 새 음절');
+  console.assert(type('ㄷㅏㄹㄱ') === '닭' && type('ㄷㅏㄹㄱㅇㅣ') === '닭이', '겹받침 뒤에 첫소리가 오면 그대로 둔다');
+  console.assert(type('ㅃㅏㄸ') === '빠ㄸ', 'ㄸ·ㅃ·ㅉ 은 받침이 되지 않는다');
+  console.assert(type('abㄱ') === 'abㄱ' && type('ㄱ ㅏ') === 'ㄱ ㅏ', '한글 아닌 것과 공백은 붙이기만');
+  console.assert(['값', '갑', '가', 'ㄱ', ''].every((w, i, a) => i === 0 || hanBack(a[i - 1]) === w), '지우기: 자모 하나씩');
+  console.assert(hanBack('과') === '고' && hanBack('닭') === '달' && hanBack('ㅘ') === 'ㅗ', '겹모음·겹받침 지우기');
   const mk = names => names.map(n => ({ name: n, aliases: [stripSuffix(n)].filter(Boolean), claimed: false }));
   const m = (s, items) => { const r = matchInput(s, items); return r && r.name; };
   const gu = mk(['중구', '중랑구', '강남구', '강서구', '성북구', '성동구']);
