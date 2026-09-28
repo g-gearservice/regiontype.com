@@ -1441,12 +1441,14 @@ function sheetDock() {
   new ResizeObserver(sheetMeasure).observe(SHEET.el);
   sheetMeasure();
 }
-/* 접힘은 시작하기 밑변 + 아래 여백(홈 인디케이터 몫 포함)까지만 보이는 자리다 */
+/* 접힘은 시작하기 밑변 + 아래 여백(홈 인디케이터 몫 포함)까지만 보이는 자리다.
+   시트가 Safari 아래 막대 밑으로 내려가 있으면(bottom 이 음수, style.css 의 --under)
+   --sheet-peek(화면 아래에서 잰 높이)에서는 그 몫을 뺀다 */
 function sheetMeasure() {
-  const el = SHEET.el, play = $('#navPlay');
-  const peek = play.offsetTop + play.offsetHeight + parseFloat(getComputedStyle(el).paddingBottom);
+  const el = SHEET.el, play = $('#navPlay'), cs = getComputedStyle(el);
+  const peek = play.offsetTop + play.offsetHeight + parseFloat(cs.paddingBottom);
   SHEET.shut = Math.max(0, el.offsetHeight - peek);
-  document.documentElement.style.setProperty('--sheet-peek', peek + 'px');
+  document.documentElement.style.setProperty('--sheet-peek', peek + Math.min(0, parseFloat(cs.bottom)) + 'px');
   if (SHEET.drag || SHEET.raf) return;
   SHEET.y.x = SHEET.y.to = SHEET.open ? 0 : SHEET.shut; SHEET.y.v = 0;
   sheetPaint();
@@ -2111,9 +2113,12 @@ if (window.visualViewport) {
   const vv = visualViewport, st = document.documentElement.style;
   /* 키보드가 떠 있으면 시트 밑에 홈 인디케이터 몫(--sab)을 두지 않는다. 판을 치는 중
      목표에서 끌려 나가 있지 않으면 줄어든 칸에 맞춰 목표를 다시 가운데 둔다 */
+  /* 가린 게 없으면 셋 다 지운다 — 그때 #play 는 Safari 아래 막대 밑(화면 맨 아래)까지
+     깔리고 시트가 막대 몫(--under)만큼 속을 띄운다. 막대 위에서 끊으면 그 밑이 검은 띠다 */
   const fitVV = () => {
-    st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px');
-    if (vv.height < innerHeight * .8) st.setProperty('--sab', '0px'); else st.removeProperty('--sab');
+    if (innerHeight - vv.height > 1 || vv.offsetTop > 0) {
+      st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); st.setProperty('--sab', '0px');
+    } else for (const k of ['--vvh', '--vvt', '--sab']) st.removeProperty(k);
     requestAnimationFrame(() => {
       fitPlayK();
       if (fingers() && G && G.cam && $('#play').classList.contains('on') && $('#playAim').hidden) aimCam();
@@ -2122,6 +2127,11 @@ if (window.visualViewport) {
   vv.addEventListener('resize', fitVV);
   vv.addEventListener('scroll', fitVV);
 }
+
+/* 브라우저 막대 색(theme-color)은 사이트 야간을 따른다. data-night 를 누가 바꾸든 여기 한 곳 */
+const tintBar = () => { $('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(); };
+new MutationObserver(tintBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-night'] });
+tintBar();
 
 function judge(raw) {
   const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');

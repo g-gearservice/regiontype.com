@@ -68,6 +68,25 @@
 @media (prefers-contrast:more){
   :root,:root[data-night]{--glass:var(--card);--glass-thick:var(--card);--glass-blur:none;--glass-line:var(--ink)}
 }
+/* 폰 브라우저 결 — Safari 에서 앱처럼. 데스크톱(pointer:fine)은 하나도 안 받는다.
+   --under: 브라우저 아래 막대가 가린 몫(가장 큰 뷰포트 - 지금 뷰포트). 아래 시트는 그만큼
+   화면 밖으로 내려 막대 밑까지 깔고, 속은 그만큼 띄워 글·단추가 막대에 가리지 않는다.
+   lvh 를 모르는 브라우저는 0 이라 예전 그대로다 */
+html{background:var(--bg)}
+@media (pointer:coarse){
+  :root{--under:0px;color-scheme:light;-webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;overscroll-behavior:none}
+  :root[data-night]{color-scheme:dark}
+  body{overscroll-behavior:none}
+  /* 지도·시트·유리 컨트롤은 길게 눌러도 글 고르기·돋보기·링크 풍선이 뜨지 않는다 */
+  #map,.stage,.play-sheet,.res-sheet,#regions .nav-bot,#regions .navbar,.hud,.map-ctl{
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  :is(.play-sheet,.res-sheet,#regions .nav-bot) :is(input,textarea){-webkit-user-select:text;user-select:text}
+  /* 16px 밑의 입력칸은 Safari 가 들어갈 때 화면을 확대한다. 15px 이던 둘을 올린다 */
+  :root :is(.rk-say input,.account-details :is(input,textarea,select)){font-size:16px}
+}
+@supports (height:1lvh){ @media (pointer:coarse){ :root{--under:calc(100lvh - 100dvh)} } }
 /* 모션을 줄이면 뒤집기도 즉시 전환된다 — 회전은 어지럼의 주 원인 */
 @media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s; --si-dur:0s } }
 :root[data-motion="off"]{ --fast:0s; --slow:0s; --si-dur:0s }
@@ -457,11 +476,11 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    왼쪽에 두고 점수를 그 옆에, 단추 둘을 그 밑에 편다. 순위표는 시트 안에서 굴린다 */
 .res-sheet{display:contents}
 @media (pointer:coarse){
-  #result{padding:0;justify-content:flex-end;overflow:hidden}
+  #result{padding:0;justify-content:flex-end;overflow:hidden;bottom:calc(-1 * var(--under))}
   #result .screen-head{position:absolute;z-index:2;margin:0;top:calc(env(safe-area-inset-top) + 8px);left:12px}
   .res-sheet{
     display:block;max-height:calc(100% - env(safe-area-inset-top) - 76px);overflow:auto;overscroll-behavior:contain;
-    padding:18px 16px calc(16px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;
+    padding:18px 16px calc(16px + env(safe-area-inset-bottom) + var(--under));border-radius:24px 24px 0 0;
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);border-top:1px solid var(--glass-line);
   }
@@ -837,7 +856,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    소개). 화면 높이는 보이는 만큼(--vvh, app.js)이라 키보드가 떠도 시트가 그 위에 남는다.
    목표를 가운데 둘 때는 app.js 의 viewSpan 이 머리줄과 시트 사이 빈 칸의 한가운데를 쓴다 */
 @media (pointer:coarse){
-  #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0; top:var(--vvt,0px); bottom:auto; height:var(--vvh,100%)}
+  #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0; top:var(--vvt,0px); bottom:auto; height:var(--vvh,calc(100% + var(--under)))}
   /* 흐림 띠 대신 유리가 뜬다 */
   #play > .backdrop-blur{display:none}
   .hud{gap:8px;margin:0}
@@ -858,7 +877,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   .play-sheet{
     display:flex;flex-direction:column;gap:2px;
     position:absolute;left:0;right:0;bottom:0;z-index:2;
-    padding:10px 12px calc(10px + var(--sab,env(safe-area-inset-bottom,0px)));border-radius:24px 24px 0 0;
+    padding:10px 12px calc(10px + var(--sab,calc(env(safe-area-inset-bottom,0px) + var(--under))));border-radius:24px 24px 0 0;
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);border-top:1px solid var(--glass-line);
   }
@@ -1616,9 +1635,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
      펼침: 나머지 문(순위·기록·커뮤니티·설정·소개·로그인). 칸을 끌 때는 transition 을
      끈다(.is-live) — 스프링이 매 프레임 자리를 찍는다 */
   #regions .nav-bot{
-    left:0;right:0;bottom:0;translate:none;
+    left:0;right:0;bottom:calc(-1 * var(--under));translate:none;
     display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 12px;
-    padding:18px 16px calc(12px + env(safe-area-inset-bottom));
+    padding:18px 16px calc(12px + env(safe-area-inset-bottom) + var(--under));
     border-radius:24px 24px 0 0;border-top:1px solid var(--glass-line);
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);

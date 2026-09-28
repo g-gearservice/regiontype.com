@@ -46,6 +46,13 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.30">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.30">
 <link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.30">
+<!-- 홈 화면에 올린 아이콘. iOS 는 투명 칸을 검게 칠해서, 파비콘을 바탕색(--bg)에 얹은 판을 쓴다 -->
+<link rel="apple-touch-icon" href="favicon/touch.png?v=3.30">
+<meta name="apple-mobile-web-app-title" content="regiontype">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- 브라우저 막대 색. 사이트 야간(data-night)은 기기 테마를 따르지 않아 media 로 가르지 않고,
+     app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
+<meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
 <link rel="stylesheet" href="style.css?v=3.30">
 </head>
