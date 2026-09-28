@@ -370,7 +370,7 @@ let securityRequest = 0;
 async function account() {
   const request = ++securityRequest;
   const inn = !!token();
-  $('#secIn').hidden = false;
+  $('#secIn').hidden = !inn;
   $('#secOut').hidden = inn;
   [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')].forEach(b => { b.disabled = !inn; });
   $('#securityState').textContent = inn ? '확인 중' : '로그인 필요';

@@ -725,6 +725,9 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
              background var(--fast) var(--ease-out);
 }
 .choice-b button[aria-pressed="true"]{opacity:1;background:var(--block-hi)}
+/* 밤에는 흐림(opacity .5)이 어두운 바탕과 섞여 글자 대비가 3:1 로 떨어진다 — 흐리게
+   하는 대신 고른 칸(--block-hi)보다 어두운 채움으로 갈라 흰 글자를 그대로 둔다 */
+:root[data-night] .choice-b button:not([aria-pressed="true"]):not(:hover){opacity:1;background:color-mix(in srgb,var(--block) 60%,var(--bg))}
 .choice-b button:focus-visible{outline:3px solid transparent}
 @media (hover:hover) and (pointer:fine){
   .choice-b button:hover{opacity:1;background:var(--accent)}
