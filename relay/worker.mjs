@@ -1298,7 +1298,18 @@ async function cmWrite(req, env, o, path) {
    ponytail: 모델이 JSON 을 약속만 한다(response_format 은 모델마다 달라 안 쓴다).
    못 읽으면 글 전체를 말로만 쓴다 — 틀린 동작보다 동작 없음이 낫다. */
 const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
-const NV_MODEL = 'deepseek-ai/deepseek-v4.1-flash'; // [vars] NV_MODEL 로 갈 수 있다
+/* 무료 모델을 이 차례로 돌려 쓴다. [vars] NV_MODELS 에 쉼표로 적으면 그걸 따른다.
+   모델마다 하루 토큰 예산(NV_BUDGET, 기본 NV_DAY)을 두고, 이번 물음이 쓸 만큼
+   (어림한 들어갈 토큰 + max_tokens)을 더해 넘칠 모델은 묻기 전에 건너뛴다 — 한도에
+   부딪혀 429 를 받고서야 갈아타지 않는다. 쓴 양은 답의 usage 로 세어 D1(botuse)에 쌓는다.
+   그래도 429·5xx·시간 초과가 나면 다음 모델로 넘긴다(한 물음에 BOT_TRIES 번까지). 200 을
+   받았으면 답이 비었어도 거기서 끝낸다 — 빈 답을 유도해 모델마다 예산을 깎게 두지 않는다.
+   ponytail: 어림은 글자 수로 한다(한글·한자 한 글자 = 1, 그 밖 4글자 = 1). 모델마다
+   토크나이저가 달라 정확히 못 맞추니 예산을 넉넉히 밑돌게 잡는다 */
+const NV_MODELS = ['deepseek-ai/deepseek-v4.1-flash', 'z-ai/glm-5.3-flash', 'nvidia/nemotron-3-super-120b-a12b',
+                   'moonshotai/kimi-k2.6', 'openai/gpt-oss-20b', 'google/gemma-3-12b-it'];
+const NV_DAY = 200000, BOT_OUT = 400, BOT_TRIES = 2;
+const DAY_MS = 86400000;
 const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
 /* 봇이 바꿀 수 있는 설정과 그 값. app.js·settings.js 의 DEF 와 같은 키다(lang·country 는
    개발 중이라 뺀다). time 은 순위표가 판마다 갈리는 그 값들이다 */
@@ -1363,6 +1374,37 @@ export function botAct(text, courses) {
   return { say: cut(j.say, BOT_LINE), do: acts };
 }
 
+/* 토큰 어림. 메시지마다 역할 표시 몫으로 4 를 더한다 */
+export function botTokens(msgs) {
+  return msgs.reduce((n, m) => {
+    const t = String(m.content ?? '');
+    const wide = (t.match(/[^\x00-\x7f]/g) || []).length;
+    return n + 4 + wide + Math.ceil((t.length - wide) / 4);
+  }, 0);
+}
+
+/* 오늘 예산 안에 이번 물음(need)이 들어가는 모델만, 정한 차례대로 */
+export function botRoute(models, used, need, budget) {
+  return models.filter(m => (used[m] || 0) + need <= budget);
+}
+
+async function botUsed(env, day) {
+  try {
+    const r = await env.DB.prepare('select model, tok from botuse where day = ?').bind(day).all();
+    return Object.fromEntries((r.results || []).map(x => [x.model, x.tok]));
+  } catch { console.warn('botuse: 읽지 못함 — 예산 없이 돈다'); return {}; }   // 표가 아직 없거나 D1 이 넘어져도 대화는 돈다 — 실패 시 갈아타기만 남는다
+}
+
+async function botSpend(env, day, model, tok) {
+  try {
+    await env.DB.batch([
+      env.DB.prepare('insert into botuse (model, day, tok) values (?, ?, ?) on conflict (model, day) do update set tok = tok + excluded.tok')
+        .bind(model, day, tok),
+      env.DB.prepare('delete from botuse where day < ?').bind(day - 1),
+    ]);
+  } catch { console.warn('botuse: 적지 못함'); }
+}
+
 async function botChat(req, env, o) {
   if (!env.NV_KEY) return reply(503, '봇 대화는 아직 열리지 않았습니다.', o);
   /* IP 창에 더해 모두가 나눠 쓰는 창 하나 — IP 를 돌려 가며 무료 키 한도를 다 먹어
@@ -1375,21 +1417,32 @@ async function botChat(req, env, o) {
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
   const a = botAsk(c);
   if (!a.ok) return reply(400, '할 말이 없습니다.', o);
-  let r;
-  try {
-    r = await fetch(NV, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${env.NV_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.NV_MODEL || NV_MODEL, max_tokens: 400, temperature: 0.6,
-        messages: [{ role: 'system', content: botSystem(a) }, ...a.msgs] }),
-      signal: AbortSignal.timeout(25000),
-    });
-  } catch { return reply(502, '봇이 대답하지 못했습니다.', o); }
-  if (!r.ok) return reply(r.status === 429 ? 429 : 502, '봇이 대답하지 못했습니다.', o);
-  const d = await r.json().catch(() => null);
-  const out = botAct(d?.choices?.[0]?.message?.content, a.courses);
-  if (!out.say && !out.do.length) return reply(502, '봇이 대답하지 못했습니다.', o);
-  return send(200, out, o);
+  const messages = [{ role: 'system', content: botSystem(a) }, ...a.msgs];
+  const models = String(env.NV_MODELS || env.NV_MODEL || '').split(',').map(x => x.trim()).filter(Boolean);
+  const day = Math.floor(Date.now() / DAY_MS);
+  const need = botTokens(messages) + BOT_OUT;
+  const route = botRoute(models.length ? models : NV_MODELS, await botUsed(env, day), need,
+                         Number(env.NV_BUDGET) || NV_DAY).slice(0, BOT_TRIES);
+  if (!route.length) return reply(429, '오늘 봇이 쓸 수 있는 몫을 다 썼습니다.', o);
+  let busy = false;
+  for (const model of route) {
+    let r;
+    try {
+      r = await fetch(NV, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${env.NV_KEY}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ model, max_tokens: BOT_OUT, temperature: 0.6, messages }),
+        signal: AbortSignal.timeout(12000),
+      });
+    } catch { continue; }
+    if (!r.ok) { busy ||= r.status === 429; continue; }
+    const d = await r.json().catch(() => null);
+    const text = d?.choices?.[0]?.message?.content;
+    await botSpend(env, day, model, d?.usage?.total_tokens || need - BOT_OUT + botTokens([{ content: text }]));
+    const out = botAct(text, a.courses);
+    return out.say || out.do.length ? send(200, out, o) : reply(502, '봇이 대답하지 못했습니다.', o);
+  }
+  return reply(busy ? 429 : 502, '봇이 대답하지 못했습니다.', o);
 }
 
 /* ── 지금 접속 ── 사이트가 보이는 탭마다 ONLINE_PING 에 한 번 {id} 를 두드린다. id 는 탭이

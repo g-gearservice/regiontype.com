@@ -305,3 +305,12 @@ create table if not exists online (
   at  integer not null
 );
 create index if not exists online_at on online (at);
+
+-- 봇 대화의 모델별 하루 토큰 사용량(worker.mjs 의 botSpend). day 는 UTC 날짜 번호
+-- (Date.now()/86400000). 이틀 지난 줄은 중계기가 걷는다
+create table if not exists botuse (
+  model text    not null,
+  day   integer not null,
+  tok   integer not null,
+  primary key (model, day)
+);

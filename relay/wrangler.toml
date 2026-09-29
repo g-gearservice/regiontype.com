@@ -15,6 +15,9 @@ GOOGLE_ID = "553049755538-kbc24ao0p1hv6re0nspv50j9e6hrqr0j.apps.googleuserconten
 APPLE_ID = ""
 APPLE_TEAM = ""
 APPLE_KID = ""
+# 봇 대화 모델 차례(쉼표)와 모델마다 하루 토큰 예산. 비우면 worker.mjs 의 NV_MODELS·NV_DAY
+# NV_MODELS = "deepseek-ai/deepseek-v4.1-flash,z-ai/glm-5.3-flash"
+# NV_BUDGET = "200000"
 
 # wrangler d1 create rt-board 가 찍어주는 id 를 여기 적는다
 [[d1_databases]]

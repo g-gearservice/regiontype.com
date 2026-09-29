@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botSystem, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
@@ -874,6 +874,39 @@ console.log('security rule self-check done');
   assert.ok(!JSON.stringify(d).includes('nv-secret'), '키는 답에 안 실린다');
   globalThis.fetch = async () => new Response('busy', { status: 500 });
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);
+
+  /* 모델 돌려 쓰기와 토큰 예산 */
+  assert.equal(botTokens([{ content: '강서구' }]), 7, '한글은 한 글자에 하나');
+  assert.equal(botTokens([{ content: 'abcdefgh' }]), 6, '그 밖은 네 글자에 하나');
+  assert.deepEqual(botRoute(['a', 'b', 'c'], { a: 950, b: 100 }, 100, 1000), ['b', 'c'], '넘칠 모델은 묻기 전에 건너뛴다');
+  assert.deepEqual(botRoute(['a'], { a: 900 }, 100, 1000), ['a'], '딱 맞으면 쓴다');
+  const tried = [];
+  globalThis.fetch = async (url, init) => {
+    const m = JSON.parse(init.body).model;
+    tried.push(m);
+    if (m === 'x') return new Response('limit', { status: 429 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"네","do":[]}' } }], usage: { total_tokens: 321 } }));
+  };
+  const spent = [];
+  const db = (rows) => ({
+    prepare: (q) => ({ bind: (...v) => ({ q, v, all: async () => ({ results: rows }) }) }),
+    batch: async (st) => { spent.push(...st.filter(x => x.q.startsWith('insert')).map(x => x.v)); },
+  });
+  const env2 = { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'full, x, y, z', NV_BUDGET: '5000',
+                 DB: db([{ model: 'full', tok: 4990 }]) };
+  assert.equal((await chat(ask, env2)).status, 200, '429 난 모델 다음으로 넘어간다');
+  assert.deepEqual(tried, ['x', 'y'], '예산이 찬 모델엔 묻지도 않는다');
+  assert.equal(spent[0][0], 'y');
+  assert.equal(spent[0][2], 321, '쓴 양은 답의 usage 로 센다');
+  tried.length = 0;
+  assert.equal((await chat(ask, { ...env2, NV_MODELS: 'full' })).status, 429, '모두 차면 묻지 않고 쉰다');
+  assert.equal(tried.length, 0);
+  globalThis.fetch = async () => new Response('limit', { status: 429 });
+  assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 429, 'DB 가 없어도 돌고, 다 막히면 429');
+  let calls = 0;
+  globalThis.fetch = async () => (calls++, new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"","do":[]}' } }] })));
+  assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);
+  assert.equal(calls, 1, '빈 답이면 다음 모델로 넘기지 않는다');
   globalThis.fetch = originalFetch;
   console.log('bot chat self-check done');
 }
