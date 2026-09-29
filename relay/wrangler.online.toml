@@ -1,0 +1,35 @@
+name = "rt-online"
+main = "entry-online.mjs"
+compatibility_date = "2026-08-01"
+# 문은 존 라우트뿐 — workers.dev 는 닫는다.
+workers_dev = false
+
+# 이 워커가 받는 경로는 entry.mjs 의 OWN.online. g.gearservicevanguard.com 의 rt-feedback(커스텀
+# 도메인)보다 존 라우트 워커가 먼저 요청을 받으므로 프런트·OAuth 주소는 그대로다.
+# 배포: wrangler deploy -c wrangler.online.toml
+# 시크릿 없음.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rt-board"
+database_id = "593224a1-2f33-4ec4-b43a-d9cd246e2d40"
+
+
+[[ratelimits]]
+name = "RL_ON"
+namespace_id = "1010"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이어진다
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+# 시크릿을 넣은 뒤 주석을 푼다 — 그 전에는 이 워커가 실제 요청을 받지 않는다.
+# [[routes]]
+# pattern = "g.gearservicevanguard.com/online*"
+# zone_name = "gearservicevanguard.com"
+
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true

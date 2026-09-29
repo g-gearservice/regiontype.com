@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botSystem, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
@@ -624,9 +624,9 @@ good('origin-allowlist', "const SITE = ['https://regiontype.com', 'https://www.r
 bad('token-stays-server', 'const t = env.GH_TOKEN;', '브라우저 코드에 토큰이 보이면 안 된다');
 
 /* Cloudflare MCP 가 떠다 주는 값 — 판정은 그래도 여기 표가 한다 */
-good('workers-known', ['regiontype-com', 'rt-feedback']);
-good('workers-known', ['rt-feedback', 'regiontype-com'], '순서는 상관없다');
-bad('workers-known', ['regiontype-com', 'rt-feedback', 'crypto-miner'], '모르는 워커를 놓치면 안 된다');
+good('workers-known', ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online']);
+good('workers-known', ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online'].reverse(), '순서는 상관없다');
+bad('workers-known', ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online', 'crypto-miner'], '모르는 워커를 놓치면 안 된다');
 bad('workers-known', ['regiontype-com'], '워커가 사라진 것도 사고다');
 
 /* 값을 못 떠 온 룰은 통과가 아니라 skip 이다 — 꺼진 검사가 초록으로 보이면 안 된다 */
@@ -874,6 +874,48 @@ console.log('security rule self-check done');
   assert.ok(!JSON.stringify(d).includes('nv-secret'), '키는 답에 안 실린다');
   globalThis.fetch = async () => new Response('busy', { status: 500 });
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);
+
+  /* 모델 돌려 쓰기와 토큰 예산 */
+  assert.equal(botTokens([{ content: '강서구' }]), 7, '한글은 한 글자에 하나');
+  assert.equal(botTokens([{ content: 'abcdefgh' }]), 6, '그 밖은 네 글자에 하나');
+  assert.deepEqual(botRoute(['a', 'b', 'c'], { a: 950, b: 100 }, 100, 1000), ['b', 'c'], '넘칠 모델은 묻기 전에 건너뛴다');
+  assert.deepEqual(botRoute(['a'], { a: 900 }, 100, 1000), ['a'], '딱 맞으면 쓴다');
+  const tried = [];
+  globalThis.fetch = async (url, init) => {
+    const m = JSON.parse(init.body).model;
+    tried.push(m);
+    if (m === 'x') return new Response('limit', { status: 429 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"네","do":[]}' } }], usage: { total_tokens: 321 } }));
+  };
+  const spent = [];
+  const db = (rows) => ({
+    prepare: (q) => ({ bind: (...v) => ({ q, v, all: async () => ({ results: rows }) }) }),
+    batch: async (st) => { spent.push(...st.filter(x => x.q.startsWith('insert')).map(x => x.v)); },
+  });
+  const env2 = { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'full, x, y, z', NV_BUDGET: '5000',
+                 DB: db([{ model: 'full', tok: 4990 }]) };
+  assert.equal((await chat(ask, env2)).status, 200, '429 난 모델 다음으로 넘어간다');
+  assert.deepEqual(tried, ['x', 'y'], '예산이 찬 모델엔 묻지도 않는다');
+  assert.equal(spent[0][0], 'y');
+  assert.equal(spent[0][2], 321, '쓴 양은 답의 usage 로 센다');
+  tried.length = 0;
+  assert.equal((await chat(ask, { ...env2, NV_MODELS: 'full' })).status, 429, '모두 차면 묻지 않고 쉰다');
+  assert.equal(tried.length, 0);
+  globalThis.fetch = async () => new Response('limit', { status: 429 });
+  assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 429, 'DB 가 없어도 돌고, 다 막히면 429');
+  const order = [];
+  globalThis.fetch = async (url, init) => {
+    const m = JSON.parse(init.body).model;
+    order.push(m);
+    if (order.length === 1) return new Response('busy', { status: 503 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"네","do":[]}' } }] }));
+  };
+  assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'fast,slow' })).status, 200);
+  assert.deepEqual(order, ['fast', 'fast'], '맨 앞 모델이 곧바로 503 이면 느린 예비보다 먼저 한 번 더 묻는다');
+  let calls = 0;
+  globalThis.fetch = async () => (calls++, new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"","do":[]}' } }] })));
+  assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);
+  assert.equal(calls, 1, '빈 답이면 다음 모델로 넘기지 않는다');
   globalThis.fetch = originalFetch;
   console.log('bot chat self-check done');
 }
@@ -913,4 +955,25 @@ console.log('security rule self-check done');
   assert.equal(again.n, 2, '방금 센 수는 잠깐 그대로 쓴다 — 두드릴 때마다 표를 훑지 않는다');
   assert.ok(rows.has('d'.repeat(32)), '세지 않아도 내 줄은 남긴다');
   console.log('online self-check done');
+}
+
+/* 경로 분리: 옛 라우터가 다루는 경로는 정확히 한 워커(또는 rt-feedback)에 속하고,
+   entry 는 남의 경로를 404 로 돌려보낸다. */
+{
+  const { OWN, owns, only } = await import('./entry.mjs');
+  const block = worker.slice(worker.indexOf('export default {'));
+  const paths = [...new Set([...block.matchAll(/'(\/[a-z/]*)'/g)].map(m => m[1]))];
+  assert.ok(paths.length > 20, '라우터에서 경로를 못 읽었다');
+  for (const p of paths) {
+    const at = Object.keys(OWN).filter(n => owns(n, p));
+    assert.equal(at.length, 1, `${p} 는 워커 하나에만 속해야 한다: ${at}`);
+  }
+  for (const n of Object.keys(OWN).filter(n => n !== 'feedback')) {
+    const r = await only(n).fetch(new Request('https://g.gearservicevanguard.com/where', { method: 'OPTIONS' }), {});
+    assert.equal(r.status, 404, `${n} 은 남의 경로를 거절한다`);
+  }
+  const pre = await only('bot').fetch(new Request('https://g.gearservicevanguard.com/bot/chat',
+    { method: 'OPTIONS', headers: { origin: 'https://regiontype.com' } }), {});
+  assert.equal(pre.status, 204, '자기 경로의 프리플라이트는 worker 로 넘긴다');
+  console.log('entry split check done');
 }

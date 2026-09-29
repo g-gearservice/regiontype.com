@@ -46,3 +46,16 @@ cd relay && npx wrangler deploy
 ```
 
 Site `FEEDBACK_URL` in `app.js` should be `https://g.gearservicevanguard.com`.
+
+## Split workers
+
+Each path group deploys on its own (`entry.mjs` `OWN` lists the paths). The zone routes in
+`wrangler.<name>.toml` ship commented out: put the secrets first, then uncomment and deploy.
+
+```bash
+cd relay
+npx wrangler secret put SESSION_KEY -c wrangler.auth.toml   # see each toml for its secrets
+npx wrangler deploy -c wrangler.auth.toml                   # auth · board · community · bot · online
+```
+
+Zone-route Workers run before the Custom Domain Worker, so `rt-feedback` stays the fallback.

@@ -25,7 +25,8 @@ const root = new URL('../', import.meta.url);
 
 /* 저장소 파일. 'file:relay' 는 relay 소스를 한 덩어리로 본다 — 비밀이 어느 파일에
    박혀도 걸리게. 읽지 못한 파일은 fact 를 만들지 않아 룰이 skip 으로 남는다. */
-const RELAY_SRC = ['relay/worker.mjs', 'relay/auth.mjs', 'relay/wrangler.toml'];
+const RELAY_SRC = ['relay/worker.mjs', 'relay/auth.mjs', 'relay/entry.mjs', 'relay/wrangler.toml',
+  ...['auth', 'board', 'community', 'bot', 'online'].map(n => `relay/wrangler.${n}.toml`)];
 const read = p => { try { return readFileSync(new URL(p, root), 'utf8'); } catch { return undefined; } };
 
 const facts = {};
