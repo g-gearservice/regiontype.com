@@ -1,6 +1,13 @@
 /* regiontype 중계기 — 정적 사이트가 혼자 못 하는 두 가지만 한다. 도메인은
    g.gearservicevanguard.com 이다(workers.dev 문은 닫혀 있다 — wrangler.toml 참고).
 
+     배포는 경로 묶음별로 따로 한다 — 코드는 이 파일 하나, 문은 entry-<이름>.mjs(entry.mjs 의 OWN).
+       rt-feedback   POST / · /turnstile · /where, 그리고 어느 워커도 안 잡은 나머지의 원점
+       rt-auth       /auth/*        rt-board   /top /dist /score /forget /ranked/* /played /games /ladder
+       rt-community  /cm/*          rt-bot     /bot/*          rt-online  /online
+       rt-feedback 는 커스텀 도메인, 나머지는 같은 호스트의 존 라우트라 먼저 요청을 받는다.
+       바인딩·시크릿은 wrangler.<이름>.toml 에. 아래 secret put 은 그 워커가 쓰는 것만 넣는다.
+
      POST /         피드백을 GitHub 이슈로 옮긴다 (토큰을 사이트에 둘 수 없다)
      POST /score    판 하나의 점수를 순위표에 올린다
      GET  /top      그 판의 상위 기록을 읽는다
@@ -1302,12 +1309,14 @@ const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
    모델마다 하루 토큰 예산(NV_BUDGET, 기본 NV_DAY)을 두고, 이번 물음이 쓸 만큼
    (어림한 들어갈 토큰 + max_tokens)을 더해 넘칠 모델은 묻기 전에 건너뛴다 — 한도에
    부딪혀 429 를 받고서야 갈아타지 않는다. 쓴 양은 답의 usage 로 세어 D1(botuse)에 쌓는다.
-   그래도 429·5xx·시간 초과가 나면 다음 모델로 넘긴다(한 물음에 BOT_TRIES 번까지). 200 을
+   그래도 429·5xx·시간 초과(25초 — 생각하는 모델은 10초를 넘긴다)가 나면 다음 모델로 넘긴다(한 물음에 BOT_TRIES 번까지). 200 을
    받았으면 답이 비었어도 거기서 끝낸다 — 빈 답을 유도해 모델마다 예산을 깎게 두지 않는다.
    ponytail: 어림은 글자 수로 한다(한글·한자 한 글자 = 1, 그 밖 4글자 = 1). 모델마다
    토크나이저가 달라 정확히 못 맞추니 예산을 넉넉히 밑돌게 잡는다 */
-const NV_MODELS = ['deepseek-ai/deepseek-v4.1-flash', 'z-ai/glm-5.3-flash', 'nvidia/nemotron-3-super-120b-a12b',
-                   'moonshotai/kimi-k2.6', 'openai/gpt-oss-20b', 'google/gemma-3-12b-it'];
+/* 차례는 잰 속도순이다(2026-09-29, 이 키로): nemotron-3-super 1.6초, glm-5.3-flash 20초,
+   deepseek-v4.1-flash 22~25초. kimi-k2.6·gemma-3-12b·mistral-large-2·llama-3.1-nemotron-70b 는
+   목록에 있어도 이 키엔 404, gemma-4-31b·nemotron-3.5-lightning·gpt-oss-20b 는 25초를 넘겨 뺐다 */
+const NV_MODELS = ['nvidia/nemotron-3-super-120b-a12b', 'z-ai/glm-5.3-flash', 'deepseek-ai/deepseek-v4.1-flash'];
 const NV_DAY = 200000, BOT_OUT = 400, BOT_TRIES = 2;
 const DAY_MS = 86400000;
 const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
@@ -1425,17 +1434,29 @@ async function botChat(req, env, o) {
                          Number(env.NV_BUDGET) || NV_DAY).slice(0, BOT_TRIES);
   if (!route.length) return reply(429, '오늘 봇이 쓸 수 있는 몫을 다 썼습니다.', o);
   let busy = false;
-  for (const model of route) {
+  /* 맨 앞 모델이 곧바로(2초 안) 5xx 를 주면 느린 예비로 넘기 전에 그 모델에 한 번 더 묻는다 —
+     nemotron 은 가끔 0.1초 만에 503 을 주고 다음 번엔 멀쩡히 답한다 */
+  const tries = [...route];
+  for (let i = 0; i < tries.length; i++) {
+    const model = tries[i];
     let r;
+    const t0 = Date.now();
     try {
       r = await fetch(NV, {
         method: 'POST',
         headers: { authorization: `Bearer ${env.NV_KEY}`, 'content-type': 'application/json' },
         body: JSON.stringify({ model, max_tokens: BOT_OUT, temperature: 0.6, messages }),
-        signal: AbortSignal.timeout(12000),
+        /* 맨 앞 모델은 평소 3초 안에 답한다 — 가끔 멈출 때 25초를 다 기다리지 않게 8초에 끊는다.
+           NV_MODELS 로 느린 모델을 맨 앞에 두면 이 8초에 걸린다 */
+        signal: AbortSignal.timeout(model === route[0] ? 8000 : 25000),
       });
-    } catch { continue; }
-    if (!r.ok) { busy ||= r.status === 429; continue; }
+    } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); continue; }
+    console.log('bot', model, r.status, Date.now() - t0);
+    if (!r.ok) {
+      busy ||= r.status === 429;
+      if (i === 0 && r.status >= 500 && Date.now() - t0 < 2000) tries.splice(1, 0, model);
+      continue;
+    }
     const d = await r.json().catch(() => null);
     const text = d?.choices?.[0]?.message?.content;
     await botSpend(env, day, model, d?.usage?.total_tokens || need - BOT_OUT + botTokens([{ content: text }]));

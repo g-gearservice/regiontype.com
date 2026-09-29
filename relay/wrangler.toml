@@ -1,4 +1,7 @@
 name = "rt-feedback"
+# 경로 묶음별 워커(auth·board·community·bot·online)는 wrangler.<이름>.toml 로 따로 배포한다.
+# 그쪽 존 라우트가 먼저 받고, 이 워커는 POST /·/turnstile·/where 와 나머지의 원점으로 남는다.
+# 아래 바인딩은 분리 전 그대로다(옮겨 간 워커의 라우트를 풀기 전까지는 이쪽이 전부 처리한다).
 main = "worker.mjs"
 compatibility_date = "2026-08-01"
 # One door only: the custom domain below. The workers.dev address answered the same
@@ -16,7 +19,7 @@ APPLE_ID = ""
 APPLE_TEAM = ""
 APPLE_KID = ""
 # 봇 대화 모델 차례(쉼표)와 모델마다 하루 토큰 예산. 비우면 worker.mjs 의 NV_MODELS·NV_DAY
-# NV_MODELS = "deepseek-ai/deepseek-v4.1-flash,z-ai/glm-5.3-flash"
+# NV_MODELS = "nvidia/nemotron-3-super-120b-a12b,z-ai/glm-5.3-flash"
 # NV_BUDGET = "200000"
 
 # wrangler d1 create rt-board 가 찍어주는 id 를 여기 적는다
