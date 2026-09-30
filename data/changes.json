@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.349",
+    "date": "2026-10-01",
+    "ko": "봇은 이제 로고 안에 삽니다. 가입하거나 로그인한 직후에만 로고 점이 로고를 채운 채 봇이 먼저 나오고, 그 뒤로는 로고를 꾹 눌러 점이 로고를 다 채우면 로고 밖 아래로 끌어내야 나옵니다(키보드는 로고에서 ↓). 봇이 드나들 때 로고 뒤에 깔리던 판과 로고를 감싸던 알약을 걷었습니다.",
+    "en": "The bot now lives inside the logo. Only right after you sign up or sign in does it come out on its own, with the logo's dot filling the logo. After that, press and hold the logo until the dot fills it, then drag down out of the logo to pull the bot out (↓ on the logo with a keyboard). The plate behind the logo and the pill around it when the bot came out are gone."
+  },
+  {
     "v": "0.8.348",
     "date": "2026-10-01",
     "ko": "폰 홈 화면에서 로고 양옆의 메뉴·전체 보기 단추를 걷었습니다. 전체 보기는 지도 탭을 한 번 더 누르면 됩니다. 봇은 아래 막대의 지금 탭을 잡고 위로 끌면 그 뒤에서 나옵니다.",

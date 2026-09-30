@@ -177,7 +177,7 @@ const loggedIn = () => !!read('rt.token');
 /* 이 브라우저에 남긴 거울을 통째로 지운다. 로그아웃도, 토큰이 죽은 것을 알아챈
    자리도 같은 손을 쓴다 — 한쪽만 지우면 다음 사람이 이 기기로 가입할 때 남은
    값이 그 사람의 공개 프로필로 올라간다(welcome/welcome.js 의 save 참고). */
-const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue'];
+const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue', 'rt.greet'];
 const forget = () => { for (const k of KEYS) localStorage.removeItem(k); sessionStorage.removeItem('rt.bind'); };
 
 /* ── 서버에 남는 프로필 ────────────────────────────────────

@@ -1711,8 +1711,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);translate:-50% 0;
     display:flex;align-items:center;height:44px;padding:0 14px;font-size:24px;border-radius:999px;
   }
-  /* 봇이 이 뒤로 들어가 숨는(ranked.js 의 tuck) 동안만 바탕을 깔아 비치지 않게 한다 */
-  body.rk-emerge #regions .navbar .nav-logo{background:var(--bg)}
   #regions .navbar .nav-logo .dot{visibility:visible;margin-right:0}
   .nav-burger{
     display:block;position:relative;width:44px;height:44px;padding:0;border-radius:50%;color:var(--ink);cursor:pointer;
@@ -2109,9 +2107,35 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 }
 
 /* ═══ 도우미 봇 · 경쟁전 ════════════════════════════════
-   봇이 조르는 동안에만 로고를 잡을 수 있다 — 쥐는 손이 되고, 끌어내리면 봇이 나온다(ranked.js) */
-#regions .navbar .nav-logo{user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
-body.rk-intro #regions .navbar .nav-logo{cursor:grab}
+   봇은 로고 안에 산다. 로고를 꾹 누르면 옆의 로고 점이 로고를 채우고(rk-fill, 다 차면
+   rk-full), 그때 로고 밖 아래로 끌어내면 봇이 나온다(ranked.js 의 wireLogo). 봇이 조르는
+   동안(rk-intro)과 드나드는 동안(rk-emerge)에도 로고는 차 있다. 원은 점 자리에서 커지고
+   (--dot-*, ranked.js 의 markDot), 글자색도 함께 바뀌어 색만으로 가르지 않는다.
+   끄는 손가락을 스크롤이 가로채지 않게 로고에서는 터치 이동을 받는다 */
+#regions .navbar .nav-logo{user-select:none;-webkit-user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none;touch-action:none}
+#regions .navbar .nav-logo::before{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:999px;pointer-events:none;
+  background:var(--accent);opacity:0;
+  clip-path:circle(var(--dot-r,.11em) at var(--dot-x,calc(100% - 20px)) var(--dot-y,60%));
+  transition:clip-path var(--fast) var(--ease-out),opacity 0s linear var(--fast);
+}
+#regions .navbar .nav-logo{transition:color var(--fast) var(--ease-out)}
+body:is(.rk-fill,.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--on-accent)}
+body:is(.rk-fill,.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{
+  opacity:1;clip-path:circle(150% at var(--dot-x,calc(100% - 20px)) var(--dot-y,60%));
+  transition:clip-path var(--si-dur) var(--ease-out),opacity 0s;
+}
+/* 꾹 누르는 동안은 누른 시간(ranked.js 의 HOLD_MS)에 걸쳐 차오른다 */
+body.rk-fill #regions .navbar .nav-logo{transition-duration:.6s}
+body.rk-fill #regions .navbar .nav-logo::before{transition:clip-path .6s cubic-bezier(.55,0,.75,.4),opacity 0s}
+body:is(.rk-full,.rk-intro) #regions .navbar .nav-logo{cursor:grab}
+/* 움직임을 줄이면 차오르지 않고, 다 찼을 때 한 번에 찬다 */
+@media (prefers-reduced-motion:reduce){
+  body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--ink)}
+  body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{opacity:0}
+}
+:root[data-motion="off"] body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--ink)}
+:root[data-motion="off"] body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{opacity:0}
 /* 지금 접속 — 경쟁전을 켜면(rk-ready) 왼쪽 아래 귀퉁이에서 대각선으로 밀려 나오는 부채.
    빛깔은 경쟁전 빛깔(--rk-on)이고, 점과 숫자는 귀퉁이의 45° 선 위에 눕는다. 봇은 층이
    위라(.rk-layer) 겹쳐도 가리지 않는다 — 왼쪽 아래에서 자던 봇은 ranked.js 가 비켜 둔다 */
@@ -2172,7 +2196,9 @@ body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy{--buddy-
 .rk-bot.is-held{cursor:grabbing;transition:none}
 .rk-bot.is-held .rk-bot-motion{transform:scale(1.08) rotate(4deg)}
 body:has(.rk-bot.is-held) .rk-say{transition:none}
-.rk-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out)}
+.rk-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out),opacity var(--si-dur) var(--ease-out)}
+/* 로고 안에 든 봇 — 로고 한가운데서 작아지며 사라진다(ranked.js 의 stow·tuck) */
+.rk-bot.is-in .rk-bot-motion{transform:scale(.25);opacity:0;transition-duration:var(--si-dur)}
 .rk-bot .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .rk-bot:hover .rk-bot-motion{transform:scale(1.06)}
 /* 자는 봇은 눈을 감고(소개 페이지 helper.svg 의 ‿‿), 색만이 아니라 글자(z)로도
