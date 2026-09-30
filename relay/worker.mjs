@@ -3,7 +3,7 @@
 
      배포는 경로 묶음별로 따로 한다 — 코드는 이 파일 하나, 문은 entry-<이름>.mjs(entry.mjs 의 OWN).
        rt-feedback   POST / · /turnstile · /where, 그리고 어느 워커도 안 잡은 나머지의 원점
-       rt-auth       /auth/*        rt-board   /top /dist /score /forget /ranked/* /played /games /ladder
+       rt-auth       /auth/*        rt-board   /top /dist /score /forget /ranked/* /played /games /ladder /match/*
        rt-community  /cm/*          rt-bot     /bot/*          rt-online  /online
        rt-feedback 는 커스텀 도메인, 나머지는 같은 호스트의 존 라우트라 먼저 요청을 받는다.
        바인딩·시크릿은 wrangler.<이름>.toml 에. 아래 secret put 은 그 워커가 쓰는 것만 넣는다.
@@ -15,6 +15,9 @@
      POST /forget   내 줄을 전부 내린다 (순위표·경쟁전·전적)
      POST /ranked/start {c,name}  경쟁전 표를 낸다. 끝내지 않은 옛 표는 탈주로 셈한다
      POST /ranked/end   {id,score,hits,tries}  표를 태우고 lp 를 오르내린다
+     POST /match/find {c,name,dev,bot?}  1대1 매칭 줄에 서거나(폴링) 짝을 받는다 → {wait,n} | 짝 응답
+     POST /match/leave  매칭 줄에서 나간다
+     POST /match/tick {duel,hits}  내 진행을 적고 상대 진행·정산 결과를 받는다
      POST /played   일반전 한 판을 전적에 남긴다
      GET  /games    내 사다리 줄과 최근 판들 (로그인 필요)
      GET  /ladder   경쟁전 상위 50
@@ -363,8 +366,9 @@ async function forget(req, env, o) {
   if (ok !== true) return shut(ok, o);
   /* 이름이 걸린 곳은 전부 내린다 — 경쟁전 사다리와 전적도 같은 사람의 것이다 */
   return safely(o, async () => {
-    const [r] = await env.DB.batch(['speed', 'board', 'ladder', 'played', 'ticket']
-      .map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(who)));
+    const [r] = await env.DB.batch(['speed', 'board', 'ladder', 'played', 'ticket', 'queue']
+      .map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(who))
+      .concat(env.DB.prepare('delete from duel where a = ? or b = ?').bind(who, who)));
     return send(200, { gone: r.meta?.changes ?? 0 }, o);
   });
 }
@@ -412,6 +416,18 @@ const logPlay = (env, who, mode, dev, slug, secs, e, delta, at) => [
     .bind(who, who, KEEP),
 ];
 
+/* 끝내지 않은 옛 표를 탈주로 셈하는 문장들 — rankedStart 와 matchFind 가 같이 쓴다.
+   맞대결 표였으면 그 판의 내 칸을 -2(탈주, 이미 깎음)로 적어 상대가 이기게 하고, 정산에서
+   또 깎지 않는다. 부른 쪽은 batch 뒤에 tk.duel 이 있으면 settle 을 불러 준다 */
+const forfeit = (env, me, tk, quit, now) => [
+  env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ? and dev = ?').bind(quit, now, me, tk.dev),
+  ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now),
+  env.DB.prepare('delete from ticket where who = ?').bind(me),
+  ...(tk.duel ? [env.DB.prepare(`update duel set a_cpm = case when a = ? and a_cpm is null then -2 else a_cpm end,
+                                                   b_cpm = case when b = ? and b_cpm is null then -2 else b_cpm end
+                                  where id = ? and done = 0`).bind(me, me, tk.duel)] : []),
+];
+
 async function rankedStart(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '경쟁전은 로그인이 필요합니다.', o);
@@ -424,7 +440,7 @@ async function rankedStart(req, env, o) {
   return safely(o, async () => {
     const now = Date.now(), id = rand(18);
     const [old, row] = await env.DB.batch([
-      env.DB.prepare('select slug, dev from ticket where who = ?').bind(me),
+      env.DB.prepare('select slug, dev, duel from ticket where who = ?').bind(me),
       /* 탈주는 옛 표를 낸 기기의 사다리에서 깎는다 */
       env.DB.prepare('select lp from ladder where who = ? and dev = (select dev from ticket where who = ?)').bind(me, me),
     ]);
@@ -433,14 +449,12 @@ async function rankedStart(req, env, o) {
     await env.DB.batch([
       env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
                       on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
-      ...(tk ? [
-        env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ? and dev = ?').bind(quit, now, me, tk.dev),
-        ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now),
-      ] : []),
+      ...(tk ? forfeit(env, me, tk, quit, now) : []),
       env.DB.prepare(`insert into ticket (who, id, slug, dev, at) values (?, ?, ?, ?, ?)
                       on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, at = excluded.at`)
         .bind(me, id, slug, dev, now),
     ]);
+    if (tk?.duel) await settle(env, tk.duel, now);
     return send(201, { id, secs: RANKED_SECS, quit }, o);
   });
 }
@@ -456,9 +470,10 @@ async function rankedEnd(req, env, o) {
     const now = Date.now();
     /* 표를 먼저 태운다 — 한 줄을 돌려받은 요청만 이어 간다. 같은 표로 두 번
        동시에 끝내도 한 번만 셈된다 */
-    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, dev, at')
+    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, dev, at, duel')
       .bind(me, cut(c.id, 40)).first();
     if (!tk) return reply(409, '끝낼 경쟁전이 없습니다.', o);
+    if (tk.duel) return duelEnd(env, me, tk, c, now, o);
     const [row, day] = await env.DB.batch([
       env.DB.prepare('select name, lp, games from ladder where who = ? and dev = ?').bind(me, tk.dev),
       env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and dev = ? and delta > 0 and at > ?")
@@ -480,6 +495,228 @@ async function rankedEnd(req, env, o) {
     ]);
     if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
     return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1, dev: tk.dev }, o);
+  });
+}
+
+/* ── 경쟁전 1대1 ─────────────────────────────────────────
+   사람끼리 자동 매칭, 20초 안에 짝이 없으면(또는 눌러서) 봇. D1 + 짧은 폴링뿐이다.
+   승패는 cpm 이 높은 쪽 → 같으면 acc → 그래도 같으면 무승부. 앞뒤 안 맞는 판·탈주는 진다.
+   lp 는 Elo 식이고 얻는 쪽에는 DAY_CAP 이 그대로 씌워진다.
+   두 요청이 같은 줄을 집거나 정산이 두 번 도는 걸 `delete … returning`·
+   `update … where done = 0 returning` 한 문장으로 막는다 — 한 줄을 돌려받은 쪽만 이어 간다. */
+export const DUEL_WAIT = 20000, DUEL_LEAD = 3000, DUEL_GRACE = 30000, DUEL_KEYS = 8, DUEL_ACC = 96, DUEL_PAIR = 3;
+export function duelDelta(myLp, games, oppLp, S) {
+  const E = 1 / (1 + 10 ** ((oppLp - myLp) / 400));
+  let d = Math.round((games < PLACE ? 80 : 40) * (S - E));
+  if (S === 1) d = Math.max(3, d); else if (S === 0) d = Math.min(-3, d);
+  return Math.max(-myLp, Math.max(-50, Math.min(50, d)));
+}
+/* a 쪽에서 본 결과 1 | .5 | 0. cpm < 0 은 못 낸 판(-1 앞뒤 불일치 · -2 탈주) */
+export function duelWinner(a, b) {
+  if (a.cpm < 0 || b.cpm < 0) return a.cpm >= 0 ? 1 : 0;
+  if (a.cpm !== b.cpm) return a.cpm > b.cpm ? 1 : 0;
+  return a.acc === b.acc ? .5 : a.acc > b.acc ? 1 : 0;
+}
+/* 봇이 지금까지 맞힌 곳. ponytail: 한 곳당 평균 KEYS 타로 어림한다 — 코스마다 지명 길이가
+   달라 실제와 어긋난다. 봇이 너무 빠르거나 굼뜨면 코스별 평균 타수를 size.mjs 에서 찍는다 */
+export const botHits = (slug, botCpm, elapsedMs) =>
+  Math.min(SIZE[slug] || 0, Math.floor(Math.min(Math.max(0, elapsedMs), RANKED_SECS * 1000) * botCpm / 6e4 / DUEL_KEYS));
+
+/* 짝 응답. 상대에게서는 이름·lp·봇 여부만 싣는다 — who 는 안 나간다 */
+async function pair(env, me, id, duel, now, o) {
+  const d = await env.DB.prepare('select * from duel where id = ?').bind(duel).first();
+  if (!d) return reply(404, '없는 판입니다.', o);
+  const p = d.a === me ? 'b' : 'a';
+  return send(200, { id, duel, slug: d.slug, secs: RANKED_SECS, at: d.at, now,
+    opp: { name: d[p + '_name'], lp: d[p + '_lp'], bot: d[p] === 'bot' } }, o);
+}
+
+async function matchFind(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '경쟁전은 로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  if (!c || typeof c !== 'object') return reply(400, '읽을 수 없는 내용입니다.', o);
+  const slug = cut(c.c, 40), name = plain(c.name, CAP.name), dev = devOf(c.dev);
+  if (!Object.hasOwn(SIZE, slug) || !name) return reply(400, '시작할 수 없는 판입니다.', o);
+  const ok = await pass(env.RL_MT, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    const now = Date.now();
+    const [, lad, old, que] = await env.DB.batch([
+      env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
+                      on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
+      env.DB.prepare('select lp from ladder where who = ? and dev = ?').bind(me, dev),
+      env.DB.prepare('select id, slug, dev, duel, at from ticket where who = ?').bind(me),
+      env.DB.prepare('select at from queue where who = ?').bind(me),
+    ]);
+    const tk = old.results[0], q = que.results[0], lp = lad.results[0]?.lp ?? 0;
+    /* 방금 지어진 짝이면 그 판을 준다. 집힌 사람의 줄은 집을 때 이미 지워져 q 가 없을 수
+       있으니, 표가 시작 20초 안이고(q 가 있으면 줄에 선 때보다 늦게 생겼고) 판이 아직 안
+       끝났으면 짝으로 본다. 그보다 묵은 표는 아래에서 탈주로 셈한다 */
+    if (tk?.duel && now < tk.at + DUEL_WAIT && (!q || tk.at >= q.at)) {
+      await env.DB.prepare('delete from queue where who = ?').bind(me).run();
+      return pair(env, me, tk.id, tk.duel, now, o);
+    }
+    /* 그 밖의 옛 표는 탈주다. 옛 표를 낸 기기의 사다리에서 깎는다 */
+    if (tk) {
+      const ol = await env.DB.prepare('select lp from ladder where who = ? and dev = ?').bind(me, tk.dev).first();
+      await env.DB.batch(forfeit(env, me, tk, -Math.min(QUIT, ol?.lp ?? 0), now));
+      if (tk.duel) await settle(env, tk.duel, now);
+    }
+    const mk = (a, b, extra) => {
+      const id = rand(18), at = now + DUEL_LEAD;
+      return { id, tid: rand(18), at, slug: extra.slug,
+        duel: env.DB.prepare(`insert into duel (id, dev, slug, at, a, b, a_name, b_name, a_lp, b_lp, bot_cpm, b_cpm, b_acc)
+                              values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .bind(id, dev, extra.slug, at, a.who, b.who, a.name, b.name, a.lp, b.lp,
+                extra.botCpm ?? null, extra.botCpm ?? null, extra.botCpm ? DUEL_ACC : null) };
+    };
+    const tkt = (who, m, tid) => env.DB.prepare(`insert into ticket (who, id, slug, dev, at, duel) values (?, ?, ?, ?, ?, ?)
+      on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, at = excluded.at, duel = excluded.duel`)
+      .bind(who, tid, m.slug, dev, m.at, m.id);
+    const meRow = { who: me, name, lp };
+
+    if (c.bot === true) {
+      /* 내 줄을 지우고도 돌려받은 게 없으면 그 사이 누가 나를 집은 것이다 — 그 짝을 받는다.
+         ponytail: 집힌 사람의 batch 가 아직 표를 못 쓴 몇 ms 는 못 잡는다(그러면 봇 판이 된다) */
+      const gone = await env.DB.prepare('delete from queue where who = ? returning at').bind(me).first();
+      if (q && !gone) {
+        const t = await env.DB.prepare('select id, duel from ticket where who = ?').bind(me).first();
+        if (t?.duel) return pair(env, me, t.id, t.duel, now, o);
+      }
+      const botCpm = Math.round(WANT[Math.min(WANT.length - 1, Math.floor(lp / STEP))] * (.85 + Math.random() * .3));
+      const m = mk(meRow, { who: 'bot', name: 'bot', lp }, { slug, botCpm });
+      await env.DB.batch([env.DB.prepare('delete from duel where at < ?').bind(now - 864e5), m.duel, tkt(me, m, m.tid)]);
+      return pair(env, me, m.tid, m.id, now, o);
+    }
+
+    /* 사람 짝: 20초 넘은 줄은 걷고, 같은 기기의 가장 오래된 다른 줄을 한 문장으로 집는다 */
+    await env.DB.prepare('delete from queue where at < ?').bind(now - DUEL_WAIT).run();
+    const p = await env.DB.prepare(`delete from queue where who = (select who from queue where dev = ? and who <> ? order by at limit 1)
+                                    returning who, name, slug, lp`).bind(dev, me).first();
+    if (p) {
+      const m = mk(p, meRow, { slug: p.slug });
+      /* 옛 판은 하루면 걷는다 — 표가 커지지 않게, 남의 이름이 오래 남지 않게 */
+      await env.DB.batch([
+        env.DB.prepare('delete from duel where at < ?').bind(now - 864e5),
+        env.DB.prepare('delete from queue where who = ?').bind(me),
+        m.duel, tkt(p.who, m, rand(18)), tkt(me, m, m.tid)]);
+      return pair(env, me, m.tid, m.id, now, o);
+    }
+    await env.DB.prepare(`insert into queue (who, dev, slug, name, lp, at) values (?, ?, ?, ?, ?, ?)
+                          on conflict (who) do update set name = excluded.name, slug = excluded.slug, lp = excluded.lp`)
+      .bind(me, dev, slug, name, lp, now).run();
+    const n = await env.DB.prepare('select count(*) as n from queue where dev = ?').bind(dev).first('n');
+    return send(200, { wait: true, n }, o);
+  });
+}
+
+async function matchLeave(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  const ok = await pass(env.RL_MT, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    await env.DB.prepare('delete from queue where who = ?').bind(me).run();
+    return send(200, {}, o);
+  });
+}
+
+/* 정산. 두 칸이 다 차면(force 면 상대가 안 나타나도) 한 번만 — done 을 먼저 잡은 요청만
+   이어 간다. 끝내면 {d(행), out:{a,b}} 를 돌려주고, 못 잡았으면 null 이다.
+   ponytail: 잡은 뒤 batch 가 엎어지면 그 판은 done 인데 lp 가 안 오른다(드묾). 시달리면
+   done 을 batch 안으로 옮긴다 */
+async function settle(env, id, now, force = false) {
+  const d = await env.DB.prepare(`update duel set done = 1 where id = ? and done = 0
+      and (? = 1 or (a_cpm is not null and b_cpm is not null)) returning *`).bind(id, force ? 1 : 0).first();
+  if (!d) return null;
+  const hs = [['a', 'b'], ['b', 'a']].filter(([s]) => d[s] !== 'bot');
+  const rows = await env.DB.batch(hs.flatMap(([s]) => [
+    env.DB.prepare('select lp, games from ladder where who = ? and dev = ?').bind(d[s], d.dev),
+    env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and dev = ? and delta > 0 and at > ?")
+      .bind(d[s], d.dev, now - 864e5),
+  ]));
+  /* 같은 두 사람이 하루에 DUEL_PAIR 판을 넘기면 얻는 lp 가 없다 — 두 계정으로 서로
+     져 주며 lp 를 뽑는 길을 막는다(져 주는 쪽이 lp 0 이면 잃을 것도 없다) */
+  const same = hs.length < 2 ? 0 : await env.DB.prepare(`select count(*) as n from duel where done = 1 and id <> ? and at > ?
+      and ((a = ? and b = ?) or (a = ? and b = ?))`).bind(id, now - 864e5, d.a, d.b, d.b, d.a).first('n');
+  const out = {}, st = [];
+  hs.forEach(([s, p], i) => {
+    const lad = rows[2 * i].results[0] ?? { lp: 0, games: 0 }, cpm = d[s + '_cpm'];
+    const quit = cpm === null, paid = cpm === -2;   // 안 나타남 · 이미 깎은 탈주
+    const S = duelWinner({ cpm: cpm ?? -1, acc: d[s + '_acc'] ?? 0 }, { cpm: d[p + '_cpm'] ?? -1, acc: d[p + '_acc'] ?? 0 });
+    let dl = paid ? 0 : quit ? -Math.min(QUIT, lad.lp) : duelDelta(lad.lp, lad.games, lad.lp + d[p + '_lp'] - d[s + '_lp'], S);   // 격차는 짝지을 때의 것으로 — 두 사람이 서로 반대 값을 받는다
+    if (dl > 0) dl = same >= DUEL_PAIR ? 0 : Math.max(0, Math.min(dl, DAY_CAP - (rows[2 * i + 1].results[0]?.n ?? 0)));
+    out[s] = { d: dl, S, lp: lad.lp + dl, games: lad.games + (paid ? 0 : 1) };
+    if (!paid) st.push(
+      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ? and dev = ?')
+        .bind(dl, S === 1 ? 1 : 0, now, d[s], d.dev),
+      ...logPlay(env, d[s], 'ranked', d.dev, d.slug, RANKED_SECS,
+        { cpm: Math.max(0, cpm ?? 0), score: 0, hits: d[s + '_hits'] ?? 0, acc: Math.max(0, d[s + '_acc'] ?? 0) }, dl, now));
+    /* 안 나타난 사람의 표도 태운다 — 다음 시작에서 또 깎이지 않게 */
+    if (quit) st.push(env.DB.prepare('delete from ticket where who = ? and duel = ?').bind(d[s], id));
+  });
+  st.push(env.DB.prepare('update duel set a_d = ?, b_d = ? where id = ?').bind(out.a?.d ?? null, out.b?.d ?? null, id));
+  await env.DB.batch(st);
+  return { d, out };
+}
+
+/* /ranked/end 의 맞대결 갈래 — 표는 이미 탔다. lp 는 바로 안 바꾸고 내 칸만 적는다 */
+async function duelEnd(env, me, tk, c, now, o) {
+  const [lad, dl] = await env.DB.batch([
+    env.DB.prepare('select name from ladder where who = ? and dev = ?').bind(me, tk.dev),
+    env.DB.prepare('select id, a from duel where id = ? and (a = ? or b = ?)').bind(tk.duel, me, me),
+  ]);
+  const d = dl.results[0];
+  if (!d) return reply(409, '끝낼 경쟁전이 없습니다.', o);
+  const s = d.a === me ? 'a' : 'b';   // 열 이름은 이 두 값뿐이라 바로 붙여도 된다
+  const e = lad.results[0] ? rankedCheck({ ...c, name: lad.results[0].name }, { ...tk, id: c.id }, now, me) : { ok: false };
+  await env.DB.prepare(`update duel set ${s}_cpm = ?, ${s}_acc = ?, ${s}_hits = max(coalesce(${s}_hits, 0), ?)
+                         where id = ? and ${s}_cpm is null and done = 0`)
+    .bind(e.ok ? e.cpm : -1, e.ok ? e.acc : 0, e.ok ? e.hits : 0, d.id).run();
+  const r = await settle(env, d.id, now);
+  if (!r) return send(200, { pending: true }, o);   // 상대가 아직이거나, 같은 순간 상대가 정산을 잡았다 — 틱으로 받는다
+  const p = s === 'a' ? 'b' : 'a', m = r.out[s];
+  return send(200, { delta: m.d, lp: m.lp, games: m.games, dev: tk.dev,
+                     duel: { win: m.S, oppCpm: Math.max(0, r.d[p + '_cpm'] ?? 0) } }, o);
+}
+
+async function matchTick(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  if (!c || typeof c !== 'object') return reply(400, '읽을 수 없는 내용입니다.', o);
+  const id = cut(c.duel, 40), hits = c.hits;
+  if (!id || !Number.isInteger(hits) || hits < 0) return reply(400, '읽을 수 없는 내용입니다.', o);
+  const ok = await pass(env.RL_MT, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    const now = Date.now();
+    /* 내가 낀 판만 본다 — 남의 판은 없는 판이다 */
+    let d = await env.DB.prepare('select * from duel where id = ? and (a = ? or b = ?)').bind(id, me, me).first();
+    if (!d) return reply(404, '없는 판입니다.', o);
+    const s = d.a === me ? 'a' : 'b', p = s === 'a' ? 'b' : 'a';
+    if (!d.done) {
+      await env.DB.prepare(`update duel set ${s}_hits = max(coalesce(${s}_hits, 0), ?)
+                             where id = ? and ${s}_cpm is null and done = 0`).bind(Math.min(hits, SIZE[d.slug] || 0), id).run();
+      /* 나는 끝냈는데 사람 상대가 제한 시간 + 30초가 지나도록 안 나타났다 → 그쪽을 탈주로 셈한다 */
+      if (d[s + '_cpm'] !== null && d[p + '_cpm'] === null && d[p] !== 'bot' && now > d.at + RANKED_SECS * 1000 + DUEL_GRACE)
+        await settle(env, id, now, true);
+      d = await env.DB.prepare('select * from duel where id = ?').bind(id).first();
+    }
+    const res = { opp: d[p] === 'bot'
+      ? { hits: botHits(d.slug, d.bot_cpm, now - d.at), done: now - d.at >= RANKED_SECS * 1000 }
+      : { hits: d[p + '_hits'] ?? 0, done: d[p + '_cpm'] !== null } };
+    if (d.done) {
+      const lad = await env.DB.prepare('select lp, games from ladder where who = ? and dev = ?').bind(me, d.dev).first();
+      const my = d[s + '_cpm'], their = d[p + '_cpm'];
+      res.result = { win: duelWinner({ cpm: my ?? -1, acc: d[s + '_acc'] ?? 0 }, { cpm: their ?? -1, acc: d[p + '_acc'] ?? 0 }),
+                     delta: d[s + '_d'] ?? 0, lp: lad?.lp ?? 0, games: lad?.games ?? 0,
+                     oppCpm: Math.max(0, their ?? 0), myCpm: Math.max(0, my ?? 0) };
+    }
+    return send(200, res, o);
   });
 }
 
@@ -1090,7 +1327,7 @@ async function authIntro(req, env, o) {
    이 목록이 곧 "이 저장소가 사람에 대해 쥐고 있는 전부" 다. 새 표를 만들면서 여기
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
-export const ERASE = ['speed', 'board', 'ladder', 'played', 'ticket', 'profile', 'intro',
+export const ERASE = ['speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro',
                       'passkey', 'recovery', 'pending', 'sso', 'post', 'reply', 'mark'];
 
 async function authErase(req, env, o) {
@@ -1110,6 +1347,8 @@ async function authErase(req, env, o) {
                         or target in (select 'r' || id from reply where who = ?)`).bind(me, me, me),
       env.DB.prepare('delete from reply where post in (select id from post where who = ?)').bind(me),
       ...ERASE.map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(me)),
+      /* 맞대결 판은 who 칸이 없다(a·b) — 내가 낀 판은 따로 지운다 */
+      env.DB.prepare('delete from duel where a = ? or b = ?').bind(me, me),
       /* 사람 줄은 맨 끝에 지운다. D1 의 batch 는 한 묶음으로 도니 도중에 엎어지면
          통째로 없던 일이 된다 — 반쯤 지워진 계정이 남지 않는다 */
       env.DB.prepare('delete from user where id = ?').bind(me),
@@ -1591,6 +1830,12 @@ export default {
       if (path === '/played' && req.method === 'POST') return playedNormal(req, env, o);
       if (path === '/games' && req.method === 'GET') return myGames(req, env, o);
       if (path === '/ladder' && req.method === 'GET') return ladderTop(req, env, o);
+    }
+    if (path.startsWith('/match/') && req.method === 'POST') {
+      if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);
+      if (path === '/match/find') return matchFind(req, env, o);
+      if (path === '/match/leave') return matchLeave(req, env, o);
+      if (path === '/match/tick') return matchTick(req, env, o);
     }
     if (path === '/bot/chat' && req.method === 'POST') return botChat(req, env, o);
     if (path === '/online' && req.method === 'POST') {

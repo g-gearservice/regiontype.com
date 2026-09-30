@@ -39,8 +39,11 @@ addEventListener('rt-bot-opt', ({ detail }) => {
   Object.assign(opt, Object.fromEntries(ok));
   saveOpt();
 });
-const saveOpt = () => {
+/* kind 가 있으면(야간·언어) 즉석에서 칠하지 않고 부드러운 새로고침(app.js softReload)으로 넘긴다.
+   판이 살아 있거나 못 하면 false 가 와서 예전처럼 칠한다 */
+const saveOpt = kind => {
   localStorage.setItem('rt.opt', JSON.stringify(opt));
+  if (kind && softReload(kind)) return true;
   document.documentElement.toggleAttribute('data-night', opt.night);
   document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
   document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
@@ -48,6 +51,7 @@ const saveOpt = () => {
   document.querySelectorAll('#options .toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
   paintUnit();
   dispatchEvent(new CustomEvent('rt-opt'));
+  return false;
 };
 
 /* ── 화면 말 ─────────────────────────────────────────── */
@@ -431,7 +435,7 @@ let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
     backgroundState = [...document.body.children]
-      .filter(el => el !== over() && el.id !== 'codes' && el.tagName !== 'SCRIPT')
+      .filter(el => el !== over() && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
       .map(el => [el, el.hasAttribute('inert')]);
     backgroundState.forEach(([el]) => { el.inert = true; });
     return;
@@ -463,8 +467,13 @@ function finishClose() {
   if (opener) { opener.focus(); opener = null; }
   if (isSetHash()) history.replaceState(null, '', location.pathname + location.search);
 }
+/* 'auto' 는 홈(app.js 의 resolveLang — 중계기 위치까지 본다)이 <html lang> 에 적어 둔 말을
+   따른다. 여기서 브라우저 언어로 따로 고르면 설정 덮개만 다른 말로 보였다가 나가면 바뀐다 */
+const pickLang = () => UI_LANGS.includes(opt.lang) ? opt.lang
+  : UI_LANGS.includes(document.documentElement.lang) ? document.documentElement.lang : 'ko';
 function open(tab) {
   const name = String(tab || location.hash.slice(1) || 'settings').toLowerCase();
+  LANG = pickLang(); applyI18n(over());   // 홈이 말을 늦게 정해도 열 때마다 맞춘다
   dispatchEvent(new CustomEvent('rt-open-settings', { detail: name }));
   const leaving = document.body.classList.contains('opts-leaving') || over().classList.contains('opts-exit');
   if (over().hidden) {
@@ -481,7 +490,7 @@ function open(tab) {
     document.body.classList.add('setting');
   }
   pickTab(name === 'settings' ? '' : name, name === 'settings');
-  if (!isSetHash()) history.pushState({ set: 1 }, '', '#' + (name === 'settings' ? 'settings' : name));
+  if (!isSetHash()) histPush({ set: 1 }, '#' + (name === 'settings' ? 'settings' : name));
   requestAnimationFrame(syncOptShell);
 }
 function close(immediate) {
@@ -505,7 +514,7 @@ function wire() {
   $('#securityCheck').onclick = account;
   document.addEventListener('click', e => {
     const tog = e.target.closest('#options .toggle');
-    if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(); }
+    if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(tog.dataset.opt === 'night' ? 'night' : undefined); }
     const unit = e.target.closest('#optUnit button');
     if (unit) { opt.unit = unit.dataset.v; saveOpt(); }
     const dong = e.target.closest('#optDong button');
@@ -515,7 +524,8 @@ function wire() {
   $('#optLang').addEventListener('change', e => {
     const r = e.target.closest('input[name="rtLang"]');
     if (!r) return;
-    opt.lang = r.value; saveOpt();
+    opt.lang = r.value;
+    if (saveOpt('lang')) return;
     LANG = UI_LANGS.includes(opt.lang) ? opt.lang : LANG;
     document.documentElement.lang = LANG;
     applyI18n(over());
@@ -593,17 +603,18 @@ function wire() {
   if (closeBtn) closeBtn.onclick = close;
   addEventListener('rt-open-signin', () => close(true));
   addEventListener('rt-open-settings', () => {});
+  addEventListener('rt-tab-swap', () => close(true));
   addEventListener('keydown', e => {
     if (over().hidden) return;
     if (($('#codes') && $('#codes').open) || ($('#feedback') && $('#feedback').open)) return;
     if (e.key === 'Escape') return close();
     if (e.key !== 'Tab') return;
-    const items = focusable();
+    const items = focusable().filter(n => n.getClientRects().length).concat(dockTabs());
     if (!items.length) return;
     const first = items[0], last = items[items.length - 1];
-    if (e.shiftKey && (document.activeElement === first || !over().contains(document.activeElement))) {
+    if (e.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {
       e.preventDefault(); last.focus();
-    } else if (!e.shiftKey && (document.activeElement === last || !over().contains(document.activeElement))) {
+    } else if (!e.shiftKey && (document.activeElement === last || !items.includes(document.activeElement))) {
       e.preventDefault(); first.focus();
     }
   });
@@ -611,26 +622,44 @@ function wire() {
   addEventListener('hashchange', () => { if (isSetHash()) open(location.hash.slice(1)); });
 }
 
+/* 이어 붙이기(app.js softReload)로 온 새 문서 — 덮개 안 스크롤과 초점을 적어 둔 자리로 되돌린다 */
+function softApply() {
+  const s = window.RT_SOFT;
+  if (!s || over().hidden) return;
+  const all = [...over().querySelectorAll('*')];
+  (s.scroll || []).forEach(({ i, t, l }) => { if (all[i]) { all[i].scrollTop = t; all[i].scrollLeft = l; } });
+  const f = s.focus && s.focus.sel && document.querySelector(s.focus.sel);
+  if (f) f.focus({ preventScroll: true, focusVisible: s.focus.kb });
+}
+
 (async () => {
   capZoom();
   saveOpt();
-  try { I18N = await grab('data/i18n.json'); } catch {}
-  /* 배포는 아직 한국어만이다(app.js 의 UI_LANGS 와 같은 갈림) */
-  UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
-  /* 'auto' 의 정책(중계기 위치·타임존까지 보는 resolveLang)은 홈에 있다. 여기서는
-     그 무거운 길을 다시 깔지 않고 브라우저가 말하는 언어만 본다 — 배포는 어차피
-     한국어 하나다 */
-  LANG = UI_LANGS.includes(opt.lang) ? opt.lang
-    : (navigator.languages || []).map(x => x.split('-')[0]).find(x => UI_LANGS.includes(x)) || 'ko';
+  /* 부트 스크립트가 읽어 둔 마지막 말(app.js 의 cacheUI)이 있으면 기다리지 않고 바로 연다 —
+     이어 붙이기(softReload)의 덮개가 첫 그림에 서야 한다. 전체 팩·지역은 열고 나서 받는다 */
+  const ui = window.RT_UI;
+  if (ui) { I18N = { [ui.lang]: ui.pack }; UI_LANGS = ui.langs; }
+  else {
+    try { I18N = await grab('data/i18n.json'); } catch {}
+    /* 배포는 아직 한국어만이다(app.js 의 UI_LANGS 와 같은 갈림) */
+    UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
+  }
+  /* 'auto' 는 홈이 정한 말을 빌린다(pickLang). 홈이 늦게 정하면 덮개를 열 때 다시 맞춘다 */
+  LANG = pickLang();
   applyI18n(over());
   paintUnit();
   $('#verBuild').textContent = VER;
   $('#verPatch').textContent = VER.replace('.', '');   // 릴리스 C 자리는 VER 에서 점을 뺀 숫자
   /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */
-  if (isDev()) { try { WORLD = await grab('data/world.json'); } catch {} }
+  if (isDev() && !ui) { try { WORLD = await grab('data/world.json'); } catch {} }
   wire();
   wireOptsTabs();
   if (isSetHash()) open(location.hash.slice(1));
+  if (ui) {
+    softApply();
+    grab('data/i18n.json').then(all => { I18N = all; }).catch(() => {});
+    if (isDev()) grab('data/world.json').then(w => { WORLD = w; }).catch(() => {});
+  }
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });
 
   /* ?v= 표류. 페이지가 셋이라 손으로 적는 자리가 여섯이다 — 개발에서만 짖는다.

@@ -224,6 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* 머리의 로그인 자리. 닉네임이 있으면 이름을, 없으면 정하러 가는 길을 건다 */
   if (!token()) return;
+  Object.assign($('#signinLink'), { href: '/#account', textContent: '내 계정' });   // 폰 아래 막대의 계정 동그라미
   try {
     const d = await call('/auth/me');
     const p = d.profile || {};

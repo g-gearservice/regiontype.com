@@ -8,7 +8,7 @@ import worker from './worker.mjs';
 export const OWN = {
   feedback: ['/', '/turnstile', '/where'],   // 기존 rt-feedback — 남는 경로의 최후 원점
   auth: ['/auth/'],
-  board: ['/top', '/dist', '/score', '/forget', '/ranked/', '/played', '/games', '/ladder'],
+  board: ['/top', '/dist', '/score', '/forget', '/ranked/', '/played', '/games', '/ladder', '/match/'],
   community: ['/cm/'],
   bot: ['/bot/'],
   online: ['/online'],

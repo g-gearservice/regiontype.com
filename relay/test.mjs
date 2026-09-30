@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
-         lpDelta, WANT, rankedCheck, profile, intro, ERASE, RANKED_SECS, devOf,
+         lpDelta, WANT, rankedCheck, duelDelta, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
          cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
+import { SIZE } from './size.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
@@ -976,4 +977,159 @@ console.log('security rule self-check done');
     { method: 'OPTIONS', headers: { origin: 'https://regiontype.com' } }), {});
   assert.equal(pre.status, 204, '자기 경로의 프리플라이트는 worker 로 넘긴다');
   console.log('entry split check done');
+}
+
+/* ── 경쟁전 1대1 ───────────────────────────────────────────
+   순수 함수 몇 개와, 진짜 sqlite 에 워커를 그대로 태운 한 판(사람끼리 · 봇 · 탈주 · 남의 판) */
+{
+  assert.equal(duelDelta(100, 9, 100, 1), 20, '같은 lp 를 이기면 +20');
+  assert.equal(duelDelta(100, 9, 100, 0), -20);
+  assert.equal(duelDelta(100, 9, 100, .5), 0, '비기면 그대로');
+  assert.equal(duelDelta(100, 0, 100, 1), 40, '배치 판은 K 80');
+  assert.equal(duelDelta(1000, 9, 0, 1), 3, '이겨도 최소 +3');
+  assert.equal(duelDelta(0, 0, 3000, 1), 50, '±50 캡');
+  assert.equal(duelDelta(1000, 9, 0, 0), -40, '이길 판을 지면 크게 깎인다');
+  assert.equal(duelDelta(10, 9, 10, 0), -10, 'lp 는 0 아래로 안 간다');
+  assert.ok(duelDelta(0, 9, 0, 0) === 0, '0 에서는 더 안 깎인다');
+  assert.equal(duelWinner({ cpm: 200, acc: 90 }, { cpm: 190, acc: 100 }), 1, 'cpm 이 먼저');
+  assert.equal(duelWinner({ cpm: 200, acc: 90 }, { cpm: 200, acc: 95 }), 0, '같으면 acc');
+  assert.equal(duelWinner({ cpm: 200, acc: 90 }, { cpm: 200, acc: 90 }), .5);
+  assert.equal(duelWinner({ cpm: -1, acc: 0 }, { cpm: 10, acc: 1 }), 0, '앞뒤 안 맞는 판은 진다');
+  assert.equal(duelWinner({ cpm: 10, acc: 1 }, { cpm: -2, acc: 0 }), 1);
+  assert.equal(botHits('seoul-gu', 240, 0), 0);
+  assert.equal(botHits('seoul-gu', 240, 60e3), Math.min(SIZE['seoul-gu'], 30), '분당 240 타 ÷ 8 타 = 분당 30 곳');
+  assert.equal(botHits('seoul-gu', 1e6, 1e9), SIZE['seoul-gu'], '코스 크기를 못 넘는다');
+
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(':memory:');
+  db.exec(sql);
+  const stmt = (q, a = []) => ({
+    q, bind: (...b) => stmt(q, b),
+    first: async col => { const r = db.prepare(q).get(...a); return r ? (col ? r[col] : { ...r }) : null; },
+    all: async () => ({ results: db.prepare(q).all(...a).map(r => ({ ...r })) }),
+    run: async () => ({ meta: { changes: Number(db.prepare(q).run(...a).changes) } }),
+  });
+  const DB = { prepare: q => stmt(q), batch: async ss => Promise.all(ss.map(s =>
+    /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
+  const open = { limit: async () => ({ success: true }) };
+  const env = { DB, SESSION_KEY: 'k'.repeat(32), RL_SC: open, RL_RK: open, RL_AU: open, RL_MT: open };
+  const [A, B, C] = ['a', 'b', 'c'].map(x => x.repeat(32));
+  const tok = {};
+  for (const w of [A, B, C]) tok[w] = await sign(env.SESSION_KEY, w);
+  const call = async (path, body, who, e = env) => {
+    const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com' + path, {
+      method: 'POST', body: JSON.stringify(body ?? {}),
+      headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
+                 ...(who ? { authorization: 'Bearer ' + tok[who] } : {}) } }), e);
+    return { status: r.status, ...(await r.json()) };
+  };
+  const find = (who, extra = {}) => call('/match/find', { c: 'seoul-gu', name: who === A ? '가양' : who === B ? '등촌' : '화곡', ...extra }, who);
+  const lp = who => db.prepare("select lp, games, wins from ladder where who = ? and dev = 'pc'").get(who);
+  const fin = (id, cpm) => ({ id, score: 1000, hits: 10, tries: 12, cpm, acc: 100 });
+  const age = () => db.prepare('update duel set at = at - 130000').run() && db.prepare('update ticket set at = at - 130000').run();
+
+  assert.equal((await call('/match/find', { c: 'seoul-gu', name: 'x' })).status, 401, '로그인 없이는 못 선다');
+  assert.equal((await find(A, { c: 'nope' })).status, 400, '모르는 코스');
+  assert.equal((await call('/match/find', { c: 'seoul-gu', name: '가양' }, A, { ...env, RL_MT: undefined })).status, 503, '창이 없으면 닫는다');
+  assert.equal((await call('/match/tick', { duel: 'x', hits: 1 }, A, { ...env, RL_MT: { limit: async () => ({ success: false }) } })).status, 429);
+
+  /* 사람끼리 */
+  const w1 = await find(A);
+  assert.deepEqual([w1.status, w1.wait, w1.n], [200, true, 1], '혼자면 줄에 선다');
+  assert.equal((await find(A)).n, 1, '다시 불러도 한 줄');
+  const pB = await find(B);
+  assert.equal(pB.status, 200);
+  assert.equal(pB.opp.name, '가양'); assert.equal(pB.opp.bot, false); assert.equal(pB.slug, 'seoul-gu');
+  assert.ok(pB.at - pB.now > 2000 && pB.at - pB.now <= 3000, 'at 은 서버 시각 기준 3초 뒤');
+  assert.ok(!JSON.stringify(pB).includes(A), '상대의 who 는 안 나간다');
+  const pA = await find(A);
+  assert.equal(pA.duel, pB.duel, '줄에 있던 쪽은 다음 폴링에서 같은 판을 받는다');
+  assert.equal(pA.opp.name, '등촌');
+  assert.equal(db.prepare('select count(*) as n from queue').get().n, 0);
+  assert.equal(pA.at, pB.at);
+
+  /* 남의 판은 못 본다 */
+  assert.equal((await call('/match/tick', { duel: pA.duel, hits: 1 }, C)).status, 404);
+  assert.equal((await call('/match/tick', { duel: pA.duel, hits: -1 }, A)).status, 400);
+  assert.equal((await call('/match/tick', { duel: pA.duel, hits: 1.5 }, A)).status, 400);
+  const t1 = await call('/match/tick', { duel: pA.duel, hits: 4 }, A);
+  await call('/match/tick', { duel: pA.duel, hits: 2 }, A);
+  assert.equal(db.prepare('select a_hits from duel').get().a_hits, 4, '진행은 줄어들지 않는다');
+  await call('/match/tick', { duel: pA.duel, hits: 9999 }, A);
+  assert.equal(db.prepare('select a_hits from duel').get().a_hits, SIZE['seoul-gu'], '코스 크기로 자른다');
+  const tB = await call('/match/tick', { duel: pB.duel, hits: 1 }, B);
+  assert.deepEqual(tB.opp, { hits: db.prepare('select a_hits from duel').get().a_hits, done: false });
+  assert.equal(t1.result, undefined);
+
+  age();
+  db.prepare('update ladder set lp = 100, games = 9').run();
+  const eA = await call('/ranked/end', fin(pA.id, 300), A);
+  assert.deepEqual([eA.status, eA.pending], [200, true], '상대가 아직이면 기다린다');
+  assert.equal(lp(A).games, 9, '정산 전에는 lp 가 안 바뀐다');
+  const eB = await call('/ranked/end', fin(pB.id, 200), B);
+  assert.equal(eB.status, 200); assert.equal(eB.duel.win, 0); assert.equal(eB.duel.oppCpm, 300);
+  assert.equal(eB.delta, -20); assert.equal(lp(B).games, 10);
+  const tA = await call('/match/tick', { duel: pA.duel, hits: 10 }, A);
+  assert.equal(tA.result.win, 1);
+  assert.deepEqual([tA.result.delta, tA.result.lp, tA.result.oppCpm, tA.result.myCpm], [20, 120, 200, 300]);
+  assert.deepEqual([lp(A).games, lp(A).wins], [10, 1]);
+  assert.equal(db.prepare("select count(*) as n from played where mode = 'ranked'").get().n, 2);
+  assert.equal((await call('/ranked/end', fin(pA.id, 300), A)).status, 409, '같은 표로 두 번 끝낼 수 없다');
+  assert.equal(db.prepare('select done from duel').get().done, 1);
+  assert.deepEqual([lp(A).games, lp(B).games], [10, 10], '정산은 한 번만');
+
+  /* 봇 */
+  db.exec('delete from duel; delete from ticket; delete from played');
+  const pb = await find(A, { bot: true });
+  assert.equal(pb.opp.bot, true);
+  const bd = db.prepare('select * from duel').get();
+  assert.equal(bd.b, 'bot'); assert.ok(bd.bot_cpm >= Math.round(WANT[1] * .85) && bd.bot_cpm <= Math.round(WANT[1] * 1.15));
+  assert.equal((await call('/match/tick', { duel: pb.duel, hits: 1 }, A)).opp.done, false);
+  age();
+  const gl = lp(A).lp;
+  const eb = await call('/ranked/end', fin(pb.id, 200), A);
+  assert.equal(eb.status, 200); assert.ok(eb.duel && typeof eb.duel.win === 'number', '봇 판은 끝내는 즉시 정산');
+  assert.equal(db.prepare("select count(*) as n from played where who = 'bot'").get().n, 0, '봇 쪽은 아무것도 안 적는다');
+  assert.equal(lp(A).lp, gl + eb.delta);
+
+  /* 탈주: 사람이 안 나타나면 30초 뒤 그쪽만 깎이고 표도 탄다 */
+  db.exec('delete from duel; delete from ticket; delete from played; delete from queue; update ladder set lp = 100, games = 9');
+  await find(A); const qB = await find(B); await find(A);
+  age();
+  await call('/ranked/end', fin(qB.id, 200), B);
+  assert.equal(db.prepare('select done from duel').get().done, 0, '기다리는 중');
+  db.prepare('update duel set at = at - 40000').run();
+  const q = await call('/match/tick', { duel: qB.duel, hits: 10 }, B);
+  assert.equal(q.result.win, 1); assert.ok(q.result.delta >= 3);
+  assert.equal(lp(A).lp, 75, '안 나타난 쪽은 -25');
+  assert.equal(db.prepare('select count(*) as n from ticket where who = ?').get(A).n, 0, '그쪽 표도 탄다');
+  const st = await call('/ranked/start', { c: 'seoul-gu', name: '가양' }, A);
+  assert.equal(st.quit, 0, '다음 시작에서 또 깎이지 않는다');
+
+  /* 진행 중 판을 두고 새로 시작하면 탈주 — 상대는 이기고, 나는 정산에서 또 깎이지 않는다 */
+  db.exec('delete from duel; delete from ticket; delete from played; update ladder set lp = 100, games = 9');
+  await find(A); const dB = await find(B); await find(A);
+  await call('/ranked/start', { c: 'seoul-gu', name: '가양' }, A);
+  assert.equal(lp(A).lp, 75);
+  age();
+  const eb2 = await call('/ranked/end', fin(dB.id, 200), B);
+  assert.equal(eb2.duel.win, 1);
+  assert.equal(lp(A).lp, 75, '이미 깎은 탈주는 두 번 깎지 않는다');
+
+  /* 줄에서 나가기 · 기기가 다르면 짝이 아니다 */
+  db.exec('delete from duel; delete from ticket; delete from queue');
+  await find(A);
+  assert.equal((await find(B, { dev: 'mobile' })).wait, true, '다른 기기 줄과는 짝이 안 된다');
+  assert.equal((await call('/match/leave', {}, A)).status, 200);
+  assert.equal(db.prepare("select count(*) as n from queue where who = ?").get(A).n, 0);
+  assert.equal((await find(C, { dev: 'mobile' })).wait, undefined, '같은 기기라 B 와 짝');
+  db.exec('delete from duel; delete from ticket; delete from queue');
+  await find(B); db.prepare('update queue set at = at - 25000').run();
+  assert.equal((await find(C)).wait, true, '20초 넘은 줄은 걷혀 짝이 못 된다');
+  assert.equal(db.prepare('select count(*) as n from queue').get().n, 1, '걷힌 줄은 없다');
+
+  /* 내리기·지우기에 딸려 간다 */
+  assert.equal((await call('/forget', {}, C)).status, 200);
+  assert.equal(db.prepare('select count(*) as n from queue where who = ?').get(C).n, 0);
+  console.log('duel self-check done');
 }

@@ -64,7 +64,7 @@ function siDurMs() {
 function lockBack(on, el) {
   if (on) {
     inertWas = [...document.body.children]
-      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['signin', 'options', 'codes', 'feedback'].includes(n.id))
+      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['signin', 'options', 'codes', 'feedback', 'tabDock'].includes(n.id))
       .map(n => [n, n.inert]);
     inertWas.forEach(([n]) => { n.inert = true; });
   } else {
@@ -74,6 +74,8 @@ function lockBack(on, el) {
 }
 function openPage(name) {
   if (page === name) return;
+  /* 기록은 로그인한 사람만 — 로그인 전엔 로그인 덮개를 연다 */
+  if (name === 'records' && !token()) { closePage(true); $('#signinLink').click(); return; }
   if (page) closePage(true);
   const el = over(name);
   leaveGen++;
@@ -84,8 +86,9 @@ function openPage(name) {
   el.hidden = false;
   document.body.classList.add('paging');
   page = name;
-  if (location.hash !== '#' + name) history.pushState({ pg: 1 }, '', '#' + name);
-  el.querySelector('[data-pg-close]').focus({ preventScroll: true });
+  if (location.hash !== '#' + name) histPush({ pg: 1 }, '#' + name);
+  /* 폰은 뒤로 단추를 접고 탭으로 오간다 — 초점은 제목으로 */
+  (fingers() ? el.querySelector('h1, h2') : el.querySelector('[data-pg-close]')).focus({ preventScroll: true });
   if (name === 'ranking') fillRanking();
   else if (name === 'records') fillRecords();
   else openAccount();
@@ -277,6 +280,8 @@ function sizeBot() {
 sizeBot();
 const layer = $('#rkLayer'), bubble = $('#rkSay'), dim = $('#rkDim'), next = $('#rkNext'), skip = $('#rkSkip');
 const logo = () => $('#regions .navbar .nav-logo');
+/* 폰의 봇 집 — 아래 막대의 지금 탭. 막대(z 7)가 봇 층(z 5) 위라 그 뒤에서 걸어 나온다 */
+const den = () => fingers() ? ($('#tabBar [aria-current]') || $('#tabHome')) : logo();
 const regionsOn = () => $('#regions').classList.contains('on');
 const botName = () => { try { return localStorage.getItem('rt.botname') || 'Grok'; } catch { return 'Grok'; } };
 let bot = null, making = null, out = false, intro = false, touring = false, corner = 0, hush = 0, nap = 0, chatting = false;
@@ -319,10 +324,7 @@ function makeBot() {
     const motion = document.createElement('span');
     motion.className = 'rk-bot-motion';
     el.append(motion);
-    /* 폰은 떠다니지 않고 아래 시트의 아바타 자리(Apple 지도의 프로필 자리)에 산다 —
-       시트와 함께 움직이고 단추를 가리지 않는다. 누르면 하는 일은 같다 */
-    const slot = fingers() && $('#sheetBot');
-    if (slot) slot.append(el); else bubble.before(el);
+    bubble.before(el);
     const face = readFace();
     const api = mountBuddy(motion, { calm, shape: face.shape, expression: face.expression });
     if (face.colour) api.setColour(face.colour);
@@ -334,7 +336,7 @@ function makeBot() {
     el.addEventListener('click', () => {
       if (dragged) { dragged = false; return; }
       if (intro) pull();
-      else if (!touring) chat();
+      else if (!touring) chatting ? endChat() : chat();
     });
     el.addEventListener('pointerdown', e => grab(e));
     el.addEventListener('keydown', e => nudge(e));
@@ -409,7 +411,7 @@ function place(x, y) {
   /* 안내 중인 폰은 봇이 시트에 묶여 못 날아간다 — 말풍선이 대신 가리키는 것(aim) 곁에
      선다. 위쪽 반에 있으면 그 밑에, 아니면 그 위에. 시트 안의 것은 시트 위로 비켜
      가리지 않는다 */
-  const a = dock && aim && aim.getBoundingClientRect(), inSheet = a && aim.closest('#regions .nav-bot');
+  const a = dock && aim && aim.getBoundingClientRect(), inSheet = a && aim.closest('#regions .nav-bot, #tabDock');
   const low = a && !inSheet && a.top + a.height / 2 < innerHeight / 2;
   const cx = a ? a.left + a.width / 2 : x + size / 2, cy = y + size / 2, side = dock ? (low ? 'down' : 'up') : sideOf(cx, cy);
   const turned = bubble.dataset.side !== side;
@@ -438,6 +440,8 @@ function speak(text, form) {
   $('#rkSayText').textContent = text;
   $('#rkName').hidden = !form;
   $('#rkChat').hidden = !chatting;
+  clearTimeout(closing);
+  bubble.classList.remove('is-closing');
   bubble.hidden = false;
   if (bot) place(bot.x, bot.y);
   unfold();
@@ -453,7 +457,17 @@ function unfold() {
     bubble.classList.add('is-open');
   });
 }
-function hide() { bubble.hidden = true; chatting = false; }
+/* 접을 때는 흐려지며 사라진다 — 다 흐려진 뒤에 hidden 을 건다. 그 사이에 speak 가 다시
+   열면 취소한다. 움직임을 줄였으면 바로 숨긴다 */
+let closing = 0;
+function hide() {
+  chatting = false;
+  clearTimeout(closing);
+  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing'); bubble.hidden = true; return; }
+  bubble.classList.remove('is-open');
+  bubble.classList.add('is-closing');
+  closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing'); }, 240);
+}
 
 /* 귀퉁이는 넵바 아래 두 곳과 화면 아래 두 곳이다. 경쟁전을 켜면 왼쪽 아래는 지금 접속
    부채(#rkLive)가 차지하므로 오른쪽 아래로 비킨다 */
@@ -462,11 +476,13 @@ function cornerAt(i) {
   const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
   const x = i % 2 ? innerWidth - BOT - 20 : 20;
   /* 폰은 아래 막대가 폭을 거의 다 먹는다 — 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
-  const dock = $('#regions .nav-bot').getBoundingClientRect();
+  const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot').getBoundingClientRect();
   const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
   return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
 }
 function sleep() {
+  /* 폰은 귀퉁이에서 자지 않고 로고 뒤로 스스로 들어간다 */
+  if (fingers()) { tuck(); return; }
   hide();
   bot.el.classList.add('is-asleep');
   /* 엔진의 sleep 은 눈 없는 작은 점이다. 홈 봇은 몸을 그대로 두고 눈만 감는다 —
@@ -488,7 +504,7 @@ function doze() {
     if (!touring && bubble.hidden && !bot.el.matches(':hover, :focus-within, :focus-visible')) sleep();
   }, 1500);
 }
-/* 떠 있지 않으면 아무 귀퉁이에서 깨어난다 */
+/* 떠 있지 않으면 아무 귀퉁이에서 깨어난다. 폰은 로고 뒤에서 걸어 나온다 */
 async function summon() {
   await makeBot();
   if (out) return;
@@ -496,8 +512,38 @@ async function summon() {
   layer.hidden = false;
   bot.api.start();
   spot = null;
+  if (fingers()) { wake(); await emerge(); return; }
   corner = Math.floor(Math.random() * 4);
   jump(...cornerAt(corner));
+}
+/* 로고 뒤에서 걸어 나온다. 나오는 동안만 넵바를 봇 층 위로 올려(rk-emerge) 알약 뒤에서
+   빠져나오는 것처럼 보인다 */
+async function emerge() {
+  document.body.classList.add('rk-emerge');
+  const r = den().getBoundingClientRect();
+  const x = Math.max(16, Math.min(innerWidth - BOT - 16, r.left + r.width / 2 - BOT / 2));
+  jump(x, r.top + r.height / 2 - BOT / 2);
+  /* jump 이 스타일을 한 번 확정해 두어 여기서 바로 옮겨도 미끄러져 나온다. 막대(미니 막대 포함) 위로 선다 */
+  place(x, $('#tabDock').getBoundingClientRect().top - BOT - 8);
+  await new Promise(res => setTimeout(res, Math.max(60, siDurMs())));
+  if (out) document.body.classList.remove('rk-emerge');
+}
+/* 폰 — 할 일이 끝나면 로고 뒤로 도로 들어가 숨는다. 들어가는 사이 다시 불리면(summon)
+   out 이 켜져 숨기지 않는다 */
+function tuck() {
+  hide();
+  out = false;
+  spot = null;
+  if (bot.el.contains(document.activeElement)) den().focus({ preventScroll: true });
+  document.body.classList.add('rk-emerge');
+  const r = den().getBoundingClientRect();
+  place(r.left + r.width / 2 - BOT / 2, r.top + r.height / 2 - BOT / 2);
+  setTimeout(() => {
+    if (out) return;
+    document.body.classList.remove('rk-emerge');
+    layer.hidden = true;
+    bot.api.stop();
+  }, calm() ? 0 : siDurMs());
 }
 /* 둘러보기 밖에서 하는 말. 이름 칸을 연 말이 아니면 조금 뒤 접고 다시 잔다 */
 async function say(key, vars, form) {
@@ -523,6 +569,8 @@ async function chat() {
 }
 function endChat() {
   if (!chatting) return;
+  /* 폰은 대화를 닫으면 곧바로 로고 뒤로 들어간다 */
+  if (fingers()) { tuck(); return; }
   hide();
   bot.el.focus({ preventScroll: true });
   doze();
@@ -554,7 +602,7 @@ function act(a) {
     if (a.page === 'home') { closePage(); return; }
     if (a.page === 'signin') { $('#signinLink').click(); return; }
     /* 설정은 제 손(settings.js)이 링크 click 을 받아 덮개로 연다 */
-    const link = PAGE_LINK[a.page] && document.querySelector(`#regions a[href="${PAGE_LINK[a.page]}"]`);
+    const link = PAGE_LINK[a.page] && document.querySelector(`#regions a[href="${PAGE_LINK[a.page]}"], #tabDock a[href="${PAGE_LINK[a.page]}"]`);
     if (link) link.click();
   }
 }
@@ -667,8 +715,8 @@ const STEPS = [
   ['tourTiles', () => near(midTile()), midTile],
   ['tourPlay', () => near($('#navPlay')), () => $('#navPlay')],
   ['tourRanked', () => near($('#navPlay')), () => $('#navPlay')],
-  ['tourBoard', () => near($('#regions .navbar a[href="#ranking"]')), () => $('#regions a[href="#ranking"]')],
-  ['tourSettings', () => near($('#regions .nav-bot a[href="settings/"]')), () => $('#regions a[href="settings/"]')],
+  ['tourBoard', () => near($('#tabDock a[href="#ranking"], #regions a[href="#ranking"]')), () => $('#tabDock a[href="#ranking"], #regions a[href="#ranking"]')],
+  ['tourSettings', () => near($('#tabDock a[href="settings/"], #regions a[href="settings/"]')), () => $('#tabDock a[href="settings/"], #regions a[href="settings/"]')],
   ['tourBye', () => [innerWidth / 2 - BOT / 2, innerHeight * .36], () => $('#sheetBot')],
 ];
 /* 폰 — 셋째 칸이 가리킬 것이다. 순위·설정은 접힌 시트 안에 있으니 시트를 펼쳐 보여 준다 */
@@ -760,14 +808,7 @@ async function greetIn() {
   bot.api.start();
   bot.api.setState('idle');
   hide();
-  /* 나오는 동안만 넵바를 봇 층 위로 올려, 알약 뒤에서 빠져나오는 것처럼 보인다 */
-  document.body.classList.add('rk-emerge');
-  const r = logo().getBoundingClientRect();
-  jump(r.left + r.width / 2 - BOT / 2, r.top + r.height / 2 - BOT / 2);
-  requestAnimationFrame(() => place(r.left + r.width / 2 - BOT / 2,
-    $('#regions .navbar').getBoundingClientRect().bottom - BOT * .15));
-  await new Promise(res => setTimeout(res, Math.max(60, siDurMs())));
-  document.body.classList.remove('rk-emerge');
+  await emerge();
   const name = token() ? readName() : '';
   tell(name ? 'botWelcomeName' : 'botWelcome', { name });
   clearTimeout(hush);
@@ -791,7 +832,7 @@ addEventListener('rt-sheet', () => {
 });
 addEventListener('resize', () => {
   if (!out || !bot || touring || intro) return;
-  if (spot) moveTo(...spot); else place(...cornerAt(corner));
+  if (spot) moveTo(...spot); else if (!fingers()) place(...cornerAt(corner));
 });
 
 /* 로고 — 조르는 동안에만 봇을 꺼내는 손잡이다. 잡아서 아래로 16px 넘게 끌면 나온다 */
@@ -822,6 +863,8 @@ function wireLogo() {
   el.addEventListener('click', e => {
     if (swallowLogo) { e.preventDefault(); swallowLogo = false; }
     else if (intro) { e.preventDefault(); pull(); }
+    /* 폰은 봇이 로고 뒤에 산다 — 로고를 누르면 나와서 말을 걸고, 다시 누르면 들어간다 */
+    else if (fingers() && !touring) { e.preventDefault(); chatting ? endChat() : chat(); }
   });
   addEventListener('pointerup', () => setTimeout(() => { swallowLogo = false; }, 0));
   el.addEventListener('keydown', e => {
@@ -829,6 +872,23 @@ function wireLogo() {
     e.preventDefault();
     pull();
   });
+  /* 폰 — 지금 탭 단추를 잡고 위로 24px 넘게 끌면 봇이 그 뒤에서 나와 말을 건다. 끌고 난 뒤의
+     click 은 탭을 누른 게 아니라 삼킨다 */
+  let drag = null, swallowTab = false;
+  $('#tabBar').addEventListener('pointerdown', e => {
+    drag = fingers() && !intro && !touring && e.target.closest('[aria-current]') ? e.clientY : null;
+  });
+  addEventListener('pointermove', e => {
+    if (drag === null || drag - e.clientY < 24) return;
+    drag = null;
+    swallowTab = true;
+    if (!chatting) chat();
+  });
+  addEventListener('pointerup', () => { drag = null; setTimeout(() => { swallowTab = false; }, 0); });
+  addEventListener('pointercancel', () => { drag = null; });
+  addEventListener('click', e => {
+    if (swallowTab && e.target.closest('#tabBar')) { e.preventDefault(); e.stopPropagation(); swallowTab = false; }
+  }, true);
   next.addEventListener('click', () => advance());
   skip.addEventListener('click', quitTour);
 }
@@ -875,6 +935,127 @@ function wirePlayHold() {
 }
 
 let quitNote = '';
+/* 1대1 매칭. 같은 기기(dev)의 다른 사람이 줄에 있으면 곧장 짝이고, 20초 안 나오면 봇과 붙는다.
+   중계기는 WebSocket 이 없어 2초마다 /match/find 를 다시 부르는 것이 곧 기다리는 방법이다 —
+   먼저 온 사람은 다음 폴링에서 짝을 받는다 */
+const FIND_MS = 2000, BOT_AFTER = 20, OPP_MS = 1500, WAIT_MAX = 180000;
+let mm = null, pollGen = 0;
+const lastLeave = () => {
+  const head = { 'content-type': 'application/json' };
+  if (token()) head.authorization = 'Bearer ' + token();
+  fetch(RELAY + '/match/leave', { method: 'POST', headers: head, body: '{}', keepalive: true }).catch(() => {});
+};
+const mmText = (id, s) => { $(id).textContent = s; };
+function matchClose(leave) {
+  if (!mm) return;
+  clearInterval(mm.timer);
+  if (leave) lastLeave();
+  const back = mm.opener;
+  mm = null;
+  $('#rkMatch').hidden = true;
+  if (back && back.isConnected) back.focus();
+}
+function matchStep() {
+  if (!mm || mm.paired) return;
+  const s = Math.floor((Date.now() - mm.t0) / 1000);
+  if (s >= BOT_AFTER) mm.bot = true;
+  mmText('#rkMatchStat', mm.bot ? t('rkFindingBot', { s }) : t('rkFinding', { s, n: mm.n }));
+  $('#rkMatchBot').hidden = mm.bot;
+  if (!mm.busy && (mm.first || s % 2 === 0 || mm.bot)) matchFind();
+  mm.first = false;
+}
+async function matchFind() {
+  const m = mm;
+  m.busy = true;
+  let d;
+  try { d = await ask('/match/find', { c: m.slug, name: m.name, dev: DEV, ...(m.bot ? { bot: true } : {}) }); }
+  catch (e) {
+    if (mm !== m) return;
+    m.busy = false;
+    if (e.status === 401) { matchClose(false); say('rkNeedLogin'); return; }
+    if (++m.fails >= 3) { matchClose(false); say('rkFail'); }
+    return;
+  }
+  if (mm !== m) return;
+  m.busy = false; m.fails = 0;
+  if (d.wait) { m.n = Number(d.n) || 1; matchStep(); return; }
+  if (!d.id || !d.duel) { matchClose(false); say('rkFail'); return; }
+  matchPaired(m, d);
+}
+/* 짝이 오면 상대를 보이고 duel.at 까지 센다. 서버 시계와 이 기기 시계 차를 now 로 맞춘다 */
+function matchPaired(m, d) {
+  m.paired = true;
+  clearInterval(m.timer);
+  quitNote = d.quit ? t('rkQuit', { n: -d.quit }) : '';
+  const o = d.opp || {};
+  if (o.bot) o.name = botName();   // 봇 판은 홈 봇이 맞상대다 — 서버는 'bot' 이라고만 적는다
+  const info = o.bot ? t('rkBotTag') : t('rkPlayerInfo', { tier: tierName(o.lp, o.games == null ? PLACE : o.games), lp: o.lp });
+  mmText('#rkMatchStat', placeOf(d.slug || m.slug));
+  mmText('#rkMatchOpp', t('rkFoundVs', { name: o.name || '', info }));
+  $('#rkMatchOpp').hidden = false;
+  $('#rkMatchBtns').hidden = true;
+  /* start() 의 3·2·1(700ms × 3) 이 duel.at 에 끝나도록 그만큼 먼저 부른다 */
+  const at = d.at - (Number(d.now) - Date.now()) - 2100;
+  const rk = { id: d.id, secs: d.secs, duel: d.duel, opp: { name: o.name || '', bot: !!o.bot } };
+  const slug = d.slug || m.slug;
+  const show = () => {
+    const n = Math.max(0, Math.ceil((at - Date.now()) / 1000));
+    $('#rkMatchCount').hidden = false;
+    mmText('#rkMatchCount', n);
+    /* 숫자를 스크린리더에 매초 읽히지 않게 aria-hidden 이고, 상태 줄은 처음 한 번만 알린다 */
+    return n;
+  };
+  mmText('#rkMatchStat', t('rkStartsIn', { n: Math.max(0, Math.ceil((at - Date.now()) / 1000)) }));
+  m.timer = setInterval(() => {
+    if (show() > 0 && Date.now() < at) return;
+    clearInterval(m.timer);
+    matchClose(false);
+    if (!touring) hide();
+    start(slug, null, rk);
+    oppWatch(rk);
+  }, 200);
+  show();
+}
+function matchOpen(slug, name) {
+  setRanked(false);
+  if (!touring) hide();
+  mm = { slug, name, t0: Date.now(), n: 1, bot: false, busy: false, first: true, fails: 0, paired: false,
+    opener: document.activeElement };
+  $('#rkMatchOpp').hidden = true;
+  $('#rkMatchCount').hidden = true;
+  $('#rkMatchBtns').hidden = false;
+  $('#rkMatchBot').hidden = false;
+  $('#rkMatch').hidden = false;
+  $('#rkMatchBot').focus();
+  matchStep();
+  mm.timer = setInterval(matchStep, 1000);
+}
+function wireMatch() {
+  $('#rkMatchBot').addEventListener('click', () => {
+    if (!mm || mm.paired) return;
+    mm.bot = true;
+    matchStep();
+    $('#rkMatchCancel').focus();
+  });
+  $('#rkMatchCancel').addEventListener('click', () => matchClose(true));
+  document.addEventListener('keydown', e => {
+    if (!mm) return;
+    if (e.key === 'Escape') {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (!mm.paired) matchClose(true);
+      return;
+    }
+    /* 탭은 창 안 단추 둘 사이만 돈다 */
+    if (e.key !== 'Tab' || mm.paired) return;
+    const items = [...$('#rkMatchBtns').querySelectorAll('button')].filter(b => !b.hidden);
+    const at = items.indexOf(document.activeElement);
+    if (!items.length) return;
+    e.preventDefault();
+    items[(at + (e.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+  }, true);
+  /* 짝이 지어지기 전에 탭을 닫으면 줄에서 내린다 */
+  addEventListener('pagehide', () => { if (mm && !mm.paired) lastLeave(); });
+}
 async function go(slug) {
   if (!token()) { say('rkNeedLogin'); $('#signinLink').click(); return; }
   const name = readName();
@@ -883,13 +1064,31 @@ async function go(slug) {
     $('#rkNameIn').focus();
     return;
   }
-  let d;
-  try { d = await ask('/ranked/start', { c: slug, name, dev: DEV }); }
-  catch (e) { say(e.status === 401 ? 'rkNeedLogin' : 'rkFail'); return; }
-  quitNote = d.quit ? t('rkQuit', { n: -d.quit }) : '';
-  setRanked(false);
-  if (!touring) hide();
-  start(slug, null, { id: d.id, secs: d.secs });
+  if (mm) return;
+  matchOpen(slug, name);
+}
+/* 판 중에는 1.5초마다 내 맞힌 곳을 알리고 상대의 것을 받아 머리줄에 건다 */
+let oppTimer = 0;
+function oppWatch(rk) {
+  clearInterval(oppTimer);
+  const put = n => {
+    const total = G && G.items ? G.items.length : 0;
+    mmText('#rkOppT', t('rkOppLine', { name: rk.opp.name, n }));
+    $('#rkOppFill').style.width = (total ? Math.min(100, n / total * 100) : 0) + '%';
+  };
+  put(0);
+  let seen = false;
+  oppTimer = setInterval(async () => {
+    /* start() 는 코스를 읽고 나서 G 를 세운다 — 그 전 틱은 건너뛴다 */
+    if (!G || G.ranked !== rk) { if (seen) clearInterval(oppTimer); return; }
+    /* 그만두고 나갔으면 멈춘다 */
+    if (seen && !$('#play').classList.contains('on')) { clearInterval(oppTimer); return; }
+    seen = true;
+    try {
+      const d = await ask('/match/tick', { duel: rk.duel, hits: G.hits });
+      if (oppTimer && d.opp && G && G.ranked === rk) put(Number(d.opp.hits) || 0);
+    } catch {}
+  }, OPP_MS);
 }
 function wireStart() {
   /* 캡처 단계에서 먼저 받는다 — app.js 의 일반 시작·Esc 보다 앞선다 */
@@ -935,15 +1134,34 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
   if (!g.ranked) { ask('/played', { ...body, c: g.slug, t: g.total, dev: DEV }).catch(() => {}); return; }
   line.textContent = t('uploading');
+  clearInterval(oppTimer); oppTimer = 0;
+  const gen = ++pollGen, opp = g.ranked.opp || {};
+  /* 결과 줄: 승패 · 상대 속도 · ±lp · 티어 */
+  const show = (win, oppCpm, d) => {
+    line.textContent = [quitNote, t(win === 1 ? 'rkWin' : win === 0 ? 'rkLose' : 'rkDraw'),
+      t('rkVsResult', { name: opp.name, cpm: showSpeed(oppCpm) }),
+      t('rkResult', { d: signed(d.delta), tier: tierName(d.lp, d.games), lp: d.lp })].filter(Boolean).join(' · ');
+    quitNote = '';
+  };
   try {
     const d = await ask('/ranked/end', { ...body, id: g.ranked.id });
-    line.textContent = [quitNote, t('rkResult', { d: signed(d.delta), tier: tierName(d.lp, d.games), lp: d.lp })]
-      .filter(Boolean).join(' · ');
+    if (gen !== pollGen) return;
+    if (!d.pending) { show(d.duel.win, d.duel.oppCpm, d); return; }
+    /* 사람 상대가 아직 치는 중이다 — 정산될 때까지 1.5초마다 묻는다 */
+    line.textContent = t('rkWaitOpp');
+    for (const t0 = Date.now(); Date.now() - t0 < WAIT_MAX; ) {
+      await new Promise(r => setTimeout(r, OPP_MS));
+      if (gen !== pollGen || !$('#result').classList.contains('on')) return;
+      let r;
+      try { r = await ask('/match/tick', { duel: g.ranked.duel, hits: g.hits }); } catch { continue; }
+      if (r.result) { show(r.result.win, r.result.oppCpm, r.result); return; }
+    }
+    throw new Error('wait');
   } catch {
+    if (gen !== pollGen) return;
     line.textContent = t('rkEndFail');
     line.classList.add('bad');
   }
-  quitNote = '';
 });
 
 /* ── 지금 접속 ─────────────────────────────────────────
@@ -986,12 +1204,12 @@ addEventListener('keydown', e => {
   if (e.key === 'Escape') { e.preventDefault(); return closePage(); }
   if (e.key !== 'Tab') return;
   const items = [...over(page).querySelectorAll('a[href], button:not([disabled]), [tabindex="0"]')]
-    .filter(n => !n.closest('[hidden]'));
+    .filter(n => !n.closest('[hidden]') && n.getClientRects().length).concat(dockTabs());
   if (!items.length) return;
   const first = items[0], last = items[items.length - 1];
-  if (e.shiftKey && (document.activeElement === first || !over(page).contains(document.activeElement))) {
+  if (e.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {
     e.preventDefault(); last.focus();
-  } else if (!e.shiftKey && (document.activeElement === last || !over(page).contains(document.activeElement))) {
+  } else if (!e.shiftKey && (document.activeElement === last || !items.includes(document.activeElement))) {
     e.preventDefault(); first.focus();
   }
 });
@@ -1001,11 +1219,13 @@ addEventListener('popstate', () => {
 });
 addEventListener('rt-open-settings', () => closePage(true));
 addEventListener('rt-open-signin', () => closePage(true));
+addEventListener('rt-tab-swap', () => closePage(true));
 
 wireTabs();
 wireLogo();
 wirePlayHold();
 wireStart();
+wireMatch();
 wireChat();
 /* 가입하고 처음 온 홈이면 조르고, 아니면 귀퉁이에서 자고 있다.
    화면 말(i18n)을 다 읽은 뒤에 연다 */

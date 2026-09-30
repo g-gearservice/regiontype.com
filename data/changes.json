@@ -1,5 +1,101 @@
 [
   {
+    "v": "0.8.348",
+    "date": "2026-10-01",
+    "ko": "폰 홈 화면에서 로고 양옆의 메뉴·전체 보기 단추를 걷었습니다. 전체 보기는 지도 탭을 한 번 더 누르면 됩니다. 봇은 아래 막대의 지금 탭을 잡고 위로 끌면 그 뒤에서 나옵니다.",
+    "en": "On phones, the menu and fit buttons beside the home logo are gone; tap the Map tab again to fit the map. Drag the current tab upward to pull the bot out from behind it."
+  },
+  {
+    "v": "0.8.347",
+    "date": "2026-10-01",
+    "ko": "폰에서 탭을 옮기거나 커뮤니티를 오갈 때 나가는 화면이 제자리에서 흐려지며 사라지고, 들어오는 화면은 흐림에서 맑아집니다. 지도를 끌어 막대가 접혔을 때 가운데 막대가 아래로 처지던 것을 바로잡았고, 지도가 Safari 아래 막대 밑까지 이어집니다.",
+    "en": "On phones, the screen you leave now blurs out in place when switching tabs or going to and from the community, and the next one blurs in. The middle bar no longer sits low when the dock folds, and the map continues under Safari's bottom bar."
+  },
+  {
+    "v": "0.8.346",
+    "date": "2026-10-01",
+    "ko": "폰 아래 탭 막대에서 지금 탭이 주황 판 위 짙은 아이콘으로 보이고, 탭을 옮기면 그 판이 새 탭까지 미끄러져 갑니다. 코스 막대 왼쪽의 지도 동그라미를 걷었습니다.",
+    "en": "On phones, the current tab in the bottom bar now sits on an orange plate with a dark icon, and the plate slides to the new tab when you switch. The map circle at the left of the course bar is gone."
+  },
+  {
+    "v": "0.8.345",
+    "date": "2026-10-01",
+    "ko": "폰에서 순위·설정·계정 탭을 열면 지도 화면의 로고·메뉴·전체 보기 단추가 덮개 제목과 겹쳐 보이던 것을 고쳤습니다. 커뮤니티 페이지 위의 로고를 걷었습니다.",
+    "en": "On phones, the map screen's logo, menu and fit button no longer overlap the title of the ranking, settings and account tabs. The logo is gone from the top of the community page."
+  },
+  {
+    "v": "0.8.345",
+    "date": "2026-10-01",
+    "ko": "폰 게임 자판에 시프트와 스페이스 바가 돌아왔고 지우기도 제자리로 갔습니다. 위로 밀어 윗글자를 치는 것은 그대로입니다. 자판 어디서든 왼쪽으로 쓸면 한 자 지워집니다. 자판을 품은 시트는 바닥에서 떠서 네 모서리가 둥글고 위아래 여백이 같습니다.",
+    "en": "The phone game keyboard has Shift and the space bar back, with Backspace in its old place. Swiping a key up still types its upper character, and swiping left anywhere deletes one character. The keyboard sheet now floats above the bottom with rounded corners and even padding."
+  },
+  {
+    "v": "0.8.344",
+    "date": "2026-10-01",
+    "ko": "폰에서 탭을 옮길 때 새 화면이 흐린 채 가는 쪽(오른쪽 탭이면 오른쪽, 왼쪽 탭이면 왼쪽)에서 밀려와 맑아집니다. 설정 내용이 아래에서 다시 올라오던 것을 없앴고, 덮개 뒤에 지도를 깔지 않으며 지도는 흐려지며 사라지고 흐림에서 맑아지며 나타납니다.",
+    "en": "On phones, switching tabs now slides the new screen in blurred from the side of the tab you picked. Settings no longer rise from the bottom, the map is no longer shown behind other tabs, and it blurs out and back in when you leave or return."
+  },
+  {
+    "v": "0.8.343",
+    "date": "2026-10-01",
+    "ko": "폰 홈 화면 로고 뒤에 깔려 있던 둥근 바탕을 걷어, 로고가 지도 위에 글자만으로 뜹니다.",
+    "en": "On phones, the rounded backing behind the home screen logo is gone, so the logo floats over the map as text alone."
+  },
+  {
+    "v": "0.8.342",
+    "date": "2026-10-01",
+    "ko": "폰의 지도·게임 화면 위아래 끝에 흐림 그라데이션을 깔아, 지도가 상태 막대와 아래 버튼 밑으로 부드럽게 스며듭니다.",
+    "en": "On phones, the map and game screens now fade into a soft blur at the top and bottom edges."
+  },
+  {
+    "v": "0.8.341",
+    "date": "2026-10-01",
+    "ko": "폰 게임 자판으로 칠 때 입력칸을 붙잡지 않아, iOS Safari 에서 화면 아래 ∧∨✓ 막대와 위로 뜨는 주소 알약이 더는 나타나지 않습니다.",
+    "en": "When typing with the phone game keyboard, iOS Safari no longer shows the up/down/done bar and the floating address pill."
+  },
+  {
+    "v": "0.8.340",
+    "date": "2026-10-01",
+    "ko": "폰에서 게임 중에는 지도를 손가락으로 끌어 옮길 수 없습니다. 자판을 치다 스친 손가락에 지도가 밀리지 않습니다. 두 손가락 확대는 그대로입니다.",
+    "en": "On phones the map no longer drags during a game, so a stray thumb cannot push it away while typing. Pinch to zoom still works."
+  },
+  {
+    "v": "0.8.339",
+    "date": "2026-09-30",
+    "ko": "폰 게임 자판에서 스페이스 바를 뺐습니다(띄어 쓴 이름이 있는 코스에만 남습니다). 키 사이 틈이나 ㅁ·ㅣ 옆 빈자리를 짚어도 가장 가까운 키가 쳐져, ㅁ 이 가끔 안 먹던 것을 고쳤습니다.",
+    "en": "The phone game keyboard drops the space bar except on courses with spaced names. Tapping a gap between keys now types the nearest key, so edge keys no longer miss."
+  },
+  {
+    "v": "0.8.338",
+    "date": "2026-09-30",
+    "ko": "폰에서 기기 키보드로 칠 때는 이전·지금·다음 지명 칸이 바닥에 붙지 않고 경기장형 알약으로 떠 있습니다. 지도도 iOS 주소 알약 뒤까지 깔려, 키보드 위에 빈 띠가 남지 않습니다.",
+    "en": "When typing with the phone's own keyboard, the previous, current and next name bar floats as a rounded pill, and the map now reaches behind the iOS address pill, so no empty strip is left above the keyboard."
+  },
+  {
+    "v": "0.8.337",
+    "date": "2026-09-30",
+    "ko": "폰 게임 자판에서 시프트를 없앴습니다. ㄲ·ㅆ·ㅒ·ㅖ 같은 윗글자는 키를 위로 밀었다 떼면 쳐집니다(키 오른쪽 위에 작게 적혀 있습니다). 시프트 자리에는 지우기, 지우기 자리에는 엔터가 섭니다. 자판 위 여백도 시트 윗 여백과 맞췄습니다.",
+    "en": "The phone game keyboard no longer has Shift. Swipe a key up and release to type its upper character, such as capitals. Backspace now sits where Shift was, Enter where Backspace was, and the space above the keyboard matches the top of the sheet."
+  },
+  {
+    "v": "0.8.336",
+    "date": "2026-09-30",
+    "ko": "폰 아래 탭에서 기록을 빼고 그 자리에 커뮤니티를 두었습니다. 기록은 계정 탭 안에서 엽니다. 기록은 이제 로그인해야 볼 수 있습니다. 커뮤니티 페이지에도 같은 아래 탭이 생겨 바로 오갈 수 있습니다.",
+    "en": "On phones the bottom tabs now show Community where Records was. Records opens from the account tab and now needs you to sign in. The Community page has the same bottom tabs, so you can move between pages directly."
+  },
+  {
+    "v": "0.8.335",
+    "date": "2026-09-30",
+    "ko": "폰 아래 막대를 애플 뮤직처럼 바꿨습니다. 위 줄은 코스 이름과 시작 버튼, 아래 줄은 지도·순위·기록·설정 탭과 계정 버튼입니다. 지도를 끌면 탭이 동그라미로 접히고, 지도 탭을 누르면 다시 펼쳐집니다.",
+    "en": "On phones the bottom bar now works like Apple Music: a mini bar with the course and a Play button above a Map, Ranking, Records and Settings tab bar plus an account button. Dragging the map folds the tabs into one circle; tap Map to unfold them."
+  },
+  {
+    "v": "0.8.334",
+    "date": "2026-09-29",
+    "ko": "폰 아래 막대가 다시 알약(설정·시작하기·로그인)으로 돌아왔습니다. 위쪽 로고는 걷고 햄버거 버튼을 놓았습니다. 누르면 순위·기록·커뮤니티·소개가 펼쳐집니다.",
+    "en": "On phones the bottom bar is back to the pill (Settings, Play, Sign in). The logo at the top is replaced by a menu button that opens Ranking, Records, Community and About."
+  },
+  {
     "v": "0.8.333",
     "date": "2026-09-28",
     "ko": "폰에서 게임을 시작하면 regiontype 자체 키보드가 뜹니다. 처음부터 두벌식 한글이라 자판을 바꿀 필요가 없고, 다음에 칠 키를 주황 테두리로 짚어 줍니다(경쟁전에서는 꺼짐). 폰 키보드 위 막대가 사라져 지도와 한 줄 소개가 넓게 보입니다. 설정 > 게임에서 폰 기본 키보드로 돌아가거나 키 안내를 끌 수 있습니다.",

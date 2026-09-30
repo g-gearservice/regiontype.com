@@ -30,6 +30,14 @@ namespace_id = "1005"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이�
   limit = 6
   period = 60
 
+[[ratelimits]]
+# 1대1 매칭(/match/*). 찾기 폴링 2초·진행 폴링 1.5초라 분당 서른 남짓 — 넉넉히 둔다
+name = "RL_MT"
+namespace_id = "1011"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이어진다
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
 # 시크릿을 넣은 뒤 주석을 푼다 — 그 전에는 이 워커가 실제 요청을 받지 않는다.
 # [[routes]]
 # pattern = "g.gearservicevanguard.com/top*"
@@ -61,6 +69,10 @@ namespace_id = "1005"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이�
 
 # [[routes]]
 # pattern = "g.gearservicevanguard.com/ladder*"
+# zone_name = "gearservicevanguard.com"
+
+# [[routes]]
+# pattern = "g.gearservicevanguard.com/match/*"
 # zone_name = "gearservicevanguard.com"
 
 
