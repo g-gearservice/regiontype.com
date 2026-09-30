@@ -105,6 +105,14 @@ namespace_id = "1009"
   period = 60
 
 [[ratelimits]]
+# 1대1 매칭(/match/*). 찾기 폴링 2초·진행 폴링 1.5초라 분당 서른 남짓 — 넉넉히 둔다
+name = "RL_MT"
+namespace_id = "1011"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[[ratelimits]]
 # 지금 접속(/online). 탭 하나가 2분에 한 번이라, 학교·사무실처럼 IP 하나를 여럿이
 # 써도 걸리지 않게 넉넉히 둔다
 name = "RL_ON"

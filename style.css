@@ -92,9 +92,9 @@ html{background:var(--bg)}
 :root[data-motion="off"]{ --fast:0s; --slow:0s; --si-dur:0s }
 
 *{box-sizing:border-box;margin:0;padding:0}
-/* 주황 하이라이트 위 글자. 야간에 --ink 가 밝아지면 주황 위에서 날아간다 */
-::selection{background:var(--accent);color:var(--on-accent)}
-::-moz-selection{background:var(--accent);color:var(--on-accent)}
+/* 선택 색은 어디서나 투명. 글자색은 건드리지 않아 원래 색 그대로 남는다 */
+::selection{background:transparent}
+::-moz-selection{background:transparent}
 html,body{height:100%}
 /* 스크롤바는 안 보이게 둔다 — 굴리는 건 그대로다. 색만 지운다: ::-webkit-scrollbar 를
    건드리면 웹킷이 겹침(overlay) 스크롤바를 포기하고 자리를 차지하는 옛 스크롤바로
@@ -859,9 +859,11 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    소개). 화면 높이는 보이는 만큼(--vvh, app.js)이라 키보드가 떠도 시트가 그 위에 남는다.
    목표를 가운데 둘 때는 app.js 의 viewSpan 이 머리줄과 시트 사이 빈 칸의 한가운데를 쓴다 */
 @media (pointer:coarse){
-  #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0; top:var(--vvt,0px); bottom:auto; height:var(--vvh,calc(100% + var(--under)))}
-  /* 흐림 띠 대신 유리가 뜬다 */
-  #play > .backdrop-blur{display:none}
+  #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0; top:var(--vvt,0px); bottom:auto; height:calc(var(--vvh,calc(100% + var(--under))) + var(--kb,0px))}
+  /* 위 띠는 상태 막대 밑부터, 아래 띠는 키보드 바로 위(시트 뒤)부터 번진다 — 유리 알약 뒤에 깐다 */
+  #play > .backdrop-blur{--fade-x:linear-gradient(#000,#000)}
+  #play > .backdrop-blur:not(.bot){--blur-top:calc(env(safe-area-inset-top) + 72px)}
+  #play > .backdrop-blur.bot{bottom:var(--kb,0px);--blur-bot:140px}
   .hud{gap:8px;margin:0}
   .hud-pill{
     position:relative;flex:1;min-width:0;height:44px;padding:0 14px 2px;border-radius:999px;
@@ -879,12 +881,23 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   #play .map-ctl{top:calc(env(safe-area-inset-top) + 64px)}
   .play-sheet{
     display:flex;flex-direction:column;gap:2px;
-    position:absolute;left:0;right:0;bottom:0;z-index:2;
+    position:absolute;left:0;right:0;bottom:var(--kb,0px);z-index:2;
     padding:10px 12px calc(10px + var(--sab,calc(env(safe-area-inset-bottom,0px) + var(--under))));border-radius:24px 24px 0 0;
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-lg);border-top:1px solid var(--glass-line);
   }
   #play.on .play-sheet{animation:sheet-rise var(--slow) var(--ease-out) backwards}
+  /* 기기 키보드로 칠 때(게임 자판이 없을 때)는 바닥에 붙이지 않고 경기장형 알약으로 띄운다 —
+     iOS 는 키보드 위 도구 막대·주소창이 밀고 당겨 붙인 시트 밑에 빈 띠가 드러난다 */
+  /* 게임 자판을 품은 시트도 바닥에서 띄운다 — 네 모서리를 윗 모서리처럼 둥글게, 아래 여백은 위(10px)와 같게 */
+  .play-sheet:has(> .softkb:not([hidden])){
+    left:8px;right:8px;bottom:calc(8px + var(--kb,0px) + var(--sab,calc(env(safe-area-inset-bottom,0px) + var(--under))));
+    padding:10px 12px;border-radius:24px;border:1px solid var(--glass-line);
+  }
+  .play-sheet:has(> .softkb[hidden]){
+    left:12px;right:12px;bottom:calc(8px + var(--kb,0px) + var(--sab,calc(env(safe-area-inset-bottom,0px) + var(--under))));
+    padding:8px 22px;border-radius:999px;border:1px solid var(--glass-line);
+  }
   /* 유리 위에 판을 한 겹 더 얹지 않는다 — 회색 알약을 걷고 글자만 둔다 */
   #play .typing{min-width:0; width:100%; gap:0; min-height:0; padding:4px 0; margin:0; border-radius:0; background:none}
   .q-side{flex:1 1 0; min-width:0; padding:0 6px}
@@ -895,11 +908,12 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   .fact span{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 게임 자판 — 시트 맨 아래, 홈 인디케이터 몫은 시트의 아래 여백이 맡는다.
      키는 사이트의 둥근 칸 결: --card 판에 가는 선, 기능 키는 유리 위 먹 칸 */
-  .softkb{margin:6px -6px 0;display:flex;flex-direction:column;gap:8px;touch-action:manipulation;
+  /* 위 13px — 시트 윗선에서 이름 글자 윗면까지(≈21px)와 소개 글자 밑면에서 자판까지를 맞춘다 */
+  .softkb{margin:13px -6px 0;display:flex;flex-direction:column;gap:8px;touch-action:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .softkb[hidden],#play:not(.on) .softkb{display:none}   /* 결과 화면 뒤에 남은 지도에는 자판이 없다 */
   .kb-row{display:flex;gap:5px}
-  .kb-row:nth-last-child(3){padding-inline:5%}   /* 가운데 줄(ㅁ~ㅣ, a~l)은 반 칸 들여 선다 */
+  .kb-row.kb-mid{padding-inline:5%}   /* 가운데 줄(ㅁ~ㅣ, a~l)은 반 칸 들여 선다 */
   .kb-k{flex:1 1 0;min-width:0;height:46px;border:1px solid var(--glass-line);border-radius:8px;
     background:var(--card);color:var(--ink);font:inherit;font-size:21px;font-weight:600;line-height:1;
     box-shadow:0 1px 0 var(--glass-line);position:relative;
@@ -907,8 +921,14 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   .kb-shift,.kb-back,.kb-enter{flex:1.45 1 0;background:var(--glass-fill);font-size:20px}
   .kb-space{flex:5 1 0;font-size:15px;color:var(--ink-soft)}
   .softkb.is-sym .kb-row:first-child .kb-k{height:40px;font-size:17px}   /* 숫자 줄은 조금 낮게 */
-  /* Shift 가 켜지면 판이 먹색으로 차고 글자도 ㄲ·ㅃ 로 바뀐다 */
-  .kb-shift[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  /* 윗글자(ㄲ·ㅒ·대문자)는 오른쪽 위에 작게. 위로 밀면(.up) 키가 먹색으로 차고 윗글자가 선다 */
+  .kb-k[data-s]::before{content:attr(data-s);position:absolute;top:3px;right:5px;font-size:10px;font-weight:600;color:var(--ink-soft)}
+  .kb-k.up,.kb-shift[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .softkb.is-shift .kb-k::before{content:none}   /* 켜진 Shift 면 키 가운데가 이미 윗글자다 */
+  .kb-k.up::before{content:none}
+  .softkb.is-en .kb-k:not(.kb-flick)::before{content:none}   /* 영어 대문자는 모서리에 다 적지 않는다 */
+  /* 다음 키가 윗글자면 위로 밀라는 화살표 */
+  .kb-k.kb-flick::before{content:"↑";color:var(--accent);font-size:12px;font-weight:800}
   .kb-k.down{background:var(--grid);transform:scale(.94)}
   /* 다음 키 — 주황 테두리 + 밑줄. 색만으로 가르지 않는다 */
   .kb-k.kb-next{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
@@ -1129,7 +1149,18 @@ body.setting #regions .nav-bot,body.paging #regions .nav-bot{transform:translate
 /* 칸은 자리를 지킨 채 가라앉는다. 가라앉기를 background 로 하면 구역 호버와 같은
    속성이라 시간을 못 나눈다 — 호버가 0.7초로 늘어진다. 그래서 어둠은 겹으로 깔고
    background 는 호버에 그대로 내준다 */
-#courseBtns .grid-btn{transition:none}
+/* 홈 칸의 자리·크기·나타남은 CSS 트랜지션이 옮긴다(app.js 의 paintTile·paintCam) — 저전력
+   모드에서도 합성기가 제 박자로 돈다. background 는 목록에 없어 호버는 바로 바뀐다.
+   곡선은 예전 스프링(감쇠 1 · 반응 .42)을 닮게 골랐다. 길이는 app.js 의 CAM_MS 와 같다 */
+#regions{--cam-dur:.5s;--cam-ease:cubic-bezier(.22,.75,.2,1)}
+#courseBtns{
+  position:absolute;left:0;top:0;transform-origin:0 0;
+  transition:transform var(--cam-dur) var(--cam-ease);
+}
+#courseBtns .grid-btn{transition:transform var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease)}
+#courseBtns .grid-btn > span{transition:transform var(--cam-dur) var(--cam-ease)}
+@media (prefers-reduced-motion:reduce){ #courseBtns,#courseBtns .grid-btn,#courseBtns .grid-btn > span{transition:none} }
+:root[data-motion="off"] :is(#courseBtns,#courseBtns .grid-btn,#courseBtns .grid-btn > span){transition:none}
 #courseBtns .grid-btn::before{
   /* -1px 은 겉돌라고 둔 값이 아니다. 같은 반지름의 원 두 장을 겹치면 가장자리
      안티에일리어싱이 한 겹 남아, 고른 칸(주황)이나 호버 자국이 링처럼 비친다 */
@@ -1282,6 +1313,13 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 :root[data-motion="off"]::view-transition-group(*),
 :root[data-motion="off"]::view-transition-old(*),
 :root[data-motion="off"]::view-transition-new(*){animation:none!important}
+/* 부드러운 새로고침(app.js softReload) — 야간↔낮은 짧은 크로스페이드, 말은 거의 즉시.
+   새 문서는 덮개·칸을 이미 선 자리로 세우니 그 동안 등장 움직임을 0 으로 눌러 둔다(data-still).
+   길이는 위 움직임 줄임 규칙이 이어서 0 으로 만든다 */
+:root[data-soft]::view-transition-group(*){animation-duration:.2s}
+:root[data-soft="lang"]::view-transition-group(*){animation-duration:.05s}
+:root[data-still] *,:root[data-still] *::before,:root[data-still] *::after{
+  animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;transition-delay:0s!important}
 
 /* ── 내 계정 여닫기 ─────────────────────────────────────
    내 계정은 순위·기록처럼 홈 위의 덮개다(#account, body.paging). 홈은 설정 덮개 때와
@@ -1355,8 +1393,8 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #regions .nav-bot .nav-item{padding:14px 18px}
 /* 시작하기 채움은 #navBotShape 가 그린다 — 호버 틴트를 두면 알약이 옮겨도 남는다 */
 #regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
-/* 폰에서만 몸을 갖는 시트 조각. 데스크톱 아래 막대에는 자리를 안 차지한다 */
-.sheet-grab,.sheet-head,.sheet-bot,.sheet-more{display:none}
+/* 폰에서만 몸을 갖는 조각(햄버거·메뉴·봇 자리). 데스크톱에는 자리를 안 차지한다 */
+.nav-burger,.sheet-bot,.sheet-more,.tab-dock{display:none}
 /* 구역 이름은 아래 막대와 같은 x, 막대가 비운 틈에 앉는다. 높이 = --dock-gap */
 #regions .course-name{
   left:50%; bottom:0; height:var(--dock-gap); z-index:4;
@@ -1495,6 +1533,8 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .account-layout{display:flex;flex-wrap:wrap;gap:24px;align-items:start}
 .account-character{display:flex;flex:0 1 220px;flex-direction:column;gap:12px;min-width:0}
 .account-details{flex:1 1 280px;min-width:0}
+/* 폰 — 기록은 계정 탭 안에 산다(app.js 의 tabDock). 로그인해야 들어온다 */
+.account-details > [href="#records"]{display:flex;margin-bottom:14px}
 /* 제목이 머리 위에 서고, 봇은 남은 칸 한가운데 선다. 크기는 --bot-scale(내 계정의 Size,
    홈 봇과 같은 값)을 따른다 */
 /* 내 펫 — 실제 크기(홈 봇과 같은 px, --bot-scale 을 따른다) < 확대 크기(고정)를 나란히
@@ -1613,13 +1653,13 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 }
 
 /* ═══ 폰 — Apple 지도 결 ══════════════════════════════════
-   손가락 화면(폭이 아니라 pointer 로 가른다)에서는 두 줄 넵바와 아래 막대를 걷고 지도를
-   화면 끝까지(상태 막대·홈 인디케이터 밑까지) 깐다. 그 위에 작은 유리만 뜬다 — 왼쪽 위
-   로고 칩, 오른쪽 컨트롤 줄, 아래 시트. 줄의 요소는 그대로라(시트로 옮길 뿐) 키보드 길도
-   그대로다. 시트의 자리(--sheet-y)와 펼친 정도(--sheet-p)는 app.js 의 sheet* 가 찍는다 */
+   손가락 화면(폭이 아니라 pointer 로 가른다)에서는 두 줄 넵바를 걷고 지도를 화면 끝까지
+   (상태 막대·홈 인디케이터 밑까지) 깐다. 그 위에 작은 유리만 뜬다 — 왼쪽 위 햄버거,
+   오른쪽 컨트롤 줄. 아래는 데스크톱과 같은 알약(설정·시작하기·로그인)이다. 윗줄 메뉴는
+   app.js 의 sheetDock 이 햄버거 메뉴(sheet-more)로 옮겨 온다 — 요소는 그대로라 키보드 길도 그대로 */
 @media (pointer:coarse){
   /* 유리 한 벌. 작은 것은 얇게, 시트는 두껍게(위 --glass-thick) */
-  #regions .nav-logo,.hud-pill,.map-ctl,
+  #regions .nav-burger,.sheet-more,.hud-pill,.map-ctl,
   :is(#play,#result,.pg-over,#options) .back,.si-close,.account-heading .back{
     background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
     box-shadow:var(--glass-hi),var(--glass-sm);border:1px solid var(--glass-line);
@@ -1627,9 +1667,26 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   :is(#play,#result,.pg-over,#options) .back,.si-close,.account-heading .back{width:44px;height:44px;border-radius:50%}
   :is(#play,#result,.pg-over,#options) .back .i,.si-close .i,.account-heading .back .i{font-size:26px}
   /* 누르는 그 순간 반응한다 — 떼기를 기다리지 않는다 */
-  :is(.back,.si-close,.ctl,#regions .nav-logo,#regions .nav-bot .nav-item,.sheet-grab,#again,#save):active{transform:scale(.97)}
+  :is(.back,.si-close,.ctl,#regions .nav-burger,#regions .nav-bot .nav-item,#again,#save):active{transform:scale(.97)}
 
-  #regions > .backdrop-blur{display:none}
+  /* 위·아래 흐림 띠 — 화면 끝까지 펴서 지도가 상태 막대·아래 알약 밑으로 스며들게 한다 */
+  #regions > .backdrop-blur{position:fixed;left:0;right:0;--fade-x:linear-gradient(#000,#000)}
+  #regions > .backdrop-blur:not(.bot){top:0;--blur-top:calc(env(safe-area-inset-top) + 72px)}
+  #regions > .backdrop-blur.bot{
+    top:auto;bottom:calc(-1 * var(--under));
+    --blur-bot:calc(110px + env(safe-area-inset-bottom) + var(--under));
+  }
+  /* 아래 막대 밑을 뚫는다 — iOS 26 Safari 는 아래 끝에 닿은 position:fixed 판이 있으면 막대 자리를
+     단색으로 덮어 흐림이 거기서 딱 잘린다. 지도 화면과 아래 띠를 fixed 가 아닌 absolute 로 두고
+     가장 큰 뷰포트(lvh)까지 늘려, 지도와 흐림이 Safari 막대의 유리 밑으로 이어지게 한다.
+     지도 자리(app.js 의 homeStage)는 고정된 넵바·막대로 재니 흔들리지 않는다 */
+  /* 로고 양옆(햄버거·전체 보기)은 걷는다 — 지도 탭을 다시 누르면 전체 보기가 된다(app.js tabGo).
+     탭 단추는 손가락 끌기를 스크롤이 가로채지 않게 한다 — 지금 탭에서 봇을 끌어낸다(ranked.js) */
+  #regions .nav-burger,#regions .map-ctl{display:none}
+  #tabBar .nav-item{touch-action:none}
+  #regions.screen{position:absolute;inset:0 0 auto;height:calc(100% + var(--under))}
+  @supports (height:1lvh){ #regions.screen{height:100lvh} }
+  #regions > .backdrop-blur.bot{position:absolute;bottom:0}
   /* iOS 26 Safari 는 상태바·아래 막대 자리를 페이지 대신 단색(가장자리 고정 요소나 body 의
      배경색)으로 칠한다 — 흐림이 그 밑으로 들어갈 수 없다. 그래서 띠가 가장자리에서 그 색
      (--bg)으로 녹아들게 해 막대부터 흐림까지 한 장의 그라데이션으로 잇는다. 아래 띠는 막대가
@@ -1643,17 +1700,31 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   :is(.pg-over,#options,#account) > .backdrop-blur.bot{
     bottom:calc(-1 * var(--under)); height:calc(var(--blur-bot,160px) + var(--under));
   }
-  /* 로고 칩 — 왼쪽 위, 상태 막대 밑 */
+  /* 햄버거 — 왼쪽 위, 상태 막대 밑. 로고는 화면 위 가운데(햄버거·오른쪽 컨트롤 줄과 같은
+     높이 44px). 알약은 폰에 없어 점도 로고가 직접 그린다 */
   #regions .navbar{
     display:block;right:auto;padding:0;
     top:calc(env(safe-area-inset-top) + 8px);left:12px;
   }
   #regions .navbar .nav-side,#regions .navbar .nav-shape{display:none}
   #regions .navbar .nav-logo{
-    display:inline-flex;align-items:center;height:44px;padding:0 16px 3px;border-radius:999px;
-    font-size:21px;translate:none;
+    position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);translate:-50% 0;
+    display:flex;align-items:center;height:44px;padding:0 14px;font-size:24px;border-radius:999px;
   }
+  /* 봇이 이 뒤로 들어가 숨는(ranked.js 의 tuck) 동안만 바탕을 깔아 비치지 않게 한다 */
+  body.rk-emerge #regions .navbar .nav-logo{background:var(--bg)}
   #regions .navbar .nav-logo .dot{visibility:visible;margin-right:0}
+  .nav-burger{
+    display:block;position:relative;width:44px;height:44px;padding:0;border-radius:50%;color:var(--ink);cursor:pointer;
+    transition:transform var(--fast) var(--ease-out);
+  }
+  .nav-burger::before{
+    content:"";position:absolute;left:12px;top:14px;width:18px;height:14px; /* 테두리 1px 을 뺀 안쪽 42px 의 가운데 */
+    background:linear-gradient(currentColor,currentColor) top/100% 2px no-repeat,
+      linear-gradient(currentColor,currentColor) center/100% 2px no-repeat,
+      linear-gradient(currentColor,currentColor) bottom/100% 2px no-repeat;
+  }
+  .nav-burger:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
   /* 오른쪽 컨트롤 줄 — 세로로 쌓이는 유리 알약 */
   .map-ctl{
@@ -1672,41 +1743,17 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .ctl:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
   body:is(.signing,.setting,.paging) .map-ctl{opacity:0;pointer-events:none}
 
-  /* 아래 시트 — 아래 막대가 그대로 시트가 된다. 접힘: 손잡이·코스·시작하기·봇.
-     펼침: 나머지 문(순위·기록·커뮤니티·설정·소개·로그인). 칸을 끌 때는 transition 을
-     끈다(.is-live) — 스프링이 매 프레임 자리를 찍는다 */
-  #regions .nav-bot{
-    left:0;right:0;bottom:calc(-1 * var(--under));translate:none;
-    display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px 12px;
-    padding:18px 16px calc(12px + env(safe-area-inset-bottom) + var(--under));
-    border-radius:24px 24px 0 0;border-top:1px solid var(--glass-line);
-    background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-    box-shadow:var(--glass-hi),var(--glass-lg);
-    transform:translate3d(0,var(--sheet-y,calc(100% - 150px)),0);
+  /* 아래 알약 — 데스크톱과 같다. 폰에서는 봇이 왼쪽 아바타 자리에 산다(떠다니며 단추를 가리지 않는다) */
+  #regions{--dock-gap:calc(16px + env(safe-area-inset-bottom))}
+  #regions .nav-bot{padding:6px 8px;gap:2px}
+  #regions .nav-bot .nav-item{font-size:18px;padding:14px 16px}
+  #regions .nav-bot .nav-item.is-play{font-size:20px}
+  /* 코스 이름은 알약 위 한 줄. 지도 글자처럼 바탕색 테를 두른다 */
+  #regions .course-name{
+    bottom:calc(var(--dock-gap) + 72px);height:auto;font-size:20px;font-weight:800;color:var(--ink);
+    text-shadow:0 0 6px var(--bg),0 0 6px var(--bg),0 0 6px var(--bg);
   }
-  :root[data-night] #regions .nav-bot{background:var(--glass-thick)}
-  #regions .nav-bot.is-live{transition:none}
-  #regions .nav-bot > .nav-shape{display:none}
-  .sheet-grab{
-    display:block;position:absolute;top:-10px;left:50%;translate:-50% 0;
-    width:96px;height:44px;padding:0;border:0;background:none;cursor:grab;touch-action:none;
-  }
-  .sheet-grab::before{
-    content:"";position:absolute;left:50%;top:16px;translate:-50% 0;
-    width:38px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--ink-soft) 55%,transparent);
-  }
-  .sheet-grab:focus-visible{outline:3px solid var(--accent);outline-offset:-6px;border-radius:12px}
-  .sheet-head{display:block;grid-column:1;min-width:0}
-  #regions .sheet-head .course-name{
-    position:static;translate:none;height:auto;display:block;
-    font-size:20px;font-weight:800;letter-spacing:-.01em;line-height:1.25;color:var(--ink);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .sheet-bot{display:block;grid-column:2;position:relative;width:44px;height:44px;border-radius:50%;--rk-bot:44px}
-  /* 봇은 시트의 아바타 자리에 산다 — 떠다니며 단추를 가리지 않는다. 누르면 예전처럼 말을 건다 */
-  .sheet-bot .rk-bot{transform:none!important;transition:none}
-  .sheet-bot .rk-bot.is-asleep::before,.sheet-bot .rk-bot.is-asleep::after{font-size:11px}
-  /* 처음 온 사람 — 시트(봇·시작하기)는 막 위로 올라 밝게 남는다. 안내가 가리키는 것에는
+  /* 처음 온 사람 — 알약(봇·시작하기)은 막 위로 올라 밝게 남는다. 안내가 가리키는 것에는
      말풍선 빛깔의 테두리를 두르고, 말풍선 단추는 손가락 크기(44px)다. 닫기는 늘 오른쪽 위 */
   body.rk-intro #regions .nav-bot{z-index:6}
   /* 조르는 동안 로고는 is-on 이지만 폰엔 그 밑에 깔 알약이 없다 — 글자색도 걷는다(야간에 묻힌다) */
@@ -1722,37 +1769,34 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .rk-say .rk-skip:focus-visible{outline-color:var(--rk-ink,#fff);outline-offset:-6px}
   .rk-say .rk-skip[hidden]{display:none}
   .rk-say[data-dock]:has(.rk-skip:not([hidden])){padding-right:44px}
-  #navPlay{
-    grid-column:1 / -1;justify-content:center;min-height:52px;border-radius:14px;
-    font-size:19px;background:var(--accent);color:var(--on-accent);
-    transition:background-color var(--si-dur) var(--ease-out),transform var(--fast) var(--ease-out);
-  }
-  body.rk-charging #navPlay{background:var(--rk-on,var(--ranked));transition-duration:.6s,var(--fast)}
-  body.rk-ready #navPlay{background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff)}
+  /* 햄버거 메뉴 — 버튼 밑에 펼쳐지는 유리 판. 닫힌 동안은 안 보이고 inert 다 */
   .sheet-more{
-    display:grid;grid-column:1 / -1;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
-    opacity:clamp(0,calc(var(--sheet-p,0) * 2 - 1),1);
+    display:flex;flex-direction:column;gap:2px;position:absolute;left:0;top:calc(100% + 8px);
+    width:min(240px,calc(100vw - 24px));padding:6px;border-radius:18px;
+    background:var(--glass-thick);box-shadow:var(--glass-hi),var(--glass-lg);
+    transform-origin:top left;
+    transition:opacity var(--fast) var(--ease-out),transform var(--fast) var(--ease-out);
+  }
+  .nav-burger[aria-expanded="false"] ~ .sheet-more{
+    opacity:0;visibility:hidden;transform:scale(.96) translateY(-4px);
+    transition:opacity var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),visibility 0s linear var(--fast);
   }
   #regions .sheet-more .nav-item{
-    flex-direction:column;justify-content:center;gap:6px;min-height:72px;padding:10px 4px;
-    border-radius:14px;background:var(--glass-fill);color:var(--ink);
-    font-size:14px;font-weight:700;white-space:normal;text-align:center;line-height:1.2;
-    transition:transform var(--fast) var(--ease-out);
+    justify-content:flex-start;gap:12px;min-height:48px;padding:0 14px;border-radius:12px;
+    color:var(--ink);font-size:17px;font-weight:700;
   }
+  #regions .sheet-more .nav-item:active{background:var(--glass-fill)}
   /* 알약은 폰에서 안 뜬다 — 알약 위 글자색(is-on)도 걷는다 */
   #regions .sheet-more .nav-item.is-on{color:var(--ink)}
   #regions .sheet-more .nav-item::before{
     content:"";width:24px;height:24px;flex:none;background:currentColor;
     -webkit-mask:var(--i) center / 100% no-repeat;mask:var(--i) center / 100% no-repeat;
   }
-  .sheet-more [href="#ranking"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 20v-6h5v6M9 20V8h6v12M15 20v-9h5v9M3 20h18'/></svg>")}
+  .sheet-more [href="#ranking"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 19v-5h5v5M9 19V5h6v14M15 19v-8h5v8M3 19h18'/></svg>")}
   .sheet-more [href="#records"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M3.5 12a8.5 8.5 0 1 0 2.5-6'/><path d='M3 4v4h4M12 8v4.5l3 2'/></svg>")}
   .sheet-more [href="community/"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><circle cx='9' cy='8' r='3.2'/><path d='M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.3c1.8.6 3 2.2 3.5 4.7'/></svg>")}
-  .sheet-more [href="settings/"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><path d='M4 7h9M17 7h3M4 17h3M11 17h9'/><circle cx='15' cy='7' r='2.2'/><circle cx='9' cy='17' r='2.2'/></svg>")}
   .sheet-more #aboutLink{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='9'/><path d='M12 11v6M12 7.5v.1'/></svg>")}
-  .sheet-more #signinLink{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='8' r='4'/><path d='M4 21c.8-4.2 3.8-6.5 8-6.5s7.2 2.3 8 6.5'/></svg>")}
-  /* 경쟁전 접속 부채는 시트 윗변에 올라앉는다. 시트를 펼치면 그 밑으로 들어간다 */
-  .rk-live{bottom:var(--sheet-peek,0px);z-index:3}
+  .rk-live{z-index:3}
 
   /* 구 칸 글자 — 기본 배율에서도 읽히게 크고 굵게, 청록 위에서 날아가지 않게 짙은 테를
      두른다(paint-order 로 글자 뒤에). 고른 칸(주황)은 테도 주황이라 먹 글자만 남는다 */
@@ -1776,16 +1820,185 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .si-close{top:calc(12px + env(safe-area-inset-top))}
   #account{--acct-top:calc(28px + env(safe-area-inset-top))}
 }
+/* ═══ 폰 — 아래 막대(애플 뮤직 결) ═══════════════════════════
+   두 줄: 위는 미니 막대(코스 이름·시작), 아래는 탭 알약(지도·순위·기록·설정)과 계정 동그라미.
+   .is-min(지도를 끌 때) — 탭 알약은 지도 동그라미로 줄고, 미니 막대가 두 동그라미 사이로
+   내려앉는다. 상자(#tabDock) 높이는 그대로라 지도 자리(app.js 의 homeStage)가 흔들리지 않는다.
+   유리는 쓰지 않는다 — 데스크톱 알약과 같은 불투명 판이다 */
+@media (pointer:coarse){
+  #regions .nav-bot{display:none}
+  .tab-dock{
+    --row:58px; --acc:52px; --gut:12px; --dur:.42s;
+    display:block;position:fixed;left:0;right:0;bottom:var(--dock-gap);z-index:4;
+    height:calc(var(--row) + 8px + var(--acc));pointer-events:none;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    transition:transform var(--si-dur) var(--ease-in-out),opacity var(--si-dur) var(--ease-in-out);
+  }
+  .tab-dock > *{
+    position:absolute;pointer-events:auto;box-sizing:border-box;
+    background:#e7eef1;border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);
+    box-shadow:0 8px 22px -10px rgba(40,56,64,.32),0 1px 3px rgba(40,56,64,.1);
+    transition:left var(--dur) var(--ease-out),right var(--dur) var(--ease-out),
+      top var(--dur) var(--ease-out),width var(--dur) var(--ease-out);
+  }
+  :root[data-night] .tab-dock > *{background:#2d383e;box-shadow:0 8px 22px -10px rgba(0,0,0,.6)}
+  /* 탭 알약·계정 동그라미는 덮개 위에도 남는다(body 직속이라 덮개 z 6 위 7). 미니 막대(코스 이름·시작)는
+     시작하기가 홈 전용이라 덮개에서는 걷는다. 플레이·결과에서는 막대가 통째로 없다 */
+  .tab-dock{--dock-gap:calc(16px + env(safe-area-inset-bottom));z-index:7}
+  :root{--dock-h:calc(16px + env(safe-area-inset-bottom) + 58px + 8px)}
+  body:has(#regions:not(.on)) .tab-dock{display:none}
+  body:is(.signing,.setting,.paging) .tab-acc{opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity var(--fast) var(--ease-out),visibility 0s linear var(--fast)}
+  body.rk-intro .tab-dock{z-index:8}
+  /* 덮개 내용이 막대 밑에 깔리지 않게 아래 여백을 준다 */
+  .pg-over{padding-bottom:calc(var(--screen-pad-y) + var(--dock-h))}
+  .si-over{padding-bottom:calc(24px + var(--dock-h))}
+  body.setting #options.opts-over{padding-bottom:calc(40px + var(--dock-h))}
+  .account-shell{padding-bottom:calc(40px + var(--dock-h))}
+  /* 탭으로 오가니 뒤로·닫기 단추는 접는다. Esc·브라우저 뒤로 가기는 그대로 닫는다 */
+  .pg-over .back,#optClose,.si-close{display:none}
+
+  /* 미니 막대 */
+  .tab-acc{
+    left:var(--gut);right:var(--gut);top:0;height:var(--acc);border-radius:999px;
+    display:flex;align-items:center;gap:10px;padding:0 4px 0 20px;
+  }
+  #tabDock .tab-acc .course-name{
+    position:static;translate:none;height:auto;flex:1;min-width:0;display:block;
+    font-size:16px;font-weight:700;color:var(--ink);text-shadow:none;text-align:left;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;
+  }
+  /* 시작 — 주황 동그라미의 재생 삼각형. 글자(시작하기)는 이름으로만 남는다 */
+  #tabDock .tab-acc #navPlay{
+    flex:none;width:42px;height:42px;padding:0;gap:0;justify-content:center;
+    font-size:0;color:var(--on-accent);background:var(--accent);
+  }
+  .tab-dock .nav-item::before{
+    content:"";width:24px;height:24px;flex:none;background:currentColor;
+    -webkit-mask:var(--i) center / 100% no-repeat;mask:var(--i) center / 100% no-repeat;
+  }
+  .tab-dock #navPlay::before{width:20px;height:20px;margin-left:2px}
+
+  /* 탭 알약 — 칸 폭을 못 박아 두어, 접힐 때 칸이 찌그러지지 않고 알약 밖으로 잘려 나간다 */
+  .tab-bar{
+    --tab:calc((100vw - 2 * var(--gut) - var(--row) - 8px - 8px) / 4);
+    left:var(--gut);bottom:0;top:auto;height:var(--row);
+    width:calc(100vw - 2 * var(--gut) - var(--row) - 8px);
+    border-radius:999px;padding:3px;display:flex;overflow:hidden;
+  }
+  #tabDock .tab-bar .nav-item{
+    flex:none;width:var(--tab);height:100%;padding:0;gap:3px;
+    flex-direction:column;justify-content:center;
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+    transition:opacity var(--fast) var(--ease-out),width var(--dur) var(--ease-out),visibility 0s;
+  }
+  /* 지금 탭 — 주황 판 하나(.tab-ind)가 칸 사이를 옮겨 다닌다. 아이콘·글자는 판 위 단색.
+     색 하나로만 가르지 않는다(판·굵기·aria-current). 자리는 aria-current 에서 CSS 가 고른다 —
+     탭 전환(View Transition)에서는 제 이름(tabind)으로 떼어 새 칸까지 미끄러진다 */
+  #tabDock .tab-bar .nav-item{position:relative}
+  .tab-ind{
+    position:absolute;left:3px;top:3px;bottom:3px;width:var(--tab);border-radius:999px;
+    background:var(--accent);pointer-events:none;opacity:0;
+    transition:translate var(--dur) var(--ease-out),width var(--dur) var(--ease-out),opacity var(--fast) var(--ease-out);
+  }
+  .tab-bar:has(> .nav-item[aria-current]) .tab-ind{opacity:1}
+  .tab-bar:has(> :nth-child(3)[aria-current]) .tab-ind{translate:var(--tab) 0}
+  .tab-bar:has(> :nth-child(4)[aria-current]) .tab-ind{translate:calc(2 * var(--tab)) 0}
+  .tab-bar:has(> :nth-child(5)[aria-current]) .tab-ind{translate:calc(3 * var(--tab)) 0}
+  .tab-dock.is-min .tab-ind{width:calc(var(--row) - 8px)}
+  #tabDock .tab-bar .nav-item[aria-current]{color:var(--on-accent);font-weight:800}
+  #tabDock .tab-bar .nav-item[aria-current]::before{background:var(--on-accent)}
+  #tabDock.tab-dock .nav-item.is-on{color:inherit}
+  #tabDock.tab-dock .nav-item:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+  /* 계정 — 오른쪽 동그라미(애플 뮤직의 검색 자리) */
+  #tabDock.tab-dock #signinLink{
+    right:var(--gut);bottom:0;width:var(--row);height:var(--row);padding:0;gap:0;
+    justify-content:center;border-radius:50%;font-size:0;
+  }
+  #tabDock.tab-dock #signinLink::before{width:26px;height:26px}
+
+  #tabHome{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M9 4 3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20'/></svg>")}
+  .tab-bar [href$="#ranking"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 19v-5h5v5M9 19V5h6v14M15 19v-8h5v8M3 19h18'/></svg>")}
+  .tab-bar [href$="community/"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 5h16v11H9l-5 4z'/><path d='M8 9.5h8M8 12.5h5'/></svg>")}
+  .tab-bar :is([href^="settings"],[href$="#settings"]){--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 7h9M17 7h3M4 17h3M11 17h9'/><circle cx='15' cy='7' r='2'/><circle cx='9' cy='17' r='2'/></svg>")}
+  .tab-dock #signinLink{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><circle cx='12' cy='8' r='4'/><path d='M4 21c.8-4 4-6 8-6s7.2 2 8 6'/></svg>")}
+  .tab-dock #navPlay{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M7 5v14l12-7z'/></svg>")}
+
+  /* 접힘 */
+  .tab-dock.is-min .tab-bar{width:var(--row)}
+  .tab-dock.is-min .tab-acc{left:calc(var(--gut) + var(--row) + 8px);right:calc(var(--gut) + var(--row) + 8px);
+    top:calc(var(--acc) + 8px + (var(--row) - var(--acc)) / 2)}
+  .tab-dock.is-min .tab-acc{padding-left:16px}
+  #tabDock.tab-dock.is-min #tabHome{width:calc(var(--row) - 8px);font-size:0;gap:0}
+  #tabDock.tab-dock.is-min .tab-bar .nav-item:not(#tabHome){
+    opacity:0;visibility:hidden;transition:opacity var(--fast) var(--ease-out),visibility 0s linear var(--fast);
+  }
+}
+@media (pointer:coarse) and (prefers-reduced-motion:reduce){
+  .tab-dock > *,#tabDock .tab-bar .nav-item{transition:none}
+}
+@media (pointer:coarse){
+  :root[data-motion="off"] :is(.tab-dock > *,#tabDock .tab-bar .nav-item){transition:none}
+}
+/* 계정 동그라미가 지금 탭일 때 — 판과 굵은 테두리(색만으로 가르지 않는다) */
+@media (pointer:coarse){
+  #tabDock.tab-dock #signinLink[aria-current]{background:var(--accent);color:var(--on-accent);border-color:transparent}
+  #tabDock.tab-dock #signinLink[aria-current]::before{background:var(--on-accent)}
+}
+/* 폰에서는 덮개 뒤에 지도(칸)를 깔지 않는다 — 들고 나는 건 아래 탭 전환이 흐림으로 맡는다.
+   덮개 안쪽의 제 등장(아래에서 올라오기 등)도 거둔다. 탭 전환 동안 --si-dur 를 0 으로 눌렀다가
+   되돌리는 순간, 이미 끝난 등장 애니메이션의 길이가 도로 늘어나 중간부터 다시 돈다 */
+@media (pointer:coarse){
+  body:is(.setting,.paging,.signing) #courseBtns{visibility:hidden}
+  /* 홈 머리(햄버거·로고)와 오른쪽 컨트롤 줄도 opacity 전환에 맡기지 않고 바로 감춘다 — iOS Safari
+     에서는 탭 전환 뒤 opacity 가 1 로 남아, 위로 비켜 선 로고가 덮개 제목과 겹쳐 보였다.
+     로고 점은 제 visibility 를 따로 쥐고 있어 함께 적는다 */
+  body:is(.setting,.paging,.signing) :is(#regions .navbar,#regions .navbar .nav-logo .dot,.map-ctl){visibility:hidden}
+  body:is(.setting,.paging) :is(#options .opts-shell,#options .screen-head,.pg-shell,.pg-over .screen-head,
+    #account .account-shell,#account .account-heading),
+  body.signing :is(.si-logo,.si-card > :not(.si-logo)){animation:none}
+}
+/* 탭 사이 전환 — 같은 문서 View Transition. 막대는 고정 이름이라 움직이지 않고, 나머지 화면은
+   흐린 채 가는 쪽(--tab-sign)에서 밀려와 맑아진다. 지도(칸)는 제 이름으로 따로 떼어 제자리에서
+   흐려지며 사라지고 흐림에서 맑아지며 나타난다. app.js 의 tabGo 가 data-tab-swap 을 걸어 둔
+   동안은 덮개의 긴 여닫기(--si-dur)를 0 으로 접어 스냅샷이 바로 서게 한다 */
+@media (pointer:coarse) and (prefers-reduced-motion:no-preference){
+  #tabDock{view-transition-name:tabdock}
+  /* 주황 판은 제 이름으로 떼어 옛 칸에서 새 칸으로 옮긴다. 칸마다 이름을 주어 아이콘이 판 위에
+     그려지게 한다(이름 없는 칸은 막대 스냅샷에 묻혀 판 밑에 깔린다). 홈·커뮤니티 두 문서가 같은
+     이름을 써서 문서 사이 전환에서도 미끄러진다 */
+  .tab-ind{view-transition-name:tabind}
+  #tabBar > :nth-child(2){view-transition-name:tab-1}
+  #tabBar > :nth-child(3){view-transition-name:tab-2}
+  #tabBar > :nth-child(4){view-transition-name:tab-3}
+  #tabBar > :nth-child(5){view-transition-name:tab-4}
+  #signinLink{view-transition-name:tab-acc}
+  ::view-transition-group(tabind){animation-duration:.28s;animation-timing-function:var(--ease-out)}
+  :root[data-tab-swap] #courseBtns{view-transition-name:bitmap}
+  :root[data-tab-swap]{--si-dur:0s}
+  /* 나가는 화면은 어느 탭이든 지도처럼 제자리에서 흐려지며 사라진다. 들어오는 화면만 가는 쪽에서
+     흐린 채 밀려온다. 커뮤니티를 오가는 문서 사이 전환도 같은 흐림으로 들고 난다 — 가상 요소는
+     새 문서의 CSS 가 칠하고, 부드러운 새로고침은 새 문서가 data-soft 를 먼저 걸어 여기서 빠진다 */
+  :root[data-tab-swap]::view-transition-old(root),
+  :root:not([data-soft])::view-transition-old(root){animation:bm-out .28s var(--ease-out) both}
+  :root[data-tab-swap]::view-transition-new(root){animation:tab-in .28s var(--ease-out) both}
+  :root:not([data-soft],[data-tab-swap])::view-transition-new(root){animation:bm-in .28s var(--ease-out) both}
+  :root[data-tab-swap]::view-transition-group(bitmap){animation:none}
+  :root[data-tab-swap]::view-transition-old(bitmap){animation:bm-out .28s var(--ease-out) both}
+  :root[data-tab-swap]::view-transition-new(bitmap){animation:bm-in .28s var(--ease-out) both}
+  @keyframes tab-in{from{opacity:0;filter:blur(12px);transform:translateX(calc(48px * var(--tab-sign,1)))}}
+  @keyframes bm-in{from{opacity:0;filter:blur(16px)}}
+  @keyframes bm-out{to{opacity:0;filter:blur(16px)}}
+}
 /* 움직임을 줄이면 시트는 미끄러지지 않고 제자리에서 스민다(app.js 의 sheetSet 이 자리를
    바로 옮긴다). 누름 반응의 크기 변화도 거둔다 */
 @media (pointer:coarse) and (prefers-reduced-motion:reduce){
-  :is(.back,.si-close,.ctl,#regions .nav-logo,#regions .nav-bot .nav-item,.sheet-grab,#again,#save):active{transform:none}
-  .sheet-more{transition:opacity .2s ease-out}
+  :is(.back,.si-close,.ctl,#regions .nav-burger,#regions .nav-bot .nav-item,#again,#save):active{transform:none}
   #play.on .play-sheet{animation:rise-fade .2s ease-out backwards}
 }
 @media (pointer:coarse){
-  :root[data-motion="off"] :is(.back,.si-close,.ctl,#regions .nav-logo,#regions .nav-bot .nav-item,.sheet-grab,#again,#save):active{transform:none}
-  :root[data-motion="off"] .sheet-more{transition:opacity .2s ease-out}
+  :root[data-motion="off"] :is(.back,.si-close,.ctl,#regions .nav-burger,#regions .nav-bot .nav-item,#again,#save):active{transform:none}
   :root[data-motion="off"] #play.on .play-sheet{animation:rise-fade .2s ease-out backwards}
 }
 
@@ -2030,12 +2243,15 @@ body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
 .rk-say[data-side="left"].is-open{animation-name:rk-open-left}
 .rk-say[data-side="down"].is-open{animation-name:rk-open-down}
 .rk-say[data-side="up"].is-open{animation-name:rk-open-up}
-@keyframes rk-open-right{from{clip-path:inset(0 100% 0 0 round 14px)}to{clip-path:inset(-40px round 14px)}}
-@keyframes rk-open-left{from{clip-path:inset(0 0 0 100% round 14px)}to{clip-path:inset(-40px round 14px)}}
-@keyframes rk-open-down{from{clip-path:inset(0 0 100% 0 round 14px)}to{clip-path:inset(-40px round 14px)}}
-@keyframes rk-open-up{from{clip-path:inset(100% 0 0 0 round 14px)}to{clip-path:inset(-40px round 14px)}}
-@media (prefers-reduced-motion:reduce){ .rk-say.is-open{animation:none} }
-:root[data-motion="off"] .rk-say.is-open{animation:none}
+@keyframes rk-open-right{from{clip-path:inset(0 100% 0 0 round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
+@keyframes rk-open-left{from{clip-path:inset(0 0 0 100% round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
+@keyframes rk-open-down{from{clip-path:inset(0 0 100% 0 round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
+@keyframes rk-open-up{from{clip-path:inset(100% 0 0 0 round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
+/* 접힘: 흐려지며 사라진다(ranked.js 의 hide). 그동안 누름은 받지 않는다 */
+.rk-say.is-closing{animation:rk-blur-out .24s var(--ease-out) both;pointer-events:none}
+@keyframes rk-blur-out{from{filter:none;opacity:1}to{filter:blur(10px);opacity:0}}
+@media (prefers-reduced-motion:reduce){ .rk-say.is-open,.rk-say.is-closing{animation:none} }
+:root[data-motion="off"] .rk-say.is-open,:root[data-motion="off"] .rk-say.is-closing{animation:none}
 .rk-say[hidden]{display:none}
 .rk-say .rk-next{margin-top:8px}
 .rk-say .rk-next[hidden]{display:none}
@@ -2394,4 +2610,43 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   /* 보안 판 — 이미 카드 결이라 폭과 여백만 맞춘다 */
   body:is(.set,.setting) #options .security-content{width:100%}
   body:is(.set,.setting) #optsSecurity .profile-help{padding:0}
+}
+
+/* ── 1대1 경쟁전 ─────────────────────────────────────────
+   매칭 창(#rkMatch)은 홈 위 가운데에 뜨는 작은 카드고, 판 중 상대 진행(#rkOpp)은 머리줄 아래 한 줄이다.
+   상태는 글자(이름·숫자)가 먼저고 막대·테두리는 거든다 */
+.rk-match{
+  position:fixed;left:50%;top:50%;translate:-50% -50%;z-index:6;
+  width:min(340px,calc(100vw - 32px));box-sizing:border-box;padding:18px 20px;
+  background:var(--card);color:var(--ink);border:3px solid var(--rk-on,var(--ranked));border-radius:14px;
+  box-shadow:var(--shadow-lift);text-align:center;
+}
+.rk-match[hidden]{display:none}
+.rk-match h3{margin:0 0 8px;font-size:16px;font-weight:800;color:var(--rk-on,var(--ranked))}
+.rk-match p{margin:0 0 10px;font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+.rk-match p[hidden]{display:none}
+.rk-match-opp{font-weight:700}
+.rk-match-count{font-size:44px;font-weight:800;line-height:1}
+.rk-match-btns{display:flex;gap:10px;justify-content:center;margin-top:4px}
+.rk-match-btns[hidden]{display:none}
+.rk-match-btns button{
+  min-height:40px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer;
+  color:var(--ink);background:none;border:2px solid var(--ink);border-radius:999px;
+}
+.rk-match-btns #rkMatchBot{color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked));border-color:var(--rk-on,var(--ranked))}
+.rk-match-btns button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media (pointer:coarse){ .rk-match-btns button{min-height:44px} }
+@media (prefers-reduced-motion:no-preference){ html:not([data-motion="off"]) .rk-match{animation:rise var(--slow) var(--ease-out) backwards} }
+
+.hud{flex-wrap:wrap}
+.rk-opp{
+  flex:1 0 100%;display:flex;align-items:center;gap:10px;margin:0;
+  font-size:14px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;
+}
+#play:not(.is-ranked) .rk-opp{display:none}
+.rk-opp span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.rk-opp i{flex:1;height:4px;border-radius:2px;background:var(--land);overflow:hidden}
+.rk-opp b{display:block;height:100%;width:0;background:var(--rk-on,var(--ranked));transition:width var(--slow) linear}
+@media (pointer:coarse){
+  .rk-opp{padding:0 14px;font-size:13px;margin-top:6px}
 }

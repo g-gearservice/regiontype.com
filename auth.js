@@ -480,7 +480,7 @@ let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
     backgroundState = [...document.body.children]
-      .filter(el => el !== over() && el.id !== 'options' && el.id !== 'codes' && el.tagName !== 'SCRIPT')
+      .filter(el => el !== over() && el.id !== 'options' && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
       .map(el => [el, el.hasAttribute('inert')]);
     backgroundState.forEach(([el]) => { el.inert = true; });
     return;
@@ -511,7 +511,7 @@ function open() {
   live = true;
   show('vSignin');
   /* 뒤로 가기로 닫힌다 — 주소는 그대로고 기록만 한 칸 쌓는다 */
-  if (location.hash !== '#signin') history.pushState({ si: 1 }, '', '#signin');
+  if (location.hash !== '#signin') histPush({ si: 1 }, '#signin');
   wakeBuddy();
 }
 function close() {
@@ -575,17 +575,18 @@ function wire() {
   over().addEventListener('pointermove', buddyLook);
   over().addEventListener('pointerleave', () => bots.forEach(b => b.api.lookAway()));
   addEventListener('rt-open-settings', close);
+  addEventListener('rt-tab-swap', close);
   addEventListener('keydown', e => {
     if (over().hidden) return;
     if (e.key === 'Escape') return close();
     if (e.key !== 'Tab') return;
-    const items = focusable();
+    const items = focusable().filter(n => n.getClientRects().length).concat(dockTabs());
     if (!items.length) return;
     const first = items[0], last = items[items.length - 1];
-    if (e.shiftKey && (document.activeElement === first || !over().contains(document.activeElement))) {
+    if (e.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {
       e.preventDefault();
       last.focus();
-    } else if (!e.shiftKey && (document.activeElement === last || !over().contains(document.activeElement))) {
+    } else if (!e.shiftKey && (document.activeElement === last || !items.includes(document.activeElement))) {
       e.preventDefault();
       first.focus();
     }

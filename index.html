@@ -43,18 +43,53 @@
      기본 글자 아이콘으로 넘어가는 것을 막는다. Safari 는 파비콘을 사이트
      데이터 캐시와 별도로 URL 별로 오래 쥐고 있어서, 파일을 바꿔도 주소가
      같으면 안 갈아탄다 — 쿼리스트링으로 매번 새 주소를 만든다. -->
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.33">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.33">
-<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.33">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="favicon/white.png?v=3.48">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="favicon/dark.png?v=3.48">
+<link rel="icon" type="image/png" sizes="any" href="favicon/dark.png?v=3.48">
 <!-- 홈 화면에 올린 아이콘. iOS 는 투명 칸을 검게 칠해서, 파비콘을 바탕색(--bg)에 얹은 판을 쓴다 -->
-<link rel="apple-touch-icon" href="favicon/touch.png?v=3.33">
+<link rel="apple-touch-icon" href="favicon/touch.png?v=3.48">
 <meta name="apple-mobile-web-app-title" content="regiontype">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <!-- 브라우저 막대 색. 사이트 야간(data-night)은 기기 테마를 따르지 않아 media 로 가르지 않고,
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.33">
+<link rel="stylesheet" href="style.css?v=3.48">
+<!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
+     softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
+     app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
+<script>
+(() => {
+  const d = document.documentElement;
+  try {
+    const o = JSON.parse(localStorage.getItem('rt.opt') || '{}');
+    d.toggleAttribute('data-night', !!o.night);
+    d.dataset.motion = o.motion === false ? 'off' : 'on';
+    d.toggleAttribute('data-no-grid', o.grid === false);
+    const ui = JSON.parse(localStorage.getItem('rt.ui') || 'null');
+    if (ui && ui.pack && (ui.auto ? (o.lang || 'auto') === 'auto' : o.lang === ui.lang)) {
+      window.RT_UI = ui; d.lang = ui.lang;
+    }
+    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(d).getPropertyValue('--bg').trim();
+    const s = JSON.parse(sessionStorage.getItem('rt.soft') || 'null');
+    sessionStorage.removeItem('rt.soft');
+    if (s && Date.now() - s.at < 5000) {
+      window.RT_SOFT = s;
+      d.dataset.soft = s.kind; d.dataset.still = '';
+      if (s.hash) history.replaceState(s.state, '', location.pathname + location.search + s.hash);
+      /* 전환이 끝나야 길이(data-soft)를 거둔다 — 도는 중에 바꾸면 애니메이션이 줄거나 늘어난다 */
+      const done = () => d.removeAttribute('data-soft');
+      addEventListener('pagereveal', e => {
+        const vt = e.viewTransition;
+        if (!vt) return done();
+        vt.ready.catch(() => {}); vt.updateCallbackDone.catch(() => {});   // 건너뛰어져도 오류가 아니다
+        vt.finished.catch(() => {}).finally(done);
+      });
+      setTimeout(() => { done(); d.removeAttribute('data-still'); }, 3000);   // 부팅이 어긋나도 눌러 둔 채 남지 않게
+    }
+  } catch {}
+})();
+</script>
 </head>
 <body>
 
@@ -83,6 +118,9 @@
     <!-- 가입하고 처음 온 홈에서만 로고를 잡고 끌어내리면 Grok 봇이 나온다(ranked.js).
          키보드는 로고에서 ↓. 그 밖에는 그냥 홈 링크다 -->
     <a class="nav-logo logo" href="/" draggable="false" aria-label="regiontype">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
+    <!-- 폰에서만 보이는 햄버거. 윗줄 메뉴(sheet-more)가 여기서 펼쳐진다(app.js 의 sheetDock) -->
+    <button type="button" class="nav-burger" id="sheetGrab" aria-expanded="false" aria-controls="sheetMore" data-i18n-aria="sheetMore" aria-label="메뉴 펼치기"></button>
+    <div class="sheet-more" id="sheetMore"></div>
     <span class="nav-side nav-end">
       <a class="nav-item" href="#ranking" data-i18n="ranking">순위</a>
       <a class="nav-item" href="community/" data-i18n="community">커뮤니티</a>
@@ -93,20 +131,24 @@
   <span class="backdrop-blur bot" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </span>
-  <!-- 설정·시작·계정은 아래 막대. 폰에서는 이 막대가 그대로 Apple 지도의 아래 시트가 된다 —
-       손잡이·코스 이름·봇 자리·펼침 칸(sheet-*)은 폰에서만 보이고, 윗줄 메뉴는 app.js 의
-       sheetDock 이 펼침 칸으로 옮겨 온다. 데스크톱에서는 sheet-* 가 display:none 이다 -->
+  <!-- 설정·시작·계정은 아래 막대. 폰에서도 같은 알약이다. 폰의 봇은 로고 뒤에 산다(ranked.js 의 tuck) -->
   <nav class="nav-bot" data-i18n-aria="navDock" aria-label="놀이 메뉴">
     <span class="nav-shape" id="navBotShape" aria-hidden="true"></span>
-    <button type="button" class="sheet-grab" id="sheetGrab" aria-expanded="false" aria-controls="sheetMore" data-i18n-aria="sheetMore" aria-label="메뉴 펼치기"></button>
-    <div class="sheet-head" id="sheetHead"></div>
-    <span class="sheet-bot" id="sheetBot"></span>
     <a class="nav-item" href="settings/" data-i18n="options">설정</a>
     <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start">시작하기</button>
     <!-- 로그인은 홈 덮개를 연다. 로그인해 있으면 라벨과 길이 '내 계정' 으로 바뀐다 -->
     <a class="nav-item" id="signinLink" href="signin/" data-i18n="signinBtn">로그인</a>
-    <div class="sheet-more" id="sheetMore"></div>
   </nav>
+  <!-- 폰에서만: 애플 뮤직 결의 아래 막대. 위 줄은 미니 막대(코스 이름·시작), 아래 줄은 탭 알약
+       (지도·순위·기록·설정)과 계정 동그라미. 지도를 끌면 탭 알약이 지도 동그라미로 접히고 미니
+       막대가 그 옆으로 내려앉는다. 요소는 app.js 의 tabDock 이 제자리에서 옮겨 온다 -->
+  <div class="tab-dock" id="tabDock">
+    <div class="tab-acc"></div>
+    <nav class="tab-bar" id="tabBar" data-i18n-aria="navDock" aria-label="놀이 메뉴">
+      <span class="tab-ind" aria-hidden="true"></span>
+      <button type="button" class="nav-item" id="tabHome" aria-current="page" data-i18n="tabMap">지도</button>
+    </nav>
+  </div>
   <!-- 오른쪽 컨트롤 줄(폰만). 지도를 이리저리 옮긴 뒤 한 번에 전체로 돌아온다 -->
   <div class="map-ctl">
     <button type="button" class="ctl" id="homeFit" data-i18n-aria="fitAll" aria-label="전체 보기"><i class="i i-fit" aria-hidden="true"></i></button>
@@ -119,6 +161,17 @@
   <p class="course-name" id="courseName" aria-live="polite"></p>
   <!-- 지금 접속. 경쟁전을 켜면 왼쪽 아래 귀퉁이에서 대각선으로 나온다(ranked.js 의 '지금 접속' 절).
        첫 숫자를 받기 전에는 숨어 있다 -->
+  <!-- 경쟁전 매칭 창(ranked.js 의 match 절). 상대를 찾는 동안과 짝이 지어진 뒤 카운트다운 동안만 선다 -->
+  <div class="rk-match" id="rkMatch" role="dialog" aria-labelledby="rkMatchTitle" aria-describedby="rkMatchStat" hidden>
+    <h3 id="rkMatchTitle" data-i18n="rkMatchTitle">1대1 경쟁전</h3>
+    <p id="rkMatchStat" role="status" aria-live="polite"></p>
+    <p class="rk-match-opp" id="rkMatchOpp" hidden></p>
+    <p class="rk-match-count" id="rkMatchCount" aria-hidden="true" hidden></p>
+    <div class="rk-match-btns" id="rkMatchBtns">
+      <button type="button" id="rkMatchBot" data-i18n="rkVsBot">봇과 겨루기</button>
+      <button type="button" id="rkMatchCancel" data-i18n="cancel">취소</button>
+    </div>
+  </div>
   <p class="rk-live" id="rkLive" role="img" hidden><span class="rk-live-in" aria-hidden="true"><i></i><b id="rkLiveN"></b></span></p>
   <!-- 도우미 봇과 말풍선. 홈이 보일 때만 산다 — #regions 안에 둬서 플레이 화면에선 저절로 빠진다.
        .rk-dim 은 처음 온 사람에게 넵바만 남기고 홈을 덮는 막이다 -->
@@ -163,6 +216,8 @@
     <div class="stat combo" id="statCombo"></div>
     <div class="stat rk-tag" id="rkTag" data-i18n="rankedTab" hidden>경쟁전</div>
     </div>
+    <!-- 1대1 상대의 진행. 숫자와 이름을 함께 두고 막대는 보조다 -->
+    <p class="rk-opp" id="rkOpp"><span id="rkOppT"></span><i aria-hidden="true"><b id="rkOppFill"></b></i></p>
   </div>
   <!-- 오른쪽 컨트롤 줄(폰만). 지도를 끌어 목표에서 벗어나면 돌아오는 단추가 선다 -->
   <div class="map-ctl">
@@ -403,7 +458,6 @@
           <a class="profile-button" href="terms/" data-i18n="termsLink">이용약관</a>
           <button type="button" class="profile-button" data-fb-open data-i18n="feedback">피드백</button>
         </div>
-        <p class="profile-help" data-i18n="policyHelp">새 창이 아니라 이 자리를 떠나 문서로 갑니다.</p>
       </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
         <p class="ver">regiontype v0.8.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
@@ -546,9 +600,9 @@
   </form>
 </dialog>
 
-<script src="app.js?v=3.33"></script>
-<script src="auth.js?v=3.33"></script>
-<script src="settings/settings.js?v=3.33"></script>
-<script src="ranked.js?v=3.33"></script>
+<script src="app.js?v=3.48"></script>
+<script src="auth.js?v=3.48"></script>
+<script src="settings/settings.js?v=3.48"></script>
+<script src="ranked.js?v=3.48"></script>
 </body>
 </html>

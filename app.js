@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.33';
+const VER = '3.48';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -198,6 +198,65 @@ const saveOpt = () => {
   requestAnimationFrame(syncGrid);
 };
 
+
+/* ── 부드러운 새로고침 ────────────────────────────────
+   야간·언어는 한 번 새로 열어야 온 화면이 맞는다. 다만 새로고침 티가 나지 않게 —
+   떠나기 직전 자리(덮개·탭·스크롤·초점·지도)를 sessionStorage 에 적고, 새 문서의 부트
+   스크립트(index.html 머리)와 boot()·settings.js 가 읽어 첫 그림 전에 같은 자리로 선다.
+   전환은 교차 문서 View Transition — navigation.navigate(replace) 는 전환이 붙고 기록도
+   안 쌓인다(location.replace 는 전환이 안 붙는다, 실측). 판이 살아 있으면 하지 않는다.
+   부르는 쪽은 false 를 받으면 예전처럼 즉석에서 칠한다. */
+function softReload(kind) {
+  if (G || $('#play').classList.contains('on')) return false;
+  try {
+    const box = $('#options'), a = document.activeElement;
+    const rec = { at: Date.now(), kind, hash: location.hash, state: history.state, scroll: [], y: scrollY };
+    if (!box.hidden) {
+      [...box.querySelectorAll('*')].forEach((el, i) => {
+        if (el.scrollTop || el.scrollLeft) rec.scroll.push({ i, t: el.scrollTop, l: el.scrollLeft });
+      });
+    }
+    const opts = box.contains(a) && a !== box && a;
+    if (opts) rec.focus = {
+      kb: a.matches(':focus-visible'),
+      sel: a.id ? '#' + a.id : a.dataset.opt ? `#options [data-opt="${a.dataset.opt}"]`
+        : a.name ? `#options [name="${a.name}"][value="${a.value}"]` : '',
+    };
+    if (COURSE.tiles.length) rec.map = {
+      pick: PICK && { name: PICK.name, kid: !!PICK.kid },
+      open: OPEN && OPEN.tile.name, z: COURSE.z, px: COURSE.px, py: COURSE.py,
+    };
+    /* 새 문서가 새 말을 바로 입히도록 마지막 말 팩을 새 설정 것으로 바꿔 둔다 */
+    Object.assign(opt, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
+    LANG = resolveLang();
+    cacheUI();
+    sessionStorage.setItem('rt.soft', JSON.stringify(rec));
+  } catch { return false; }
+  const url = location.pathname + location.search;   // 해시를 떼야 조각 이동이 아닌 새 문서가 된다
+  if (window.navigation) navigation.navigate(url, { history: 'replace' }); else location.replace(url);
+  return true;
+}
+/* 마지막에 그린 말(지금 언어 것만) — 다음 첫 그림이 fetch 를 기다리지 않는다 */
+function cacheUI() {
+  if (!I18N[LANG]) return;
+  try {
+    localStorage.setItem('rt.ui', JSON.stringify({ lang: LANG, auto: opt.lang === 'auto', pack: I18N[LANG], langs: UI_LANGS }));
+  } catch {}
+}
+/* 새 문서 쪽 — 지도(고른 칸·펼친 구·카메라)를 적어 둔 자리로 세운다. 덮개는 settings.js 몫 */
+async function softMap() {
+  const m = window.RT_SOFT && window.RT_SOFT.map;
+  if (!m || !COURSE.tiles.length) return;
+  if (m.open) {
+    const host = COURSE.tiles.find(x => !x.kid && x.name === m.open);
+    if (host) await openCourse(host);
+  }
+  if (m.pick) {
+    const p = COURSE.tiles.find(x => !!x.kid === m.pick.kid && x.name === m.pick.name);
+    if (p) pickTile(p);
+  }
+  if (m.z) aimHomeCam(m.px, m.py, m.z, COURSE.tiles.filter(x => !x.gone && x.o.to > 0), true);
+}
 
 /* ── 정답 판정 ───────────────────────────────────────
    조합 중 문자열까지 매 입력마다 검사한다. 약칭("강남")은
@@ -555,79 +614,95 @@ function asideTile(tile, on, k = 1) {
   const first = !tile.fitted;
   tile.fitted = true;
   if (tile.f.to === f && !first) return;
-  tile.f.to = f;
-  if (calm() || first) { tile.f.x = f; tile.f.v = 0; }
+  tile.f.x = tile.f.to = f;
+  /* 글자 크기도 CSS 트랜지션이 옮긴다(style.css). 처음 재는 칸은 바로 맞춘다 */
+  span.style.transition = calm() || first ? 'none' : '';
+  span.style.transform = `scale(${f.toFixed(4)})`;
 }
+/* ── 홈 칸의 움직임은 CSS 트랜지션이 한다 ──
+   저전력 모드의 Safari·Chrome 은 JS 가 매 프레임 그리는 움직임을 초당 30장으로 묶지만,
+   transform·opacity 트랜지션은 합성기가 제 박자로 돌린다. 그래서 JS 는 목표 자리만 한 번
+   찍는다 — 스프링 값(x·y·s·o·f)은 늘 목표와 같고, 눈에 보이는 중간은 CSS 가 메운다.
+   카메라(이동·줌)는 칸마다 곱하지 않고 칸을 담은 통(#courseBtns) 하나에 건다:
+   통 translate(px) scale(z) 안의 칸 translate(x) scale(s) = 예전의 translate(x·z+px) scale(s·z).
+   번지는 차례(wait)는 transition-delay 다. 길이·곡선은 style.css 의 --cam-dur·--cam-ease */
+const CAM_MS = 500;
 function paintTile(tile) {
-  const z = COURSE.z || 1;
   tile.el.firstChild.style.transform = `scale(${tile.f.x.toFixed(4)})`;
   tile.el.style.transform =
-    `translate3d(${(tile.x.x * z + COURSE.px).toFixed(2)}px,${(tile.y.x * z + COURSE.py).toFixed(2)}px,0) scale(${(tile.s.x * z).toFixed(4)})`;
+    `translate3d(${tile.x.x.toFixed(2)}px,${tile.y.x.toFixed(2)}px,0) scale(${tile.s.x.toFixed(4)})`;
   tile.el.style.opacity = tile.o.x.toFixed(3);
 }
-/* 줄인 움직임에서는 자리를 바로 옮기고 나타남·사라짐만 스민다 */
+/* now 면 트랜지션 없이 바로(끌기·휠·처음 그리기) — 손을 1:1 로 따라와야 한다 */
+function paintCam(now = false) {
+  const el = $('#courseBtns');
+  el.style.transition = now || calm() ? 'none' : '';
+  el.style.transform = `translate3d(${(COURSE.px + GZ.nx.to).toFixed(2)}px,${(COURSE.py + GZ.ny.to).toFixed(2)}px,0) scale(${(COURSE.z || 1).toFixed(4)})`;
+  courseKick();
+}
+/* 줄인 움직임에서는 트랜지션 없이 바로 옮긴다 */
 function aimTile(tile, x, y, s, o, wait = 0, snap = false) {
   if (!snap && tile.x.to === x && tile.y.to === y && tile.s.to === s && tile.o.to === o) return;
   const still = snap || calm();
   tile.el.inert = o === 0;
-  tile.o.to = o;
-  if (snap) { tile.o.x = o; tile.o.v = 0; }
-  tile.wait = still ? 0 : wait;
-  if (still && tile.gone) return;
-  [[tile.x, x], [tile.y, y], [tile.s, s]].forEach(([p, v]) => {
-    p.to = v;
-    if (still) { p.x = v; p.v = 0; }
-  });
+  tile.el.style.transition = still ? 'none' : '';
+  tile.el.style.transitionDelay = still || !wait ? '' : wait.toFixed(3) + 's';
+  tile.o.x = tile.o.to = o;
+  /* 접히는 구역은 줄인 움직임에서 제자리에서 사라지기만 한다 */
+  if (!(still && tile.gone)) [[tile.x, x], [tile.y, y], [tile.s, s]].forEach(([p, v]) => { p.x = p.to = v; });
+  paintTile(tile);
+  /* 다 사라진 뒤에 걷는다. 그 사이 다시 보이게 되면(o 가 0 이 아니면) 두고 간다 */
+  if (tile.gone && o === 0) setTimeout(() => {
+    if (!tile.gone || tile.o.to !== 0) return;
+    tile.el.remove();
+    COURSE.tiles = COURSE.tiles.filter(t => t !== tile);
+  }, still ? 0 : wait * 1000 + CAM_MS);
 }
+/* 격자 배율도 칸과 같은 곡선·같은 시간으로 — 보이지 않는 요소 하나(GK)에 트랜지션을 걸고
+   그 지금 값을 읽는다. translate(A·(1−z)) scale(z) 를 함수마다 보간하면 붙잡은 점 A 는
+   움직이는 내내 제자리다(선이 A 쪽으로 모인다) */
+const GK = document.createElement('i');
+const GK_T = 'transform var(--cam-dur) var(--cam-ease)';
+GK.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;transform-origin:0 0';
+$('#courseBtns').before(GK);
 function aimGrid(z, ax, ay) {
-  const still = calm(), flat = Math.abs(GZ.z.x - 1) < 1e-3;
-  [[GZ.z, z, still], [GZ.ax, ax, still || flat], [GZ.ay, ay, still || flat]].forEach(([p, v, now]) => {
-    p.to = v;
-    if (now) { p.x = v; p.v = 0; }
-  });
+  if (GZ.z.to === z && GZ.ax.to === ax && GZ.ay.to === ay) return;
+  GZ.z.x = GZ.z.to = z; GZ.ax.x = GZ.ax.to = ax; GZ.ay.x = GZ.ay.to = ay;
+  GK.style.transition = calm() ? 'none' : GK_T;
+  GK.style.transform = `translate(${(ax * (1 - z)).toFixed(2)}px,${(ay * (1 - z)).toFixed(2)}px) scale(${z.toFixed(5)})`;
+  courseKick();
 }
+/* 통이 지금 서 있는 카메라 — 트랜지션 도중이면 그 중간 값이다(계산된 스타일) */
+function liveOf(el) {
+  const t = getComputedStyle(el).transform;
+  if (!t || t === 'none') return { z: 1, px: 0, py: 0 };
+  const m = new DOMMatrix(t);
+  return { z: m.a, px: m.e, py: m.f };
+}
+const liveCam = () => liveOf($('#courseBtns'));
 /* 무늬 원점을 붙잡은 점 A 에 두고 칸을 z 배로 — 선이 A 쪽으로 모인다.
-   A 는 늘 큰 칸의 모서리라 z = 1/d 에서 선이 작은 칸 격자와 딱 겹친다 */
+   A 는 늘 큰 칸의 모서리라 z = 1/d 에서 선이 작은 칸 격자와 딱 겹친다.
+   카메라는 통의 지금 값을 읽는다 — 칸과 한 치도 어긋나지 않는다 */
 function courseGridArgs(cw, ch) {
   const on = $('#regions').classList.contains('on');
-  const cam = on ? (COURSE.z || 1) : 1;
-  const gz = on ? GZ.z.x : 1;
-  const px = on ? COURSE.px : 0;
-  const py = on ? COURSE.py : 0;
-  return [GZ.ax.x * (1 - gz) * cam + px, GZ.ay.x * (1 - gz) * cam + py, cw * gz * cam, ch * gz * cam];
+  const { z: cam, px, py } = on ? liveCam() : { z: 1, px: 0, py: 0 };
+  const { z: gz, px: gx, py: gy } = on ? liveOf(GK) : { z: 1, px: 0, py: 0 };
+  return [gx * cam + px, gy * cam + py, cw * gz * cam, ch * gz * cam];
 }
 
-let courseRaf = 0, courseT = 0;
+/* 격자만 JS 가 그린다(SVG 무늬 속성은 트랜지션이 없다). 통이 움직이는 동안 매 프레임
+   통의 지금 카메라를 따라 그린다. 저전력 모드에선 이 선만 30장이고, 흐린 선이라 덜 보인다 */
+let courseRaf = 0;
 function courseKick() {
   if (courseRaf) return;
-  courseT = performance.now();
   courseRaf = requestAnimationFrame(courseFrame);
 }
-function courseFrame(now) {
-  /* rAF 시각은 그 프레임의 시작이라 방금 잰 courseT 보다 앞설 수 있다 — 뒤로 감지 않게 0 에서 자른다 */
-  const dt = Math.max(0, Math.min(.034, (now - courseT) / 1000));
-  courseT = now;
+function courseFrame() {
   let busy = false;
-  for (const p of Object.values(GZ)) busy = spStep(p, dt) || busy;
-  COURSE.px = GZ.px.x + GZ.nx.x;
-  COURSE.py = GZ.py.x + GZ.ny.x;
-  COURSE.z = GZ.cz.x;
-  COURSE.tiles = COURSE.tiles.filter(tile => {
-    if (tile.wait > 0) {
-      tile.wait -= dt;
-      busy = true;
-      /* 차례를 기다리는 구역은 움직이는 부모 칸에 붙어 있다가 거기서 떠난다 */
-      if (!tile.gone) ['x', 'y', 's'].forEach(k => { tile[k].x = tile.parent[k].x; tile[k].v = 0; });
-    } else {
-      for (const p of [tile.x, tile.y, tile.s, tile.o, tile.f]) busy = spStep(p, dt) || busy;
-    }
-    if (tile.gone && tile.o.to === 0 && tile.o.x === 0) { tile.el.remove(); return false; }
-    paintTile(tile);
-    return true;
-  });
   if ($('#regions').classList.contains('on')) {
     const { cw, ch } = decoGrid();
     applyGrid(...courseGridArgs(cw, ch));
+    busy = $('#courseBtns').getAnimations().length > 0 || GK.getAnimations().length > 0;
   }
   courseRaf = busy ? requestAnimationFrame(courseFrame) : 0;
 }
@@ -893,6 +968,7 @@ async function renderCourses() {
   pickTile(COURSE.tiles.find(tile => tile.name === was) || null);
   planCourses(true);
   COURSE.tiles.forEach(paintTile);
+  paintCam(true);
 }
 /* 코스 칸은 지도가 다시 그려질 때마다 새로 나므로 문서에서 받는다 */
 document.addEventListener('click', e => {
@@ -955,28 +1031,27 @@ function shiftHome(px, py, tiles, useTo = false) {
   COURSE.px = px; COURSE.py = py;
   GZ.px.x = GZ.px.to = px; GZ.px.v = 0;
   GZ.py.x = GZ.py.to = py; GZ.py.v = 0;
-  COURSE.tiles.forEach(paintTile);
+  paintCam(true);
   const { cw, ch } = decoGrid();
   applyGrid(...courseGridArgs(cw, ch));
 }
 function aimHomeCam(px, py, z, tiles, snap = false) {
   z = clampZoom(z, HOME_Z[0], HOME_Z[1]);
   [px, py] = clampHomePan(px, py, tiles, true, z);
-  GZ.cz.to = z; GZ.px.to = px; GZ.py.to = py;
+  GZ.cz.x = GZ.cz.to = z; GZ.cz.v = 0;
+  GZ.px.x = GZ.px.to = px; GZ.px.v = 0;
+  GZ.py.x = GZ.py.to = py; GZ.py.v = 0;
+  COURSE.z = z; COURSE.px = px; COURSE.py = py;
+  paintCam(snap);
   if (snap || calm()) {
-    GZ.cz.x = z; GZ.cz.v = 0;
-    GZ.px.x = px; GZ.px.v = 0;
-    GZ.py.x = py; GZ.py.v = 0;
-    COURSE.z = z; COURSE.px = px; COURSE.py = py;
-    COURSE.tiles.forEach(paintTile);
     const { cw, ch } = decoGrid();
     applyGrid(...courseGridArgs(cw, ch));
   }
-  courseKick();
 }
 function homeStage() {
   const nav = $('#regions .navbar');
-  const dock = $('#regions .nav-bot');
+  /* 폰의 아래 막대(#tabDock)는 접혀도 제 상자 높이가 그대로라 지도 자리가 흔들리지 않는다 */
+  const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot');
   const pad = 28;
   const top = (nav ? nav.getBoundingClientRect().bottom : 160) + pad;
   const bot = (dock ? dock.getBoundingClientRect().top : innerHeight) - pad;
@@ -1047,11 +1122,13 @@ const fineHover = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
 function aimNudge(x, y) {
   const on = fineHover() && !calm() && $('#regions').classList.contains('on')
     && !document.body.classList.contains('signing') && !document.body.classList.contains('setting');
-  if (!on || x == null) { GZ.nx.to = GZ.ny.to = 0; courseKick(); return; }
   const grip = v => Math.max(-1, Math.min(1, v));
-  GZ.nx.to = grip((x - innerWidth / 2) / (innerWidth / 2)) * NUDGE;
-  GZ.ny.to = grip((y - innerHeight / 2) / (innerHeight / 2)) * NUDGE;
-  courseKick();
+  const nx = !on || x == null ? 0 : grip((x - innerWidth / 2) / (innerWidth / 2)) * NUDGE;
+  const ny = !on || x == null ? 0 : grip((y - innerHeight / 2) / (innerHeight / 2)) * NUDGE;
+  if (nx === GZ.nx.to && ny === GZ.ny.to) return;
+  GZ.nx.x = GZ.nx.to = nx; GZ.ny.x = GZ.ny.to = ny;
+  /* 끄는 동안은 손을 1:1 로 따라가는 중이라 트랜지션을 다시 켜지 않는다 */
+  if (!drag) paintCam();
 }
 $('#regions').addEventListener('pointermove', e => {
   if (drag || e.pointerType !== 'mouse') return;
@@ -1066,17 +1143,18 @@ let drag = null, skipClick = false;
 const slopOf = e => e.pointerType === 'mouse' ? 36 : 196;
 document.addEventListener('click', e => {
   if (!skipClick) return;
+  if (e.target.closest('#tabDock')) { skipClick = false; return; }   // 지도를 끈 뒤 첫 탭 누름을 삼키지 않는다
   skipClick = false;
   e.preventDefault();
   e.stopPropagation();
 }, true);
 /* 넵바 링크를 끌면 브라우저가 주소 미리보기를 달고 나온다. 파이어폭스는 -webkit-user-drag 를 몰라 여기서 막는다 */
 $('#regions').addEventListener('dragstart', e => {
-  if (e.target.closest && e.target.closest('.navbar, .nav-bot')) e.preventDefault();
+  if (e.target.closest && e.target.closest('.navbar, .nav-bot, .tab-dock')) e.preventDefault();
 });
 $('#regions').addEventListener('pointerdown', e => {
   if (e.button || !$('#regions').classList.contains('on') || fingersOn.size > 1) return;
-  if (e.target.closest('.navbar, .nav-bot, .map-ctl, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
+  if (e.target.closest('.navbar, .nav-bot, .tab-dock, .map-ctl, .screen-head, .rk-layer, dialog, a, input, textarea, select')) return;
   /* 캡처는 문턱을 넘긴 뒤에만. 처음부터 #regions 가 잡으면 칸 버튼의 click 이
      부모로 다시 향해 구를 눌러도 행정동이 안 열린다 */
   GZ.cz.x = GZ.cz.to = COURSE.z || 1; GZ.cz.v = 0;
@@ -1092,6 +1170,12 @@ addEventListener('pointermove', e => {
     drag.host.classList.add('is-drag');
     if (drag.kind === 'home') {
       try { drag.host.setPointerCapture(drag.id); } catch {}
+      /* 카메라가 아직 미끄러지는 중이면 지금 선 자리에서 잡는다 — 목표에서 잡으면 튄다 */
+      const c = liveCam();
+      COURSE.z = c.z; COURSE.px = c.px - GZ.nx.to; COURSE.py = c.py - GZ.ny.to;
+      GZ.cz.x = GZ.cz.to = c.z;
+      paintCam(true);
+      drag.px = COURSE.px - sx; drag.py = COURSE.py - sy;
       /* 지도를 끌기 시작하면 폰 시트는 접혀 길을 비운다 */
       if (SHEET.open) sheetSet(false);
     }
@@ -1201,7 +1285,7 @@ function zoomPlayAt(mx, my, factor) {
 function mapWheel(e) {
   if (e.target.closest('dialog, input, textarea, select')) return;
   if ($('#regions').classList.contains('on')) {
-    if (e.target.closest('.navbar, .nav-bot, .map-ctl, .screen-head, .rk-layer')) return;
+    if (e.target.closest('.navbar, .nav-bot, .tab-dock, .map-ctl, .screen-head, .rk-layer')) return;
     if (!e.target.closest('#regions')) return;
     e.preventDefault();
     zoomHomeAt(e.clientX, e.clientY, wheelZoomFactor(e));
@@ -1248,7 +1332,7 @@ const fingerUp = e => {
   if (fingersOn.size > 1) return;
   pinchD = 0;
   const kind = pinchKind(), [[id, [x, y]] = []] = [...fingersOn];
-  if (kind && id != null) resumeDrag(kind, id, x, y);
+  if (kind && id != null && !(kind === 'play' && fingers())) resumeDrag(kind, id, x, y);   // 폰 게임은 끌기 없음
 };
 addEventListener('pointerup', fingerUp, true);
 addEventListener('pointercancel', fingerUp, true);
@@ -1461,111 +1545,29 @@ function aimBotShape(el) { navBot.aim(el); }
 function wireNavShape() { navTop.wire(); navBot.wire(); }
 function relayoutNavShapes() { navTop.relayout(); navBot.relayout(); }
 
-/* ── 폰의 아래 시트 ─────────────────────────────────────
-   손가락 화면에서는 아래 막대가 Apple 지도의 아래 시트가 된다(style.css 의 '폰 — Apple
-   지도 결'). 윗줄 메뉴와 설정·로그인은 여기서 시트의 펼침 칸으로 옮긴다 — 같은 요소라
-   href 로 받는 손(settings.js·auth.js·ranked.js)과 키보드 길이 그대로 산다.
-   멈춤은 둘: 접힘(코스 이름·시작하기·봇)과 펼침(나머지 문). 끌면 손을 1:1 로 따라오고
-   끝을 넘으면 고무줄처럼 버틴다. 놓으면 그 속도로 앞을 내다본 자리(Apple 의 project,
-   감속 .998)에서 가까운 멈춤으로 스프링(감쇠 .8 · 반응 .3)을 타고, 도는 중에도 다시
-   잡힌다. 손잡이를 누르거나 Enter 로 여닫고, Esc 로 접는다. 움직임을 줄였으면
-   자리는 바로 옮기고 펼침 칸만 스민다 */
-const SHEET = { el: $('#regions .nav-bot'), y: sp(0, .5), open: false, raf: 0, t: 0, shut: 0, drag: null };
-const sheetOn = () => fingers() && SHEET.el.contains($('#sheetMore').firstChild);
+/* ── 폰의 윗줄 메뉴 ─────────────────────────────────────
+   손가락 화면에서는 로고 대신 왼쪽 위 햄버거가 윗줄 메뉴(순위·기록·커뮤니티·소개)를
+   펼친다 — 같은 요소를 옮길 뿐이라 href 로 받는 손(ranked.js)과 키보드 길이 그대로 산다.
+   설정·시작하기·로그인은 아래 알약에 그대로 있다. 밖을 누르거나 Esc, 칸을 고르면 접힌다 */
+const SHEET = { open: false };
+const sheetOn = () => fingers() && !!$('#sheetMore').firstChild;
 function sheetDock() {
   $('#sheetMore').append(...['#regions a[href="#ranking"]', '#regions a[href="#records"]',
-    '#regions a[href="community/"]', '#regions a[href="settings/"]', '#aboutLink', '#signinLink'].map(s => $(s)));
-  $('#sheetHead').append($('#courseName'));
+    '#regions a[href="community/"]', '#aboutLink'].map(s => $(s)));
   $('#sheetMore').inert = true;
-  new ResizeObserver(sheetMeasure).observe(SHEET.el);
-  sheetMeasure();
 }
-/* 접힘은 시작하기 밑변 + 아래 여백(홈 인디케이터 몫 포함)까지만 보이는 자리다.
-   시트가 Safari 아래 막대 밑으로 내려가 있으면(bottom 이 음수, style.css 의 --under)
-   --sheet-peek(화면 아래에서 잰 높이)에서는 그 몫을 뺀다 */
-function sheetMeasure() {
-  const el = SHEET.el, play = $('#navPlay'), cs = getComputedStyle(el);
-  const peek = play.offsetTop + play.offsetHeight + parseFloat(cs.paddingBottom);
-  SHEET.shut = Math.max(0, el.offsetHeight - peek);
-  document.documentElement.style.setProperty('--sheet-peek', peek + Math.min(0, parseFloat(cs.bottom)) + 'px');
-  if (SHEET.drag || SHEET.raf) return;
-  SHEET.y.x = SHEET.y.to = SHEET.open ? 0 : SHEET.shut; SHEET.y.v = 0;
-  sheetPaint();
-}
-function sheetPaint() {
-  const st = SHEET.el.style;
-  st.setProperty('--sheet-y', SHEET.y.x.toFixed(1) + 'px');
-  st.setProperty('--sheet-p', SHEET.shut ? Math.max(0, Math.min(1, 1 - SHEET.y.x / SHEET.shut)).toFixed(3) : '0');
-}
-function sheetFrame(now) {
-  const dt = Math.max(0, Math.min(.034, (now - SHEET.t) / 1000));
-  SHEET.t = now;
-  const busy = spStep(SHEET.y, dt, .3, .8);
-  sheetPaint();
-  SHEET.raf = busy ? requestAnimationFrame(sheetFrame) : 0;
-  SHEET.el.classList.toggle('is-live', busy);
-}
-/* v 는 손을 놓을 때의 속도(px/s) — 스프링이 그 속도에서 이어 받아 이음매가 없다 */
-function sheetSet(open, v = 0) {
+function sheetSet(open) {
   if (!sheetOn()) return;
-  /* 시트가 움직이면 아바타(봇)의 말풍선은 거둔다 — 붙어 있던 자리가 떠난다(ranked.js) */
   dispatchEvent(new Event('rt-sheet'));
   SHEET.open = open;
   $('#sheetGrab').setAttribute('aria-expanded', String(open));
   $('#sheetMore').inert = !open;
   if (!open && $('#sheetMore').contains(document.activeElement)) $('#sheetGrab').focus({ preventScroll: true });
-  SHEET.y.to = open ? 0 : SHEET.shut;
-  if (calm()) {
-    cancelAnimationFrame(SHEET.raf); SHEET.raf = 0;
-    SHEET.y.x = SHEET.y.to; SHEET.y.v = 0;
-    SHEET.el.classList.remove('is-live');
-    sheetPaint();
-    return;
-  }
-  SHEET.y.v = v;
-  if (!SHEET.raf) { SHEET.t = performance.now(); SHEET.el.classList.add('is-live'); SHEET.raf = requestAnimationFrame(sheetFrame); }
 }
-/* 멈춤 너머로 끌면 멀어질수록 덜 따라온다(Apple rubber band, c .55) */
-const band = (d, dim) => d * dim * .55 / (dim + .55 * d);
-SHEET.el.addEventListener('pointerdown', e => {
-  /* 시작하기는 꾹 누르기(경쟁전)가 걸려 있어 끌기와 겹치지 않게 뺀다 */
-  if (!sheetOn() || e.button || e.target.closest('#navPlay, input')) return;
-  SHEET.drag = { id: e.pointerId, y0: e.clientY, from: 0, moved: false, hist: [[performance.now(), e.clientY]] };
+document.addEventListener('pointerdown', e => {
+  if (SHEET.open && !e.target.closest('.navbar, .rk-layer')) sheetSet(false);
 });
-addEventListener('pointermove', e => {
-  const d = SHEET.drag;
-  if (!d || e.pointerId !== d.id) return;
-  if (!d.moved) {
-    if (Math.abs(e.clientY - d.y0) < 8) return;
-    /* 문턱을 넘은 그 자리에서 잡는다 — 스프링이 돌고 있었으면 지금 값에서 멈춰 세운다 */
-    d.moved = true; d.y0 = e.clientY; d.from = SHEET.y.x;
-    dispatchEvent(new Event('rt-sheet'));
-    cancelAnimationFrame(SHEET.raf); SHEET.raf = 0;
-    SHEET.el.classList.add('is-live');
-    try { SHEET.el.setPointerCapture(d.id); } catch {}
-  }
-  d.hist.push([performance.now(), e.clientY]);
-  if (d.hist.length > 8) d.hist.shift();
-  const y = d.from + e.clientY - d.y0, shut = SHEET.shut;
-  SHEET.y.x = SHEET.y.to = y < 0 ? -band(-y, innerHeight) : y > shut ? shut + band(y - shut, innerHeight) : y;
-  SHEET.y.v = 0;
-  sheetPaint();
-});
-const sheetUp = e => {
-  const d = SHEET.drag;
-  if (!d || e.pointerId !== d.id) return;
-  SHEET.drag = null;
-  if (!d.moved) return;
-  /* 끌고 난 뒤의 click 은 칸을 누른 게 아니다 */
-  skipClick = true;
-  setTimeout(() => { skipClick = false; }, 0);
-  const [t1, y1] = d.hist[d.hist.length - 1], f = d.hist.find(s => t1 - s[0] <= 100) || d.hist[0];
-  const v = e.type === 'pointerup' && t1 > f[0] && performance.now() - t1 < 80 ? (y1 - f[1]) / (t1 - f[0]) * 1000 : 0;
-  const end = SHEET.y.x + v / 1000 * .998 / (1 - .998);
-  sheetSet(end < SHEET.shut / 2, v);
-};
-addEventListener('pointerup', sheetUp);
-addEventListener('pointercancel', sheetUp);
+$('#sheetMore').addEventListener('click', () => sheetSet(false));
 $('#sheetGrab').addEventListener('click', () => sheetSet(!SHEET.open));
 /* Esc 는 펼친 시트부터 접는다 — 칸 고르기를 푸는 것(아래 Esc)보다 앞선다 */
 document.addEventListener('keydown', e => {
@@ -1575,9 +1577,122 @@ document.addEventListener('keydown', e => {
   sheetSet(false);
 }, true);
 /* 오른쪽 줄의 전체 보기 — 펼친 구가 있으면 그 덩이, 없으면 서울 전체로 */
-$('#homeFit').addEventListener('click', () => { if (OPEN) focusHome(); else restoreHomeView(); });
+$('#homeFit').addEventListener('click', () => { dockMin(false); if (OPEN) focusHome(); else restoreHomeView(); });
+
+/* ── 폰의 아래 막대 — 애플 뮤직 탭 막대 결 ───────────────────
+   위 줄 미니 막대(코스 이름·시작), 아래 줄 탭 알약(지도·순위·기록·설정)과 계정 동그라미.
+   애플 뮤직이 아래로 스크롤하면 탭 막대를 지금 탭 동그라미로 접고 미니 막대를 그 옆에
+   내려앉히듯, 지도를 끌거나 집으면 접는다. 지도 탭·전체 보기를 누르거나 키보드 초점이
+   탭 알약에 들어오면 펼친다. 요소는 옮길 뿐이라 href 로 받는 손과 키보드 길이 그대로 산다 */
+const dockMin = on => $('#tabDock').classList.toggle('is-min', on && fingers());
+
+/* 탭 순서 — 전환 방향(오른쪽 탭이면 새 화면이 오른쪽에서 밀려온다)이 이걸 따른다.
+   덮개는 셋이 따로 산다(ranked.js 순위·기록·계정, settings.js 설정, auth.js 로그인) —
+   여기서는 새로 열지 않고, 기존 손잡이(탭 링크의 click)를 그대로 태워 옮긴다 */
+const TABS = ['map', 'ranking', 'settings', 'account'];
+const TAB_SEL = { map: '#tabHome', ranking: '#tabBar a[href="#ranking"]',
+  settings: '#tabBar a[href^="settings"]', account: '#signinLink' };
+const TAB = { swap: false, pass: false };   // swap: 탭끼리 옮기는 중 — 덮개들이 pushState 대신 replaceState 를 쓴다
+const histPush = (state, url) => history[TAB.swap ? 'replaceState' : 'pushState'](state, '', url);
+/* 덮개가 열려 있어도 막대가 남으니, Tab 이 덮개 안에서만 돌지 않게 덮개 쪽 트랩에 얹는다 */
+const dockTabs = () => fingers() ? [...document.querySelectorAll('#tabBar .nav-item, #signinLink')] : [];
+function tabNow() {
+  const b = document.body.classList;
+  if (b.contains('signing')) return 'account';
+  if (b.contains('setting')) return 'settings';
+  if (b.contains('paging')) {
+    const p = ['ranking', 'records', 'account'].find(n => !$('#' + n).hidden && !$('#' + n).classList.contains('pg-exit'));
+    if (p) return p === 'records' ? 'account' : p;   // 기록은 계정 탭 안에 산다
+  }
+  return 'map';
+}
+function tabPaint() {
+  $('#tabDock').inert = false;   // 옛 캐시의 덮개 스크립트가 body 자식을 통째로 잠가도 막대는 산다
+  const now = tabNow();
+  TABS.forEach(n => {
+    const el = $(TAB_SEL[n]);
+    if (n === now) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+  });
+  if (now !== 'map') dockMin(false);
+}
+/* 같은 문서 View Transition — 없거나 움직임을 줄였으면 그냥 즉시 바꾼다 */
+function tabSwap(sign, fn) {
+  const root = document.documentElement;
+  if (!document.startViewTransition || calm()) return fn();
+  root.dataset.tabSwap = '';
+  root.style.setProperty('--tab-sign', sign);
+  const vt = document.startViewTransition(fn);
+  vt.ready.catch(() => {}); vt.updateCallbackDone.catch(() => {});   // 빠르게 연달아 누르면 앞 전환이 건너뛰어진다 — 오류가 아니다
+  vt.finished.catch(() => {}).finally(() => { delete root.dataset.tabSwap; });
+}
+function tabGo(to) {
+  const from = tabNow();
+  if (from === to && !(to === 'account' && !$('#records').hidden)) {
+    /* 지도 탭 — 접혀 있으면 펼치고, 펼친 채 다시 누르면 지도를 처음 자리로(탭을 두 번 누르면 맨 위로 가듯). 덮개 탭은 그대로 */
+    if (to === 'map') { if ($('#tabDock').classList.contains('is-min')) dockMin(false); else $('#homeFit').click(); }
+    return;
+  }
+  tabSwap(Math.sign(TABS.indexOf(to) - TABS.indexOf(from)), () => {
+    TAB.swap = from !== 'map';   // 지도에서 첫 진입만 기록을 쌓는다 — 뒤로 가기 한 번이 곧 홈
+    try {
+      dispatchEvent(new Event('rt-tab-swap'));
+      /* 캐시에 남은 옛 덮개 스크립트는 이 이벤트를 못 듣는다 — 열린 채면 닫기 단추로 닫는다 */
+      [['#options', '#optClose'], ['#signin', '#siClose']].forEach(([b, c]) => { if (!$(b).hidden) $(c).click(); });
+      if (to !== 'map') { TAB.pass = true; $(TAB_SEL[to]).click(); TAB.pass = false; }
+    } finally { TAB.swap = TAB.pass = false; }
+    tabPaint();
+    /* 포커스는 새 덮개의 제목으로, 지도면 지도 탭으로 */
+    const box = ['#ranking', '#records', '#account', '#options', '#signin'].map(s => $(s)).find(n => n && !n.hidden);
+    if (!box) $('#tabHome').focus({ preventScroll: true });
+    else if (!box.contains(document.activeElement)) (box.querySelector('h1, h2') || box).focus({ preventScroll: true });
+  });
+}
+function tabDock() {
+  $('#tabDock .tab-acc').append($('#courseName'), $('#navPlay'));
+  $('#tabBar').append(...['#regions a[href="#ranking"]', '#regions a[href="community/"]',
+    '#regions .nav-bot a[href="settings/"]'].map(s => $(s)));
+  $('#tabDock').append($('#signinLink'));
+  /* 기록은 계정 탭 안으로 — 로그인해야 들어오는 곳이다. href 는 그대로라 ranked.js 의 손이 받는다 */
+  const rec = $('#regions a[href="#records"]');
+  rec.className = 'profile-button';
+  $('#account .account-details').prepend(rec);
+  /* #regions 안에 있으면 덮개가 뒤를 잠글 때(inert) 막대도 잠긴다 — body 직속으로 뺀다 */
+  document.body.append($('#tabDock'));
+  /* 덮개는 막대와 함께 열려 있으니 모달이 아니다. 제목은 프로그램으로 초점을 받는다 */
+  ['#signin', '#options', '#ranking', '#records', '#account'].forEach(s => {
+    const box = $(s);
+    box.setAttribute('aria-modal', 'false');
+    const h = box.querySelector('h1, h2');
+    if (h) h.tabIndex = -1;
+  });
+  let down = null;
+  $('#regions').addEventListener('pointerdown', e => {
+    down = e.target.closest('.tab-dock, .navbar, .map-ctl, .rk-layer, dialog') ? null : [e.clientX, e.clientY];
+  }, true);
+  $('#regions').addEventListener('pointermove', e => {
+    if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 12) { down = null; dockMin(true); }
+  }, true);
+  addEventListener('pointerup', () => { down = null; });
+  addEventListener('pointercancel', () => { down = null; });
+  /* 탭 — 덮개 손잡이보다 먼저 받아 탭끼리의 이동으로 돌린다(합성 click 은 통과시킨다) */
+  $('#tabDock').addEventListener('click', e => {
+    if (TAB.pass) return;
+    const to = TABS.find(n => $(TAB_SEL[n]).contains(e.target));
+    if (!to) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    tabGo(to);
+  }, true);
+  $('#tabBar').addEventListener('focusin', () => dockMin(false));
+  /* 덮개가 어떤 길로 열리고 닫혀도(Esc·뒤로 가기·주소 해시) 지금 탭 표시가 따라간다 */
+  const mo = new MutationObserver(tabPaint);
+  mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  mo.observe($('#tabDock'), { attributes: true, attributeFilter: ['inert'] });
+  ['#ranking', '#records', '#account'].forEach(s => mo.observe($(s), { attributes: true, attributeFilter: ['hidden', 'class'] }));
+  tabPaint();
+}
 if (fingers()) {
   sheetDock();
+  tabDock();
   /* 결과 시트는 순위표가 늦게 붙어 자란다 — 자랄 때마다 끝난 지도를 그 위 빈 칸에 다시 앉힌다 */
   new ResizeObserver(() => { if ($('#result').classList.contains('on')) fitResult(); }).observe($('#result .res-sheet'));
   /* iOS 는 터치 손잡이가 하나도 없으면 :active(누름 반응)를 안 켠다 */
@@ -1677,6 +1792,8 @@ async function showCountry(id) {
 
 async function boot() {
   saveOpt();
+  /* 부트 스크립트가 읽어 둔 마지막 말이 있으면 fetch 를 기다리지 않고 바로 입힌다 */
+  if (window.RT_UI) { I18N[RT_UI.lang] = RT_UI.pack; LANG = RT_UI.lang; paintUI(); }
   const [i18n, world] = await Promise.all([
     grab('data/i18n.json'),
     grab('data/world.json'),
@@ -1694,6 +1811,7 @@ async function boot() {
   COUNTRY = resolveCountry();
   LANG = resolveLang();
   paintUI();
+  cacheUI();
   addEventListener('rt-opt', () => {
     const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
     for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
@@ -1706,12 +1824,16 @@ async function boot() {
     requestAnimationFrame(syncGrid);
     LANG = resolveLang();
     paintUI();
+    cacheUI();
     if (G) syncKb();
   });
   fbPlaceholder();
   paintRegion();
   wireNavShape();
   await showCountry(COUNTRY);
+  await softMap();
+  /* 이어 붙이기가 끝났다 — 등장 움직임 눌러 둔 것을 한 박자 뒤 푼다 */
+  setTimeout(() => document.documentElement.removeAttribute('data-still'), 400);
 }
 
 /* ── 게임 ───────────────────────────────────────────── */
@@ -1723,7 +1845,7 @@ async function start(slug, only, rk) {
      기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
   /* 게임 자판이 켜져 있으면 기기 키보드가 올라오지 않게 먼저 막는다 — 코스를 못 치는
      자판이면 syncKb 가 도로 푼다 */
-  if (fingers()) { kbMode(opt.softkb); go('play'); $('#typein').focus(); }
+  if (fingers()) { kbMode(opt.softkb); go('play'); if (!opt.softkb) $('#typein').focus(); }
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [course, geom] = await load(slug);
@@ -2021,13 +2143,13 @@ function clampCam(tx, ty, W, H, z) {
 /* 폰은 지도가 화면 끝까지 깔리고 머리줄·아래 시트가 그 위에 뜬다. 가려지지 않는 칸
    (머리줄 밑 ~ 시트 위)을 지도 좌표로 돌려준다 — 목표는 이 칸 한가운데에 서고, 지도는
    이 칸을 빈틈없이 덮는 데까지만 끌린다. 결과 화면이면 뒤로 단추 밑 ~ 결과 시트 위다.
-   시트 높이는 offsetHeight 로 잰다 — 올라오는 중(transform)에도 앉을 자리는 같다 */
+   시트는 offsetTop·offsetHeight 로 잰다 — 올라오는 중(transform)에도 앉을 자리는 같다 */
 function viewSpan() {
   if (!fingers()) return null;
   const res = $('#result').classList.contains('on');
   const head = (res ? $('#result .back') : $('#play .hud')).getBoundingClientRect();
   const sheet = res ? $('#result .res-sheet') : $('#play .play-sheet');
-  const low = (res ? innerHeight : $('#play').getBoundingClientRect().bottom) - sheet.offsetHeight;
+  const low = res ? innerHeight - sheet.offsetHeight : $('#play').getBoundingClientRect().top + sheet.offsetTop;
   const a = viewPoint({ clientX: 0, clientY: head.bottom + 8 }), b = viewPoint({ clientX: innerWidth, clientY: low - 8 });
   return a && b && b.y > a.y ? [a, b] : null;
 }
@@ -2104,7 +2226,7 @@ function countdown(n, done) {
 
 function run() {
   $('#typein').value = '';   // 카운트다운 동안 미리 친 글자는 세지 않는다
-  $('#typein').focus();
+  typeFocus();
   /* 폰: 첫 조준은 머리줄이 내려오는 중에 재서 칸이 어긋난다 — 다 앉은 뒤 다시 맞춘다 */
   if (fingers() && G.cam && $('#playAim').hidden) aimCam();
   tick = setInterval(() => {
@@ -2126,7 +2248,8 @@ function stop() { clearInterval(tick); clearTimeout(pending); tick = pending = n
 /* 입력창은 1x1 로 숨겨 두었다. 다른 데를 클릭하면 포커스가 빠져나가
    타이핑이 먹지 않으므로, 플레이 화면을 누르면 되돌린다.
    pointerdown 에서 기본 동작을 막아야 포커스가 딴 데로 가지 않는다.
-   그 자리에서 끌면 3배 카메라를 옮긴다 — 맞히면 aim() 이 다음 목표로 되돌린다. */
+   그 자리에서 끌면 3배 카메라를 옮긴다 — 맞히면 aim() 이 다음 목표로 되돌린다.
+   폰은 끌지 않는다 — 자판을 치다 스친 엄지에 지도가 밀린다. 핀치 확대는 둔다 */
 function viewPoint(e) {
   const svg = $('#map'), ctm = svg && svg.getScreenCTM();
   if (!ctm) return null;
@@ -2137,8 +2260,8 @@ function viewPoint(e) {
 $('#play').addEventListener('pointerdown', e => {
   if (e.target.closest('button, a, input, select, textarea')) return;
   e.preventDefault();
-  $('#typein').focus();
-  if (!G || !G.cam || e.button || fingersOn.size > 1) return;
+  typeFocus();
+  if (!G || !G.cam || e.button || fingersOn.size > 1 || fingers()) return;
   const p = viewPoint(e);
   if (!p) return;
   const map = $('#map');
@@ -2150,11 +2273,19 @@ $('#play').addEventListener('pointerdown', e => {
 /* 폰은 pointerdown 의 focus 로는 화상 키보드가 안 뜨는 브라우저가 있다(iOS) —
    click 에서 한 번 더 부른다. 이미 포커스가 있으면 아무 일도 없다 */
 $('#play').addEventListener('click', e => {
-  if (!e.target.closest('button, a, input, select, textarea')) $('#typein').focus();
+  if (!e.target.closest('button, a, input, select, textarea')) typeFocus();
+});
+/* 게임 자판이 서 있으면 입력창에 초점을 주지 않는다 — 초점이 있으면 iOS 가 ∧∨✓ 막대를
+   붙이고 주소창 알약을 띄운다. 자판은 초점 없이 입력창 값을 고친다(kbPress) */
+const kbOwns = () => !KB.el.hidden;
+function typeFocus() { if (kbOwns()) $('#typein').blur(); else $('#typein').focus(); }
+/* 게임 자판 중에 블루투스 키보드를 치면 그제야 초점을 준다 — 첫 키는 흘릴 수 있다 */
+document.addEventListener('keydown', e => {
+  if (kbOwns() && G && tick && e.target === document.body && e.key.length === 1) $('#typein').focus();
 });
 
 /* 지금 칠 수 있는 상태인지 눈에 보이게 한다 */
-const markFocus = () => $('#typing').classList.toggle('off', document.activeElement !== $('#typein'));
+const markFocus = () => $('#typing').classList.toggle('off', document.activeElement !== $('#typein') && !kbOwns());
 $('#typein').addEventListener('focus', markFocus);
 $('#typein').addEventListener('blur', markFocus);
 
@@ -2170,7 +2301,10 @@ if (window.visualViewport) {
   const fitVV = () => {
     if (innerHeight - vv.height > 1 || vv.offsetTop > 0) {
       st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); st.setProperty('--sab', '0px');
-    } else for (const k of ['--vvh', '--vvt', '--sab']) st.removeProperty(k);
+      /* 보이는 칸 밑 ~ 레이아웃 바닥(키보드·주소 알약 뒤). #play 는 거기까지 깔고 시트만 그 위에 앉힌다 —
+         보이는 칸에서 끊으면 iOS 주소 알약 둘레가 지도 없이 빈다(카운트다운은 inset:0 이라 거기까지 깔린다) */
+      st.setProperty('--kb', Math.max(0, innerHeight - vv.height - vv.offsetTop) + 'px');
+    } else for (const k of ['--vvh', '--vvt', '--sab', '--kb']) st.removeProperty(k);
     requestAnimationFrame(() => {
       fitPlayK();
       if (fingers() && G && G.cam && $('#play').classList.contains('on') && $('#playAim').hidden) aimCam();
@@ -2212,9 +2346,10 @@ $('#typein').addEventListener('input', e => {
   if (cap && !(G.spacy && /\s/.test(G.want || '')) && !/\s/.test(val) && val.length > cap) {
     val = val.slice(0, cap);
     composing = false;
+    const had = document.activeElement === inp;   // 게임 자판이면 초점이 없다 — 도로 주지 않는다
     inp.blur();
     inp.value = val;
-    inp.focus();
+    if (had) inp.focus();
   }
   paintTyped(val, composing);
   G.part = partKeys(val, G.seq ? [target()] : G.items.filter(it => !it.claimed), G.spacy);
@@ -2252,6 +2387,8 @@ const KB_NAME = { ㄱ: '기역', ㄲ: '쌍기역', ㄴ: '니은', ㄷ: '디귿',
   ㅔ: '에', ㅕ: '여', ㅖ: '예', ㅗ: '오', ㅛ: '요', ㅜ: '우', ㅠ: '유', ㅡ: '으', ㅣ: '이' };
 const KB_SYM = /^[0-9,.'\-]$/;   // 숫자·문장부호는 코스에 있는 것만 한 줄 더 선다(종로1,2,3,4가동)
 const KB = { el: $('#softkb'), sig: '', shift: false, down: new Map() };
+const KB_SWIPE = 40;   // 자판 위를 이만큼(px) 왼쪽으로 쓸고 떼면 한 자 지운다
+const KB_FLICK = 18;   // 이만큼(px) 위로 밀고 떼면 윗글자(ㄲ·ㅒ·대문자)를 친다
 
 /* 이 코스를 칠 자판 — { lay: 'ko'|'en', sym: '12,' } 또는 null(기기 키보드). 항목마다 이름이나
    별칭 하나는 자판 글자·공백·코스의 숫자/문장부호로만 되어 있어야 한다(Québec 은 못 친다) */
@@ -2290,17 +2427,23 @@ function kbBuild(kb) {
     row(shift, ...letters(r3), act('back', 'kbBack', '⌫')),
     row(act('space', 'kbSpace', t('kbSpace')), ...(G.spacy ? [act('enter', 'kbEnter', '⏎')] : [])),
   ].filter(Boolean));
-  KB.el.classList.toggle('is-sym', !!kb.sym);
   KB.shift = false;
+  KB.el.querySelectorAll('.kb-row')[kb.sym ? 2 : 1].classList.add('kb-mid');
+  KB.el.classList.toggle('is-sym', !!kb.sym);
+  KB.el.classList.toggle('is-en', kb.lay === 'en');
   kbPaint();
 }
-/* Shift 에 따라 글자를 갈아 끼운다 — 켜진 Shift 는 aria-pressed 와 바뀐 글자로 보인다(색만이 아니다) */
+/* 키 얼굴 — 윗글자는 모서리에 작게 서고, 위로 밀면 키 가운데로 올라온다. 켜진 Shift 면 윗글자가 선다 */
+function kbFace(b, up) {
+  const k = (up || KB.shift) && b.dataset.s || b.dataset.k;
+  b.textContent = k;
+  b.classList.toggle('up', up && !!b.dataset.s);
+  if (b.dataset.name) b.setAttribute('aria-label', KB_NAME[k] || k);
+}
+/* 켜진 Shift 는 aria-pressed 와 바뀐 글자로 보인다(색만이 아니다) */
 function kbPaint() {
-  KB.el.querySelectorAll('[data-k]').forEach(b => {
-    const k = KB.shift && b.dataset.s || b.dataset.k;
-    b.textContent = k;
-    if (b.dataset.name) b.setAttribute('aria-label', KB_NAME[k] || k);
-  });
+  KB.el.querySelectorAll('[data-k]').forEach(b => kbFace(b, false));
+  KB.el.classList.toggle('is-shift', KB.shift);
   const s = KB.el.querySelector('.kb-shift');
   if (s) s.setAttribute('aria-pressed', KB.shift);
   kbHint();
@@ -2308,7 +2451,7 @@ function kbPaint() {
 /* 다음에 칠 키 — 친 것을 두벌식으로 풀어 목표의 앞머리면 그 다음 자모, 아니면 지우기.
    다 쳤으면 확정(스페이스, 띄어 쓴 코스는 Enter). 경쟁전·설정에서 끄면 안 뜬다 */
 function kbHint() {
-  KB.el.querySelectorAll('.kb-next').forEach(b => b.classList.remove('kb-next'));
+  KB.el.querySelectorAll('.kb-next').forEach(b => b.classList.remove('kb-next', 'kb-flick'));
   if (KB.el.hidden || !opt.kbhint || !G || G.ranked || !G.want) return;
   /* 영어는 대소문자까지 짚는다 — 판정은 안 가려도 글자 칸 색칠(paintTyped)은 가린다 */
   const form = s => G.kb && G.kb.lay === 'en' ? (G.spacy ? s : s.replace(/\s/g, '')) : typedForm(s, G.spacy);
@@ -2320,8 +2463,10 @@ function kbHint() {
     : [...KB.el.querySelectorAll('[data-k]')].find(x => x.dataset.k === ch || x.dataset.s === ch);
   if (!b) return;
   b.classList.add('kb-next');
-  /* 쌍자음·ㅒ·ㅖ·대문자는 Shift 도 같이 짚는다. 켜진 Shift 를 꺼야 할 때도 짚는다 */
+  /* 쌍자음·ㅒ·ㅖ·대문자는 Shift 도 짚고 키에 위로 밀라는 화살표(kb-flick)도 세운다 — 색만이 아니다.
+     켜진 Shift 를 꺼야 할 때도 Shift 를 짚는다 */
   const up = !!b.dataset.s && ch === b.dataset.s && ch !== b.dataset.k;
+  b.classList.toggle('kb-flick', up && !KB.shift);
   if (b.dataset.s && up !== KB.shift) KB.el.querySelector('.kb-shift').classList.add('kb-next');
 }
 const kbMode = on => { if (on) $('#typein').inputMode = 'none'; else $('#typein').removeAttribute('inputmode'); };
@@ -2335,28 +2480,47 @@ function syncKb() {
   /* 기기 키보드로 돌아갈 때 초점을 놓는다 — 다음 누름의 focus 가 기기 키보드를 띄운다(iOS) */
   if (!on && inp.inputMode === 'none') { kbMode(false); inp.blur(); }
   else kbMode(on);
+  if (on) inp.blur();
   KB.el.hidden = !on;
+  markFocus();
   kbHint();
   if (G && G.cam && $('#play').classList.contains('on')) requestAnimationFrame(() => { fitPlayK(); if ($('#playAim').hidden) aimCam(); });
 }
-function kbPress(b) {
+function kbPress(b, up) {
   const inp = $('#typein'), a = b.dataset.act;
   if (a === 'shift') { KB.shift = !KB.shift; return kbPaint(); }
   /* Enter 는 입력창의 keydown Enter 와 같은 길로 확정한다 */
   if (a === 'enter') { inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true })); return kbHint(); }
-  const k = a === 'space' ? ' ' : a === 'back' ? null : KB.shift && b.dataset.s || b.dataset.k;
+  const k = a === 'space' ? ' ' : a === 'back' ? null : (up || KB.shift) && b.dataset.s || b.dataset.k;
   inp.value = k === null ? hanBack(inp.value) : hanPush(inp.value, k);
   inp.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: k === null ? 'deleteContentBackward' : 'insertText', data: k }));
   if (KB.shift && !a) { KB.shift = false; kbPaint(); }
 }
-/* 누르면 바로 눌린 모양, 뗄 때 친다(키 위에서 뗐을 때만). 지우기는 길게 누르면 되풀이한다.
+/* 키 사이 틈·가운데 줄 들여쓰기·줄 사이를 짚어도 가장 가까운 키를 친다 — 빈 곳이 먹히면
+   ㅁ·ㅣ 처럼 들여 선 줄 끝 키가 자주 안 쳐진다. 자판 밖이면 null */
+function kbAt(x, y) {
+  const at = document.elementFromPoint(x, y);
+  if (!at || !KB.el.contains(at)) return null;
+  const hit = at.closest('button');
+  if (hit) return hit;
+  let best = null, bd = Infinity;
+  for (const b of KB.el.querySelectorAll('button')) {
+    const r = b.getBoundingClientRect();
+    const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+    if (d < bd) { bd = d; best = b; }
+  }
+  return best;
+}
+/* 누르면 바로 눌린 모양, 뗄 때 친다(가장 가까운 키가 누른 키일 때만). 윗글자가 있는 키는 위로 밀고 떼면
+   윗글자를 친다(키를 벗어나도 된다). 어느 키에서든 왼쪽으로 쓸고 떼면 한 자 지운다.
+   지우기는 길게 누르면 되풀이한다.
    pointerdown 을 막아 초점은 입력창에 남고, 두 엄지로 쳐도 지도 끌기·핀치가 되지 않는다 */
 KB.el.addEventListener('pointerdown', e => {
   e.preventDefault(); e.stopPropagation();
-  const b = e.target.closest('button');
+  const b = kbAt(e.clientX, e.clientY);
   if (!b) return;
   b.classList.add('down');
-  const d = { b, rep: 0, n: 0 };
+  const d = { b, rep: 0, n: 0, x: e.clientX, y: e.clientY, up: false, left: false };
   if (b.dataset.act === 'back') d.rep = setTimeout(function again() { kbPress(b); d.n++; d.rep = setTimeout(again, 70); }, 450);
   KB.down.set(e.pointerId, d);
 });
@@ -2366,13 +2530,24 @@ const kbUp = (e, commit) => {
   KB.down.delete(e.pointerId);
   clearTimeout(d.rep);
   d.b.classList.remove('down');
-  const at = document.elementFromPoint(e.clientX, e.clientY);
-  if (commit && !d.n && at && at.closest('button') === d.b) kbPress(d.b);
+  if (d.up) kbFace(d.b, false);
+  if (!commit || d.n) return;
+  if (d.left) kbPress(KB.el.querySelector('.kb-back'));
+  else if (d.up || kbAt(e.clientX, e.clientY) === d.b) kbPress(d.b, d.up);
 };
+KB.el.addEventListener('pointermove', e => {
+  const d = KB.down.get(e.pointerId);
+  if (!d || d.n) return;
+  const dx = d.x - e.clientX, dy = d.y - e.clientY;
+  const left = dx >= KB_SWIPE && dx > Math.abs(dy);
+  if (left !== d.left) { d.left = left; d.b.classList.toggle('down', !left); }
+  const up = !left && !!d.b.dataset.s && dy >= KB_FLICK;
+  if (up !== d.up) { d.up = up; kbFace(d.b, up); }
+});
 KB.el.addEventListener('pointerup', e => kbUp(e, true));
 KB.el.addEventListener('pointercancel', e => kbUp(e, false));
 /* 키보드(Tab·Enter)로 누른 click 은 pointer 가 없다(detail 0) */
-KB.el.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !e.detail) kbPress(b); });
+KB.el.addEventListener('click', e => { const b = e.target.closest('button'); if (b && !e.detail) kbPress(b, e.shiftKey); });   // Shift+Enter 는 윗글자
 KB.el.addEventListener('contextmenu', e => e.preventDefault());
 $('#typein').addEventListener('input', kbHint);
 $('#typein').addEventListener('keydown', () => setTimeout(kbHint));
@@ -2970,7 +3145,7 @@ if (location.search.includes('rt=1')) {
   }
   const play = $('#navPlay'), botShape = $('#navBotShape');
   const set = document.querySelector('#regions .nav-bot a[href="settings/"]');
-  if (play && botShape && set) {
+  if (play && botShape && set && play.closest('.nav-bot')) {
     aimBotShape(set);
     console.assert(set.classList.contains('is-on') && !play.classList.contains('is-on') && botShape.classList.contains('is-pill'),
       '아래줄에서 설정을 가리키면 알약이 설정을 감싼다');
@@ -2992,7 +3167,6 @@ if (location.search.includes('rt=1')) {
     '폰 조준: 지도 맨 끝(0, 1000)의 목표도 칸 한가운데(250)에 선다');
   console.assert(fitSpan(9999, 0, 500, 1000, 2 / 3) === 500 * 2 / 3 && fitSpan(0, -100, 900, 600, .5) === 100,
     '폰 끌기: 칸의 1/3 은 지도가 덮고, 작은 지도는 여전히 한가운데');
-  console.assert(band(100, 800) < 100 && band(1e6, 800) < 800, '시트 고무줄은 멀수록 덜 따라오고 화면을 못 넘는다');
 
   UI_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh'];
   LANG_COUNTRY = buildLangCountry({
