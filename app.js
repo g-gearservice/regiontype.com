@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.48';
+const VER = '3.49';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1371,7 +1371,9 @@ document.addEventListener('keydown', e => {
 function navTopTarget(el) {
   if (!el || !el.closest) return null;
   const logo = el.closest('.nav-logo');
-  if (logo && logo.closest('#regions .navbar')) return logo;
+  /* 봇이 로고에서 나오는 동안(ranked.js 의 rk-intro·rk-fill·rk-full)은 알약이 로고를 감싸지
+     않는다 — 로고 점이 제 자리에서 로고를 채운다 */
+  if (logo && logo.closest('#regions .navbar')) return document.body.matches('.rk-intro, .rk-fill, .rk-full') ? null : logo;
   const it = el.closest('.nav-item');
   if (!it) return null;
   if (!it.closest('#regions .navbar')) return null;
@@ -1414,9 +1416,6 @@ function makeNavFollow(spec) {
     if ($('#signin') && !$('#signin').hidden && nav.contains(signin)) el = signin;
     const setLink = nav.querySelector('a[href^="settings"]');
     if (document.body.classList.contains('setting') && setLink) el = setLink;
-    /* 처음 온 사람에게 봇이 조르는 동안(ranked.js 의 rk-intro) 알약은 로고를 감싼 채 선다 */
-    const introLogo = document.body.classList.contains('rk-intro') && nav.querySelector('.nav-logo');
-    if (introLogo) el = introLogo;
     const home = spec.home();
     const t = el || home;
     aim = el || null;
@@ -3138,8 +3137,8 @@ if (location.search.includes('rt=1')) {
       '손 떼면 로고 점 자리의 원으로 돌아간다');
     document.body.classList.add('rk-intro');
     aimNavShape(null);
-    console.assert(logo.classList.contains('is-on') && shape.classList.contains('is-pill'),
-      '봇이 조르는 동안엔 손을 떼도 알약이 로고에 남는다');
+    console.assert(!logo.classList.contains('is-on') && !shape.classList.contains('is-pill') && navTopTarget(logo) === null,
+      '봇이 조르는 동안엔 알약이 로고를 감싸지 않는다 — 로고 점이 채운다');
     document.body.classList.remove('rk-intro');
     aimNavShape(null);
   }
