@@ -12,7 +12,7 @@ body{overflow:auto}
 [data-tag="chat"]{--tag:var(--ink-soft);--on-tag:var(--bg)}
 
 .cm-top,.cm{max-width:760px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative;z-index:1}
-.cm-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:32px}
+.cm-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:32px;z-index:4}
 .cm-top .logo{font-size:28px;color:var(--ink);text-decoration:none}
 .cm-me{display:inline-flex;align-items:center;min-height:40px;padding:6px 16px;border:2px solid var(--grid);border-radius:999px;
   background:var(--card);color:var(--ink);font-size:15px;font-weight:700;text-decoration:none;max-width:60%;

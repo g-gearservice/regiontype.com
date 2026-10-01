@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.9.363",
+    "date": "2026-10-01",
+    "ko": "폰 설정 화면에서 탭 줄 좌우 끝의 블러가 탭 줄에서 끊기지 않고 맨 위 제목 자리까지 이어집니다.",
+    "en": "On phones, the blur at the left and right ends of the Settings tab row now runs all the way up past the page title instead of stopping at the tabs."
+  },
+  {
+    "v": "0.9.362",
+    "date": "2026-10-01",
+    "ko": "설정의 게임 탭에서 항목 아래 설명 글을 걷어 내 고르는 칸만 남겼습니다.",
+    "en": "The Game tab in Settings now shows just the options, without the explanatory notes underneath."
+  },
+  {
     "v": "0.9.361",
     "date": "2026-10-01",
     "ko": "폰 설정 화면에서 탭 줄 좌우 끝의 블러 띠가 위쪽에서 뚝 끊긴 사각형 층으로 보이지 않고, 위아래 모두 서서히 바래 사라집니다.",
@@ -14,8 +26,8 @@
   {
     "v": "0.9.359",
     "date": "2026-10-01",
-    "ko": "데스크톱과 태블릿에서는 예전처럼 봇이 스스로 나옵니다. 들어오면 한 번 인사하고 마지막으로 끌어다 놓은 자리에서 잡니다(옮긴 적이 없으면 귀퉁이). 인사말과 둘러보기 끝인사도 예전 말(“필요할 때 저를 눌러 주세요”)로 돌렸습니다. 로고를 꾹 누르거나 끌어도 이제 아무 일 없습니다(가입 직후 봇이 조를 때만 끌어냅니다). 폰은 지금처럼 로고 안에 있다가 불러야 나옵니다. 폰 설정에 보이던 개발 중인 언어·지역 탭 단추를 정식 사이트에서 숨겼습니다.",
-    "en": "On desktop and tablet, the bot comes out on its own again as before: it greets you once when you arrive, then naps where you last dragged it (a corner if you never moved it), even after a reload. Its greeting and tour goodbye are back to the old wording (\"Press me whenever you need a hand\"). Pressing and holding or dragging the logo no longer does anything, except to pull the bot out right after you sign up. On phones it still lives inside the logo until you call it. The in-development Language and Region tab buttons no longer show in Settings on phones on the live site."
+    "ko": "데스크톱과 태블릿에서는 예전처럼 봇이 스스로 나옵니다. 들어오면 한 번 인사하고 마지막으로 끌어다 놓은 자리에서 잡니다(옮긴 적이 없으면 귀퉁이). 인사말과 둘러보기 끝인사도 예전 말(“필요할 때 저를 눌러 주세요”)로 돌렸습니다. 로고를 꾹 누르거나 끌어도 이제 아무 일 없습니다(가입 직후 봇이 조를 때만 끌어냅니다). 폰은 지금처럼 로고 안에 있다가 불러야 나옵니다. 폰 설정에 보이던 개발 중인 언어·지역 탭 단추를 정식 사이트에서 숨겼습니다. 폰에서 내 계정으로 오갈 때 주황 판이 왼쪽으로 빠지지 않고, 탭 알약과 계정 동그라미가 한 막대인 것처럼 그 사이를 미끄러집니다. 설정·순위·기록·내 계정·커뮤니티·소개 페이지의 위·아래 흐림을 홈과 같은 높이와 결로 맞췄습니다. 폰 설정의 탭 줄 좌우 끝 흐림을 걷고, 머리줄 뒤 흐림만 남겼습니다.",
+    "en": "On desktop and tablet, the bot comes out on its own again as before: it greets you once when you arrive, then naps where you last dragged it (a corner if you never moved it), even after a reload. Its greeting and tour goodbye are back to the old wording (\"Press me whenever you need a hand\"). Pressing and holding or dragging the logo no longer does anything, except to pull the bot out right after you sign up. On phones it still lives inside the logo until you call it. The in-development Language and Region tab buttons no longer show in Settings on phones on the live site. On phones, moving to or from My Account no longer drops the orange shape off to the left; it slides between the tab pill and the account circle as if they were one bar. Settings, Ranking, Records, My Account, Community and the About pages now use the same top and bottom blur as the home screen. On phones, the blurred left and right edges of the Settings tab row are gone; only the blur behind the header remains."
   },
   {
     "v": "0.9.358",

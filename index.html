@@ -54,7 +54,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.61">
+<link rel="stylesheet" href="style.css?v=3.63">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -385,7 +385,6 @@
             </div>
           </dd>
         </dl>
-        <p class="profile-help" data-i18n="dongHelp">구를 펼쳤을 때 칠 동입니다. 행정동은 주민센터 단위, 법정동은 주소에 쓰는 이름이고 순위표는 따로 섭니다.</p>
         <!-- 폰(pointer:coarse)에서만 보인다 — 게임 자판과 다음 키 표시 (app.js 의 syncKb) -->
         <div class="opts-kb">
           <dl class="opts">
@@ -394,10 +393,7 @@
             <dt data-i18n="kbHint">다음 키 표시</dt>
             <dd><button class="toggle" data-opt="kbhint" data-i18n-aria="kbHint" aria-label="다음 키 표시"></button></dd>
           </dl>
-          <p class="profile-help" data-i18n="softKbHelp">폰에서는 게임 자판으로 칩니다. 끄면 기기 키보드를 씁니다. 다음 키 표시는 경쟁전에서 늘 꺼집니다.</p>
         </div>
-        <p class="profile-help" id="unitNow"></p>
-        <p class="profile-help" data-i18n="unitHelp">순위표는 늘 같은 값으로 저장하고 보일 때만 이 단위로 바꿉니다 — 단위가 다른 사람끼리도 같은 표에 섭니다.</p>
       </div>
       <div id="optsVideo" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVideo" tabindex="0" hidden>
         <dl class="opts">
@@ -469,16 +465,18 @@
       </div>
     </div>
   </div>
-  <span class="backdrop-blur" aria-hidden="true">
+  <span class="backdrop-blur page-blur" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </span>
-  <span class="backdrop-blur bot" aria-hidden="true">
+  <span class="backdrop-blur page-blur bot" aria-hidden="true">
     <span></span><span></span><span></span><span></span><span></span><span></span>
   </span>
 </section>
 
 <!-- 순위·기록 — 설정처럼 홈 위에 뜨는 덮개다(ranked.js). 주소는 #ranking · #records -->
 <section id="ranking" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="rankingHead" hidden>
+  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <div class="screen-head">
     <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head" id="rankingHead" data-i18n="ranking">순위</h2>
@@ -503,6 +501,8 @@
 </section>
 
 <section id="records" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="recordsHead" hidden>
+  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <div class="screen-head">
     <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head" id="recordsHead" data-i18n="records">기록</h2>
@@ -525,8 +525,8 @@
      고른 칸·지도 자리가 떠날 때 그대로다. /account/ 는 #account 로 넘기는 착지대다.
      머리줄과 위·아래 흐림 띠는 덮개에 붙어 있고 본문이 그 밑으로 지나간다 -->
 <section id="account" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="accountHead" hidden>
-  <span class="backdrop-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-  <span class="backdrop-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <header class="account-heading"><button type="button" class="back" data-pg-close aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></button><h1 id="accountHead">내 계정</h1></header>
   <div class="account-shell">
   <div class="account-layout">
@@ -605,9 +605,9 @@
   </form>
 </dialog>
 
-<script src="app.js?v=3.61"></script>
+<script src="app.js?v=3.63"></script>
 <script src="auth.js?v=3.51"></script>
-<script src="settings/settings.js?v=3.58"></script>
+<script src="settings/settings.js?v=3.62"></script>
 <script src="ranked.js?v=3.59"></script>
 </body>
 </html>
