@@ -813,6 +813,8 @@ function settle() {
 const GREET_KEY = 'rt.greet';
 async function greetIn() {
   await makeBot();
+  /* 부드러운 새로고침으로 온 첫 그림은 움직임을 눌러 둔다(data-still) — 풀린 뒤에 나와야 걸어 나온다 */
+  while (document.documentElement.hasAttribute('data-still')) await new Promise(r => setTimeout(r, 50));
   out = true;
   layer.hidden = false;
   bot.api.start();
@@ -944,6 +946,7 @@ const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
   ranked = on;
   document.body.classList.toggle('rk-ready', on);
+  if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
   if (on) ping();
   const play = $('#navPlay');
   play.dataset.i18n = on ? 'rankedStart' : 'start';

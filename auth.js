@@ -223,7 +223,9 @@ function done(tok, generation, isNewAccount = false) {
   if (isNewAccount) localStorage.setItem('rt.rescue', '1');
   /* 로그인하고 돌아온 홈에서는 봇이 먼저 나와 인사한다(ranked.js 의 greetIn) — 한 번만 */
   localStorage.setItem('rt.greet', '1');
-  location.assign(isNewAccount ? 'welcome/' : './');
+  if (isNewAccount) return location.assign('welcome/');
+  /* 홈은 그 자리에서 티 안 나게 새로 연다(app.js softReload) — 화면은 그대로, 계정 것만 새로 읽는다 */
+  if (!(window.softReload && softReload('auth'))) location.assign('./');
 }
 
 /* ── 덮개 여닫기 ─────────────────────────────────────── */
