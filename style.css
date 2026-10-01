@@ -93,8 +93,9 @@ html{background:var(--bg)}
 
 *{box-sizing:border-box;margin:0;padding:0}
 /* 선택 색은 어디서나 투명. 글자색은 건드리지 않아 원래 색 그대로 남는다 */
-::selection{background:transparent}
-::-moz-selection{background:transparent}
+/* !important — 뒤에 오는 어떤 규칙도 선택 색을 되살리지 못한다 */
+::selection{background:transparent!important}
+::-moz-selection{background:transparent!important}
 html,body{height:100%}
 /* 스크롤바는 안 보이게 둔다 — 굴리는 건 그대로다. 색만 지운다: ::-webkit-scrollbar 를
    건드리면 웹킷이 겹침(overlay) 스크롤바를 포기하고 자리를 차지하는 옛 스크롤바로
@@ -1298,10 +1299,6 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .si-view[hidden]{display:none}
 .si-head{font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
 .si-lead{color:var(--ink-soft);font-size:15px;line-height:1.6;max-width:32em}
-/* 이 화면은 글자를 긁어 갈 일이 없다. 전역 ::selection 의 주황이 주황 버튼 위에
-   덧칠되면 글자만 흐려 보이므로 투명으로 둔다 */
-.si ::selection,.si::selection{background:transparent}
-.si ::-moz-selection,.si::-moz-selection{background:transparent}
 
 /* 버튼 두 개는 시안대로 간격 없이 붙고, 사이는 1px 선으로만 갈린다 */
 .si-btns{display:flex;flex-direction:column;width:204px;max-width:100%}
@@ -1586,7 +1583,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .map-backdrop span{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--ink-soft);color:var(--ink);font-size:30px;font-weight:700}
 .account-shell{width:min(100% - 48px,637px);margin:auto;padding-block:48px}
 .account-heading{display:flex;align-items:center;gap:14px;margin-bottom:22px}
-.account-heading h1{font-size:40px;line-height:1;letter-spacing:-.8px;font-weight:800}
+.account-heading h1{font-size:40px;line-height:1;letter-spacing:-.02em;font-weight:800;margin:0}
 .account-heading .back{color:var(--ink);text-decoration:none;width:34px;height:40px}
 .account-layout{display:flex;flex-wrap:wrap;gap:24px;align-items:start}
 .account-character{display:flex;flex:0 1 220px;flex-direction:column;gap:12px;min-width:0}
@@ -1661,7 +1658,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #account{--profile-space:16px}
 .account-shell{width:min(100% - 56px,820px);padding-block:56px}
 .account-heading{gap:16px}
-.account-heading h1{font-size:48px}
 .account-heading .back{width:40px;height:48px}
 /* 머리줄은 제 통에 떠 있고 설정이 그 밑으로 지나간다. 폭과 왼쪽 선은 본문 통과 같다.
    본문은 머리줄(위 여백 + 48px)과 그 아래 틈 28px 만큼 내려 시작한다 */
@@ -1700,6 +1696,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   #account{--acct-top:28px}
   .account-shell{width:min(100% - 40px,637px);padding-block:calc(var(--acct-top) + 48px + 28px) 40px}
   .account-heading{width:min(100% - 40px,637px)}
+  .account-heading h1{font-size:32px}
   .account-character{flex:1 1 220px}
   .account-details{flex:2 1 280px}
   .account-details label.profile-row{gap:16px}

@@ -1,5 +1,9 @@
 /* Mimi board tokens — from design.pen variables. Independent of the parent site. */
 
+/* 본 사이트와 같이 선택 색은 늘 투명 */
+::selection{background:transparent}
+::-moz-selection{background:transparent}
+
 :root {
   --outer: #F1E9DC;
   --paper: #FBF6EE;

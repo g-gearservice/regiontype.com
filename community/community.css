@@ -11,7 +11,7 @@ body{overflow:auto}
 [data-tag="idea"]{--tag:var(--ranked);--on-tag:#fff}
 [data-tag="chat"]{--tag:var(--ink-soft);--on-tag:var(--bg)}
 
-.cm-top,.cm{max-width:760px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative;z-index:1}
+.cm-top,.cm{max-width:760px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative}
 .cm-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:32px;z-index:4}
 .cm-top .logo{font-size:28px;color:var(--ink);text-decoration:none}
 .cm-me{display:inline-flex;align-items:center;min-height:40px;padding:6px 16px;border:2px solid var(--grid);border-radius:999px;
@@ -20,6 +20,8 @@ body{overflow:auto}
 .cm{padding-top:40px;padding-bottom:96px}
 .cm h1{font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
 .cm h1:focus{outline:none}
+/* 목록 제목은 다른 화면 머리줄처럼 위 흐림 띠(.page-blur, z-index 3) 위에 선다 */
+#listView > h1{position:relative;z-index:4}
 .cm-lead{margin-top:10px;font-size:17px;color:var(--ink-soft)}
 .cm a{color:var(--accent-text)}
 .cm-top a:focus-visible,.cm a:focus-visible,.cm button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
