@@ -1764,7 +1764,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   #regions .navbar .nav-side,#regions .navbar .nav-shape{display:none}
   #regions .navbar .nav-logo{
     position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);translate:-50% 0;
-    display:flex;align-items:center;height:44px;padding:0 14px;font-size:24px;border-radius:999px;
+    display:flex;align-items:center;height:44px;padding:0 14px;font-size:27px;border-radius:999px;
   }
   #regions .navbar .nav-logo .dot{visibility:visible;margin-right:0}
   .nav-burger{
@@ -2610,7 +2610,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   }
   body:is(.set,.setting) #options .head{font-size:32px}
   body:is(.set,.setting) #options .opts-shell{
-    display:block;width:100%;max-width:none;height:auto;zoom:1;margin:0;top:0;
+    display:block;width:100%;max-width:none;height:auto;zoom:1;margin:.4rem 0 0;top:0;
     z-index:auto; /* 제 쌓임 맥락을 풀어야 탭 줄(z 5)이 머리줄 유리(z 4) 위로 올라선다 */
   }
 

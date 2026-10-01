@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.366",
+    "date": "2026-10-01",
+    "ko": "폰에서 설정 내용이 조금 더 아래에서 시작하고, 홈 화면 로고가 조금 커졌습니다.",
+    "en": "On phones the Settings content starts a bit further down, and the home-screen logo is a little larger."
+  },
+  {
     "v": "0.9.365",
     "date": "2026-10-01",
     "ko": "글자 선택 색을 어디서나 투명으로 고정했고, 커뮤니티 목록 제목이 위 흐림 띠 위에 보이도록 했으며, 내 계정 제목 글꼴을 다듬었습니다.",
