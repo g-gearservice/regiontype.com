@@ -312,6 +312,14 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 /* 언어 통은 위·아래 흐림이 끝나는 자리에 맞춘다. 가운데 두면 띠에 안 닿는다 */
 #optsLanguage:not([hidden]){justify-content:flex-start}
 .opts-panel:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
+/* 탭을 옮기면 새 판이 고른 쪽에서 살짝 밀려 들어온다(settings.js select 가 --dir 을 ±1 로 단다).
+   나가는 판은 hidden 이 곧장 걷는다 — 화살표로 연달아 넘겨도 판 둘이 겹쳐 쌓이지 않는다.
+   데스크톱은 세로 레일이라 위아래로, 폰은 가로 칩 줄이라 좌우로. --fast 가 움직임 끔·줄임에 0 이 된다 */
+.opts-panel:not([hidden]){transition:opacity var(--fast) var(--ease-out),transform var(--fast) var(--ease-out)}
+@starting-style{
+  .opts-panel:not([hidden]){opacity:0;transform:translateY(calc(var(--dir,0) * 8px))}
+  @media (pointer:coarse){ .opts-panel:not([hidden]){transform:translateX(calc(var(--dir,0) * 16px))} }
+}
 /* 언어·지역 고르기 — 대륙 fieldset + 2열 라디오. 지역 판과 같은 스크롤 통 */
 .opts-lang-pick{
   /* 대륙 fieldset 은 통을 가로지르고, 홀로 선 '자동' 칸은 한 열만 차지한다 —
@@ -349,11 +357,56 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   top:auto; bottom:0;
   --blur-bot:var(--opt-page-blur);
 }
+/* 언어·지역 pick 통 위·아래 흐림 — OuterVale "Blobby Navbar Blur" 의 여섯 겹을 pick 전용으로 둔다.
+   플레이·홈이 쓰는 .backdrop-blur 와 나누어 둔다(그쪽은 손대지 않는다).
+   띠는 pick 의 형제다 — fillLangPick/fillRegionPick 이 pick 을 replaceChildren 하므로.
+   판(.opts-panel)에 붙여 pick 의 바깥 자리(--opt-pick-dy·-h, settings.js syncOptShell)를 그대로 따른다.
+   띠 높이는 pick 의 위·아래 안쪽 여백 — 목록이 처음 서는 자리에서 흐림이 끝난다.
+   색은 아래 두 토큰만. 스크림은 라이트·다크 공통, 씻김은 밤이면 검정 */
+:root{--pick-blur-scrim:0 0 0 / 0.1; --pick-blur-wash:#ffffff; --pick-blur-k:.55}
+:root[data-night]{--pick-blur-wash:#000000}
+:root[data-motion="off"]{--pick-blur-k:0}
+@media (prefers-reduced-motion:reduce){ :root{--pick-blur-k:0} }
+#optsLanguage,#optsRegion{position:relative}
+.pick-blur{
+  position:absolute; left:0; right:0; z-index:1; display:grid; pointer-events:none;
+  top:var(--opt-pick-dy,0px); height:var(--opt-pick-pad-t,28px);
+  --pick-blur-deg:0deg; /* 0deg: 아래(목록 쪽) 투명 → 위(통 가장자리) 가장 흐림 */
+}
+.pick-blur.bot{
+  top:calc(var(--opt-pick-dy,0px) + var(--opt-pick-h,0px) - var(--opt-pick-pad-b,28px));
+  height:var(--opt-pick-pad-b,28px);
+  --pick-blur-deg:180deg;
+}
+/* 빈 pick(지역 판은 아직 그리지 않는다)에는 띠도 없다 */
+:is(.opts-lang-pick,.opts-region-pick):empty ~ .pick-blur{display:none}
+.pick-blur > span{grid-area:1/1}
+.pick-blur > :nth-child(1){--b:1px;  --m:transparent 0%,#000 15%}
+.pick-blur > :nth-child(2){--b:4px;  --m:transparent 5%,#000 30%}
+.pick-blur > :nth-child(3){--b:8px;  --m:transparent 15%,#000 45%}
+.pick-blur > :nth-child(4){--b:16px; --m:transparent 30%,#000 60%}
+.pick-blur > :nth-child(5){--b:24px; --m:transparent 45%,#000 75%}
+.pick-blur > :nth-child(6){--b:32px; --m:transparent 60%,#000 90%}
+.pick-blur > span{
+  backdrop-filter:blur(calc(var(--b) * var(--pick-blur-k))); -webkit-backdrop-filter:blur(calc(var(--b) * var(--pick-blur-k)));
+  mask:linear-gradient(var(--pick-blur-deg),var(--m)); -webkit-mask:linear-gradient(var(--pick-blur-deg),var(--m));
+}
+/* 스크림 — 가장자리에서 씻김, 안으로 스크림, 목록 쪽 끝에서 투명 */
+.pick-blur::after{
+  content:""; grid-area:1/1;
+  background:linear-gradient(var(--pick-blur-deg),transparent,rgb(var(--pick-blur-scrim)),var(--pick-blur-wash));
+}
+/* pick 띠가 서는 동안 설정 페이지 띠는 걷는다 — 같은 가장자리를 두 번 흐리지 않는다 */
+@media not (pointer:coarse){
+  :root[data-dev] #options:has(> .opts-shell .opts-panel:not([hidden]) > :is(.opts-lang-pick,.opts-region-pick):not(:empty)) > .backdrop-blur{display:none}
+}
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
 /* 언어·지역은 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
-   언어 목록이 번쩍이지 않는다. 선택된 판만 개발 환경에서 되살린다. */
+   언어 목록이 번쩍이지 않는다. 선택된 판만 개발 환경에서 되살린다.
+   폰 설정의 칩(display:inline-flex)처럼 더 센 규칙이 있어도 배포에선 단추조차 안 보이게 !important */
 .opts-tab[data-dev-only],.opts-panel[data-dev-only]{display:none}
+:root:not([data-dev]) :is(.opts-tab,.opts-panel)[data-dev-only]{display:none!important}
 :root[data-dev] .opts-tab[data-dev-only]{display:revert}
 :root[data-dev] .opts-panel[data-dev-only]:not([hidden]){display:flex}
 .opts-region-pick{display:none}
@@ -1447,6 +1500,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     flex:0 1 auto;height:auto;max-height:none;margin-top:0;margin-bottom:0;
     overflow:visible;padding-block:28px;scroll-padding-block:28px;
   }
+  body.set .pick-blur, body.setting .pick-blur{display:none}
 }
 
 /* 계정과 보안의 작은 입력·카드. 홈과 게임의 컨트롤에는 적용하지 않는다.
@@ -2118,10 +2172,9 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 }
 
 /* ═══ 도우미 봇 · 경쟁전 ════════════════════════════════
-   봇은 로고 안에 산다. 로고를 꾹 누르면 옆의 로고 점이 로고를 채우고(rk-fill, 다 차면
-   rk-full), 그때 로고 밖 아래로 끌어내면 봇이 나온다(ranked.js 의 wireLogo). 봇이 조르는
-   동안(rk-intro)과 드나드는 동안(rk-emerge)에도 로고는 차 있다. 원은 점 자리에서 커지고
-   (--dot-*, ranked.js 의 markDot), 글자색도 함께 바뀌어 색만으로 가르지 않는다.
+   봇이 조르는 동안(rk-intro)과 로고로 드나드는 동안(rk-emerge) 로고 점이 로고를 채운다.
+   원은 점 자리에서 커지고(--dot-*, ranked.js 의 markDot), 글자색도 함께 바뀌어 색만으로
+   가르지 않는다. 조르는 동안엔 로고를 끌어내려 봇을 꺼낸다(ranked.js 의 wireLogo).
    끄는 손가락을 스크롤이 가로채지 않게 로고에서는 터치 이동을 받는다 */
 #regions .navbar .nav-logo{user-select:none;-webkit-user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none;touch-action:none}
 #regions .navbar .nav-logo::before{
@@ -2131,22 +2184,12 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
   transition:clip-path var(--fast) var(--ease-out),opacity 0s linear var(--fast);
 }
 #regions .navbar .nav-logo{transition:color var(--fast) var(--ease-out)}
-body:is(.rk-fill,.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--on-accent)}
-body:is(.rk-fill,.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{
+body:is(.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--on-accent)}
+body:is(.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{
   opacity:1;clip-path:circle(150% at var(--dot-x,calc(100% - 20px)) var(--dot-y,60%));
   transition:clip-path var(--si-dur) var(--ease-out),opacity 0s;
 }
-/* 꾹 누르는 동안은 누른 시간(ranked.js 의 HOLD_MS)에 걸쳐 차오른다 */
-body.rk-fill #regions .navbar .nav-logo{transition-duration:.6s}
-body.rk-fill #regions .navbar .nav-logo::before{transition:clip-path .6s cubic-bezier(.55,0,.75,.4),opacity 0s}
-body:is(.rk-full,.rk-intro) #regions .navbar .nav-logo{cursor:grab}
-/* 움직임을 줄이면 차오르지 않고, 다 찼을 때 한 번에 찬다 */
-@media (prefers-reduced-motion:reduce){
-  body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--ink)}
-  body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{opacity:0}
-}
-:root[data-motion="off"] body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo{color:var(--ink)}
-:root[data-motion="off"] body.rk-fill:not(.rk-full,.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{opacity:0}
+body.rk-intro #regions .navbar .nav-logo{cursor:grab}
 /* 지금 접속 — 경쟁전을 켜면(rk-ready) 왼쪽 아래 귀퉁이에서 대각선으로 밀려 나오는 부채.
    빛깔은 경쟁전 빛깔(--rk-on)이고, 점과 숫자는 귀퉁이의 45° 선 위에 눕는다. 봇은 층이
    위라(.rk-layer) 겹쳐도 가리지 않는다 — 왼쪽 아래에서 자던 봇은 ranked.js 가 비켜 둔다 */
@@ -2210,6 +2253,12 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 .rk-bot-motion{display:block;width:100%;height:100%;transform-origin:50% 68%;transition:transform var(--fast) var(--ease-out),opacity var(--si-dur) var(--ease-out)}
 /* 로고 안에 든 봇 — 로고 한가운데서 작아지며 사라진다(ranked.js 의 stow·tuck) */
 .rk-bot.is-in .rk-bot-motion{transform:scale(.25);opacity:0;transition-duration:var(--si-dur)}
+/* 폰은 바래지도 줄지도 않는다 — 제 크기 그대로 경기장꼴 로고 뒤로 드나든다(ranked.js 의 behind).
+   봇(80px)이 로고(44px)보다 커서 숨은 몸이 로고 윗변 위로 삐져나온다 — 드나드는 동안 그 위를 잘라 낸다 */
+@media (pointer:coarse){
+  .rk-bot.is-in .rk-bot-motion{transform:none;opacity:1}
+  body.rk-emerge .rk-layer{clip-path:inset(calc(env(safe-area-inset-top) + 8px) 0 0 0)}
+}
 .rk-bot .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .rk-bot:hover .rk-bot-motion{transform:scale(1.06)}
 /* 자는 봇은 눈을 감고(소개 페이지 helper.svg 의 ‿‿), 색만이 아니라 글자(z)로도
@@ -2327,7 +2376,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 
    색만으로 나누지 않는다: 주황 바탕 + 굵은 테두리 + 번호 칸 반전 + 체크 표시 +
    aria-pressed 가 함께 선다. */
-.intro-page{--profile-space:18px;min-height:100svh;display:flex;flex-direction:column}
+.intro-page{--profile-space:18px;height:100svh;overflow:hidden;display:flex;flex-direction:column}
 /* 카드 한 장이 들고 나는 시간. --slow(.2s) 는 이 화면엔 짧다 — 물음이 통째로
    바뀌는 자리라 한 치수 길게 잡되 300ms 아래에 둔다. 움직임을 끄면 0 이 된다.
 
@@ -2344,7 +2393,15 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   transform:scaleX(var(--at,0));transform-origin:left center;
   transition:transform var(--si-dur) var(--ease-out)}
 
-.intro-shell{width:min(100% - 48px,640px);margin:auto;padding-block:56px;display:flex;flex-direction:column;gap:18px}
+/* 페이지는 서 있고 이 통 하나가 굴러간다 — 묻는 카드와 아래 줄 단추가 한 통에 담겨
+   같이 오르내린다. 통은 화면 폭을 다 쓰고(스크롤바가 글 옆이 아니라 가장자리에 붙게)
+   글 폭 640 은 안쪽 여백으로 잡는다. 짧으면 가운데, 길면 위에서부터 — justify-content
+   center 는 넘칠 때 위가 잘리므로 첫·끝 아이의 auto 여백으로 가운데를 잡는다 */
+.intro-shell{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:56px max(24px,(100% - 640px) / 2) calc(32px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:18px}
+.intro-shell > :first-child{margin-top:auto}
+.intro-shell > :last-child{margin-bottom:auto}
 .intro-count{font-size:12px;color:var(--ink-soft);letter-spacing:.06em}
 /* 카드는 포커스를 받되 테두리를 그리지 않는다 — 탭 차례에 없는 자리라
    (tabindex="-1") 키보드로 여기에 멈출 일이 없고, 멈춘 것처럼 보여서도 안 된다.
@@ -2448,6 +2505,13 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 .intro-stage{display:flex;align-items:center;justify-content:center;height:180px;
   border-radius:16px;background:var(--profile-soft);margin-bottom:14px}
 .intro-stage .character{width:140px;height:140px}
+/* 고르는 줄이 길어 통이 굴러도 캐릭터는 위에 붙어 고른 것이 바로 보인다.
+   sticky 의 top 은 통의 안쪽 여백(위 56px) 안에서 재므로 12px 에 붙이려면 -44px */
+.intro-stage{position:sticky;top:-44px;z-index:2;box-shadow:0 -12px 0 var(--bg)}
+@media (max-height:720px){
+  .intro-stage{height:120px}
+  .intro-stage .character{width:96px;height:96px}
+}
 .intro-controls{gap:12px}
 .intro-controls fieldset+fieldset{border-top:1px solid var(--profile-border);padding-top:12px}
 .intro-controls .character-choice{transition:transform var(--fast) var(--ease-out),
@@ -2516,9 +2580,9 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
    판은 유리 카드에 담긴 무리(grouped inset list)로 흐른다: 라벨 왼쪽, 컨트롤 오른쪽,
    줄 사이는 머리카락 선. 탭은 가로로 굴리는 한 줄 칩이다 — role=tab·화살표 키는 그대로 */
 @media (pointer:coarse){
-  body:is(.set,.setting) #options{--oh:calc(env(safe-area-inset-top) + 64px)}
+  body:is(.set,.setting) #options{--oh:calc(env(safe-area-inset-top) + 64px);--th:66px}
   body:is(.set,.setting) #options.opts-over{
-    padding:0 0 calc(32px + env(safe-area-inset-bottom));justify-content:flex-start;
+    padding:0 0 calc(40px + var(--dock-h));justify-content:flex-start; /* 아래 탭 독 밑에 끝이 깔리지 않게 */
     overflow-x:hidden;overscroll-behavior:contain;
   }
   /* 위 흐림 띠는 유리 머리줄이 대신한다 — 두 겹이면 탁해진다. 아래 띠는 남긴다 */
@@ -2528,22 +2592,58 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   body:is(.set,.setting) #options .screen-head{
     position:sticky;top:0;left:auto;z-index:4;flex:none;gap:12px;
     height:var(--oh);margin:0;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  }
+  /* 머리줄과 탭 줄은 유리 한 장을 같이 쓴다. 두 장이면 이음매에서 아래 스밈이 잘린다.
+     장은 머리줄에 달고 탭 줄 키(--th)만큼 내려 깐다. 탭 줄은 z 를 하나 높여 그 위에 앉는다 */
+  body:is(.set,.setting) #options .screen-head::before{
+    content:"";position:absolute;inset:0 0 auto;z-index:-1;height:calc(100% + var(--th) + .25rem);pointer-events:none;
     background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+    -webkit-mask:var(--glass-end);mask:var(--glass-end);
+  }
+  /* 끝자락은 두 겹으로 덜어 낸다 — 20px 흐림 한 장을 투명도로만 지우면 말단이 '센 흐림 + 옅은 막'이
+     되어 뒤 글자가 겹쳐 번진다. 짙은 장은 끝자락(--tail) 위쪽에서 지우고, 끝자락은 4px 흐림이 맡는다 */
+  body:is(.set,.setting) #options{--tail:24px;--glass-end:linear-gradient(#000 calc(100% - var(--tail)),transparent calc(100% - var(--tail) / 3))}
+  body:is(.set,.setting) #options .screen-head::after{
+    content:"";position:absolute;left:0;right:0;top:calc(100% + var(--th) + .25rem - var(--tail));z-index:-1;height:var(--tail);pointer-events:none;
+    background:linear-gradient(var(--glass-thick),transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    -webkit-mask:linear-gradient(#000 30%,transparent);mask:linear-gradient(#000 30%,transparent);
+  }
+  @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
+    body:is(.set,.setting) #options .screen-head::after{backdrop-filter:none;-webkit-backdrop-filter:none}
   }
   body:is(.set,.setting) #options .head{font-size:32px}
   body:is(.set,.setting) #options .opts-shell{
     display:block;width:100%;max-width:none;height:auto;zoom:1;margin:0;top:0;
+    z-index:auto; /* 제 쌓임 맥락을 풀어야 탭 줄(z 5)이 머리줄 유리(z 4) 위로 올라선다 */
   }
 
   /* 탭 줄 — 머리줄 밑에 붙는 가로 스크롤 칩. 끝이 잘려 보여 더 있음을 알린다 */
   body:is(.set,.setting) #options .opts-tabs{
-    position:sticky;top:var(--oh);z-index:3;
+    position:sticky;top:var(--oh);z-index:5;
     display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:8px;
-    width:auto;margin:0;padding:4px 16px 18px;
+    width:auto;height:var(--th);box-sizing:border-box;margin:0;padding:4px 16px 18px;
     overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;
     scrollbar-width:none;
-    background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-    -webkit-mask:linear-gradient(#000 calc(100% - 14px),transparent);mask:linear-gradient(#000 calc(100% - 14px),transparent);
+  }
+  /* 좌우 끝 흐림 — 투명도 마스크가 아니라 칩을 실제로 흐린다. 스크롤 줄 안에서 sticky 로
+     양 끝에 붙고, 음수 바깥 여백으로 자리를 먹지 않는다. 흐림의 세기는 마스크로 끝에서 안으로 옅어진다 */
+  body:is(.set,.setting) #options .opts-tabs::before,
+  body:is(.set,.setting) #options .opts-tabs::after{
+    content:"";position:sticky;z-index:1;flex:none;align-self:stretch;width:28px;margin-block:-20px -18px;pointer-events:none;
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    /* 가로 옅어짐에 머리줄 유리 장의 끝 바램(--glass-end)을 겹친다 — 둘이 한 장처럼 같이 끝나야
+       흐림 띠가 줄 밑에서 뚝 잘려 보이지 않는다. 블러는 칩 빛을 위로도 번지게 하니 띠를 위로 16px 더
+       깔고(margin-block) 윗변도 서서히 들인다 — 윗변에서 번짐이 잘리면 사각형 층이 보인다 */
+    -webkit-mask:var(--edge),linear-gradient(transparent,#000 20px),var(--glass-end);mask:var(--edge),linear-gradient(transparent,#000 20px),var(--glass-end);
+    -webkit-mask-composite:source-in;mask-composite:intersect;
+  }
+  body:is(.set,.setting) #options .opts-tabs::before{
+    left:-16px;margin-inline:-16px -20px; /* sticky 는 안쪽 여백 안에서 붙으니 그만큼 밖으로 */
+    --edge:linear-gradient(90deg,#000,transparent);
+  }
+  body:is(.set,.setting) #options .opts-tabs::after{
+    right:-16px;margin-inline:-20px -16px;
+    --edge:linear-gradient(270deg,#000,transparent);
   }
   body:is(.set,.setting) #options .opts-tabs::-webkit-scrollbar{display:none}
   body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab{

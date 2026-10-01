@@ -203,13 +203,17 @@ function wireOptsTabs() {
   const tabs = allTabs.filter(tb => isDev() || !tb.hasAttribute('data-dev-only'));
   const rail = document.querySelector('.opts-tabs');
   if (!rail || !tabs.length) return;
+  let cur = null;
   const select = (tab, keepHash) => {
+    const dir = cur ? Math.sign(allTabs.indexOf(tab) - allTabs.indexOf(cur)) : 0;
+    cur = tab;
     allTabs.forEach(tb => {
       const on = tb === tab;
       tb.setAttribute('aria-selected', String(on));
       tb.tabIndex = on ? 0 : -1;
       const panel = document.getElementById(tb.getAttribute('aria-controls'));
       if (!panel) return;
+      if (on) panel.style.setProperty('--dir', dir);
       panel.hidden = !on;
       if (on && panel.id === 'optsLanguage') fillLangPick();
       if (on && panel.id === 'optsRegion') fillRegionPick();
