@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.364",
+    "date": "2026-10-01",
+    "ko": "설정의 모든 탭이 내용이 길면 스크롤되고, 내용 위쪽 여백이 조금 넓어졌습니다.",
+    "en": "Every Settings tab now scrolls when its content runs long, and the content sits a little lower from the top."
+  },
+  {
     "v": "0.9.363",
     "date": "2026-10-01",
     "ko": "폰 설정 화면에서 탭 줄 좌우 끝의 블러가 탭 줄에서 끊기지 않고 맨 위 제목 자리까지 이어집니다.",
