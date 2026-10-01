@@ -138,7 +138,7 @@ function leftAccount() {
   /* 크기가 바뀌었으면 제자리(옮겨 둔 곳이나 로고 밑)에 다시 선다 */
   const was = BOT;
   sizeBot();
-  if (was !== BOT && out && !touring && !intro) { if (spot) moveTo(...spot); else place(...underLogo()); }
+  if (was !== BOT && out && !touring && !intro) { if (spot) moveTo(...spot); else place(...(phone() ? underLogo() : cornerAt(corner))); }
 }
 
 /* ── 순위 ─────────────────────────────────────────────── */
@@ -282,7 +282,10 @@ const layer = $('#rkLayer'), bubble = $('#rkSay'), dim = $('#rkDim'), next = $('
 const logo = () => $('#regions .navbar .nav-logo');
 const regionsOn = () => $('#regions').classList.contains('on');
 const botName = () => { try { return localStorage.getItem('rt.botname') || 'Grok'; } catch { return 'Grok'; } };
-let bot = null, making = null, out = false, intro = false, touring = false, hush = 0, nap = 0, chatting = false;
+let bot = null, making = null, out = false, intro = false, touring = false, corner = 0, hush = 0, nap = 0, chatting = false;
+/* 폰 — 봇이 로고 안에 살고 불러야 나온다. 태블릿은 손가락 화면(fingers)이라도 데스크톱처럼
+   봇이 제 발로 나와 귀퉁이에서 잔다. 창 폭이 아니라 기기 화면의 짧은 변으로 가른다 */
+const phone = () => fingers() && Math.min(screen.width, screen.height) < 600;
 /* aim — 폰 안내에서 말풍선이 가리키는 것(테두리가 둘린다). skipping — 둘러보기를 닫았다 */
 let aim = null, skipping = false;
 function aimAt(el) {
@@ -356,6 +359,13 @@ function moveTo(x, y) {
   spot = clampXY(x, y);
   place(...spot);
 }
+/* 사람이 끌어다 놓은(키보드로 옮긴) 자리는 이 기기에 남는다 — 다시 들어오거나 새로고침해도
+   폰이 아니면 봇은 귀퉁이가 아니라 거기서 깨고 잔다 */
+const SPOT_KEY = 'rt.botspot';
+function keepSpot() { try { localStorage.setItem(SPOT_KEY, JSON.stringify(spot)); } catch {} }
+function keptSpot() {
+  try { const v = JSON.parse(localStorage.getItem(SPOT_KEY)); return Array.isArray(v) && v.length === 2 && v.every(Number.isFinite) ? clampXY(...v) : null; } catch { return null; }
+}
 function grab(e) {
   if (e.button || intro || touring || docked()) return;
   const el = bot.el, sx = e.clientX, sy = e.clientY, ox = bot.x, oy = bot.y;
@@ -376,6 +386,7 @@ function grab(e) {
     /* 뒤따라오는 click 은 인사가 아니다. click 이 안 오는 경우를 위해 한 박자 뒤 푼다 */
     dragged = true;
     setTimeout(() => { dragged = false; }, 0);
+    keepSpot();
     doze();
   };
   el.addEventListener('pointermove', move);
@@ -388,6 +399,7 @@ function nudge(e) {
   e.preventDefault();
   const step = e.shiftKey ? 96 : 24;
   moveTo(bot.x + d[0] * step, bot.y + d[1] * step);
+  keepSpot();
 }
 
 /* 말풍선은 봇 뒤에서 펼쳐진다. 봇이 화면 왼쪽 3분의 1에 있으면 오른쪽으로, 오른쪽
@@ -468,6 +480,17 @@ function hide() {
   closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing'); }, 240);
 }
 
+/* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳. 경쟁전을 켜면 왼쪽
+   아래는 지금 접속 부채(#rkLive)가 차지하므로 오른쪽 아래로 비킨다 */
+function cornerAt(i) {
+  if (ranked && i === 2) i = 3;
+  const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
+  const x = i % 2 ? innerWidth - BOT - 20 : 20;
+  /* 아래 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
+  const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot').getBoundingClientRect();
+  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
+  return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
+}
 /* 제 발로 나온 봇이 서는 곳 — 로고 바로 밑 가운데 */
 function underLogo() {
   const r = logo().getBoundingClientRect();
@@ -483,9 +506,12 @@ function markDot() {
   el.style.setProperty('--dot-r', (p.width / 2).toFixed(1) + 'px');
 }
 function sleep() {
-  /* 제 발로 나온 봇은 로고로 도로 들어간다. 끌어다 놓은 봇은 그 자리에서 잔다 — 폰은
-     자리가 좁아 놓은 봇도 들어간다 */
-  if (fingers() || !spot) { tuck(); return; }
+  /* 폰은 로고로 도로 들어간다. 그 밖에는 끌어다 놓은 자리나 귀퉁이에서 잔다 */
+  if (phone()) { tuck(); return; }
+  if (!spot) {
+    const k = keptSpot();
+    if (k) moveTo(...k); else { corner = Math.floor(Math.random() * 4); place(...cornerAt(corner)); }
+  }
   hide();
   bot.el.classList.add('is-asleep');
   /* 엔진의 sleep 은 눈 없는 작은 점이다. 홈 봇은 몸을 그대로 두고 눈만 감는다 —
@@ -507,7 +533,7 @@ function doze() {
     if (!touring && bubble.hidden && !bot.el.matches(':hover, :focus-within, :focus-visible')) sleep();
   }, 1500);
 }
-/* 떠 있지 않으면 로고에서 걸어 나온다 */
+/* 떠 있지 않으면 폰은 로고에서 걸어 나오고, 그 밖에는 아무 귀퉁이에서 깨어난다 */
 async function summon() {
   await makeBot();
   if (out) return;
@@ -516,7 +542,17 @@ async function summon() {
   bot.api.start();
   spot = null;
   wake();
-  await emerge();
+  if (phone()) { await emerge(); return; }
+  const k = keptSpot();
+  if (k) { spot = k; jump(...k); return; }
+  corner = Math.floor(Math.random() * 4);
+  jump(...cornerAt(corner));
+}
+/* 로고 뒤 숨는 자리. 폰은 봇이 작아지지 않고 제 크기 그대로 경기장꼴 로고 뒤에 숨는다 —
+   발끝을 로고 아랫변에 맞춰 두면 거기서 미끄러져 내려온다 */
+function behind() {
+  const r = logo().getBoundingClientRect();
+  return [r.left + r.width / 2 - BOT / 2, fingers() ? r.bottom - BOT : r.top + r.height / 2 - BOT / 2];
 }
 /* 로고 한가운데에 작게 숨은 채 선다. 로고 점이 로고를 채우고(rk-emerge) 넵바가 봇 층
    위로 올라, 채워진 로고 뒤에서 빠져나오는 것처럼 보인다 */
@@ -524,8 +560,7 @@ function stow() {
   markDot();
   document.body.classList.add('rk-emerge');
   bot.el.classList.add('is-in');
-  const r = logo().getBoundingClientRect();
-  jump(r.left + r.width / 2 - BOT / 2, r.top + r.height / 2 - BOT / 2);
+  jump(...behind());
   bot.el.classList.remove('is-in');
 }
 async function emerge() {
@@ -545,8 +580,7 @@ function tuck() {
   markDot();
   document.body.classList.add('rk-emerge');
   bot.el.classList.add('is-in');
-  const r = logo().getBoundingClientRect();
-  place(r.left + r.width / 2 - BOT / 2, r.top + r.height / 2 - BOT / 2);
+  place(...behind());
   setTimeout(() => {
     if (out) return;
     document.body.classList.remove('rk-emerge');
@@ -579,7 +613,7 @@ async function chat() {
 function endChat() {
   if (!chatting) return;
   /* 폰은 대화를 닫으면 곧바로 로고로 들어간다 */
-  if (fingers()) { tuck(); return; }
+  if (phone()) { tuck(); return; }
   hide();
   bot.el.focus({ preventScroll: true });
   doze();
@@ -810,7 +844,7 @@ function settle() {
 /* ── 로그인한 사람 ── 로그인하고 돌아온 홈에서 봇이 먼저 채워진 로고 뒤에서 걸어 나와
    인사하고, 조금 뒤 로고로 들어간다. 로그인 한 번에 한 번 — auth.js 가 남긴 표를 여기서
    지운다. 그 뒤로는 로고에서 끌어내야 나온다 */
-const GREET_KEY = 'rt.greet';
+const GREET_KEY = 'rt.greet', GREETED_KEY = 'rt.greeted';
 async function greetIn() {
   await makeBot();
   /* 부드러운 새로고침으로 온 첫 그림은 움직임을 눌러 둔다(data-still) — 풀린 뒤에 나와야 걸어 나온다 */
@@ -845,92 +879,49 @@ addEventListener('rt-sheet', () => {
 });
 addEventListener('resize', () => {
   if (!out || !bot || touring || intro) return;
-  if (spot) moveTo(...spot); else place(...underLogo());
+  if (spot) moveTo(...spot); else if (phone()) place(...underLogo()); else place(...cornerAt(corner));
 });
 
-/* 로고 — 봇을 꺼내는 손잡이다. 꾹(HOLD_MS) 누르면 옆의 로고 점이 로고를 채우고(rk-fill →
-   다 차면 rk-full), 그대로 로고 밖 아래로 끌어내야 봇이 손끝에 붙어 나온다. 놓은 자리에
-   서서 말을 건다. 다 차기 전에 떼거나 로고 밖으로 안 끌면 아무 일 없이 비워진다.
-   조르는 동안(rk-intro)은 이미 차 있어 곧장 끌어내리거나 누르면 된다.
-   키보드는 로고에서 ↓ — 로고 밑으로 나와 말을 건다 */
+/* 로고 — 가입하고 처음 온 사람에게 봇이 조르는 동안(rk-intro)에만 봇을 꺼내는 손잡이다.
+   끌어내리거나 누르면(키보드는 ↓) 나온다. 그 밖에 꾹 누르거나 끌어도 아무 일 없다 —
+   폰은 로고를 누르면 그 뒤에서 나와 말을 걸고, 다시 누르면 들어간다 */
 let swallowLogo = false;
-/* 로고에서 손끝으로 — 로고 한가운데서 작게 나와 손끝까지 짧게 미끄러진 뒤로는 손을 바로 따른다 */
-function lift(x, y) {
-  clearTimeout(hush); clearTimeout(nap);
-  hide();
-  if (!out) {
-    out = true;
-    layer.hidden = false;
-    bot.api.start();
-    stow();
-  }
-  wake();
-  const el = bot.el;
-  el.classList.add('is-held');
-  if (!calm()) {
-    el.style.transition = 'transform .2s cubic-bezier(.23,1,.32,1)';
-    setTimeout(() => { el.style.transition = ''; }, 200);
-  }
-  moveTo(x - BOT / 2, y - BOT / 2);
-}
-function drop(talk) {
-  bot.el.classList.remove('is-held');
-  bot.el.style.transition = '';
-  document.body.classList.remove('rk-emerge');
-  if (talk) chat(); else doze();
-}
 function wireLogo() {
   const el = logo();
   el.addEventListener('dragstart', e => e.preventDefault());
   /* 손가락으로 꾹 누르면 뜨는 링크 메뉴를 막는다 */
   el.addEventListener('contextmenu', e => e.preventDefault());
   el.addEventListener('pointerdown', e => {
-    if (e.button || touring || !regionsOn()) return;
-    const id = e.pointerId, body = document.body.classList;
-    let full = intro, held = false, timer = 0;
-    makeBot();
-    if (!intro) {
-      /* 가리켜 로고를 감싼 알약은 점으로 돌아가고, 그 점이 로고를 채운다 */
-      aimNavShape(null);
-      markDot();
-      body.add('rk-fill');
-      timer = setTimeout(() => { full = true; swallowLogo = true; body.add('rk-full'); }, HOLD_MS);
-    }
+    if (e.button || !intro) return;
+    const id = e.pointerId;
     const move = ev => {
-      if (ev.pointerId !== id) return;
-      if (held) { moveTo(ev.clientX - BOT / 2, ev.clientY - BOT / 2); return; }
-      if (!full || !bot || ev.clientY < el.getBoundingClientRect().bottom + 4) return;
+      if (ev.pointerId !== id || ev.clientY < el.getBoundingClientRect().bottom + 4) return;
       swallowLogo = true;
-      if (intro) { stop(); pull(); return; }
-      held = true;
-      body.remove('rk-fill', 'rk-full');
-      lift(ev.clientX, ev.clientY);
+      stop();
+      pull();
     };
     const stop = ev => {
       if (ev && ev.pointerId !== id) return;
-      clearTimeout(timer);
       removeEventListener('pointermove', move);
       removeEventListener('pointerup', stop);
       removeEventListener('pointercancel', stop);
-      body.remove('rk-fill', 'rk-full');
-      if (held) drop(!!ev && ev.type === 'pointerup');
     };
     addEventListener('pointermove', move);
     addEventListener('pointerup', stop);
     addEventListener('pointercancel', stop);
   });
-  /* 꾹 누르거나 끌고 난 뒤 따라오는 click 은 홈으로 가는 링크를 누른 게 아니다.
+  /* 끌고 난 뒤 따라오는 click 은 홈으로 가는 링크를 누른 게 아니다.
      조르는 동안에는 로고를 누르기만 해도 꺼내진다 */
   el.addEventListener('click', e => {
     if (swallowLogo) { e.preventDefault(); swallowLogo = false; }
     else if (intro) { e.preventDefault(); pull(); }
+    else if (fingers() && !touring && regionsOn()) { e.preventDefault(); chatting ? endChat() : chat(); }
   });
   addEventListener('pointerup', () => setTimeout(() => { swallowLogo = false; }, 0));
   el.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowDown' || touring) return;
+    if (e.key !== 'ArrowDown' || !intro) return;
     e.preventDefault();
-    if (intro) pull();
-    else if (!chatting) chat();
+    pull();
   });
   next.addEventListener('click', () => advance());
   skip.addEventListener('click', quitTour);
@@ -948,6 +939,8 @@ function setRanked(on) {
   document.body.classList.toggle('rk-ready', on);
   if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
   if (on) ping();
+  /* 왼쪽 아래에서 자던 봇은 부채를 비켜 주고, 부채가 들어가면 돌아온다 */
+  if (out && bot && !spot && !touring && !intro && corner === 2) place(...cornerAt(corner));
   const play = $('#navPlay');
   play.dataset.i18n = on ? 'rankedStart' : 'start';
   play.textContent = t(play.dataset.i18n);
@@ -1278,8 +1271,13 @@ BOOTED.then(() => {
   try { rescue = !!localStorage.getItem(RESCUE_KEY); } catch {}
   let greet = false;
   try { greet = !!localStorage.getItem(GREET_KEY); localStorage.removeItem(GREET_KEY); } catch {}
+  /* 폰이 아니면 예전처럼 들어올 때마다 봇이 나와 있다 — 한 탭(세션)에 한 번 인사하고, 그 뒤엔 귀퉁이에서 잔다 */
+  if (!phone()) {
+    try { greet = greet || !sessionStorage.getItem(GREETED_KEY); sessionStorage.setItem(GREETED_KEY, '1'); } catch {}
+  }
   if (rescue && token()) beginIntro();
   else if (greet) greetIn();
+  else if (!phone()) summon().then(sleep);
   else makeBot();
 }).catch(() => {});
 if (PAGES.includes(location.hash.slice(1))) openPage(location.hash.slice(1));

@@ -1,5 +1,59 @@
 [
   {
+    "v": "0.9.361",
+    "date": "2026-10-01",
+    "ko": "폰 설정 화면에서 탭 줄 좌우 끝의 블러 띠가 위쪽에서 뚝 끊긴 사각형 층으로 보이지 않고, 위아래 모두 서서히 바래 사라집니다.",
+    "en": "On phones, the blur at the left and right ends of the Settings tab row no longer shows up as a hard-edged box; it now fades out smoothly at the top as well as the bottom."
+  },
+  {
+    "v": "0.9.360",
+    "date": "2026-10-01",
+    "ko": "폰 설정 화면을 끝까지 굴리면 마지막 줄이 아래 탭 막대에 가려지지 않고 그 위까지 올라옵니다. 처음 설정(설문·프로필) 화면도 새 화면 파일을 받아 위아래로 굴러갑니다.",
+    "en": "On phones, scrolling to the end of Settings now brings the last lines up above the bottom tab bar instead of leaving them hidden under it. The first-run survey and profile screen also picks up the new styles and scrolls up and down."
+  },
+  {
+    "v": "0.9.359",
+    "date": "2026-10-01",
+    "ko": "데스크톱과 태블릿에서는 예전처럼 봇이 스스로 나옵니다. 들어오면 한 번 인사하고 마지막으로 끌어다 놓은 자리에서 잡니다(옮긴 적이 없으면 귀퉁이). 인사말과 둘러보기 끝인사도 예전 말(“필요할 때 저를 눌러 주세요”)로 돌렸습니다. 로고를 꾹 누르거나 끌어도 이제 아무 일 없습니다(가입 직후 봇이 조를 때만 끌어냅니다). 폰은 지금처럼 로고 안에 있다가 불러야 나옵니다. 폰 설정에 보이던 개발 중인 언어·지역 탭 단추를 정식 사이트에서 숨겼습니다.",
+    "en": "On desktop and tablet, the bot comes out on its own again as before: it greets you once when you arrive, then naps where you last dragged it (a corner if you never moved it), even after a reload. Its greeting and tour goodbye are back to the old wording (\"Press me whenever you need a hand\"). Pressing and holding or dragging the logo no longer does anything, except to pull the bot out right after you sign up. On phones it still lives inside the logo until you call it. The in-development Language and Region tab buttons no longer show in Settings on phones on the live site."
+  },
+  {
+    "v": "0.9.358",
+    "date": "2026-10-01",
+    "ko": "설정에서 탭을 옮기면 새 판이 고른 탭 쪽에서 살짝 밀려 들어오며 나타납니다. 움직임을 줄이면 바로 바뀝니다.",
+    "en": "Switching tabs in Settings now slides the new panel in gently from the direction of the chosen tab. With reduced motion, it switches instantly."
+  },
+  {
+    "v": "0.9.357",
+    "date": "2026-10-01",
+    "ko": "폰 설정 화면에서 제목·탭 유리의 아래 끝자락이 흐림을 단계적으로 줄이며 사라져, 끝에서 뒤 글자가 번지거나 막이 옅게 덮이지 않습니다.",
+    "en": "On phones, the bottom edge of the Settings title and tab glass now steps its blur down as it fades, so text behind it no longer smears under a faint film."
+  },
+  {
+    "v": "0.9.355",
+    "date": "2026-10-01",
+    "ko": "폰 설정 화면에서 탭 줄 좌우 끝의 블러가 줄 밑에서 잘리지 않고 제목·탭 유리와 함께 부드럽게 바래 사라집니다.",
+    "en": "On phones, the blur at the Settings tab row's left and right edges no longer cuts off at the bottom of the row; it fades out together with the title and tab glass."
+  },
+  {
+    "v": "0.9.354",
+    "date": "2026-10-01",
+    "ko": "처음 설정(설문·프로필) 화면에서 페이지 전체가 아니라 질문과 단추가 담긴 칸만 위아래로 굴러가고, 캐릭터를 고르는 동안 캐릭터 미리보기가 위에 붙어 있습니다.",
+    "en": "In first-run setup (survey and profile), only the panel holding the question and buttons scrolls instead of the whole page, and the character preview stays pinned at the top while you pick."
+  },
+  {
+    "v": "0.9.353",
+    "date": "2026-10-01",
+    "ko": "폰 설정 화면에서 제목과 탭 줄이 유리 한 장으로 이어지고, 탭 줄 좌우 끝의 칩이 블러로 흐려져 옆으로 더 넘길 탭이 있음을 알려 줍니다.",
+    "en": "On phones, the Settings title and tab row now share one sheet of glass, and chips blur out at the row's left and right edges to hint that more tabs scroll sideways."
+  },
+  {
+    "v": "0.9.352",
+    "date": "2026-10-01",
+    "ko": "폰에서 봇이 흐려지며 나타나지 않고, 위의 경기장꼴 로고 뒤에서 제 크기 그대로 미끄러져 나옵니다. 꾹 눌러 끌어낼 필요 없이 로고를 누르면 나와서 말을 걸고, 다시 누르면 로고 뒤로 들어갑니다.",
+    "en": "On phones, the bot no longer fades in: it slides out at full size from behind the pill-shaped logo at the top. No more hold-and-drag — tap the logo to bring it out to chat, and tap again to send it back behind the logo."
+  },
+  {
     "v": "0.9.351",
     "date": "2026-10-01",
     "ko": "로그인 전 봇의 말풍선(말 걸기 칸 포함)이 빨강이 아니라 봇과 같은 빛깔로 나옵니다. 경쟁전을 켜면 봇과 함께 빨강으로 바뀝니다. 로그인하면 홈이 그 자리에서 티 나지 않게 새로 열려 계정 정보를 바로 불러옵니다.",

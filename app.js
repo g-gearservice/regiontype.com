@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.51';
+const VER = '3.61';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1371,9 +1371,9 @@ document.addEventListener('keydown', e => {
 function navTopTarget(el) {
   if (!el || !el.closest) return null;
   const logo = el.closest('.nav-logo');
-  /* 봇이 로고에서 나오는 동안(ranked.js 의 rk-intro·rk-fill·rk-full)은 알약이 로고를 감싸지
+  /* 봇이 로고에서 조르는 동안(ranked.js 의 rk-intro)은 알약이 로고를 감싸지
      않는다 — 로고 점이 제 자리에서 로고를 채운다 */
-  if (logo && logo.closest('#regions .navbar')) return document.body.matches('.rk-intro, .rk-fill, .rk-full') ? null : logo;
+  if (logo && logo.closest('#regions .navbar')) return document.body.classList.contains('rk-intro') ? null : logo;
   const it = el.closest('.nav-item');
   if (!it) return null;
   if (!it.closest('#regions .navbar')) return null;
