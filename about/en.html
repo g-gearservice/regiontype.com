@@ -76,7 +76,7 @@
 <!-- 앱에서 고른 야간 테마를 그대로 쓴다. 같은 출처라 rt.opt 를 그냥 읽으면 된다.
      첫 그림 전에 붙여야 밝은 화면이 한 번 번쩍이지 않는다 -->
 <script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
-<link rel="stylesheet" href="../style.css?v=3.09">
+<link rel="stylesheet" href="../style.css?v=3.59">
 <!-- This page is prose to read, so it does not use the app's fixed-viewport rules
      (overflow:hidden, position:fixed). Tokens and fonts are inherited from style.css;
      only the document layout is overridden. app.js is not loaded — there is no map
@@ -84,7 +84,7 @@
 <style>
   html,body{height:auto}
   body{overflow:auto}
-  .doc{max-width:720px;margin:0 auto;padding:56px 24px 96px;position:relative;z-index:1}
+  .doc{max-width:720px;margin:0 auto;padding:56px 24px 96px;position:relative}
   .doc a{color:var(--accent-text)}
   .doc .go-back{display:inline-flex;align-items:center;gap:8px;margin-bottom:40px;font-weight:700;
               color:var(--ink-soft);text-decoration:none;padding:6px 12px 6px 8px;border-radius:6px;
@@ -122,6 +122,9 @@
   </defs>
   <rect width="100%" height="100%" fill="url(#bitgrid)"/>
 </svg>
+
+<span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+<span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
 
 <main class="doc">
   <a class="go-back" href="/"><span aria-hidden="true">←</span>Back</a>
@@ -230,7 +233,7 @@ fetch('../data/howto.json?v=3.09').then(r => r.json()).then(list => {
     }
   }
 }).catch(() => {});
-fetch('../data/changes.json?v=3.61').then(r => r.json()).then(list => {
+fetch('../data/changes.json?v=3.63').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const ul = document.getElementById('changes');
   if (!ul) return;

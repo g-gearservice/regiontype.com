@@ -339,24 +339,13 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   scroll-padding-top:var(--opt-pick-pad-t, 28px);
   scroll-padding-bottom:var(--opt-pick-pad-b, 28px);
 }
-/* 설정 페이지 위·아래 흐림. 목록 통이 아니라 뷰포트에 붙인다.
-   위 띠는 위에서 아래로, 아래 띠는 아래에서 위로 번진다. 언어 통과 같은
-   --opt-page-blur 를 써서 통이 띠에 닿는 높이를 같이 잰다.
-   높이를 제 height 로 박지 않는 이유: 플레이 화면용 .backdrop-blur.bot 규칙이 같은
-   특이도에 파일 뒤쪽이라 그쪽 height 가 이긴다 — 함께 읽는 --blur-bot/--blur-top 에 값을 준다 */
-#options{--opt-page-blur:21px}
+/* 설정 페이지 위·아래 흐림 — 높이·결은 .page-blur(홈과 같은 값)가 준다. 여기는 자리만 */
 #options > .backdrop-blur{
   display:grid; position:fixed; left:0; right:0; z-index:3; pointer-events:none;
   --fade-x:linear-gradient(#000,#000);
 }
-#options > .backdrop-blur:not(.bot){
-  top:0; bottom:auto;
-  --blur-top:var(--opt-page-blur);
-}
-#options > .backdrop-blur.bot{
-  top:auto; bottom:0;
-  --blur-bot:var(--opt-page-blur);
-}
+#options > .backdrop-blur:not(.bot){top:0; bottom:auto}
+#options > .backdrop-blur.bot{top:auto; bottom:0}
 /* 언어·지역 pick 통 위·아래 흐림 — OuterVale "Blobby Navbar Blur" 의 여섯 겹을 pick 전용으로 둔다.
    플레이·홈이 쓰는 .backdrop-blur 와 나누어 둔다(그쪽은 손대지 않는다).
    띠는 pick 의 형제다 — fillLangPick/fillRegionPick 이 pick 을 replaceChildren 하므로.
@@ -1086,6 +1075,18 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   -webkit-mask-image:var(--fade-x);
   mask-image:var(--fade-x);
 }
+/* 홈 밖 화면(설정·순위·기록·계정·커뮤니티·소개)의 위·아래 흐림 — 홈(#regions)과 같은 높이·결.
+   화면에 붙고 폭은 끝까지 편다. 본문은 그 밑으로 지나가고, 머리줄·뒤로 단추만 띠 위에 선다 */
+.backdrop-blur.page-blur{
+  position:fixed; left:0; right:0; z-index:3;
+  --blur-top:120px; --blur-bot:110px; --fade-x:linear-gradient(#000,#000);
+}
+.backdrop-blur.page-blur:not(.bot){top:0; bottom:auto}
+.backdrop-blur.page-blur.bot{top:auto; bottom:0}
+@media (pointer:coarse){
+  .backdrop-blur.page-blur{--blur-top:calc(env(safe-area-inset-top) + 72px); --blur-bot:calc(110px + env(safe-area-inset-bottom))}
+}
+.doc .go-back{position:relative; z-index:4}
 
 /* 이름 숨김 — 아직 안 친 글자는 블록으로 가린다. 친 만큼만 드러난다 */
 .typing.hide b:not(.on):not(.ing){
@@ -1668,8 +1669,8 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 /* 위·아래 흐림 띠 — 설정 덮개(#options)와 같은 식으로 뷰포트에 붙인다. 위 띠는
    머리줄을 다 덮고 조금 더 내려와 지나가는 글이 머리줄 밑에서 흐려진다 */
 #account > .backdrop-blur{position:fixed;left:0;right:0;z-index:3;--fade-x:linear-gradient(#000,#000)}
-#account > .backdrop-blur:not(.bot){top:0;bottom:auto;--blur-top:calc(var(--acct-top) + 48px + 40px)}
-#account > .backdrop-blur.bot{top:auto;bottom:0;--blur-bot:64px}
+#account > .backdrop-blur:not(.bot){top:0;bottom:auto}
+#account > .backdrop-blur.bot{top:auto;bottom:0}
 .account-layout{gap:32px}
 .account-character{flex:0 1 300px;gap:16px}
 .account-details{flex:1 1 340px}
@@ -1958,6 +1959,13 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .tab-bar:has(> :nth-child(4)[aria-current]) .tab-ind{translate:calc(2 * var(--tab)) 0}
   .tab-bar:has(> :nth-child(5)[aria-current]) .tab-ind{translate:calc(3 * var(--tab)) 0}
   .tab-dock.is-min .tab-ind{width:calc(var(--row) - 8px)}
+  /* 계정이 지금 탭이면 판은 알약 밖 계정 동그라미 자리로 간다 — 평소엔 알약에 잘려 안 보이고
+     동그라미가 제 판을 칠하지만, 탭 전환(tabind)에서는 판이 알약과 동그라미 사이를 한 줄처럼
+     미끄러진다. 지도 칸 쪽으로 사라지듯 빠지지 않는다. 알약 테두리 1px 와 안쪽 3px 를 덜어 맞춘다 */
+  .tab-dock:has(#signinLink[aria-current]) .tab-ind{
+    opacity:1;top:-1px;bottom:-1px;width:var(--row);
+    translate:calc(100vw - 2 * var(--gut) - var(--row) - 4px) 0;
+  }
   #tabDock .tab-bar .nav-item[aria-current]{color:var(--on-accent);font-weight:800}
   #tabDock .tab-bar .nav-item[aria-current]::before{background:var(--on-accent)}
   #tabDock.tab-dock .nav-item.is-on{color:inherit}
@@ -1997,6 +2005,12 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 @media (pointer:coarse){
   #tabDock.tab-dock #signinLink[aria-current]{background:var(--accent);color:var(--on-accent);border-color:transparent}
   #tabDock.tab-dock #signinLink[aria-current]::before{background:var(--on-accent)}
+}
+/* 계정으로 가는 탭 전환 동안 동그라미는 제 판을 칠하지 않는다 — 새 그림이 처음부터 주황이면 판이
+   닿기도 전에 불이 들어온다. 그 사이엔 미끄러져 오는 주황 판(tabind)이 밑에서 비치고, 전환이
+   끝나 data-tab-swap 이 풀리면 동그라미가 제 판을 칠해 이어받는다 */
+@media (pointer:coarse){
+  :root[data-tab-swap] #tabDock.tab-dock #signinLink[aria-current]{background:transparent;border-color:transparent;box-shadow:none}
 }
 /* 폰에서는 덮개 뒤에 지도(칸)를 깔지 않는다 — 들고 나는 건 아래 탭 전환이 흐림으로 맡는다.
    덮개 안쪽의 제 등장(아래에서 올라오기 등)도 거둔다. 탭 전환 동안 --si-dur 를 0 으로 눌렀다가
@@ -2060,7 +2074,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #optsGame .opts dt{justify-self:start;text-align:left}
 #optsGame .choice-b{justify-content:flex-start}
 #optsGame .profile-help{margin-top:14px;max-width:34em}
-#unitNow{font-weight:700;color:var(--ink)}
 
 /* ═══ 순위 · 기록 덮개 ═══════════════════════════════════
    설정 덮개와 같은 결이다(ranked.js). 홈에 거는 모습 — 넵바가 빠지고 칸이 가라앉고
@@ -2074,7 +2087,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .pg-over[hidden]{display:none}
 body.paging .pg-over{opacity:1}
 .pg-over.pg-exit{opacity:0;transition:none}
-.pg-over .screen-head{position:absolute;top:var(--screen-pad-y);left:var(--screen-pad-x);margin:0}
+.pg-over .screen-head{position:absolute;z-index:4;top:var(--screen-pad-y);left:var(--screen-pad-x);margin:0}
 body.paging .pg-shell{animation:opt-rise var(--si-dur) var(--ease-out)}
 body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease-out)}
 .pg-shell{width:min(560px,100%);max-height:100%;display:flex;flex-direction:column;gap:14px}
@@ -2580,36 +2593,20 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
    판은 유리 카드에 담긴 무리(grouped inset list)로 흐른다: 라벨 왼쪽, 컨트롤 오른쪽,
    줄 사이는 머리카락 선. 탭은 가로로 굴리는 한 줄 칩이다 — role=tab·화살표 키는 그대로 */
 @media (pointer:coarse){
-  body:is(.set,.setting) #options{--oh:calc(env(safe-area-inset-top) + 64px);--th:66px}
+  body:is(.set,.setting) #options{--oh:calc(env(safe-area-inset-top) + 64px)}
   body:is(.set,.setting) #options.opts-over{
-    padding:0 0 calc(40px + var(--dock-h));justify-content:flex-start; /* 아래 탭 독 밑에 끝이 깔리지 않게 */
+    padding:0 0 calc(40px + var(--dock-h) + 60px);justify-content:flex-start; /* 아래 탭 독·칩 줄 밑에 끝이 깔리지 않게 */
     overflow-x:hidden;overscroll-behavior:contain;
   }
-  /* 위 흐림 띠는 유리 머리줄이 대신한다 — 두 겹이면 탁해진다. 아래 띠는 남긴다 */
-  body:is(.set,.setting) #options > .backdrop-blur:not(.bot){display:none}
+  /* 위·아래 흐림은 홈과 같은 띠(.page-blur)다. 머리줄은 판 없이 그 위에 앉는다 */
+  /* 아래 띠는 탭 독 위에 얹힌 칩 줄(52px + 틈 8px)을 넉넉히 덮고 위로 더 번지게 키운다 */
+  body:is(.set,.setting) #options > .backdrop-blur.bot{--blur-bot:calc(200px + env(safe-area-inset-bottom))}
+  body:is(.set,.setting) #options > .backdrop-blur:not(.bot){--blur-top:calc(env(safe-area-inset-top) + 96px)}
 
   /* 머리줄 — 상태 막대 밑까지 까는 유리. 딱딱한 선 대신 탭 줄 아래 끝이 스며 사라진다 */
   body:is(.set,.setting) #options .screen-head{
     position:sticky;top:0;left:auto;z-index:4;flex:none;gap:12px;
     height:var(--oh);margin:0;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
-  }
-  /* 머리줄과 탭 줄은 유리 한 장을 같이 쓴다. 두 장이면 이음매에서 아래 스밈이 잘린다.
-     장은 머리줄에 달고 탭 줄 키(--th)만큼 내려 깐다. 탭 줄은 z 를 하나 높여 그 위에 앉는다 */
-  body:is(.set,.setting) #options .screen-head::before{
-    content:"";position:absolute;inset:0 0 auto;z-index:-1;height:calc(100% + var(--th) + .25rem);pointer-events:none;
-    background:var(--glass-thick);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-    -webkit-mask:var(--glass-end);mask:var(--glass-end);
-  }
-  /* 끝자락은 두 겹으로 덜어 낸다 — 20px 흐림 한 장을 투명도로만 지우면 말단이 '센 흐림 + 옅은 막'이
-     되어 뒤 글자가 겹쳐 번진다. 짙은 장은 끝자락(--tail) 위쪽에서 지우고, 끝자락은 4px 흐림이 맡는다 */
-  body:is(.set,.setting) #options{--tail:24px;--glass-end:linear-gradient(#000 calc(100% - var(--tail)),transparent calc(100% - var(--tail) / 3))}
-  body:is(.set,.setting) #options .screen-head::after{
-    content:"";position:absolute;left:0;right:0;top:calc(100% + var(--th) + .25rem - var(--tail));z-index:-1;height:var(--tail);pointer-events:none;
-    background:linear-gradient(var(--glass-thick),transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
-    -webkit-mask:linear-gradient(#000 30%,transparent);mask:linear-gradient(#000 30%,transparent);
-  }
-  @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){
-    body:is(.set,.setting) #options .screen-head::after{backdrop-filter:none;-webkit-backdrop-filter:none}
   }
   body:is(.set,.setting) #options .head{font-size:32px}
   body:is(.set,.setting) #options .opts-shell{
@@ -2617,41 +2614,24 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
     z-index:auto; /* 제 쌓임 맥락을 풀어야 탭 줄(z 5)이 머리줄 유리(z 4) 위로 올라선다 */
   }
 
-  /* 탭 줄 — 머리줄 밑에 붙는 가로 스크롤 칩. 끝이 잘려 보여 더 있음을 알린다 */
+  /* 탭 줄 — 홈의 듀플 넵바처럼 아래 탭 독 위(미니 막대 자리: 높이 52px, 틈 8px)에 선다. 판 없이 아래
+     흐림 띠 위에 칩만 펼친다. 줄은 화면 끝에서 끝까지 굴러 가고, 첫 칩은 탭 독 왼쪽 끝(12px)에 맞춘다 */
   body:is(.set,.setting) #options .opts-tabs{
-    position:sticky;top:var(--oh);z-index:5;
+    position:fixed;left:0;right:0;top:auto;bottom:calc(16px + env(safe-area-inset-bottom) + 58px + 8px);z-index:5;
     display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:8px;
-    width:auto;height:var(--th);box-sizing:border-box;margin:0;padding:4px 16px 18px;
-    overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;
+    width:auto;height:52px;box-sizing:border-box;margin:0;padding:0 12px;
+    overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:12px;
     scrollbar-width:none;
   }
-  /* 좌우 끝 흐림 — 투명도 마스크가 아니라 칩을 실제로 흐린다. 스크롤 줄 안에서 sticky 로
-     양 끝에 붙고, 음수 바깥 여백으로 자리를 먹지 않는다. 흐림의 세기는 마스크로 끝에서 안으로 옅어진다 */
-  body:is(.set,.setting) #options .opts-tabs::before,
-  body:is(.set,.setting) #options .opts-tabs::after{
-    content:"";position:sticky;z-index:1;flex:none;align-self:stretch;width:28px;margin-block:-20px -18px;pointer-events:none;
-    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-    /* 가로 옅어짐에 머리줄 유리 장의 끝 바램(--glass-end)을 겹친다 — 둘이 한 장처럼 같이 끝나야
-       흐림 띠가 줄 밑에서 뚝 잘려 보이지 않는다. 블러는 칩 빛을 위로도 번지게 하니 띠를 위로 16px 더
-       깔고(margin-block) 윗변도 서서히 들인다 — 윗변에서 번짐이 잘리면 사각형 층이 보인다 */
-    -webkit-mask:var(--edge),linear-gradient(transparent,#000 20px),var(--glass-end);mask:var(--edge),linear-gradient(transparent,#000 20px),var(--glass-end);
-    -webkit-mask-composite:source-in;mask-composite:intersect;
-  }
-  body:is(.set,.setting) #options .opts-tabs::before{
-    left:-16px;margin-inline:-16px -20px; /* sticky 는 안쪽 여백 안에서 붙으니 그만큼 밖으로 */
-    --edge:linear-gradient(90deg,#000,transparent);
-  }
-  body:is(.set,.setting) #options .opts-tabs::after{
-    right:-16px;margin-inline:-20px -16px;
-    --edge:linear-gradient(270deg,#000,transparent);
-  }
   body:is(.set,.setting) #options .opts-tabs::-webkit-scrollbar{display:none}
-  body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab{
+  body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab{pointer-events:auto;
     flex:none;align-self:center;display:inline-flex;align-items:center;gap:6px;
     min-height:44px;padding:0 16px;border-radius:999px;scroll-snap-align:start;
     font-size:16px;font-weight:700;text-align:start;
-    color:var(--ink);background:var(--glass-fill);border:1px solid var(--glass-line);box-shadow:none;
+    color:var(--ink);background:#e7eef1;border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);box-shadow:none;
   }
+  /* 칩은 흐림 띠 위에 바로 앉으니 비치지 않게 불투명으로 채운다 — 바로 밑 탭 독과 같은 판색 */
+  :root[data-night] body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab:not([aria-selected="true"]){background:#2d383e}
   /* 고른 칩은 색만으로 서지 않는다 — 채움 · 굵기 · 앞의 체크 표가 함께 간다 */
   body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab[aria-selected="true"]{
     background:var(--block-hi);color:#fff;font-weight:800;border-color:var(--block-hi);

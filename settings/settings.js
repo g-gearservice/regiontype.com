@@ -263,15 +263,12 @@ function wireOptsTabs() {
 
 /* ── 타자 속도 단위 ──────────────────────────────────
    저장되는 값은 늘 CPM 이다(app.js 의 주석). 여기서 고르는 건 화면에 보일 자뿐이라,
-   단위를 바꿔도 이미 올라간 기록은 그대로다. '자동' 이 지금 무엇으로 읽히는지는
-   아래 줄에 적어 준다 — 고른 뒤에 무엇이 달라지는지 보이지 않으면 고를 수가 없다 */
+   단위를 바꿔도 이미 올라간 기록은 그대로다 */
 function paintUnit() {
   const box = $('#optUnit');
   if (!box) return;
   box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === opt.unit)));
   $('#optDong').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === opt.dong)));
-  const now = (opt.unit === 'cpm' || opt.unit === 'wpm') ? opt.unit : (LANG === 'ko' ? 'cpm' : 'wpm');
-  $('#unitNow').textContent = t('unitShown', { unit: t(now === 'wpm' ? 'wpmUnit' : 'cpmUnit') });
 }
 
 /* ── 계정 보안 ──────────────────────────────────────── */
