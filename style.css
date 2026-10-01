@@ -308,7 +308,10 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
    셸을 도로 넓힌다. 폭 하나로 묶어야 탭도 언어도 셸 바깥을 못 건드린다
    (flex-shrink 는 남긴다 — 좁은 창에서는 줄어야 한다) */
 .opts-panels{flex:0 1 auto;width:calc(var(--opt-col) * 2 + 24px);align-self:stretch;display:flex;flex-direction:column}
-.opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+/* 판이 셸보다 길면 판 안에서 굴린다. safe — 넘칠 때 윗머리가 잘리지 않게 위로 붙인다 */
+.opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;justify-content:safe center;overflow-y:auto;padding-top:.38rem}
+/* 언어·지역 통은 셸 밖으로 화면 끝까지 자란다 — 판이 자르면 안 된다 */
+#optsLanguage:not([hidden]),#optsRegion:not([hidden]){overflow:visible}
 /* 언어 통은 위·아래 흐림이 끝나는 자리에 맞춘다. 가운데 두면 띠에 안 닿는다 */
 #optsLanguage:not([hidden]){justify-content:flex-start}
 .opts-panel:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
@@ -1552,7 +1555,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 
 /* ── 설정 › 보안 ── */
 /* 판은 레일 윗변에서 시작해 아래로 흐른다(Figma 에서 카드 윗변 = 첫 탭 윗변) */
-#optsSecurity:not([hidden]){justify-content:flex-start;overflow:auto;margin-top:max(0px,calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2));min-height:0;padding:2px 8px 8px 2px;flex:1 1 0}
+#optsSecurity:not([hidden]){justify-content:flex-start;overflow:auto;margin-top:max(0px,calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2));min-height:0;padding:.38rem 8px 8px 2px;flex:1 1 0}
 .opts-shell:has(#optsSecurity:not([hidden])) .opts-tab:not([aria-selected="true"]){background:transparent}
 .security-content{width:min(100%,452px)}
 .security-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
@@ -1702,8 +1705,8 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .account-details label.profile-row{gap:16px}
   .account-details label.profile-row>span{width:auto}
   .profile-button{min-height:44px}
-  .character-choice{min-width:38px;height:38px}
-  .colour-choices .character-choice{min-width:24px;height:24px}
+  .character-choice{width:38px;height:38px}
+  .colour-choices .character-choice{width:24px;height:24px}
   #optsSecurity:not([hidden]){margin-top:0;overflow:visible}
 }
 
@@ -2645,7 +2648,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   body:is(.set,.setting) #options .opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 
   /* 판 — 위에서부터 흐른다. 가운데 모으던 데스크톱 정렬을 푼다 */
-  body:is(.set,.setting) #options .opts-panels{width:auto;display:block;padding:4px 16px 0}
+  body:is(.set,.setting) #options .opts-panels{width:auto;display:block;padding:.38rem 16px 0}
   body:is(.set,.setting) #options .opts-panel:not([hidden]){display:flex;flex-direction:column;justify-content:flex-start;gap:8px;margin:0;padding:0;overflow:visible}
   body:is(.set,.setting) #options .opts-panel:focus-visible{outline-offset:2px}
 
