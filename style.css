@@ -2095,8 +2095,19 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .rec-list .lp[data-sign="down"]::before{content:"▼ ";font-size:.7em}
 .rec-list .at{grid-column:2;grid-row:2;font-size:12px;color:var(--ink-soft)}
 @media (pointer:coarse){
-  .pg-over{justify-content:flex-start;padding:calc(84px + env(safe-area-inset-top)) 20px 40px}
-  .pg-over .screen-head{top:calc(20px + env(safe-area-inset-top));left:20px}
+  /* 폰 탭 화면(설정·순위·커뮤니티)은 한 틀이다 — 제목 32px · 옆 여백 16px · 머리줄 높이 44px ·
+     설명 15px · 칩 탭. 값은 설정 덮개(#options) 머리줄에서 딴다 */
+  .pg-over{justify-content:flex-start;padding:calc(68px + env(safe-area-inset-top)) 16px 40px}
+  .pg-over .screen-head{top:calc(10px + env(safe-area-inset-top));left:16px;min-height:44px}
+  .pg-over .head{font-size:32px}
+  .pg-shell{gap:12px}
+  .pg-help{font-size:15px}
+  .pg-tabs{gap:8px}
+  .pg-tabs [role="tab"]{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;
+    font-size:16px;color:var(--ink);background:var(--glass-fill);border:1px solid var(--glass-line)}
+  .pg-tabs [aria-selected="true"]{background:var(--block-hi);border-color:var(--block-hi);color:#fff;font-weight:800}
+  .pg-tabs [aria-selected="true"]::before{content:"";width:16px;height:16px;flex:none;background:currentColor;
+    -webkit-mask:url(assets/check-600.svg?v=1.31) center / 100% no-repeat;mask:url(assets/check-600.svg?v=1.31) center / 100% no-repeat}
   .rec-list li{grid-template-columns:auto 1fr auto auto;gap:6px 10px;border-radius:18px}
   .rec-list .mode{grid-area:1 / 1}
   .rec-list .where{grid-area:1 / 2 / 2 / 4}
@@ -2187,10 +2198,10 @@ body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
   pointer-events:auto;cursor:pointer;touch-action:none;will-change:transform;z-index:1;
   transition:transform var(--si-dur) var(--ease-out),opacity var(--si-dur) var(--ease-out);
 }
-/* 고른 색이 없는 봇은 평소엔 브랜드 빛깔, 경쟁전을 켜면(rk-ready) 빨강이다. 몸만 바꾼다 —
-   --rk-on(말풍선·게이지)은 paintTint 가 .rk-bot 의 --buddy-ink(빨강)에서 그대로 딴다.
+/* 고른 색이 없는 봇은 평소엔 브랜드 빛깔, 경쟁전을 켜면(rk-ready) 빨강이다.
+   --rk-on(말풍선·게이지)은 paintTint 가 .rk-bot-motion 에서 따므로 함께 바뀐다.
    고른 색은 setColour 가 .rk-bot-motion 에 인라인으로 박으므로 그때는 비켜선다 */
-body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]) > .buddy{--buddy-ink:var(--accent)}
+body:not(.rk-ready) .rk-bot-motion:not([style*="--buddy-ink"]){--buddy-ink:var(--accent)}
 .rk-bot:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:50%}
 /* 끌어 옮기는 동안은 손을 바로 따라간다 — 말풍선도 함께 */
 .rk-bot.is-held{cursor:grabbing;transition:none}

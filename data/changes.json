@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.9.351",
+    "date": "2026-10-01",
+    "ko": "로그인 전 봇의 말풍선(말 걸기 칸 포함)이 빨강이 아니라 봇과 같은 빛깔로 나옵니다. 경쟁전을 켜면 봇과 함께 빨강으로 바뀝니다. 로그인하면 홈이 그 자리에서 티 나지 않게 새로 열려 계정 정보를 바로 불러옵니다.",
+    "en": "Before you sign in, the bot's speech bubble (including the chat box) now matches the bot's colour instead of red. Turning on ranked switches both to red together. After you sign in, the home page quietly reopens in place so your account data loads right away."
+  },
+  {
+    "v": "0.9.350",
+    "date": "2026-10-01",
+    "ko": "폰에서 설정·순위·커뮤니티 화면의 틀을 하나로 맞췄습니다. 제목 크기와 자리, 옆 여백, 설명 글씨, 탭 칩(고르면 청록 채움과 체크)이 세 화면에서 같습니다. 커뮤니티 주제 칩은 두 줄로 꺾이지 않고 가로로 넘깁니다.",
+    "en": "On phones, the Settings, Ranking and Community screens now share one layout: the same title size and position, side margins, description text and tab chips (filled teal with a check when selected). Community topic chips scroll sideways in one row instead of wrapping."
+  },
+  {
     "v": "0.9.349",
     "date": "2026-10-01",
     "ko": "봇은 이제 로고 안에 삽니다. 가입하거나 로그인한 직후에만 로고 점이 로고를 채운 채 봇이 먼저 나오고, 그 뒤로는 로고를 꾹 눌러 점이 로고를 다 채우면 로고 밖 아래로 끌어내야 나옵니다(키보드는 로고에서 ↓). 봇이 드나들 때 로고 뒤에 깔리던 판과 로고를 감싸던 알약을 걷었습니다.",

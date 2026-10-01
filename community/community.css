@@ -112,7 +112,21 @@ body{overflow:auto}
   .cm-tags button,.cm-pick span,.cm-small{min-height:44px}
   /* 로고는 걷는다 — 계정 단추도 막대로 갔으니 머리줄이 통째로 빈다. 상태 막대 밑부터 시작한다 */
   .cm-top{display:none}
-  .cm{padding-top:calc(env(safe-area-inset-top) + 24px)}
+  /* 설정·순위 덮개와 같은 머리 틀 — 제목 32px 를 44px 줄 가운데에, 옆 여백 16px, 설명 15px.
+     거르기 칩도 설정 탭 칩과 같은 유리 칩(고르면 청록 채움 + 체크)이다 */
+  .cm{padding-top:calc(env(safe-area-inset-top) + 10px);padding-left:16px;padding-right:16px}
+  #listView > h1{display:flex;align-items:center;min-height:44px;font-size:32px;line-height:1}
+  .cm-lead{margin-top:12px;font-size:15px;line-height:1.6}
+  .cm-bar{margin:12px 0 16px;gap:8px}
+  /* 설정 탭 줄처럼 꺾지 않고 가로로 넘긴다 — 오른쪽 끝이 잘려 보여 더 있음을 알린다 */
+  .cm-tags{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;margin:0 -16px;padding:0 16px;scrollbar-width:none;
+    overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px}
+  .cm-tags::-webkit-scrollbar{display:none}
+  .cm-tags button{flex:none;scroll-snap-align:start}
+  .cm-tags button{padding:0 16px;font-size:16px;color:var(--ink);background:var(--glass-fill);border:1px solid var(--glass-line)}
+  .cm-tags [aria-pressed="true"]{background:var(--block-hi);border-color:var(--block-hi);color:#fff;font-weight:800}
+  .cm-tags [aria-pressed="true"]::before{content:"";width:16px;height:16px;flex:none;background:currentColor;
+    -webkit-mask:url(../assets/check-600.svg?v=1.31) center / 100% no-repeat;mask:url(../assets/check-600.svg?v=1.31) center / 100% no-repeat}
   /* 아래 탭 막대(홈과 같은 것)에 글 끝이 깔리지 않게. 계정은 막대의 동그라미가 맡는다 */
   .cm{padding-bottom:calc(40px + var(--dock-h))}
   .cm-me{display:none}
