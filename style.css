@@ -87,6 +87,21 @@ html{background:var(--bg)}
   :root :is(.rk-say input,.account-details :is(input,textarea,select)){font-size:16px}
 }
 @supports (height:1lvh){ @media (pointer:coarse){ :root{--under:calc(100lvh - 100dvh)} } }
+/* Safari 26 탭은 상태바·주소창 칸을 페이지 대신 단색으로 덮는다. 그 색은 가장자리에 붙은
+   fixed 요소의 background-color, 없으면 body 의 --bg 다. 여기 덮개는 그라디언트(이미지)라 색으로
+   잡히지 않으니 Safari 는 그대로 --bg 를 칠하고, 덮개가 그 --bg 를 페이지 쪽으로 번져
+   띠와 페이지 사이의 금을 지운다. 오버레이(6)는 덮고 독(7)·투어(8)는 안 덮는다.
+   홈 화면 앱(standalone)은 상태바가 비치니 덮지 않는다 */
+@media (pointer:coarse) and (display-mode:browser){
+  body::after{
+    content:""; position:fixed; inset:0; z-index:6; pointer-events:none;
+    --edge-t:env(safe-area-inset-top,0px);
+    --edge-b:calc(env(safe-area-inset-bottom,0px) + var(--under));
+    background:
+      linear-gradient(180deg,var(--bg) var(--edge-t),transparent calc(var(--edge-t) + 16px)),
+      linear-gradient(0deg,var(--bg) var(--edge-b),transparent calc(var(--edge-b) + 16px));
+  }
+}
 /* 모션을 줄이면 뒤집기도 즉시 전환된다 — 회전은 어지럼의 주 원인 */
 @media (prefers-reduced-motion:reduce){ :root{ --fast:0s; --slow:0s; --si-dur:0s } }
 :root[data-motion="off"]{ --fast:0s; --slow:0s; --si-dur:0s }

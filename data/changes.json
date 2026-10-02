@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.367",
+    "date": "2026-10-02",
+    "ko": "아이폰 Safari 에서 위 상태바·아래 주소창 띠가 화면과 이어져 보이고, 홈 화면 앱은 야간에 상태바 밑까지 화면이 비칩니다.",
+    "en": "On iPhone Safari the status-bar and address-bar strips now blend into the page, and the home-screen app shows the page under the status bar in night mode."
+  },
+  {
     "v": "0.9.366",
     "date": "2026-10-01",
     "ko": "폰에서 설정 내용이 조금 더 아래에서 시작하고, 홈 화면 로고가 조금 커졌습니다.",
