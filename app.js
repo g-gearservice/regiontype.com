@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.69';
+const VER = '3.70';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1180,7 +1180,8 @@ addEventListener('pointermove', e => {
       if (SHEET.open) sheetSet(false);
     }
   }
-  (drag.hist || (drag.hist = [])).push([performance.now(), e.clientX, e.clientY]);
+  /* 처리한 때가 아니라 일어난 때로 잰다 — 바쁠 때 몰려 처리된 이동이 순간 속도로 부풀어 튕김이 튄다 */
+  (drag.hist || (drag.hist = [])).push([e.timeStamp, e.clientX, e.clientY]);
   if (drag.hist.length > 8) drag.hist.shift();
   if (drag.kind === 'play') {
     const p = viewPoint(e);
@@ -1305,7 +1306,11 @@ const pinchKind = () => $('#regions').classList.contains('on') ? 'home'
   : $('#play').classList.contains('on') && G && G.cam ? 'play' : null;
 const pinchSpan = () => { const [a, b] = [...fingersOn.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
 addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'touch' || e.target.closest('#softkb')) return;   // 두 엄지로 치는 건 핀치가 아니다
+  if (e.pointerType !== 'touch') return;
+  /* 첫 손가락이면 화면에 남은 손가락은 없다. iOS 는 pointerup·cancel 을 빠뜨릴 때가 있어
+     그 유령이 남으면 다음 한 손가락 끌기가 핀치로 읽혀 지도가 튀고 엉뚱하게 줄었다 커진다 */
+  if (e.isPrimary) { fingersOn.clear(); pinchD = 0; }
+  if (e.target.closest('#softkb')) return;   // 두 엄지로 치는 건 핀치가 아니다
   fingersOn.set(e.pointerId, [e.clientX, e.clientY]);
   if (fingersOn.size !== 2) return;
   if (drag) { if (drag.host) drag.host.classList.remove('is-drag'); drag = null; }
