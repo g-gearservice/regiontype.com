@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.370",
+    "date": "2026-10-02",
+    "ko": "설정의 보안 탭을 끝까지 내리면 마지막 줄이 아래 흐림 띠 위로 올라와 보입니다. 폰 홈에서 지도를 끌 때 갑자기 튀거나 혼자 확대·축소되던 일을 고쳤습니다.",
+    "en": "Scrolling the Security tab in Settings to the end now brings its last line up clear of the bottom blur. Dragging the home map on phones no longer jumps or zooms on its own."
+  },
+  {
     "v": "0.9.369",
     "date": "2026-10-02",
     "ko": "아이폰 Safari 홈에서 지도가 위 상태바와 아래 주소창 밑까지 실제로 비치고, 위아래 흐림도 그 밑까지 이어집니다.",

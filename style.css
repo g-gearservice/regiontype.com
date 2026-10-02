@@ -1572,7 +1572,10 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 
 /* ── 설정 › 보안 ── */
 /* 판은 레일 윗변에서 시작해 아래로 흐른다(Figma 에서 카드 윗변 = 첫 탭 윗변) */
-#optsSecurity:not([hidden]){justify-content:flex-start;overflow:auto;margin-top:max(0px,calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2));min-height:0;padding:.38rem 8px 8px 2px;flex:1 1 0}
+#optsSecurity:not([hidden]){justify-content:flex-start;overflow:auto;margin-top:max(0px,calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2));min-height:0;padding:.38rem 8px 8px 2px;flex:1 1 0;
+  /* 판 아랫단은 화면 아래 흐림 띠(.page-blur --blur-bot 110px) 안에 든다 — 띠가 덮는 만큼 여백을
+     둬야 끝까지 굴렸을 때 마지막 줄이 띠 위로 올라선다 */
+  padding-bottom:max(8px,calc((110px - var(--opt-shell-bot)) / var(--zc)))}
 .opts-shell:has(#optsSecurity:not([hidden])) .opts-tab:not([aria-selected="true"]){background:transparent}
 .security-content{width:min(100%,452px)}
 .security-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
