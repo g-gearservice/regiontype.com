@@ -128,6 +128,20 @@ body{
   padding:var(--screen-pad-y) var(--screen-pad-x); overflow:auto;
 }
 .screen.on{display:flex}
+.top-blur{display:none}
+/* 폰 Safari 탭에서 상태바·주소창 밑까지 페이지를 그린다. iOS 26 Safari 는 그 칸에 fixed 판을
+   그리지 않고(끝 한 줄 색을 칠하거나 --bg 로 덮는다), 화면 밖 위아래에 문서 내용이 더 있을 때만
+   그것을 실제로 그린다(아이폰에서 잼). 그래서 문서를 위아래로 --bleed 만큼 늘려 app.js(pinDoc)가
+   --bleed 에 묶어 두고, 화면 판은 그 자리에 문서 내용으로 놓는다. 손가락으로는 못 굴린다.
+   홈 판은 지도가 판 밖(막대 밑)으로 넘쳐 보이게 한다. 홈 화면 앱은 막대가 없어 그대로 둔다 */
+@media (pointer:coarse) and (display-mode:browser){
+  :root{--bleed:200px}
+  html,body{height:auto}
+  html{overflow:hidden}
+  body{overflow:visible;height:calc(100dvh + 2 * var(--bleed))}
+  .screen{position:absolute;top:var(--bleed);bottom:auto;height:100dvh}
+  #regions.screen{overflow:visible}
+}
 
 .logo{font-size:clamp(38px,5vw,64px);font-weight:800;letter-spacing:-.03em;line-height:1}
 .logo span{font-weight:400}
@@ -905,10 +919,9 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    소개). 화면 높이는 보이는 만큼(--vvh, app.js)이라 키보드가 떠도 시트가 그 위에 남는다.
    목표를 가운데 둘 때는 app.js 의 viewSpan 이 머리줄과 시트 사이 빈 칸의 한가운데를 쓴다 */
 @media (pointer:coarse){
-  /* 평소엔 .screen 그대로(fixed, inset:0) — iOS 26 Safari 는 그런 판만 상태바·주소창 밑까지 펼친다.
-     높이를 손으로 잡는 건 키보드가 칸을 가릴 때(app.js fitVV 가 data-vv 를 단다)뿐이다 */
+  /* 자리는 .screen 그대로다. 키보드가 칸을 가릴 때(app.js fitVV 가 data-vv 를 단다)만 보이는 만큼으로 줄인다 */
   #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0}
-  :root[data-vv] #play{top:var(--vvt,0px); bottom:auto; height:calc(var(--vvh) + var(--kb,0px))}
+  :root[data-vv] #play{top:calc(var(--bleed,0px) + var(--vvt,0px)); bottom:auto; height:calc(var(--vvh) + var(--kb,0px))}
   /* 위 띠는 상태 막대 밑부터, 아래 띠는 키보드 바로 위(시트 뒤)부터 번진다 — 유리 알약 뒤에 깐다 */
   #play > .backdrop-blur{--fade-x:linear-gradient(#000,#000)}
   #play > .backdrop-blur:not(.bot){--blur-top:calc(env(safe-area-inset-top) + 72px)}
@@ -1093,11 +1106,9 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 @media (pointer:coarse){
   .backdrop-blur.page-blur{--blur-top:calc(env(safe-area-inset-top) + 72px); --blur-bot:calc(110px + env(safe-area-inset-bottom))}
 }
-/* 폰에서는 흐림 겹을 걷고 스크림(::after)만 둔다. iOS 26 Safari 는 화면 끝 근처에 backdrop-filter 가
-   있으면 상태바·주소창 밑을 펼쳐 보여 주지 않고 --bg 단색으로 덮는다(아이폰에서 잼). 띠를 끝에서
-   띄우면 펼침은 살지만, 흐림이 띠 바깥의 투명을 끌어와 띠 자리가 어둡게 번진다 */
+/* 폰에서는 위아래 흐림 띠를 걷는다 — 상태바·주소창 밑으로 비치는 지도를 가린다. 홈만 아래(#regions)에서 다시 켠다 */
 @media (pointer:coarse){
-  .backdrop-blur > span{display:none}
+  .backdrop-blur{display:none}
 }
 .doc .go-back{position:relative; z-index:4}
 
@@ -1740,16 +1751,44 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     top:auto;bottom:calc(-1 * var(--under));
     --blur-bot:calc(110px + env(safe-area-inset-bottom) + var(--under));
   }
-  /* 상태바·아래 막대 밑을 뚫는다 — iOS 26 Safari 는 inset:0 으로 화면을 덮는 fixed 판만 막대
-     밑까지 펼쳐 보여 준다. absolute 판이나 높이를 따로 준 fixed 판(100lvh 따위)은 거기서 --bg
-     단색으로 잘린다(아이폰에서 잼). 지도 화면은 .screen 그대로(fixed, inset:0) 둔다.
-     흐림 띠는 폰에서 흐림 겹을 걷고(위 .backdrop-blur), 아래 막대(.tab-dock)는 absolute 로 비켜 둔다.
-     지도 자리(app.js 의 homeStage)는 고정된 넵바·막대로 재니 흔들리지 않는다 */
   /* 로고 양옆(햄버거·전체 보기)은 걷는다 — 지도 탭을 다시 누르면 전체 보기가 된다(app.js tabGo).
      탭 단추는 손가락 끌기를 스크롤이 가로채지 않게 한다 — 지금 탭에서 봇을 끌어낸다(ranked.js) */
   #regions .nav-burger,#regions .map-ctl{display:none}
   #tabBar .nav-item{touch-action:none}
   #regions > .backdrop-blur.bot{position:absolute;bottom:0}
+  /* 폰 Safari 탭의 홈 흐림. 아래 띠는 문서 여백(--bleed)까지 뻗어 주소창 밑도 흐린다.
+     위는 backdrop-filter 를 못 쓴다 — 상태바 +8px 안에 닿으면 Safari 가 그 칸을 --bg 단색으로
+     덮는다(아이폰에서 잼). 그래서 지도 칸(#courseBtns)을 흐린 복사본(.top-blur, app.js topBlur)을
+     --bg 위에 아래 띠와 같은 여섯 겹으로 깔고 마스크만 뒤집는다. 겹 마스크는 보이는 범위(--h)로 잰다 */
+  @media (display-mode:browser){
+    #regions > .backdrop-blur.bot{display:grid;--h:220px;bottom:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h))}
+    #regions > .backdrop-blur.bot::after{display:none}
+    #regions > .backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
+    #regions > .backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
+    #regions > .backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
+    #regions > .backdrop-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
+    #regions > .backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
+    #regions > .backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
+    .top-blur{
+      display:grid;position:absolute;left:0;right:0;z-index:1;pointer-events:none;--h:147px;
+      top:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h));
+    }
+    .top-blur > div{grid-area:1/1;position:relative;overflow:hidden;background:var(--bg)}
+    #topBlur > div > #courseBtns{top:var(--bleed);view-transition-name:none}
+    .top-blur > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15))}
+    #topBlur > :nth-child(1) > #courseBtns{filter:blur(calc(1px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(2){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3))}
+    #topBlur > :nth-child(2) > #courseBtns{filter:blur(calc(4px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(3){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45))}
+    #topBlur > :nth-child(3) > #courseBtns{filter:blur(calc(8px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(4){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6))}
+    #topBlur > :nth-child(4) > #courseBtns{filter:blur(calc(16px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(5){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75))}
+    #topBlur > :nth-child(5) > #courseBtns{filter:blur(calc(24px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9))}
+    #topBlur > :nth-child(6) > #courseBtns{filter:blur(calc(32px * var(--blur-k,.55)))}
+  }
+
   /* 햄버거 — 왼쪽 위, 상태 막대 밑. 로고는 화면 위 가운데(햄버거·오른쪽 컨트롤 줄과 같은
      높이 44px). 알약은 폰에 없어 점도 로고가 직접 그린다 */
   #regions .navbar{
@@ -1872,15 +1911,12 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
    두 줄: 위는 미니 막대(코스 이름·시작), 아래는 탭 알약(지도·순위·기록·설정)과 계정 동그라미.
    .is-min(지도를 끌 때) — 탭 알약은 지도 동그라미로 줄고, 미니 막대가 두 동그라미 사이로
    내려앉는다. 상자(#tabDock) 높이는 그대로라 지도 자리(app.js 의 homeStage)가 흔들리지 않는다.
-   유리는 쓰지 않는다 — 데스크톱 알약과 같은 불투명 판이다.
-   fixed 가 아니라 absolute 다 — 폭 전체에 걸친 fixed 상자가 아래 끝 근처에 있으면 iOS 26 Safari 가
-   주소창 밑을 --bg 단색으로 덮는다(아이폰에서 잼). app.js 가 body 로 옮기고 body 는 구르지 않아
-   자리는 fixed 와 같다 */
+   유리는 쓰지 않는다 — 데스크톱 알약과 같은 불투명 판이다 */
 @media (pointer:coarse){
   #regions .nav-bot{display:none}
   .tab-dock{
     --row:58px; --acc:52px; --gut:12px; --dur:.42s;
-    display:block;position:absolute;left:0;right:0;bottom:var(--dock-gap);z-index:4;
+    display:block;position:fixed;left:0;right:0;bottom:var(--dock-gap);z-index:4;
     height:calc(var(--row) + 8px + var(--acc));pointer-events:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
     transition:transform var(--si-dur) var(--ease-in-out),opacity var(--si-dur) var(--ease-in-out);
