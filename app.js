@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.68';
+const VER = '3.69';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2287,6 +2287,43 @@ document.addEventListener('keydown', e => {
 const markFocus = () => $('#typing').classList.toggle('off', document.activeElement !== $('#typein') && !kbOwns());
 $('#typein').addEventListener('focus', markFocus);
 $('#typein').addEventListener('blur', markFocus);
+
+/* 폰 Safari 탭은 문서를 위아래로 --bleed 만큼 늘려 두고(style.css), 늘 그 가운데에 묶는다 —
+   화면 밖 위아래에 문서가 있어야 Safari 가 상태바·주소창 밑에 페이지를 그린다 */
+const bleedOn = matchMedia('(pointer:coarse) and (display-mode:browser)');
+const pinDoc = () => {
+  const b = bleedOn.matches ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bleed')) || 0 : 0;
+  if (Math.abs(scrollY - b) > .5) scrollTo(0, b);
+};
+pinDoc();
+for (const e of ['load', 'scroll', 'resize']) addEventListener(e, pinDoc, { passive: true });
+/* 위 흐림(style.css 의 .top-blur) — 지도 칸(#courseBtns)을 세기가 다른 흐린 복사본 여섯 장으로 따라 그린다.
+   속성만 바뀌면 짝 노드에 그 속성만 옮긴다(트랜지션도 같이 돈다). 칸이 바뀌면 통째로 다시 뜬다.
+   복사본도 id 를 그대로 쓴다 — CSS 가 #courseBtns 로 칸을 그린다. 원본이 앞에 있어 $() 는 원본을 잡는다 */
+if (bleedOn.matches) {
+  const src = $('#courseBtns'), box = $('#topBlur'), twins = new WeakMap();
+  let queued = false;
+  const copyAll = () => {
+    queued = false;
+    const a = [src, ...src.querySelectorAll('*')];
+    a.forEach(n => twins.set(n, []));
+    box.replaceChildren(...Array.from({ length: 6 }, () => {
+      const copy = src.cloneNode(true), b = [copy, ...copy.querySelectorAll('*')], layer = document.createElement('div');
+      a.forEach((n, i) => twins.get(n).push(b[i]));
+      layer.append(copy);
+      return layer;
+    }));
+  };
+  new MutationObserver(ms => {
+    for (const m of ms) {
+      const ts = m.type === 'attributes' && twins.get(m.target);
+      if (!ts) { if (!queued) { queued = true; requestAnimationFrame(copyAll); } continue; }
+      const v = m.target.getAttribute(m.attributeName);
+      for (const t of ts) v === null ? t.removeAttribute(m.attributeName) : t.setAttribute(m.attributeName, v);
+    }
+  }).observe(src, { attributes: true, childList: true, subtree: true, characterData: true });
+  copyAll();
+}
 
 /* 화상 키보드가 뜨면 플레이 화면을 보이는 만큼으로 줄인다(style.css 의 --vvh·--vvt,
    손가락 화면에서만 읽는다). 안드로이드는 viewport 메타의 interactive-widget 이 이미

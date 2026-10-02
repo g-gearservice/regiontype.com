@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.369",
+    "date": "2026-10-02",
+    "ko": "아이폰 Safari 홈에서 지도가 위 상태바와 아래 주소창 밑까지 실제로 비치고, 위아래 흐림도 그 밑까지 이어집니다.",
+    "en": "On the iPhone Safari home screen the map now shows through under the status bar and the address bar, with the top and bottom blur reaching under them."
+  },
+  {
     "v": "0.9.368",
     "date": "2026-10-02",
     "ko": "아이폰 Safari 에서 화면이 위 상태바와 아래 주소창 밑까지 끊기지 않고 이어집니다.",
