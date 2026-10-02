@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.67';
+const VER = '3.68';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2298,7 +2298,9 @@ if (window.visualViewport) {
   /* 가린 게 없으면 셋 다 지운다 — 그때 #play 는 Safari 아래 막대 밑(화면 맨 아래)까지
      깔리고 시트가 막대 몫(--under)만큼 속을 띄운다. 막대 위에서 끊으면 그 밑이 검은 띠다 */
   const fitVV = () => {
-    if (innerHeight - vv.height > 1 || vv.offsetTop > 0) {
+    const covered = innerHeight - vv.height > 1 || vv.offsetTop > 0;
+    document.documentElement.toggleAttribute('data-vv', covered);
+    if (covered) {
       st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); st.setProperty('--sab', '0px');
       /* 보이는 칸 밑 ~ 레이아웃 바닥(키보드·주소 알약 뒤). #play 는 거기까지 깔고 시트만 그 위에 앉힌다 —
          보이는 칸에서 끊으면 iOS 주소 알약 둘레가 지도 없이 빈다(카운트다운은 inset:0 이라 거기까지 깔린다) */
