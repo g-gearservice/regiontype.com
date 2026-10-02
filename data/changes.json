@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.368",
+    "date": "2026-10-02",
+    "ko": "아이폰 Safari 에서 화면이 위 상태바와 아래 주소창 밑까지 끊기지 않고 이어집니다.",
+    "en": "On iPhone Safari the page now runs all the way under the status bar and the address bar."
+  },
+  {
     "v": "0.9.367",
     "date": "2026-10-02",
     "ko": "아이폰 Safari 에서 위 상태바·아래 주소창 띠가 화면과 이어져 보이고, 홈 화면 앱은 야간에 상태바 밑까지 화면이 비칩니다.",
