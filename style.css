@@ -149,8 +149,14 @@ body{
   /* 시트는 판을 걷는다 — 자판·이름 줄·설명이 뒤 흐림 그라디언트 위에 바로 앉는다 */
   #play .play-sheet{background:none;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   /* 시트의 흐림은 뒤 띠가 맡는다 — 홈 아래 띠처럼 여섯 겹 그라디언트로, 문서 여백까지 뻗어 주소창 밑도 흐린다 */
-  #play.screen > .backdrop-blur.bot{display:grid;--h:400px;bottom:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h))}
+  #play.screen > .backdrop-blur.bot{display:grid;--h:400px;--blur-k:1;bottom:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h))}
   #play > .backdrop-blur.bot::after{display:none}
+  /* 위 상태 줄(뒤로·시간 알약)도 판을 걷고 흐림 위에 띄운다. 위 흐림은 홈과 같은 .top-blur — 게임 지도(#map)를
+     흐린 복사본 여섯 장이 상태바 칸 끝까지 깔린다(app.js blurTwins) */
+  #play.screen .hud-pill,#play.screen .back{background:none;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  #playTopBlur{display:grid;--h:160px}
+  #playTopBlur .tb-at{position:absolute;left:var(--mx,0px);top:calc(var(--bleed) + var(--my,0px));width:var(--mw,100%);height:var(--mh,100%)}
+  #playTopBlur #map{view-transition-name:none}
   #play > .backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
   #play > .backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
   #play > .backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
@@ -983,11 +989,13 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   /* 긴 동 이름(종로1,2,3,4가동)도 한 줄에 든다 — --n 은 글자 수(app.js setTarget) */
   .q-letters{flex:none; font-size:min(40px, calc((100vw - 112px) / var(--n, 4)))}
   #play .fact{min-height:1.4em;padding:0 8px;line-height:1.4}
+  /* 설명이 없으면 줄째 걷는다 — 빈 자리가 자판과 이름 줄 사이를 벌린다 */
+  #play .fact:is(:empty,:has(> span:empty)){display:none}
   .fact span{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 게임 자판 — 시트 맨 아래, 홈 인디케이터 몫은 시트의 아래 여백이 맡는다.
      키는 사이트의 둥근 칸 결: --card 판에 가는 선, 기능 키는 유리 위 먹 칸 */
   /* 위 13px — 시트 윗선에서 이름 글자 윗면까지(≈21px)와 소개 글자 밑면에서 자판까지를 맞춘다 */
-  .softkb{margin:13px -6px 0;display:flex;flex-direction:column;gap:8px;touch-action:none;
+  .softkb{margin:4px -6px 0;display:flex;flex-direction:column;gap:8px;touch-action:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .softkb[hidden],#play:not(.on) .softkb{display:none}   /* 결과 화면 뒤에 남은 지도에는 자판이 없다 */
   .kb-row{display:flex;gap:5px}
@@ -1777,7 +1785,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   #regions > .backdrop-blur.bot{position:absolute;bottom:0}
   /* 폰 Safari 탭의 홈 흐림. 아래 띠는 문서 여백(--bleed)까지 뻗어 주소창 밑도 흐린다.
      위는 backdrop-filter 를 못 쓴다 — 상태바 +8px 안에 닿으면 Safari 가 그 칸을 --bg 단색으로
-     덮는다(아이폰에서 잼). 그래서 지도 칸(#courseBtns)을 흐린 복사본(.top-blur, app.js topBlur)을
+     덮는다(아이폰에서 잼). 그래서 지도 칸(#courseBtns)을 흐린 복사본(.top-blur, app.js blurTwins)을
      --bg 위에 아래 띠와 같은 여섯 겹으로 깔고 마스크만 뒤집는다. 겹 마스크는 보이는 범위(--h)로 잰다 */
   @media (display-mode:browser){
     #regions > .backdrop-blur.bot{display:grid;--h:220px;bottom:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h))}
@@ -1800,17 +1808,17 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     .top-blur > div{grid-area:1/1;position:relative;overflow:hidden;background:var(--bg)}
     #topBlur > div > #courseBtns{top:var(--bleed);view-transition-name:none}
     .top-blur > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15))}
-    #topBlur > :nth-child(1) > #courseBtns{filter:blur(calc(1px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(1) > *{filter:blur(calc(1px * var(--blur-k,.55)))}
     .top-blur > :nth-child(2){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3))}
-    #topBlur > :nth-child(2) > #courseBtns{filter:blur(calc(4px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(2) > *{filter:blur(calc(4px * var(--blur-k,.55)))}
     .top-blur > :nth-child(3){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45))}
-    #topBlur > :nth-child(3) > #courseBtns{filter:blur(calc(8px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(3) > *{filter:blur(calc(8px * var(--blur-k,.55)))}
     .top-blur > :nth-child(4){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6))}
-    #topBlur > :nth-child(4) > #courseBtns{filter:blur(calc(16px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(4) > *{filter:blur(calc(16px * var(--blur-k,.55)))}
     .top-blur > :nth-child(5){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75))}
-    #topBlur > :nth-child(5) > #courseBtns{filter:blur(calc(24px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(5) > *{filter:blur(calc(24px * var(--blur-k,.55)))}
     .top-blur > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9))}
-    #topBlur > :nth-child(6) > #courseBtns{filter:blur(calc(32px * var(--blur-k,.55)))}
+    .top-blur > :nth-child(6) > *{filter:blur(calc(32px * var(--blur-k,.55)))}
   }
   @media (display-mode:browser) and (prefers-reduced-motion:reduce){ #regions > .backdrop-blur.bot{transition:none} }
   :root[data-motion="off"] #regions > .backdrop-blur.bot{transition:none}
