@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.371",
+    "date": "2026-10-02",
+    "ko": "아이폰 Safari 게임 화면에서 지도가 위 상태바와 아래 주소창 밑까지 비치고, 자판은 판 없이 주소창 위 흐림 그라디언트에 바로 앉습니다. 홈 아래 막대가 접히면 아래 흐림도 함께 내려앉고, 로고가 조금 커졌으며, 화면을 두 손가락으로 오므려도 페이지가 작아지지 않습니다.",
+    "en": "On iPhone Safari the game map now shows under the status bar and the address bar, and the keyboard sits straight on a blur gradient above the address bar. The home bottom blur settles with the dock when it folds, the logo is a little larger, and pinching no longer shrinks the page."
+  },
+  {
     "v": "0.9.370",
     "date": "2026-10-02",
     "ko": "설정의 보안 탭을 끝까지 내리면 마지막 줄이 아래 흐림 띠 위로 올라와 보입니다. 폰 홈에서 지도를 끌 때 갑자기 튀거나 혼자 확대·축소되던 일을 고쳤습니다.",

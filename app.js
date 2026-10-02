@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.70';
+const VER = '3.71';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1354,6 +1354,9 @@ function wirePinch(el, zoomAt) {
 }
 wirePinch($('#regions'), zoomHomeAt);
 wirePinch($('#play'), zoomPlayAt);
+/* 폰에서는 Safari 페이지 줌을 어디서도 시작시키지 않는다 — 독(#tabDock)은 body 로 나가 있어 위
+   #regions 의 막음이 닿지 않고, 지도 핀치(포인터)와 함께 페이지가 줄어 막대 비율이 깨진다 */
+for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, e => { if (fingers()) e.preventDefault(); });
 document.addEventListener('keydown', e => {
   const plus = e.key === '+' || e.key === '=' || e.key === 'Add';
   const minus = e.key === '-' || e.key === '_' || e.key === 'Subtract';
@@ -2340,7 +2343,9 @@ if (window.visualViewport) {
   /* 가린 게 없으면 셋 다 지운다 — 그때 #play 는 Safari 아래 막대 밑(화면 맨 아래)까지
      깔리고 시트가 막대 몫(--under)만큼 속을 띄운다. 막대 위에서 끊으면 그 밑이 검은 띠다 */
   const fitVV = () => {
-    const covered = innerHeight - vv.height > 1 || vv.offsetTop > 0;
+    /* 가린 높이가 100px 을 넘어야 키보드다 — iOS 26 Safari 는 키보드 없이도 아래 주소창 몫(48px 안팎)을
+       보이는 칸에서 뺀다. 그걸 키보드로 보면 시트가 그만큼 떠서 주소창과 벌어진다(아이폰에서 잼) */
+    const covered = innerHeight - vv.height > 100 || vv.offsetTop > 0;
     document.documentElement.toggleAttribute('data-vv', covered);
     if (covered) {
       st.setProperty('--vvh', vv.height + 'px'); st.setProperty('--vvt', vv.offsetTop + 'px'); st.setProperty('--sab', '0px');
