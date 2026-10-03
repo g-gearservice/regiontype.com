@@ -136,9 +136,10 @@ body{
    홈 판은 지도가 판 밖(막대 밑)으로 넘쳐 보이게 한다. 홈 화면 앱은 막대가 없어 그대로 둔다 */
 @media (pointer:coarse) and (display-mode:browser){
   :root{--bleed:200px}
-  html,body{height:auto}
-  html{overflow:hidden}
-  body{overflow:visible;height:calc(100dvh + 2 * var(--bleed))}
+  /* 홈 앱 문서(#regions 가 있는 것)에만 건다. 글처럼 흐르는 문서(커뮤니티·소개·약관)는 html 을 잠그면
+     손가락으로 못 굴린다 — 그 쪽은 평범하게 스크롤되어 막대 밑까지 이어진다 */
+  html:where(:has(#regions)){height:auto;overflow:hidden}
+  html:where(:has(#regions)) body{height:calc(100dvh + 2 * var(--bleed));overflow:visible}
   .screen{position:absolute;top:var(--bleed);bottom:auto;height:100dvh}
   #regions.screen{overflow:visible}
   /* 플레이도 같다 — 지도(svg)가 제 상자 밖, 상태바·주소창 밑의 문서 여백까지 그려진다 */

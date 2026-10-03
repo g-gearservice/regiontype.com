@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.373",
+    "date": "2026-10-03",
+    "ko": "폰에서 커뮤니티 글이 다시 손가락으로 스크롤됩니다. 홈 지도를 Safari 막대 밑까지 이어 보이게 하려고 문서를 잠그던 규칙은 이제 홈 앱에만 적용되고, 커뮤니티처럼 글을 읽는 페이지는 그대로 둡니다.",
+    "en": "Community posts scroll by finger again on phones. The locked tall document that lets the home map run under Safari's bars now applies only to the home app, so a reading page like Community scrolls normally."
+  },
+  {
     "v": "0.9.372",
     "date": "2026-10-03",
     "ko": "폰에서 봇이 독 밑이나 상태바 칸으로 끌려 들어가 가려지지 않고, 안내 말풍선도 독 위에 떠서 '다음'이 눌립니다. 처음 온 사람에게 봇이 '!' 실오라기가 아니라 얼굴로 로고 밑에서 조르고, 막이 상태바 칸까지 덮으며, 안내에서 오른쪽 위 닫기(×)로 빠져나올 수 있습니다.",
