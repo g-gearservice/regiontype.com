@@ -144,6 +144,70 @@ body{
   #regions.screen{overflow:visible}
   /* 플레이도 같다 — 지도(svg)가 제 상자 밖, 상태바·주소창 밑의 문서 여백까지 그려진다 */
   #play.screen,#play #map{overflow:visible}
+  /* 순위·기록·계정 덮개도 문서 안에 놓고 위아래 여백까지 늘린다 — 목록이 상태바·주소창 밑으로 지나간다.
+     늘린 만큼(--bleed) 안쪽 여백·머리글을 내려 내용 자리는 그대로다(폰 값은 아래 .pg-over 폰 규칙과 같게) */
+  body > .pg-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
+    padding-top:calc(68px + env(safe-area-inset-top) + var(--bleed));padding-bottom:calc(40px + var(--bleed))}
+  body > .pg-over .screen-head{top:calc(10px + env(safe-area-inset-top) + var(--bleed))}
+  /* 덮개 밑 홈 흐림은 막만 둔다 — 화면 위 끝의 backdrop-filter 는 Safari 가 상태바 칸을 --bg 로 덮게 한다.
+     폰에선 덮개가 뜨면 지도 칸이 숨어(visibility) 흐릴 것도 없다 */
+  #regions::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  /* @@settings */
+  /* 설정 덮개도 문서 안으로 — 덮개를 위아래 --bleed 만큼 늘려 목록이 상태바·주소창 밑으로 지나가게 한다.
+     스크롤 통은 덮개가 아니라 .opts-shell 이다(흐림 띠·머리줄이 덮개의 absolute 자식으로 제자리에 서야 해서).
+     fixed 띠는 막대 밑에 안 그려지니 띠를 스크롤 통 밖 absolute 로 둔다. 늘린 만큼 안쪽 여백·머리줄을 내려 보이는 자리는 그대로다 */
+  :root body:is(.set,.setting) > #options.opts-over{position:absolute;top:0;bottom:auto;inset-inline:0;height:calc(100dvh + 2 * var(--bleed));
+    padding:0;overflow:visible}
+  :root body:is(.set,.setting) #options .opts-shell{position:absolute;inset:0;margin:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+    padding:calc(var(--bleed) + var(--oh) + .4rem) 0 calc(var(--bleed) + 40px + var(--dock-h) + 60px)}
+  :root body:is(.set,.setting) #options .screen-head{position:absolute;top:var(--bleed);left:0;right:0}
+  /* 아래 띠: 덮개 바닥(문서 여백 끝)까지 — 주소창 밑도 흐리다. 마스크는 띠 높이가 아니라 보이는 범위 --h 로 잰다 */
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot{position:absolute;--h:var(--blur-bot);height:calc(var(--bleed) + var(--h));bottom:0}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot::after{display:none}
+  /* 위 띠: 보이는 칸 위 끝 +8px 에서 시작 — 더 위로 뻗으면 Safari 가 상태바 칸을 --bg 로 덮는다. 들어오는 쪽은 마스크 둘을 교차해 0 에서 올린다 */
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot){position:absolute;--h:var(--blur-top);top:calc(var(--bleed) + 8px);height:calc(var(--h) - 8px)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > span{mask:none;-webkit-mask:none;-webkit-mask-composite:source-in;mask-composite:intersect}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(2){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(3){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(4){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(5){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%)}
+  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
+  /* @@signin */
+  /* 로그인 덮개도 문서 안으로 — 위아래 여백까지 늘리고 안쪽 여백에 --bleed 를 더해 카드 자리는 그대로(아래는 독 높이 포함) */
+  body > .si-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
+    padding:calc(24px + var(--bleed)) 24px calc(24px + var(--dock-h) + var(--bleed))}
+  /* @@account */
+  /* 계정 덮개는 스크롤 상자다. 덮개 틀(위 body > .pg-over)은 이미 문서 안이지만 계정은 #account:not([hidden]) 이
+     padding:0 을 쥐어 --bleed 가 안 먹으니, 본문 통이 위아래 여백만큼 내려 앉는다. 머리줄은 fixed 라 보이는 칸 기준 그대로 */
+  #account .account-shell{padding-top:calc(var(--acct-top) + 48px + 28px + var(--bleed));padding-bottom:calc(40px + var(--dock-h,0px) + var(--bleed))}
+  /* 흐림 띠는 fixed 면 막대 밑에 안 그려진다. 스크롤 상자 안의 sticky 로 둔다 — 상자는 문서 y 0 부터라 띠가 문서
+     내용이고, 굴려도 제자리다. 흐름에선 높이를 0 으로(margin-bottom 음수) 접어 본문을 밀지 않는다 */
+  #account > .backdrop-blur.page-blur{display:grid;position:sticky;left:auto;right:auto;--h:100px;--blur-k:1;margin-bottom:calc(-1 * var(--h))}
+  #account > .backdrop-blur.page-blur::after{display:none}
+  /* 위 띠: 보이는 칸 위 끝 +8px 에서 시작(상태바 칸을 --bg 로 덮지 않게). 처음 25% 에서 0 -> 완전 흐림 */
+  #account > .backdrop-blur.page-blur:not(.bot){top:calc(var(--bleed) + 8px);bottom:auto;height:var(--h)}
+  #account > .backdrop-blur.page-blur:not(.bot) > span{mask:none;-webkit-mask:none;mask-composite:intersect;-webkit-mask-composite:source-in}
+  /* 아래 띠: 문서 아래 여백(주소창 밑)까지 뻗는다. 스크롤 상자 맨 아래 = 띠 아래 끝 */
+  #account > .backdrop-blur.page-blur.bot{top:calc(100% - var(--h) - var(--bleed));bottom:auto;height:calc(var(--bleed) + var(--h));margin-bottom:calc(-1 * (var(--bleed) + var(--h)))}
+  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%)}
+  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(2){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%)}
+  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(3){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%)}
+  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(4){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%)}
+  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(5){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%)}
+  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%)}
+  #account > .backdrop-blur.page-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
+  #account > .backdrop-blur.page-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
+  #account > .backdrop-blur.page-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
+  #account > .backdrop-blur.page-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
+  #account > .backdrop-blur.page-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
+  #account > .backdrop-blur.page-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
   /* 떠 있는 시트(게임 자판·알약)는 키보드가 없을 때 주소창 바로 위에 앉힌다. 이 모드에선 Safari 주소창이
      보이는 칸 아래 끝을 덮어, 8px + --under 로 띄우면 주소창과 70pt 가까이 벌어진다(아이폰에서 잼) */
   :root:not([data-vv]) .play-sheet:is(:has(> .softkb:not([hidden])),:has(> .softkb[hidden])){bottom:-12px}
