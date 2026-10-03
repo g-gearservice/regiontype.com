@@ -1889,7 +1889,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   }
   .rk-say .rk-skip:focus-visible{outline-color:var(--rk-ink,#fff);outline-offset:-6px}
   .rk-say .rk-skip[hidden]{display:none}
-  .rk-say[data-dock]:has(.rk-skip:not([hidden])){padding-right:44px}
+  .rk-say:has(.rk-skip:not([hidden])){padding-right:44px}
   /* 햄버거 메뉴 — 버튼 밑에 펼쳐지는 유리 판. 닫힌 동안은 안 보이고 inert 다 */
   .sheet-more{
     display:flex;flex-direction:column;gap:2px;position:absolute;left:0;top:calc(100% + 8px);

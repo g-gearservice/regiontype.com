@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.372",
+    "date": "2026-10-03",
+    "ko": "폰에서 봇이 독 밑이나 상태바 칸으로 끌려 들어가 가려지지 않고, 안내 말풍선도 독 위에 떠서 '다음'이 눌립니다. 처음 온 사람에게 봇이 '!' 실오라기가 아니라 얼굴로 로고 밑에서 조르고, 막이 상태바 칸까지 덮으며, 안내에서 오른쪽 위 닫기(×)로 빠져나올 수 있습니다.",
+    "en": "On phones the bot can no longer be dragged under the dock or into the status bar, and the tour bubble sits above the dock so Next can be tapped. For first-time visitors the bot now begs from under the logo with its face instead of a thin exclamation mark, the dim covers the status bar, and the tour can be closed with the x at the top right."
+  },
+  {
     "v": "0.9.371",
     "date": "2026-10-02",
     "ko": "아이폰 Safari 게임 화면에서 지도가 위 상태바와 아래 주소창 밑까지 비치고, 자판·이름 줄·위 상태 줄은 판 없이 위아래 흐림 그라디언트에 바로 앉습니다. 위 흐림은 상태바 끝까지 덮고, 설명이 없을 때는 그 줄 자리를 비워 자판이 이름 줄에 붙습니다. 홈 아래 막대가 접히면 아래 흐림도 함께 내려앉고, 로고가 조금 커졌으며, 화면을 두 손가락으로 오므려도 페이지가 작아지지 않습니다.",
