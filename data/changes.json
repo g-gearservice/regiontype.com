@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.374",
+    "date": "2026-10-03",
+    "ko": "폰에서 순위, 기록, 계정, 설정, 로그인 화면이 Safari 상태바와 주소창 밑까지 이어집니다. 목록은 그 밑으로 지나가고, 흐림 띠도 막대 밑에 그려지도록 문서 안으로 옮겼습니다.",
+    "en": "On phones, Ranking, Records, Account, Settings, and Sign-in now run under Safari's status bar and address bar. Their lists scroll through that bleed, and the blur bands sit in the document so they paint under the bars."
+  },
+  {
     "v": "0.9.373",
     "date": "2026-10-03",
     "ko": "폰에서 커뮤니티 글이 다시 손가락으로 스크롤됩니다. 홈 지도를 Safari 막대 밑까지 이어 보이게 하려고 문서를 잠그던 규칙은 이제 홈 앱에만 적용되고, 커뮤니티처럼 글을 읽는 페이지는 그대로 둡니다.",
