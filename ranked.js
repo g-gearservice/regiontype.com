@@ -354,7 +354,17 @@ function makeBot() {
    동안에는 옮기지 않는다. 키보드는 봇에 초점을 두고 화살표(Shift 면 크게) */
 let spot = null, dragged = false;
 const docked = () => !!bot && bot.el.parentNode === $('#sheetBot');
-const clampXY = (x, y) => [Math.max(0, Math.min(innerWidth - BOT, x)), Math.max(0, Math.min(innerHeight - BOT, y))];
+/* 폰은 상태바 밑(로고 윗선)부터 아래 독 윗선까지만 선다. 독(z 7)이 이 층(z 5) 위라 그 밑으로 들어간 봇은 가려지고,
+   말풍선의 '다음'도 눌리지 않는다. 상태바 칸은 Safari 가 fixed 를 그리지 않는다 */
+function room() {
+  if (!phone()) return [0, innerHeight];
+  const d = $('#tabDock');
+  return [logo().getBoundingClientRect().top, d && d.offsetHeight ? d.getBoundingClientRect().top - 8 : innerHeight];
+}
+const clampXY = (x, y) => {
+  const [top, low] = room();
+  return [Math.max(0, Math.min(innerWidth - BOT, x)), Math.max(top, Math.min(low - BOT, y))];
+};
 function moveTo(x, y) {
   spot = clampXY(x, y);
   place(...spot);
@@ -423,14 +433,21 @@ function place(x, y) {
      가리지 않는다 */
   const a = dock && aim && aim.getBoundingClientRect(), inSheet = a && aim.closest('#regions .nav-bot, #tabDock');
   const low = a && !inSheet && a.top + a.height / 2 < innerHeight / 2;
-  const cx = a ? a.left + a.width / 2 : x + size / 2, cy = y + size / 2, side = dock ? (low ? 'down' : 'up') : sideOf(cx, cy);
-  const turned = bubble.dataset.side !== side;
+  const cx = a ? a.left + a.width / 2 : x + size / 2, cy = y + size / 2;
+  let side = dock ? (low ? 'down' : 'up') : sideOf(cx, cy);
+  const was = bubble.dataset.side;
   bubble.dataset.side = side;
-  const w = bubble.offsetWidth, h = bubble.offsetHeight;
+  const w = bubble.offsetWidth, [rTop, rBot] = room();
+  let h = bubble.offsetHeight;
+  /* 폰은 독 윗선 위 칸이 모자라 옆에 펼친 말풍선이 밀려 오르면 봇이 그 밑 '다음'을 가린다 — 봇 위로 접는다 */
+  if (phone() && !dock && (side === 'left' || side === 'right') && cy + h / 2 > rBot) {
+    side = 'up'; bubble.dataset.side = side; h = bubble.offsetHeight;
+  }
+  const turned = was !== side;
   const bx = side === 'right' ? cx : side === 'left' ? cx - w : cx - w / 2;
   const by = a ? (low ? a.bottom + 12 : (inSheet ? inSheet.getBoundingClientRect() : a).top - h - 12)
     : dock ? y - h - 10 : side === 'down' ? cy : side === 'up' ? cy - h : cy - h / 2;
-  const fx = Math.max(16, Math.min(innerWidth - w - 16, bx)), fy = Math.max(16, Math.min(innerHeight - h - 16, by));
+  const fx = Math.max(16, Math.min(innerWidth - w - 16, bx)), fy = Math.max(rTop, 16, Math.min(rBot - h - (phone() ? 0 : 16), by));
   bubble.style.transform = `translate3d(${fx}px,${fy}px,0)`;
   /* 테두리는 말풍선 안에서 봇 자리에 선다 */
   bubble.style.setProperty('--ring-x', x - fx + 'px');
@@ -693,7 +710,8 @@ function wireChat() {
 const INTRO_LOCK = () => [$('#courseBtns'), fingers() ? null : $('#regions .nav-bot'), $('#regions .screen-head'), $('#courseName')];
 function peekAt() {
   const r = logo().getBoundingClientRect();
-  return [r.left + r.width / 2 - BOT / 2, r.bottom - BOT * .35];
+  /* 폰은 얼굴(눈)이 로고 아랫변에 걸려 잘리지 않게 덜 숨는다 */
+  return [r.left + r.width / 2 - BOT / 2, r.bottom - BOT * (phone() ? .15 : .35)];
 }
 async function beginIntro() {
   intro = true;
@@ -709,9 +727,10 @@ async function beginIntro() {
   out = true;
   bot.el.classList.remove('is-in');
   bot.api.start();
-  /* 시트의 44px 아바타에서 '!'(alert)는 실오라기로만 보인다 — 폰은 얼굴 그대로 들썩인다 */
-  bot.api.setState(docked() ? 'idle' : 'alert');
-  if (docked()) { aimAt(logo()); skip.hidden = false; }
+  /* 폰은 '!'(alert)가 로고 뒤에 가려 실오라기로만 보인다 — 얼굴 그대로 들썩인다.
+     시트(docked)는 v0.8.348 에서 없어졌으니 폰이냐로 가른다 */
+  bot.api.setState(phone() ? 'idle' : 'alert');
+  if (phone()) { aimAt(logo()); skip.hidden = false; }
   tell('botPeek');
   jump(...peekAt());
   requestAnimationFrame(peekFrame);
@@ -720,7 +739,8 @@ async function beginIntro() {
    따라가고, 막의 윗변도 넵바 아랫변에 맞춘다 */
 function peekFrame() {
   if (!intro) return;
-  dim.style.top = $('#regions .navbar').getBoundingClientRect().bottom + 'px';
+  /* 폰 넵바는 떠 있는 로고뿐이라 막은 맨 위(상태바 칸)부터 덮는다 */
+  dim.style.top = fingers() ? '0px' : $('#regions .navbar').getBoundingClientRect().bottom + 'px';
   const [x, y] = peekAt();
   if (x !== bot.x || y !== bot.y) place(x, y);
   requestAnimationFrame(peekFrame);
@@ -744,7 +764,8 @@ function near(el) {
   if (!el) return [innerWidth / 2 - BOT / 2, innerHeight * .4];
   const r = el.getBoundingClientRect();
   const x = Math.max(16, Math.min(innerWidth - BOT - 16, r.left + r.width / 2 - BOT / 2));
-  return [x, r.top > innerHeight / 2 ? r.top - BOT * .85 : r.bottom - BOT * .1];
+  /* 폰은 독 밑으로 파고들지 않게 clampXY 가 독 윗선에 세운다 */
+  return clampXY(x, r.top > innerHeight / 2 ? r.top - BOT * .85 : r.bottom - BOT * .1);
 }
 function midTile() {
   const tiles = [...document.querySelectorAll('#courseBtns .grid-btn:not(.gone)')]
@@ -810,14 +831,15 @@ async function tour() {
   bot.api.doze(false);
   next.hidden = false;
   next.focus({ preventScroll: true });
-  const dock = docked();
-  skip.hidden = !dock;
+  const dock = docked(), guide = phone();
+  skip.hidden = !guide;
   if (dock) follow();
   for (const [key, at, what] of STEPS) {
     if (skipping) break;
     /* 날아가는 동안은 입을 다물고, 내려앉은 뒤 말풍선을 펼친다 */
     hide();
     if (dock) { const el = what && what(); sheetTo(!!el && !!el.closest('#sheetMore')); aimAt(el); }
+    else if (guide) aimAt(what && what());
     place(...at());
     await new Promise(res => setTimeout(res, siDurMs()));
     if (skipping) break;
@@ -829,6 +851,7 @@ async function tour() {
   next.hidden = skip.hidden = true;
   touring = skipping = false;
   if (dock) { aimAt(null); sheetTo(false); }
+  else if (guide) aimAt(null);
   /* '다음'에 있던 초점은 봇이 받는다 — 숨은 버튼에 남기지 않는다 */
   if (!document.activeElement || [next, skip, document.body].includes(document.activeElement)) {
     bot.el.focus({ preventScroll: true });
