@@ -179,6 +179,9 @@ body{
   :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
   :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%)}
   :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
+  /* 보안 판은 따로 굴리지 않는다 — 자기 높이 안에서 굴리면 내용이 판 끝에서 잘려 막대 밑까지 못 간다.
+     막대 끝까지 늘어난 .opts-shell 이 함께 굴리고, 위아래 자리는 그 안쪽 여백이 맞춘다 */
+  :root body:is(.set,.setting) #options #optsSecurity:not([hidden]){overflow:visible;flex:none;min-height:auto;margin-top:0}
   /* @@signin */
   /* 로그인 덮개도 문서 안으로 — 위아래 여백까지 늘리고 안쪽 여백에 --bleed 를 더해 카드 자리는 그대로(아래는 독 높이 포함) */
   body > .si-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
@@ -373,6 +376,14 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   display:flex;flex-direction:column;align-items:flex-end;gap:8px;
   flex:0 0 auto;width:var(--opt-rail-w);
 }
+/* 낮은 창에서 셸이 화면 끝에서 잘리면 레일이 셸 안에서 굴러간다. 아래 여백(--opt-rail-pb)은 그때만
+   아래 흐림 띠 높이라 마지막 탭도 띠 위로 올라선다(settings.js syncOptShell) */
+@media not (pointer:coarse){
+  /* 굴리는 상자는 넘친 글자·그림자를 자른다 — 고른 탭은 레일 폭보다 넓어 왼쪽 빈 자리로 넘친다.
+     상자를 왼쪽·위로 넓히고 같은 만큼 음수 여백으로 되돌려 탭 자리는 그대로 둔다 */
+  .opts-tabs{max-height:calc(100% + 12px);overflow-y:auto;overscroll-behavior:contain;
+    width:calc(var(--opt-rail-w) + 64px);margin:-12px 0 0 -64px;padding:12px 0 var(--opt-rail-pb,0px) 64px}
+}
 .opts-tab{
   font:inherit;font-weight:700;font-size:22px;text-align:right;white-space:nowrap;
   width:fit-content;align-self:flex-end;
@@ -451,49 +462,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 #options > .backdrop-blur:not(.bot){top:0; bottom:auto}
 #options > .backdrop-blur.bot{top:auto; bottom:0}
-/* 언어·지역 pick 통 위·아래 흐림 — OuterVale "Blobby Navbar Blur" 의 여섯 겹을 pick 전용으로 둔다.
-   플레이·홈이 쓰는 .backdrop-blur 와 나누어 둔다(그쪽은 손대지 않는다).
-   띠는 pick 의 형제다 — fillLangPick/fillRegionPick 이 pick 을 replaceChildren 하므로.
-   판(.opts-panel)에 붙여 pick 의 바깥 자리(--opt-pick-dy·-h, settings.js syncOptShell)를 그대로 따른다.
-   띠 높이는 pick 의 위·아래 안쪽 여백 — 목록이 처음 서는 자리에서 흐림이 끝난다.
-   색은 아래 두 토큰만. 스크림은 라이트·다크 공통, 씻김은 밤이면 검정 */
-:root{--pick-blur-scrim:0 0 0 / 0.1; --pick-blur-wash:#ffffff; --pick-blur-k:.55}
-:root[data-night]{--pick-blur-wash:#000000}
-:root[data-motion="off"]{--pick-blur-k:0}
-@media (prefers-reduced-motion:reduce){ :root{--pick-blur-k:0} }
-#optsLanguage,#optsRegion{position:relative}
-.pick-blur{
-  position:absolute; left:0; right:0; z-index:1; display:grid; pointer-events:none;
-  top:var(--opt-pick-dy,0px); height:var(--opt-pick-pad-t,28px);
-  --pick-blur-deg:0deg; /* 0deg: 아래(목록 쪽) 투명 → 위(통 가장자리) 가장 흐림 */
-}
-.pick-blur.bot{
-  top:calc(var(--opt-pick-dy,0px) + var(--opt-pick-h,0px) - var(--opt-pick-pad-b,28px));
-  height:var(--opt-pick-pad-b,28px);
-  --pick-blur-deg:180deg;
-}
-/* 빈 pick(지역 판은 아직 그리지 않는다)에는 띠도 없다 */
-:is(.opts-lang-pick,.opts-region-pick):empty ~ .pick-blur{display:none}
-.pick-blur > span{grid-area:1/1}
-.pick-blur > :nth-child(1){--b:1px;  --m:transparent 0%,#000 15%}
-.pick-blur > :nth-child(2){--b:4px;  --m:transparent 5%,#000 30%}
-.pick-blur > :nth-child(3){--b:8px;  --m:transparent 15%,#000 45%}
-.pick-blur > :nth-child(4){--b:16px; --m:transparent 30%,#000 60%}
-.pick-blur > :nth-child(5){--b:24px; --m:transparent 45%,#000 75%}
-.pick-blur > :nth-child(6){--b:32px; --m:transparent 60%,#000 90%}
-.pick-blur > span{
-  backdrop-filter:blur(calc(var(--b) * var(--pick-blur-k))); -webkit-backdrop-filter:blur(calc(var(--b) * var(--pick-blur-k)));
-  mask:linear-gradient(var(--pick-blur-deg),var(--m)); -webkit-mask:linear-gradient(var(--pick-blur-deg),var(--m));
-}
-/* 스크림 — 가장자리에서 씻김, 안으로 스크림, 목록 쪽 끝에서 투명 */
-.pick-blur::after{
-  content:""; grid-area:1/1;
-  background:linear-gradient(var(--pick-blur-deg),transparent,rgb(var(--pick-blur-scrim)),var(--pick-blur-wash));
-}
-/* pick 띠가 서는 동안 설정 페이지 띠는 걷는다 — 같은 가장자리를 두 번 흐리지 않는다 */
-@media not (pointer:coarse){
-  :root[data-dev] #options:has(> .opts-shell .opts-panel:not([hidden]) > :is(.opts-lang-pick,.opts-region-pick):not(:empty)) > .backdrop-blur{display:none}
-}
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
 /* 언어·지역은 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
@@ -739,8 +707,8 @@ body.setting #options.opts-over{opacity:1}
   /* 언어 통이 셸 밖으로 화면 끝까지 나가도 덮개가 스크롤을 만들지 않는다 */
   body.setting #options.opts-over{overflow:hidden}
 }
-/* 셸은 뷰포트의 정확한 세로 중앙에 둔다. --opt-shell-dy 는 0이며 예전 값이 남은
-   문서에서도 중앙으로 돌아오게 top 계산을 유지한다 */
+/* 셸은 뷰포트 세로 중앙에 둔다. 낮은 창에서 위 흐림 띠에 닿으면 settings.js 가
+   --opt-shell-dy 로 그만큼 내린다 */
 #options .opts-shell{position:relative;top:calc(var(--opt-shell-dy) / var(--zc))}
 #options .screen-head{
   /* 절대배치의 기준은 .screen 의 패딩 박스가 아니라 그 안쪽 모서리다 —
@@ -1610,7 +1578,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     flex:0 1 auto;height:auto;max-height:none;margin-top:0;margin-bottom:0;
     overflow:visible;padding-block:28px;scroll-padding-block:28px;
   }
-  body.set .pick-blur, body.setting .pick-blur{display:none}
 }
 
 /* 계정과 보안의 작은 입력·카드. 홈과 게임의 컨트롤에는 적용하지 않는다.
