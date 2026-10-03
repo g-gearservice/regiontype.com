@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.74';
+const VER = '3.75';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -178,7 +178,7 @@ const unitLabel = () => t(unitNow() === 'wpm' ? 'wpmUnit' : 'cpmUnit');
 const speedIn = cpm => unitNow() === 'wpm' ? Math.round(cpm / CPW) : Math.round(cpm);
 const showSpeed = cpm => speedIn(cpm) + ' ' + unitLabel();
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true, softkb: true, kbhint: true,
-              lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
+              lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin', where: true };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -1739,7 +1739,8 @@ function countryFromLangTag(tag) {
 }
 
 async function sense() {
-  try {
+  /* 설정 보안 탭의 '접속 지역 추정'을 끄면 중계기에 묻지 않고 시간대만 쓴다 */
+  if (opt.where) try {
     const r = await fetch(FEEDBACK_URL + '/where', { signal: AbortSignal.timeout(1600) });
     if (r.ok) {
       const d = await r.json();
