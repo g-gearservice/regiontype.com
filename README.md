@@ -10,6 +10,10 @@
 
 A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
+## What's new in 0.9.375
+
+- Settings > Security has a "Privacy and this browser" section. A switch turns off the country guess, so the site stops calling `GET /where` and uses only the browser language and time zone. The site sets no cookies; everything it keeps is in `localStorage`. You can ask to be removed from the leaderboard (`/forget`, sign-in required), and clear this browser's saved data by scope: game records, settings (the country-guess choice is kept so a reset does not turn the guess back on), or everything with the `rt.` prefix, which also signs you out.
+
 ## What's new in 0.7.323
 
 - The home bot can run more of the site: start a ranked game as well as a normal one, change settings (dark mode, sound, animations, grid, hint, speed unit, Seoul dong kind, time limit), and open the feedback form. Settings go through `settings.js` so the overlay stays in sync.
@@ -302,7 +306,7 @@ Details from that stretch:
 
 ## What's new in 0.3.9
 
-- Settings let you pick a country and a language. Leave them empty and the defaults come from the browser language and the relay country code (`GET /where`)
+- Settings let you pick a country and a language. Leave them empty and the defaults come from the browser language and the relay country code (`GET /where`), which you can turn off in Settings > Security
 - First-level admin courses for 46 countries. Names are Natural Earth local names. One-line blurbs are left empty
 - Korea keeps the Seoul course. Japan is prefectures. The United States is the 50 states plus Washington, DC
 - Names that contain a space confirm with Enter, not Space

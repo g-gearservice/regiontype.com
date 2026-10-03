@@ -952,6 +952,10 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   paint-order:stroke; stroke:var(--bg); stroke-width:calc(5px / var(--z,1));
   stroke-linejoin:round; text-anchor:middle; dominant-baseline:central;
 }
+/* WebKit 은 SVG 글자를 화면 배율마다 새 폰트로 굽고 그 폰트를 캐시에 쌓는다 — 타일이 튀고(.pop) 차오를 때
+   프레임마다 배율이 달라 한 번 맞힐 때마다 2MB 씩 불어나 iOS Safari 가 탭을 죽였다. geometricPrecision 이면
+   폰트를 새로 굽지 않고 글자 윤곽을 그대로 키운다 */
+.rt-map text{text-rendering:geometricPrecision}
 .rt-map .tiles > g{opacity:0;transition:opacity .18s var(--ease-out)}
 .rt-map .tiles > g.built{opacity:1}
 #map circle.near{transform:scale(.55);transform-box:fill-box;transform-origin:center;
