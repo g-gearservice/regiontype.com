@@ -60,6 +60,32 @@ create table if not exists speed (
 );
 create index if not exists speed_top on speed (slug, secs, dev, cpm desc, at asc);
 
+-- 코스별 최고 기록. 지금 순위표는 이 표다 — speed 는 더 쓰지 않는다(읽지도 않는다).
+-- speed 는 결과 화면이 이 브라우저에 이름이 있을 때만 /score 로 올렸다. 그래서 다른
+-- 기기에서 로그인한 사람의 최고 기록은 조용히 빠졌고, 경쟁전 판은 일반전 120초 판에
+-- 섞였고, 1대1 은 아예 안 올라갔다. 여기는 worker.mjs 의 logPlay 한 곳에서만 쓴다 —
+-- 일반전·경쟁전·1대1 이 전부 그리로 지나가므로 로그인한 사람의 판은 빠짐없이 오른다.
+-- 경쟁전과 일반전은 mode 로 가른다. name 은 판을 올릴 때 들고 온 이름이고, 읽을 때는
+-- profile 의 닉네임이 있으면 그쪽이 앞선다.
+-- 이미 있는 DB 에는 표를 더하고 옛 speed 기록을 일반전으로 옮겨 담는다(사람이 실행한다):
+--   wrangler d1 execute rt-board --remote --file schema.sql
+--   wrangler d1 execute rt-board --remote --command "insert or ignore into best (mode, slug, secs, dev, who, name, cpm, score, hits, acc, at) select 'normal', slug, secs, dev, who, name, cpm, score, hits, acc, at from speed where cpm > 0"
+create table if not exists best (
+  mode  text    not null,         -- 'ranked' | 'normal'
+  slug  text    not null,
+  secs  integer not null,
+  dev   text    not null,
+  who   text    not null,
+  name  text    not null default '',
+  cpm   integer not null,
+  score integer not null,
+  hits  integer not null,
+  acc   integer not null,
+  at    integer not null,
+  primary key (mode, slug, secs, dev, who)
+);
+create index if not exists best_top on best (mode, slug, secs, dev, cpm desc, at asc);
+
 -- ── 로그인 ────────────────────────────────────────────────
 -- 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
 -- 1차 인증은 Google·Apple(SSO) 이 하고, 패스키는 계정에 하나라도 있으면 그

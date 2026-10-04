@@ -48,10 +48,6 @@ namespace_id = "1011"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이�
 # zone_name = "gearservicevanguard.com"
 
 # [[routes]]
-# pattern = "g.gearservicevanguard.com/score*"
-# zone_name = "gearservicevanguard.com"
-
-# [[routes]]
 # pattern = "g.gearservicevanguard.com/forget*"
 # zone_name = "gearservicevanguard.com"
 

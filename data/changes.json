@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.9.377",
+    "date": "2026-10-04",
+    "ko": "단추나 봇을 고를 때 둘레에 뜨던 주황 테두리가 사라졌습니다.",
+    "en": "The orange ring around a focused button or the bot is gone."
+  },
+  {
+    "v": "0.9.377",
+    "date": "2026-10-04",
+    "ko": "로그인한 채 친 판은 이름을 따로 적지 않아도, 다른 기기에서 로그인했어도 그 코스의 최고 기록이 순위표에 오릅니다. 경쟁전과 1대1 판도 경쟁전 순위표에 따로 오릅니다. 순위 화면의 경쟁전·일반전 탭에서 코스별 1위와 올린 사람 수를 보고, 펼치면 그 코스의 순위표와 내 자리를 볼 수 있습니다.",
+    "en": "Any run you finish while signed in now puts your best for that course on the board, without typing a name and on any device. Ranked and 1v1 runs go on a separate ranked board. The Ranked and Normal tabs on the Ranking screen list the top run and player count for each course, and open into that course's board with your own place."
+  },
+  {
     "v": "0.9.376",
     "date": "2026-10-04",
     "ko": "홈 화면 뒤의 격자가 다시 보입니다. 0.8.333 부터 바탕색이 격자를 덮고 있었습니다.",

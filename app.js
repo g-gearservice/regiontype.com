@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.76';
+const VER = '3.77';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2978,46 +2978,47 @@ const boardAsk = async (path, body) => {
   return r.json();
 };
 
-/* 순위표가 안 되어도 결과 화면은 그대로다 — 통째로 접고 만다. up 이 거짓이면 읽기만 한다 */
-async function board(up = true) {
+/* 순위표가 안 되어도 결과 화면은 그대로다 — 통째로 접고 만다.
+   로그인했으면 일반전 판은 여기서 /played 로 올린다 — 전적과 코스별 최고 기록이 한 번에
+   적히고 그 판의 순위표가 돌아온다. 이름은 없어도 오른다(중계기가 닉네임을 붙인다).
+   경쟁전 판은 ranked.js 가 /ranked/end 로 올리고, 정산이 끝나면 이걸 다시 부른다 */
+async function board() {
   const sec = $('#board');
   sec.hidden = true;
-  const me = localStorage.getItem(NAME_KEY) || '';
   const inn = !!token();
   const play = { c: G.slug, t: G.total };
+  /* 한 판은 한 번만 올린다 — 내리기 뒤에 다시 그릴 때 방금 내린 판을 도로 올리지 않게 */
+  const up = inn && !G.ranked && !G.sent;
+  if (up) G.sent = true;
   try {
-    /* 로그인했으면 판마다 오른다. 이름은 중계기가 프로필 닉네임으로 건다 — me 는 프로필이 없을 때의 대안이다 */
-    const d = up && inn && G.score
-      ? await boardAsk('/score', { ...play, dev: DEV, name: me, score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
-      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}`);
+    const d = up
+      ? await boardAsk('/played', { ...play, dev: DEV, name: localStorage.getItem(NAME_KEY) || '',
+          score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
+      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}&mode=${G.ranked ? 'ranked' : 'normal'}`);
     $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
-    /* 로그인 안 한 판은 안 올라간다. 왜 안 올라갔는지 여기서 말하지 않으면 다음에
-       순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고, 기능이 고장난 것으로 읽힌다. */
     boardSay(d.rank ? t('nth', { n: d.rank })
-      : G.score ? t('notOnBoard', { n: showSpeed(G.cpm) })
+      : G.score && !inn ? t('notOnBoard', { n: showSpeed(G.cpm) })
       : '');
     $('#boardIn').hidden = inn;
     $('#boardDrop').hidden = !inn;
     drawRanks(d.top || []);
     sec.hidden = false;
-  } catch {
-    sec.hidden = true;
-  }
+  } catch { sec.hidden = true; }
 }
 
-/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 — 이 버튼이
-   사라지면 철회 불가가 된다. 로그인한 판은 늘 오르므로 다음 판은 도로 올라간다. 이름을
-   감추려면 계정 비공개(이름이 빈다)나 닉네임 바꾸기다. 내린 뒤 다시 그릴 때는 읽기만 한다 —
-   올리면 방금 판이 곧바로 되살아난다 */
+/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 —
+   이 버튼이 사라지면 철회 불가가 된다. 로그인한 채 다음 판을 치면 그 판은 다시 오른다.
+   이름만 가리려면 계정의 비공개(profile.shut)다 */
 $('#boardDrop').onclick = async () => {
   if (!confirm(t('forgetAsk'))) return;
   try {
     const d = await boardAsk('/forget', {});
-    localStorage.removeItem(NAME_KEY);
-    await board(false);
+    await board();
     boardSay(d.gone ? t('forgot', { n: d.gone }) : t('forgotNone'));
   } catch { boardSay(t('forgetFail'), true); }
 };
+
+
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {

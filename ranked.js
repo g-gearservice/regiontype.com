@@ -10,7 +10,7 @@
 
    app.js 뒤에 실려 그 전역을 빌려 쓴다: t · token · asset · start · opt · clock ·
    calm · homeTitle · aimNavShape · relayoutNavShapes · plain · showSpeed · BOOTED ·
-   COURSE · PICK · G.
+   COURSE · PICK · G · board.
    ponytail: 빌려 쓰는 게 이만큼 늘었다. 한 번 더 늘면 app.js 를 모듈로 나눈다. */
 (function () {
 'use strict';
@@ -173,18 +173,45 @@ async function fillRanking() {
     lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, tierOf(r.lp))));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
   } catch { if (n === rankReq) say.textContent = t('boardFail'); }
-
-  /* 일반전은 코스·시간마다 판이 따로다 — 지금 고른 칸과 설정의 시간으로 읽는다 */
-  const slug = PICK ? PICK.slug : COURSE.root, list = $('#normalList'), nsay = $('#normalSay');
-  $('#normalWhere').textContent = slug ? `${placeOf(slug)} · ${clock(opt.time)}` : '';
-  list.replaceChildren(); nsay.textContent = t('reading');
-  if (!slug) return;
-  try {
-    const d = await ask(`/top?c=${encodeURIComponent(slug)}&t=${opt.time}&dev=${DEV}`);
-    if (n !== rankReq) return;
-    list.replaceChildren(...(d.top || []).map((r, i) => rankRow(i, r.name, showSpeed(r.cpm), r.me)));
-    nsay.textContent = (d.top || []).length ? '' : t('ladderEmpty');
-  } catch { if (n === rankReq) nsay.textContent = t('boardFail'); }
+  await Promise.all(['ranked', 'normal'].map(mode => fillBests(n, mode)));
+}
+/* 코스별 최고 기록. 코스·시간마다 1위 한 줄씩이고, 펼치면 그 판의 순위표와 내 자리를 읽는다.
+   경쟁전과 일반전은 따로 센다. 이 나라 코스만 보인다 — 다른 나라 코스는 이름을 못 읽는다.
+   지금 고른 칸의 판은 펼친 채로 연다 */
+async function fillBests(n, mode) {
+  const box = $(`#${mode}Bests`), say = $(`#${mode}BestsSay`);
+  box.replaceChildren(); say.textContent = t('reading');
+  let d;
+  try { d = await ask(`/top?mode=${mode}&dev=${DEV}`); } catch { if (n === rankReq) say.textContent = t('boardFail'); return; }
+  if (n !== rankReq) return;
+  const here = PICK ? PICK.slug : COURSE.root;
+  const known = s => s === COURSE.root || COURSE.tiles.some(x => x.slug === s);
+  const rows = d.bests.filter(b => known(b.slug));
+  box.replaceChildren(...rows.map(b => {
+    const det = document.createElement('details');
+    det.className = 'pg-best';
+    det.innerHTML = '<summary><span class="where"></span><span class="who"></span><span class="pt"></span><span class="n"></span></summary><ol class="ranks pg-ranks"></ol><p class="pg-say" role="status"></p>';
+    det.querySelector('.where').textContent = `${placeOf(b.slug)} · ${clock(b.secs)}`;
+    det.querySelector('.who').textContent = b.name;
+    det.querySelector('.pt').textContent = showSpeed(b.cpm);
+    det.querySelector('.n').textContent = t('players', { n: b.n });
+    let read = false;
+    det.addEventListener('toggle', async () => {
+      if (!det.open || read) return;
+      read = true;
+      const ol = det.querySelector('ol'), p = det.querySelector('p');
+      p.textContent = t('reading');
+      try {
+        const r = await ask(`/top?c=${encodeURIComponent(b.slug)}&t=${b.secs}&mode=${mode}&dev=${DEV}`);
+        ol.replaceChildren(...r.top.map((x, i) => rankRow(i, x.name, showSpeed(x.cpm), x.me)));
+        /* 상위 줄 밖이어도 내 자리는 보인다 */
+        p.textContent = r.rank && !r.top.some(x => x.me) ? `${t('me')} · ${t('nth', { n: r.rank })}` : '';
+      } catch { read = false; p.textContent = t('boardFail'); }
+    });
+    if (b.slug === here && (mode === 'ranked' || b.secs === opt.time)) det.open = true;
+    return det;
+  }));
+  say.textContent = rows.length ? '' : t('ladderEmpty');
 }
 function wireTabs() {
   const tabs = [$('#rkTabRanked'), $('#rkTabNormal')];
@@ -1188,9 +1215,9 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   const line = $('#rLp');
   line.textContent = '';
   line.classList.remove('bad');
-  if (!token()) return;
+  /* 일반전 판은 app.js 의 board() 가 올린다 — 그래야 그 판의 순위표를 한 번에 받는다 */
+  if (!token() || !g.ranked) return;
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
-  if (!g.ranked) { ask('/played', { ...body, c: g.slug, t: g.total, dev: DEV }).catch(() => {}); return; }
   line.textContent = t('uploading');
   clearInterval(oppTimer); oppTimer = 0;
   const gen = ++pollGen, opp = g.ranked.opp || {};
@@ -1200,6 +1227,8 @@ addEventListener('rt-finish', async ({ detail: g }) => {
       t('rkVsResult', { name: opp.name, cpm: showSpeed(oppCpm) }),
       t('rkResult', { d: signed(d.delta), tier: tierName(d.lp, d.games), lp: d.lp })].filter(Boolean).join(' · ');
     quitNote = '';
+    /* 정산이 끝나야 경쟁전 최고 기록이 적힌다 — 결과 화면 순위표를 다시 읽는다(app.js) */
+    board();
   };
   try {
     const d = await ask('/ranked/end', { ...body, id: g.ranked.id });

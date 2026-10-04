@@ -96,6 +96,10 @@ html{background:var(--bg)}
 /* !important — 뒤에 오는 어떤 규칙도 선택 색을 되살리지 못한다 */
 ::selection{background:transparent!important}
 ::-moz-selection{background:transparent!important}
+/* 초점 테두리도 선택 색이다 — 어디서나 투명. 굵기는 남겨 고대비 모드에선 보인다.
+   안내가 가리키는 .rk-aim 은 선택이 아니라 손가락이라 남긴다 */
+:focus-visible:not(.rk-aim),.pet-size:has(input:focus-visible){outline-color:transparent!important}
+.account-details :is(input,select,textarea):focus-visible{box-shadow:none!important}
 html,body{height:100%}
 /* 스크롤바는 안 보이게 둔다 — 굴리는 건 그대로다. 색만 지운다: ::-webkit-scrollbar 를
    건드리면 웹킷이 겹침(overlay) 스크롤바를 포기하고 자리를 차지하는 옛 스크롤바로
@@ -2196,6 +2200,26 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .pg-say{min-height:22px;color:var(--ink-soft);font-weight:700}
 .pg-ranks{max-width:none;overflow:auto}
 .pg-ranks li{align-items:center}
+/* 코스별 최고 기록 — 한 줄이 한 판의 1위이고, 펼치면 그 판의 순위표다.
+   펼침은 ▸·▾ 모양으로도 보인다 — 색만으로 가르지 않는다 */
+.pg-sub{margin-top:14px;font-size:17px;font-weight:800}
+.pg-bests{display:flex;flex-direction:column;gap:6px}
+.pg-best > summary{
+  display:flex;align-items:baseline;gap:12px;background:var(--card);
+  padding:10px 14px;border:2px solid transparent;border-radius:4px;box-shadow:var(--shadow);
+  font-size:15px;cursor:pointer;list-style:none;
+}
+.pg-best > summary::-webkit-details-marker{display:none}
+.pg-best > summary::before{content:'▸';color:var(--ink-soft)}
+.pg-best[open] > summary{border-color:var(--ink-soft)}
+.pg-best[open] > summary::before{content:'▾'}
+.pg-best > summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pg-best .where{font-weight:700;white-space:nowrap}
+.pg-best .who{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-best .pt{font-weight:700;font-variant-numeric:tabular-nums}
+.pg-best .n{color:var(--ink-soft);font-size:13px;font-variant-numeric:tabular-nums}
+.pg-best > .pg-ranks{margin:6px 0 0 18px}
+.pg-best > .pg-say{margin-left:18px}
 
 /* 티어 이름표. 색 점과 이름을 함께 — 이름만으로도 읽힌다 */
 .tier{

@@ -3,14 +3,13 @@
 
      배포는 경로 묶음별로 따로 한다 — 코드는 이 파일 하나, 문은 entry-<이름>.mjs(entry.mjs 의 OWN).
        rt-feedback   POST / · /turnstile · /where, 그리고 어느 워커도 안 잡은 나머지의 원점
-       rt-auth       /auth/*        rt-board   /top /dist /score /forget /ranked/* /played /games /ladder /match/*
+       rt-auth       /auth/*        rt-board   /top /dist /forget /ranked/* /played /games /ladder /match/*
        rt-community  /cm/*          rt-bot     /bot/*          rt-online  /online
        rt-feedback 는 커스텀 도메인, 나머지는 같은 호스트의 존 라우트라 먼저 요청을 받는다.
        바인딩·시크릿은 wrangler.<이름>.toml 에. 아래 secret put 은 그 워커가 쓰는 것만 넣는다.
 
      POST /         피드백을 GitHub 이슈로 옮긴다 (토큰을 사이트에 둘 수 없다)
-     POST /score    판 하나의 점수를 순위표에 올린다
-     GET  /top      그 판의 상위 기록을 읽는다
+     GET  /top      ?c=&t=&mode= 그 판의 상위 기록과 내 자리. c 가 없으면 코스마다 1위
      POST /dist     그 판의 점수 분포와 그 안에서 내가 선 자리
      POST /forget   내 줄을 전부 내린다 (순위표·경쟁전·전적)
      POST /ranked/start {c,name}  경쟁전 표를 낸다. 끝내지 않은 옛 표는 탈주로 셈한다
@@ -18,7 +17,7 @@
      POST /match/find {c,name,dev,bot?}  1대1 매칭 줄에 서거나(폴링) 짝을 받는다 → {wait,n} | 짝 응답
      POST /match/leave  매칭 줄에서 나간다
      POST /match/tick {duel,hits}  내 진행을 적고 상대 진행·정산 결과를 받는다
-     POST /played   일반전 한 판을 전적에 남긴다
+     POST /played   일반전 한 판을 전적에 남기고 순위표(코스별 최고 기록)를 갈아 끼운다
      GET  /games    내 사다리 줄과 최근 판들 (로그인 필요)
      GET  /ladder   경쟁전 상위 50
      순위표·사다리는 기기(dev)마다 따로 선다 — 'pc' | 'mobile'. 쓰기는 몸통의 dev,
@@ -128,10 +127,11 @@ export function compose(c) {
    줄을 가르는 데만 쓰고 그 밖의 무엇도 이 값을 믿지 않는다 */
 export const devOf = d => d === 'mobile' ? 'mobile' : 'pc';
 
-/* 어느 판인지. 코스 이름과 제한 시간이 둘 다 맞아야 한 줄에 세운다 */
+/* 어느 판인지. 코스 이름과 제한 시간이 둘 다 맞아야 한 줄에 세운다.
+   mode 는 읽을 때만 쓴다 — 쓰는 쪽(logPlay)은 부른 경로가 정한 값을 쓴다 */
 export function where(c) {
   const slug = cut(c.c, 40), secs = Number(c.t);
-  return { slug, secs, dev: devOf(c.dev), size: SIZE[slug] || 0,
+  return { slug, secs, dev: devOf(c.dev), mode: c.mode === 'ranked' ? 'ranked' : 'normal', size: SIZE[slug] || 0,
            ok: Object.hasOwn(SIZE, slug) && TIMES.includes(secs) };
 }
 
@@ -222,15 +222,38 @@ const turnstileConfig = (env, o) => env.TURNSTILE_SITEKEY
 /* 순위는 타자 속도로 세운다 — 들른 곳 수가 아니라 얼마나 빨리 쳤는가다.
    동점이면 먼저 올린 쪽이 앞이다 */
 /* 비공개(profile.shut)로 둔 사람은 이름 자리가 빈다. 쓰는 자리에서 지우지 않고
-   읽는 자리에서 가리는 이유: 기록을 올리는 길이 /score·/ranked/end·/auth/profile
+   읽는 자리에서 가리는 이유: 기록을 올리는 길이 /played·/ranked/end·/auth/profile
    셋이라 한 곳만 막으면 다음 판에 도로 박힌다. 읽는 쿼리는 여기 둘뿐이다.
    기록(cpm·순위)은 그대로 선다 — 가리는 것은 이름 하나다. */
+/* 닉네임(profile)이 있으면 그것이 앞선다 — 고치면 옛 기록에도 따라간다 */
+const SHOWN = `case when p.shut = 1 then '' else coalesce(nullif(p.name, ''), b.name) end`;
 const board = (env, w) => env.DB.prepare(
-  `select b.who as who, case when p.shut = 1 then '' else b.name end as name,
+  `select b.who as who, ${SHOWN} as name,
           b.cpm as cpm, b.score as score, b.hits as hits, b.acc as acc
-     from speed b left join profile p on p.who = b.who
-    where b.slug = ? and b.secs = ? and b.dev = ? order by b.cpm desc, b.at asc limit ?`
-).bind(w.slug, w.secs, w.dev, TOP);
+     from best b left join profile p on p.who = b.who
+    where b.mode = ? and b.slug = ? and b.secs = ? and b.dev = ? order by b.cpm desc, b.at asc limit ?`
+).bind(w.mode, w.slug, w.secs, w.dev, TOP);
+/* 그 판의 상위 줄과 내 자리. 내 줄이 없으면 rank 는 null 이다 */
+async function standing(env, w, me) {
+  const [list, rank] = await env.DB.batch([
+    board(env, w),
+    env.DB.prepare(
+      `select count(b.who) + 1 as n from best m left join best b
+          on b.mode = m.mode and b.slug = m.slug and b.secs = m.secs and b.dev = m.dev and b.cpm > m.cpm
+        where m.mode = ? and m.slug = ? and m.secs = ? and m.dev = ? and m.who = ? group by m.who`
+    ).bind(w.mode, w.slug, w.secs, w.dev, me ?? ''),
+  ]);
+  return { top: seen(list.results, me), rank: rank.results[0]?.n ?? null };
+}
+/* 코스마다 1위 한 줄과 올린 사람 수. 줄 수는 코스 × 제한 시간을 못 넘는다(수백 줄).
+   ponytail: 같은 속도 1위가 둘이면 sqlite 가 아무나 고른다 — 순위표(board)는 먼저 올린 쪽이다 */
+const bests = (env, mode, dev) => env.DB.prepare(
+  `select b.slug as slug, b.secs as secs, b.n as n, b.cpm as cpm, ${SHOWN} as name
+     from (select slug, secs, count(*) as n, max(cpm) as cpm, who, name from best
+            where mode = ? and dev = ? group by slug, secs) b
+     left join profile p on p.who = b.who
+    order by b.n desc, b.cpm desc`
+).bind(mode, dev);
 /* 이름은 서버가 다듬어 저장하므로 브라우저가 자기 줄을 이름으로 찾으면 어긋난다.
    난수 id 는 남에게 보일 값이 아니니 여기서 떼고 '나' 표시만 붙여 보낸다. */
 const seen = (rows, who) => rows.map(({ who: w, ...r }) => who ? { ...r, me: w === who } : r);
@@ -245,7 +268,7 @@ async function feedback(req, env, o) {
   const ok = await pass(env.RL_FB, ip(req));
   if (ok !== true) return shut(ok, o);
   /* 창을 지난 뒤에 사람인지 묻는다 — 퍼붓는 쪽에 바깥 호출을 시키지 않는다.
-     여기만 잠그면 된다: /score·/forget 은 이미 로그인 뒤고, 이슈를 만드는 이 길만
+     여기만 잠그면 된다: /played·/forget 은 이미 로그인 뒤고, 이슈를 만드는 이 길만
      아무나 두드릴 수 있다 */
   const who = await human(env, c && c.cf, ip(req));
   if (who === null) return reply(503, '중계기 설정이 덜 되었습니다.', o);
@@ -310,57 +333,17 @@ async function dist(req, env, o) {
   });
 }
 
+/* GET /top?c=&t=&mode=&dev= 그 판의 상위 줄과 내 자리. c 가 없으면 코스마다 1위 */
 async function top(req, env, o) {
-  const u = new URL(req.url);
-  const w = where({ c: u.searchParams.get('c'), t: u.searchParams.get('t'), dev: u.searchParams.get('dev') });
-  if (!w.ok) return reply(400, '없는 판입니다.', o);
-  return safely(o, async () => {
-    const { results } = await board(env, w).all();
-    return send(200, { top: seen(results, null) }, o);
-  });
-}
-
-async function post(req, env, o) {
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const u = new URL(req.url), q = k => u.searchParams.get(k);
   const me = await sessionWho(env, req);
-  if (!me) return reply(401, '순위표에 올리려면 로그인이 필요합니다.', o);
-  /* 로그인한 사람의 판은 이름이 없어도 다 오른다 — 경쟁이 서려면 순위표가 비면 안 된다.
-     걸리는 이름은 프로필 닉네임이 먼저다(authProfile 이 닉네임을 바꾸면 speed.name 도 따라
-     바뀐다). 프로필이 없으면 앱이 실어 보낸 이름, 그것도 없으면 빈 이름 — 화면은 '익명' 으로 건다.
-     entry 는 공개 이름을 요구하므로 playedNormal 처럼 자리만 채워 검사한다 */
-  const name = plain(c?.name, CAP.name);
-  const e = entry({ ...c, name: '-' }, me);
-  if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
-  /* 한 판을 다 돌려면 아무리 짧아도 60초다. 분당 셋이면 넉넉하다 */
-  const ok = await pass(env.RL_SC, ip(req));
-  if (ok !== true) return shut(ok, o);
-
-  /* 한 사람이 한 판에 한 줄만 차지한다 — 자기 최고 기록으로만 갱신된다 */
-  return safely(o, async () => {
-    const [, rank, list] = await env.DB.batch([
-      env.DB.prepare(
-        `insert into speed (slug, secs, dev, who, name, cpm, score, hits, acc, at)
-         values (?, ?, ?, ?, coalesce((select nullif(name, '') from profile where who = ?), ?), ?, ?, ?, ?, ?)
-         on conflict (slug, secs, dev, who) do update set
-           /* 이름만은 기록과 무관하게 바뀐다. 이걸 기록 조건에 묶어두면 잘못 적은
-              본명을 지우려고 자기 최고 기록을 깨야 한다 — 사실상 철회 불가가 된다. */
-           name  = excluded.name,
-           cpm   = max(speed.cpm, excluded.cpm),
-           score = case when excluded.cpm > speed.cpm then excluded.score else speed.score end,
-           hits  = case when excluded.cpm > speed.cpm then excluded.hits else speed.hits end,
-           acc   = case when excluded.cpm > speed.cpm then excluded.acc  else speed.acc  end,
-           at    = case when excluded.cpm > speed.cpm then excluded.at   else speed.at   end`
-      ).bind(e.slug, e.secs, e.dev, e.who, e.who, name, e.cpm, e.score, e.hits, e.acc, Date.now()),
-      /* coalesce 가 없으면 그 줄이 없을 때 score > NULL 이 NULL 이 되어 조용히 1위가 된다 */
-      env.DB.prepare(
-        `select count(*) + 1 as n from speed where slug = ? and secs = ? and dev = ? and cpm >
-           coalesce((select cpm from speed where slug = ? and secs = ? and dev = ? and who = ?), -1)`
-      ).bind(e.slug, e.secs, e.dev, e.slug, e.secs, e.dev, e.who),
-      board(env, e),
-    ]);
-    return send(201, { rank: rank.results[0]?.n ?? null, top: seen(list.results, e.who) }, o);
-  });
+  if (!q('c')) {
+    const w = where({ mode: q('mode'), dev: q('dev') });
+    return safely(o, async () => send(200, { bests: (await bests(env, w.mode, w.dev).all()).results }, o));
+  }
+  const w = where({ c: q('c'), t: q('t'), dev: q('dev'), mode: q('mode') });
+  if (!w.ok) return reply(400, '없는 판입니다.', o);
+  return safely(o, async () => send(200, await standing(env, w, me), o));
 }
 
 /* 순위표에서 내린다. 이름은 공개 목록에 걸리므로 거둘 손잡이가 있어야 한다.
@@ -372,7 +355,7 @@ async function forget(req, env, o) {
   if (ok !== true) return shut(ok, o);
   /* 이름이 걸린 곳은 전부 내린다 — 경쟁전 사다리와 전적도 같은 사람의 것이다 */
   return safely(o, async () => {
-    const [r] = await env.DB.batch(['speed', 'board', 'ladder', 'played', 'ticket', 'queue']
+    const [r] = await env.DB.batch(['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue']
       .map(tb => env.DB.prepare(`delete from ${tb} where who = ?`).bind(who))
       .concat(env.DB.prepare('delete from duel where a = ? or b = ?').bind(who, who)));
     return send(200, { gone: r.meta?.changes ?? 0 }, o);
@@ -414,12 +397,20 @@ export function rankedCheck(c, tk, now, who) {
   const need = e.hits >= (SIZE[tk.slug] || 0) ? e.hits * 500 : RANKED_SECS * 1000;
   return { ...e, ok: e.ok && c.id === tk.id && took >= need && took <= 10 * 60e3 };
 }
-/* 판 한 줄을 적고 그 사람의 옛 줄을 50 판에서 자른다 */
+/* 판 한 줄을 적고 그 사람의 옛 줄을 50 판에서 자른다. 일반전·경쟁전·1대1 이 전부 여기를
+   지나므로 코스별 최고 기록(best)도 여기서만 쓴다 — 더 빠를 때만 갈아 끼운다.
+   탈주·앞뒤 안 맞는 판은 cpm 0 으로 오니 올리지 않는다 */
 const logPlay = (env, who, mode, dev, slug, secs, e, delta, at) => [
   env.DB.prepare('insert into played (who, mode, dev, slug, secs, cpm, score, hits, acc, delta, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(who, mode, dev, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, at),
   env.DB.prepare('delete from played where who = ? and rowid not in (select rowid from played where who = ? order by at desc limit ?)')
     .bind(who, who, KEEP),
+  ...(e.cpm > 0 ? [env.DB.prepare(
+    `insert into best (mode, slug, secs, dev, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     on conflict (mode, slug, secs, dev, who) do update set name = excluded.name, cpm = excluded.cpm,
+       score = excluded.score, hits = excluded.hits, acc = excluded.acc, at = excluded.at
+     where excluded.cpm > best.cpm`
+  ).bind(mode, slug, secs, dev, who, e.name || '', e.cpm, e.score, e.hits, e.acc, at)] : []),
 ];
 
 /* 끝내지 않은 옛 표를 탈주로 셈하는 문장들 — rankedStart 와 matchFind 가 같이 쓴다.
@@ -659,7 +650,7 @@ async function settle(env, id, now, force = false) {
       env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ? and dev = ?')
         .bind(dl, S === 1 ? 1 : 0, now, d[s], d.dev),
       ...logPlay(env, d[s], 'ranked', d.dev, d.slug, RANKED_SECS,
-        { cpm: Math.max(0, cpm ?? 0), score: 0, hits: d[s + '_hits'] ?? 0, acc: Math.max(0, d[s + '_acc'] ?? 0) }, dl, now));
+        { cpm: Math.max(0, cpm ?? 0), score: 0, hits: d[s + '_hits'] ?? 0, acc: Math.max(0, d[s + '_acc'] ?? 0), name: d[s + '_name'] }, dl, now));
     /* 안 나타난 사람의 표도 태운다 — 다음 시작에서 또 깎이지 않게 */
     if (quit) st.push(env.DB.prepare('delete from ticket where who = ? and duel = ?').bind(d[s], id));
   });
@@ -726,20 +717,24 @@ async function matchTick(req, env, o) {
   });
 }
 
-/* 일반전 한 판을 전적에 남긴다. 이름은 받지 않는다 — 전적은 본인만 본다 */
+/* 일반전 한 판을 전적에 남기고, 더 빠르면 코스별 최고 기록도 갈아 끼운다.
+   이름은 없어도 된다 — 순위표는 닉네임(profile)을 먼저 보고, 이건 닉네임이 없을 때만 걸린다.
+   결과 화면이 바로 그리게 그 판의 순위표와 내 자리를 돌려준다 */
 async function playedNormal(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  /* entry 는 공개 이름을 요구한다. 여기는 이름이 안 남으니 자리만 채운다 */
-  const e = entry({ ...c, name: '-' }, me);
+  const name = plain(c.name, CAP.name);
+  /* entry 는 이름을 요구한다. 없으면 자리만 채우고 빈 이름으로 적는다 */
+  const e = entry({ ...c, name: name || '-' }, me);
   if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
+  /* 한 판을 다 돌려면 아무리 짧아도 60초다. 분당 셋이면 넉넉하다 */
   const ok = await pass(env.RL_SC, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
-    await env.DB.batch(logPlay(env, me, 'normal', e.dev, e.slug, e.secs, e, null, Date.now()));
-    return send(201, {}, o);
+    await env.DB.batch(logPlay(env, me, 'normal', e.dev, e.slug, e.secs, { ...e, name }, null, Date.now()));
+    return send(201, await standing(env, { ...e, mode: 'normal' }, me), o);
   });
 }
 
@@ -1333,7 +1328,7 @@ async function authIntro(req, env, o) {
    이 목록이 곧 "이 저장소가 사람에 대해 쥐고 있는 전부" 다. 새 표를 만들면서 여기
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
-export const ERASE = ['speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro',
+export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro',
                       'passkey', 'recovery', 'pending', 'sso', 'post', 'reply', 'mark'];
 
 async function authErase(req, env, o) {
@@ -1821,11 +1816,10 @@ export default {
       }
     }
     /* 순위표는 D1 을 붙이기 전에도 사이트가 멀쩡해야 한다 — 없으면 없다고만 한다 */
-    if (path === '/top' || path === '/dist' || path === '/score' || path === '/forget') {
+    if (path === '/top' || path === '/dist' || path === '/forget') {
       if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);
       if (path === '/top' && req.method === 'GET') return top(req, env, o);
       if (path === '/dist' && req.method === 'POST') return dist(req, env, o);
-      if (path === '/score' && req.method === 'POST') return post(req, env, o);
       if (path === '/forget' && req.method === 'POST') return forget(req, env, o);
     }
     if (path === '/ranked/start' || path === '/ranked/end' || path === '/played' ||
