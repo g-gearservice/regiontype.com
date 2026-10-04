@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
-         lpDelta, WANT, rankedCheck, duelDelta, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
+         rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
          cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
@@ -45,16 +45,32 @@ assert.equal(allowedOrigin('https://evil.example'), false);
 
 /* ── 경쟁전 lp ─────────────────────────────────────────
    점수가 아니라 타자 속도(CPM, 분당 타수)로 센다 — 코스가 달라도 견줄 수 있는 유일한 값이다 */
-assert.equal(lpDelta(0, 10, WANT[0], 100), 3, '기대 속도와 같으면 최소 +3');
-assert.equal(lpDelta(0, 10, 150, 100), 20, '브론즈(기대 100)가 150 CPM 이면 +20');
-assert.equal(lpDelta(0, 0, 150, 100), 40, '배치 중엔 두 배');
-assert.equal(lpDelta(0, 10, 150, 85), 12, '정확도 85% 는 얻는 몫을 .6 으로');
-assert.ok(lpDelta(100, 10, 500, 70) < 0, '정확도 80% 아래는 빨라도 잃는다');
-assert.equal(lpDelta(250, 10, 180, 100), -8, '골드(기대 200)가 180 CPM 이면 −8');
-assert.equal(lpDelta(250, 10, 195, 100), -5, '지면 최소 −5');
-assert.equal(lpDelta(3, 10, 0, 100), -3, 'lp 는 0 아래로 안 내려간다');
-assert.equal(lpDelta(900, 10, 410, 100), 24, '마스터 위로는 기대가 350 에서 멈춘다');
-assert.equal(lpDelta(0, 0, 1500, 100), 50, '한 판에 ±50 을 넘지 않는다');
+/* 경쟁전 셈(rate). 실력은 CPM 단위, 디비전마다 100 lp — 브론즈 III 0 · 골드 III 600 · 마스터 1500 */
+assert.equal(perf(200, 100), 200); assert.equal(perf(200, 85), 140, '정확도 85% 는 ×.7');
+assert.deepEqual([divCpm(0), divCpm(6), divCpm(15)], [100, 200, 350]);
+assert.deepEqual([divOf(99), divOf(150), divOf(200), divOf(349), divOf(350)], [0, 3, 6, 14, 15]);
+assert.deepEqual(rate({ lp: 0, games: 0, mmr: null }, 1, 200, 150, 150), { d: 0, mmr: 200 }, '배치 중엔 lp 를 주지 않는다');
+assert.equal(rate({ lp: 0, games: 2, mmr: 200 }, 0, 260, 150, 150).mmr, 220, '배치 중 실력은 평균');
+assert.deepEqual(rate({ lp: 0, games: 4, mmr: 200 }, 1, 200, 150, 150), { d: 600, mmr: 200, placed: true }, '5판째에 실력의 디비전(골드 III)에 앉는다');
+assert.equal(rate({ lp: 0, games: 4, mmr: 120 }, 1, 120, 100, 100).d, 100, '5연승해도 실력이 브론즈면 브론즈 II');
+assert.equal(rate({ lp: 0, games: 4, mmr: 900 }, 1, 900, 100, 100).d, 1200, '배치는 다이아 III 까지');
+assert.equal(rate({ lp: 0, games: 4, mmr: null }, 0, null, 100, 100).d, 0, '배치를 못 낸 판뿐이면 맨 아래');
+assert.equal(rate({ lp: 650, games: 9, mmr: 200 }, 1, 210, 200, 200).d, 21, '제자리 · 같은 실력을 이기면 +20 남짓');
+assert.equal(rate({ lp: 650, games: 9, mmr: 200 }, 0, 190, 200, 200).d, -21);
+assert.equal(rate({ lp: 650, games: 9, mmr: 200 }, 1, 210, 200, 200).mmr, 201.5, '배치 뒤 실력은 천천히(.15) 따라간다');
+assert.equal(rate({ lp: 300, games: 9, mmr: 200 }, 1, 210, 200, 200).d, 31, '실력보다 낮은 자리 — 이기면 더 받고');
+assert.equal(rate({ lp: 300, games: 9, mmr: 200 }, 0, 190, 200, 200).d, -11, '지면 덜 잃는다');
+assert.equal(rate({ lp: 1200, games: 9, mmr: 200 }, 1, 210, 200, 200).d, 11, '실력보다 높은 자리 — 이겨도 적게');
+assert.equal(rate({ lp: 1200, games: 9, mmr: 200 }, 0, 190, 200, 200).d, -31, '지면 많이 잃는다');
+assert.equal(rate({ lp: 650, games: 9, mmr: 200 }, 1, 310, 300, 300).d, 37, '훨씬 센 상대를 이기면 크게');
+assert.equal(rate({ lp: 1250, games: 9, mmr: 300 }, 1, 310, 100, 100).d, 5, '훨씬 약한 상대는 이겨도 최소 +5');
+assert.equal(rate({ lp: 650, games: 9, mmr: 100 }, 0, 0, 400, 400).d, -5, '못 이길 상대에게 지면 최소 −5');
+assert.equal(rate({ lp: 10, games: 9, mmr: 200 }, 0, 0, 200, 200).d, -10, 'lp 는 0 아래로 안 간다');
+assert.equal(rate({ lp: 0, games: 9, mmr: 400 }, 1, 990, 900, 900).d, 50, '±50 캡');
+assert.equal(rate({ lp: 650, games: 9, mmr: 200 }, 1, null, 200, 200).mmr, 200, '앞뒤 안 맞는 판은 실력을 안 바꾼다');
+assert.deepEqual([quitDelta({ lp: 0, games: 2, mmr: 200 }), quitDelta({ lp: 0, games: 4, mmr: 200 }), quitDelta({ lp: 650, games: 9, mmr: 200 }), quitDelta({ lp: 10, games: 9 })],
+  [0, 600, -25, -10], '탈주 — 배치 중엔 0, 5판째면 그때까지의 실력으로 앉고, 그 뒤엔 −25');
+assert.deepEqual([botCpmFor(200, 0), botCpmFor(200, 1), botCpmFor(null, .5)], [170, 230, 150], '봇은 내 실력 ±15%');
 
 /* 속도는 맞힌 곳 수에 묶인다 — 한 곳만 치고 아무 속도나 적어 보낼 수 없다 */
 const SME = 'a1b2c3d4e5';
@@ -812,7 +828,8 @@ console.log('security rule self-check done');
   db.prepare('update ticket set at = at - 130000').run();
   const end = await call('/ranked/end', { id: start.id, score: 1000, hits: 10, tries: 12, cpm: 200, acc: 100, dev: 'pc' }, A);
   assert.equal(end.status, 200); assert.equal(end.dev, 'mobile', '끝낼 때는 표의 기기를 쓴다');
-  assert.ok(end.delta > 0);
+  assert.deepEqual([end.delta, end.win], [0, 1], '배치 판은 승패만 남고 lp 는 그대로');
+  assert.equal(db.prepare('select mmr from ladder where who = ?').get(A).mmr, 200, '실력은 잰다');
   assert.deepEqual(rows('mobile', 'ranked').map(r => [r.who, r.cpm, r.name]), [[A, 200, '가양']],
     '경쟁전 판도 그 코스의 경쟁전 최고 기록에 오른다');
   assert.deepEqual(rows('mobile').map(r => r.cpm), [300], '경쟁전 판은 일반전 순위표에 섞이지 않는다');
@@ -1001,15 +1018,6 @@ console.log('security rule self-check done');
 /* ── 경쟁전 1대1 ───────────────────────────────────────────
    순수 함수 몇 개와, 진짜 sqlite 에 워커를 그대로 태운 한 판(사람끼리 · 봇 · 탈주 · 남의 판) */
 {
-  assert.equal(duelDelta(100, 9, 100, 1), 20, '같은 lp 를 이기면 +20');
-  assert.equal(duelDelta(100, 9, 100, 0), -20);
-  assert.equal(duelDelta(100, 9, 100, .5), 0, '비기면 그대로');
-  assert.equal(duelDelta(100, 0, 100, 1), 40, '배치 판은 K 80');
-  assert.equal(duelDelta(1000, 9, 0, 1), 3, '이겨도 최소 +3');
-  assert.equal(duelDelta(0, 0, 3000, 1), 50, '±50 캡');
-  assert.equal(duelDelta(1000, 9, 0, 0), -40, '이길 판을 지면 크게 깎인다');
-  assert.equal(duelDelta(10, 9, 10, 0), -10, 'lp 는 0 아래로 안 간다');
-  assert.ok(duelDelta(0, 9, 0, 0) === 0, '0 에서는 더 안 깎인다');
   assert.equal(duelWinner({ cpm: 200, acc: 90 }, { cpm: 190, acc: 100 }), 1, 'cpm 이 먼저');
   assert.equal(duelWinner({ cpm: 200, acc: 90 }, { cpm: 200, acc: 95 }), 0, '같으면 acc');
   assert.equal(duelWinner({ cpm: 200, acc: 90 }, { cpm: 200, acc: 90 }), .5);
@@ -1081,16 +1089,18 @@ console.log('security rule self-check done');
   assert.equal(t1.result, undefined);
 
   age();
-  db.prepare('update ladder set lp = 100, games = 9').run();
+  db.prepare('update ladder set lp = 600, games = 9, mmr = 200').run();
   const eA = await call('/ranked/end', fin(pA.id, 300), A);
   assert.deepEqual([eA.status, eA.pending], [200, true], '상대가 아직이면 기다린다');
   assert.equal(lp(A).games, 9, '정산 전에는 lp 가 안 바뀐다');
   const eB = await call('/ranked/end', fin(pB.id, 200), B);
   assert.equal(eB.status, 200); assert.equal(eB.duel.win, 0); assert.equal(eB.duel.oppCpm, 300);
-  assert.equal(eB.delta, -20); assert.equal(lp(B).games, 10);
+  assert.equal(eB.delta, -23, '같은 실력에게 300 대 200 으로 지면 −18 − 격차 5'); assert.equal(lp(B).games, 10);
   const tA = await call('/match/tick', { duel: pA.duel, hits: 10 }, A);
   assert.equal(tA.result.win, 1);
-  assert.deepEqual([tA.result.delta, tA.result.lp, tA.result.oppCpm, tA.result.myCpm], [20, 120, 200, 300]);
+  assert.deepEqual([tA.result.delta, tA.result.lp, tA.result.oppCpm, tA.result.myCpm], [27, 627, 200, 300]);
+  assert.equal(db.prepare('select mmr from ladder where who = ?').get(A).mmr, 215, '이긴 쪽 실력은 300 쪽으로 .15');
+  assert.deepEqual(db.prepare("select who, win from played where mode = 'ranked' order by who").all().map(r => r.win), [1, 0], '판마다 승패를 남긴다');
   assert.deepEqual([lp(A).games, lp(A).wins], [10, 1]);
   assert.equal(db.prepare("select count(*) as n from played where mode = 'ranked'").get().n, 2);
   assert.deepEqual(db.prepare("select name, cpm from best where mode = 'ranked' order by cpm desc").all().map(r => [r.name, r.cpm]),
@@ -1104,7 +1114,7 @@ console.log('security rule self-check done');
   const pb = await find(A, { bot: true });
   assert.equal(pb.opp.bot, true);
   const bd = db.prepare('select * from duel').get();
-  assert.equal(bd.b, 'bot'); assert.ok(bd.bot_cpm >= Math.round(WANT[1] * .85) && bd.bot_cpm <= Math.round(WANT[1] * 1.15));
+  assert.equal(bd.b, 'bot'); assert.ok(bd.bot_cpm >= botCpmFor(215, 0) && bd.bot_cpm <= botCpmFor(215, 1), '봇은 lp 가 아니라 실력에 맞춘다');
   assert.equal((await call('/match/tick', { duel: pb.duel, hits: 1 }, A)).opp.done, false);
   age();
   const gl = lp(A).lp;

@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.379",
+    "date": "2026-10-04",
+    "ko": "경쟁전 점수를 다시 짰습니다. 처음 5판은 배치로 실력(속도·정확도)만 재고, 끝나면 그 실력에 맞는 티어에 앉습니다 — 연승만으로 골드에 가지 않습니다. 티어마다 III·II·I 디비전이 생겼고, 이기고 지는 lp 는 상대 실력과 판 내용에 따라 달라집니다. 봇도 내 실력에 맞춰 나옵니다. 결과 화면과 기록에 승·패가 표시됩니다. 모두 배치부터 다시 시작합니다.",
+    "en": "Ranked scoring is rebuilt. Your first five games are placements that only measure your speed and accuracy, then place you at the tier that speed earns; a win streak alone no longer reaches Gold. Each tier now has divisions III, II and I, and the LP you win or lose depends on your opponent's skill and how the game went. The bot is matched to your skill too. Wins and losses show on the result screen and in Records. Everyone starts again from placements."
+  },
+  {
     "v": "0.9.378",
     "date": "2026-10-04",
     "ko": "폰 Safari 홈에서 로고 아래 위쪽 띠에도 격자가 이어져 보입니다. 위 흐림이 바탕색으로 격자를 덮고 있었습니다.",
