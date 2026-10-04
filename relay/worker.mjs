@@ -325,7 +325,12 @@ async function post(req, env, o) {
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '순위표에 올리려면 로그인이 필요합니다.', o);
-  const e = entry(c, me);
+  /* 로그인한 사람의 판은 이름이 없어도 다 오른다 — 경쟁이 서려면 순위표가 비면 안 된다.
+     걸리는 이름은 프로필 닉네임이 먼저다(authProfile 이 닉네임을 바꾸면 speed.name 도 따라
+     바뀐다). 프로필이 없으면 앱이 실어 보낸 이름, 그것도 없으면 빈 이름 — 화면은 '익명' 으로 건다.
+     entry 는 공개 이름을 요구하므로 playedNormal 처럼 자리만 채워 검사한다 */
+  const name = plain(c?.name, CAP.name);
+  const e = entry({ ...c, name: '-' }, me);
   if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
   /* 한 판을 다 돌려면 아무리 짧아도 60초다. 분당 셋이면 넉넉하다 */
   const ok = await pass(env.RL_SC, ip(req));
@@ -335,7 +340,8 @@ async function post(req, env, o) {
   return safely(o, async () => {
     const [, rank, list] = await env.DB.batch([
       env.DB.prepare(
-        `insert into speed (slug, secs, dev, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `insert into speed (slug, secs, dev, who, name, cpm, score, hits, acc, at)
+         values (?, ?, ?, ?, coalesce((select nullif(name, '') from profile where who = ?), ?), ?, ?, ?, ?, ?)
          on conflict (slug, secs, dev, who) do update set
            /* 이름만은 기록과 무관하게 바뀐다. 이걸 기록 조건에 묶어두면 잘못 적은
               본명을 지우려고 자기 최고 기록을 깨야 한다 — 사실상 철회 불가가 된다. */
@@ -345,7 +351,7 @@ async function post(req, env, o) {
            hits  = case when excluded.cpm > speed.cpm then excluded.hits else speed.hits end,
            acc   = case when excluded.cpm > speed.cpm then excluded.acc  else speed.acc  end,
            at    = case when excluded.cpm > speed.cpm then excluded.at   else speed.at   end`
-      ).bind(e.slug, e.secs, e.dev, e.who, e.name, e.cpm, e.score, e.hits, e.acc, Date.now()),
+      ).bind(e.slug, e.secs, e.dev, e.who, e.who, name, e.cpm, e.score, e.hits, e.acc, Date.now()),
       /* coalesce 가 없으면 그 줄이 없을 때 score > NULL 이 NULL 이 되어 조용히 1위가 된다 */
       env.DB.prepare(
         `select count(*) + 1 as n from speed where slug = ? and secs = ? and dev = ? and cpm >
