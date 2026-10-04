@@ -2279,6 +2279,9 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .rec-list .lp[data-sign="down"]{color:#fff;background:var(--ranked)}
 .rec-list .lp[data-sign="up"]::before{content:"▲ ";font-size:.7em}
 .rec-list .lp[data-sign="down"]::before{content:"▼ ";font-size:.7em}
+/* 배치 판(±0)도 승패는 보이게 — 테두리로 가른다 */
+.rec-list .lp[data-sign=""][data-res="win"]{box-shadow:inset 0 0 0 2px var(--block-deep)}
+.rec-list .lp[data-sign=""][data-res="loss"]{box-shadow:inset 0 0 0 2px var(--ranked)}
 .rec-list .at{grid-column:2;grid-row:2;font-size:12px;color:var(--ink-soft)}
 @media (pointer:coarse){
   /* 폰 탭 화면(설정·순위·커뮤니티)은 한 틀이다 — 제목 32px · 옆 여백 16px · 머리줄 높이 44px ·
@@ -2495,6 +2498,13 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 .rk-tag{font-size:14px;font-weight:800;color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked));padding:4px 10px;border-radius:999px}
 .rk-tag[hidden]{display:none}
 .rk-line.bad{color:var(--bad)}
+/* 경쟁전 결과의 승패 — 색만이 아니라 라벨·테두리·기호로 가른다 */
+.rk-res{display:inline-block;padding:1px 10px 2px;border:2px solid currentColor;border-radius:999px;font-weight:900}
+.rk-res[data-res="win"]{color:var(--block-deep)}
+.rk-res[data-res="win"]::before{content:"▲ ";font-size:.7em}
+.rk-res[data-res="loss"]{color:var(--ranked)}
+.rk-res[data-res="loss"]::before{content:"▼ ";font-size:.7em}
+.rk-res[data-res="draw"]{color:var(--ink-soft);border-style:dashed}
 
 /* ── 가입 안내(welcome/) ────────────────────────────────────
    한 번에 한 가지만 묻는 화면. 옷은 이 저장소가 이미 쓰는 것에서 딴다 —

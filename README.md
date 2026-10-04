@@ -10,11 +10,21 @@
 
 A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
-## What's new in 0.9.379
+## What's new in 0.9.380
 
 - "Play the bot" now starts a match right away. While waiting for an opponent, a "still waiting" reply from `/match/find` made `ranked.js` ask again on the spot, so during even seconds it polled dozens of times a second and used up the 120-per-minute limit (`RL_MT`). Waiting replies now only update the text; polling stays on the one-second timer.
 - Server-side competitive mode (not yet reachable from the site). The new `rt-compete` worker judges matches in Durable Objects (`relay/compete-do.mjs`: one lobby, one object per match, WebSocket Hibernation) using a shared reducer (`relay/compete.mjs`). It adds human-like bots (`relay/compete-bot.mjs`), Glicko-2 ratings with seasons and tiers (`relay/glicko.mjs`), a rating-window matchmaker, and cheat flags with an admin review page (`compete/review.html`). Tunables live in `relay/compete-config.mjs`; checks run in `node relay/test.mjs` (`--sim` for the 7,000-game bot curve). Launch steps are in `docs/compete-launch.md`.
 - Local development: every page reads the relay address from `relay.js`. On localhost it points at the local relay (`wrangler dev`), where a dev-only sign-in opens when `DEV_LOGIN=1`. `?relay=live` switches back to the production relay.
+
+## What's new in 0.9.379
+
+- Ranked scoring is rebuilt around a hidden skill rating (`ladder.mmr`) measured in CPM. Each game's performance is `perf = CPM × accuracy factor` (×1 at 95%+, minus 3% per point below). The visible LP is pulled toward that rating, so a tier now means a typing speed: division *d* expects `100 + d × 50/3` CPM (Bronze III 100 · Gold III 200 · Master 350).
+- Tiers have divisions III, II and I, 100 LP each; Master (1500 LP+) has none.
+- The first five games are placements. They give no LP and only average your performance; the fifth places you in the division your rating earns, capped at Diamond III. Before, every placement win paid +40 because the bot always had your own LP, so five wins meant Gold.
+- After placement, LP = `40 × (result − expected) × convergence + edge`. Expected score comes from the rating gap (100 CPM = 10:1). Convergence is 0.5–1.5×: a player rated above their LP gains more and loses less, and the reverse. Edge is ±5 from the performance gap. Wins pay at least +5, losses cost at least −5, ±50 cap. Placement jumps do not count toward the 200 LP daily cap.
+- The 1v1 bot's speed is your rating ±15%, not your LP's tier. Human opponents are rated by their current `mmr`.
+- `played.win` records each ranked result (1 / 0.5 / 0). The result screen shows a Win/Loss/Draw badge with a border and arrow, and Records shows W/L/D before the LP change.
+- Deploy needs `relay/migrate-mmr.sql` once on `rt-board`. It adds the two columns and resets every ladder row to placements; `played` and `best` stay.
 
 ## What's new in 0.9.378
 

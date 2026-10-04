@@ -18,12 +18,18 @@
 const $ = s => document.querySelector(s);
 const RELAY = self.RT_RELAY;   // relay.js
 const NAME_KEY = 'rt.name';
-/* 중계기와 같은 수다(worker.mjs 의 STEP · PLACE). 티어 이름은 여기서만 짓는다 */
-const STEP = 100, PLACE = 5, TIERS = 6;
-const tierOf = lp => Math.min(TIERS - 1, Math.floor(lp / STEP));
+/* 중계기와 같은 수다(worker.mjs 의 STEP · DIVS · PLACE). 티어 이름은 여기서만 짓는다.
+   한 디비전이 STEP lp, 한 티어가 III·II·I 세 디비전이고 마스터만 하나다 */
+const STEP = 100, DIVS = 3, PLACE = 5, TIERS = 6;
+const tierOf = lp => Math.min(TIERS - 1, Math.floor(lp / (STEP * DIVS)));
+const tierLabel = lp => t('tier' + tierOf(lp)) +
+  (tierOf(lp) < TIERS - 1 ? ' ' + ['III', 'II', 'I'][Math.floor(lp / STEP) % DIVS] : '');
 const tierName = (lp, games) => games < PLACE
-  ? t('placing', { n: games, m: PLACE }) : t('tier' + tierOf(lp));
+  ? t('placing', { n: games, m: PLACE }) : tierLabel(lp);
 const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n);
+/* 전적 한 줄의 승패. 옛 줄(win 이 없던 때)은 lp 부호로 읽는다 */
+const resKey = g => { const w = g.win ?? (g.delta > 0 ? 1 : g.delta < 0 ? 0 : .5); return w === 1 ? 'win' : w === 0 ? 'loss' : 'draw'; };
+const resOf = g => t({ win: 'resWin', loss: 'resLoss', draw: 'resDraw' }[resKey(g)]);
 const readName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } catch { return ''; } };
 /* 봇의 모습은 계정 화면에서 고른 것을 그대로 쓴다 — 저장은 거기서 하고 여기선 읽기만
    한다(로그인해 있으면 계정 화면이 서버 값을 이 거울에 맞춰 둔다). 고른 적이 없으면
@@ -142,15 +148,15 @@ function leftAccount() {
 }
 
 /* ── 순위 ─────────────────────────────────────────────── */
-function rankRow(i, name, right, me, tier) {
+function rankRow(i, name, right, me, lp) {
   const li = document.createElement('li');
   li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
   li.querySelector('b').textContent = i + 1;
   li.querySelector('.who').textContent = name;
   li.querySelector('.pt').textContent = right;
-  if (tier != null) {
+  if (lp != null) {
     const s = document.createElement('span');
-    s.className = 'tier'; s.dataset.tier = tier; s.textContent = t('tier' + tier);
+    s.className = 'tier'; s.dataset.tier = tierOf(lp); s.textContent = tierLabel(lp);
     li.querySelector('.who').after(s);
   }
   if (me) {
@@ -170,7 +176,7 @@ async function fillRanking() {
   try {
     const d = await ask(`/ladder?dev=${DEV}`);
     if (n !== rankReq) return;
-    lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, tierOf(r.lp))));
+    lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, r.lp)));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
   } catch { if (n === rankReq) say.textContent = t('boardFail'); }
   await Promise.all(['ranked', 'normal'].map(mode => fillBests(n, mode)));
@@ -251,7 +257,7 @@ async function fillRecords() {
     tier.textContent = tierName(lad.lp, lad.games);
     tier.dataset.tier = placed ? tierOf(lad.lp) : '';
     $('#recLp').textContent = lad.lp + ' LP';
-    /* 마스터는 끝이 없다 — 막대를 가득 채운다 */
+    /* 다음 디비전까지. 마스터는 끝이 없다 — 막대를 가득 채운다 */
     $('#recBar').value = tierOf(lad.lp) === TIERS - 1 ? 100 : lad.lp % STEP;
     $('#recWl').textContent = [t('games', { n: lad.games }),
       t('winLoss', { w: lad.wins, l: lad.games - lad.wins }),
@@ -268,13 +274,15 @@ async function fillRecords() {
       ['where', `${placeOf(g.slug)} · ${clock(g.secs)}`],
       ['pt', quit ? t('quitRow') : showSpeed(g.cpm)],
       ['acc', quit ? '' : g.acc + '%'],
-      ['lp', g.delta == null ? '' : signed(g.delta) + ' LP'],
+      /* 경쟁전은 승패 라벨을 lp 앞에 — 색만으로 가르지 않는다. 배치 판은 ±0 이라 승패가 곧 결과다 */
+      ['lp', g.delta == null ? '' : [g.mode === 'ranked' ? resOf(g) : '', signed(g.delta) + ' LP'].filter(Boolean).join(' ')],
       ['at', day.format(new Date(g.at))],
     ];
     cells.forEach(([k, v]) => {
       const s = document.createElement(k === 'at' ? 'time' : 'span');
       s.className = k; s.textContent = v;
       if (k === 'lp' && g.delta != null) s.dataset.sign = g.delta > 0 ? 'up' : g.delta < 0 ? 'down' : '';
+      if (k === 'lp' && g.mode === 'ranked') s.dataset.res = resKey(g);
       if (k === 'at') s.dateTime = new Date(g.at).toISOString();
       li.append(s);
     });
@@ -1073,7 +1081,7 @@ async function matchFind() {
 function matchPaired(m, d) {
   m.paired = true;
   clearInterval(m.timer);
-  quitNote = d.quit ? t('rkQuit', { n: -d.quit }) : '';
+  quitNote = d.quit < 0 ? t('rkQuit', { n: -d.quit }) : '';   // 배치 5판째 탈주는 자리를 매기는 + 라 알리지 않는다
   const o = d.opp || {};
   if (o.bot) o.name = botName();   // 봇 판은 홈 봇이 맞상대다 — 서버는 'bot' 이라고만 적는다
   const info = o.bot ? t('rkBotTag') : t('rkPlayerInfo', { tier: tierName(o.lp, o.games == null ? PLACE : o.games), lp: o.lp });
@@ -1223,11 +1231,18 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   line.textContent = t('uploading');
   clearInterval(oppTimer); oppTimer = 0;
   const gen = ++pollGen, opp = g.ranked.opp || {};
-  /* 결과 줄: 승패 · 상대 속도 · ±lp · 티어 */
+  /* 결과 줄: 승패 라벨 · 상대 속도 · ±lp · 티어. 배치 중엔 lp 대신 몇 판째인지,
+     배치를 마친 판엔 앉은 자리를 보인다 */
   const show = (win, oppCpm, d) => {
-    line.textContent = [quitNote, t(win === 1 ? 'rkWin' : win === 0 ? 'rkLose' : 'rkDraw'),
-      t('rkVsResult', { name: opp.name, cpm: showSpeed(oppCpm) }),
-      t('rkResult', { d: signed(d.delta), tier: tierName(d.lp, d.games), lp: d.lp })].filter(Boolean).join(' · ');
+    const res = document.createElement('b');
+    res.className = 'rk-res';
+    res.dataset.res = win === 1 ? 'win' : win === 0 ? 'loss' : 'draw';
+    res.textContent = t(win === 1 ? 'rkWin' : win === 0 ? 'rkLose' : 'rkDraw');
+    const lp = d.games < PLACE ? t('rkPlacing', { n: d.games, m: PLACE })
+      : d.placed || d.games === PLACE ? t('rkPlaced', { tier: tierLabel(d.lp), lp: d.lp })
+      : t('rkResult', { d: signed(d.delta), tier: tierLabel(d.lp), lp: d.lp });
+    line.replaceChildren(...[quitNote, res, t('rkVsResult', { name: opp.name, cpm: showSpeed(oppCpm) }), lp]
+      .filter(Boolean).flatMap((x, i) => i ? [' · ', x] : [x]));
     quitNote = '';
     /* 정산이 끝나야 경쟁전 최고 기록이 적힌다 — 결과 화면 순위표를 다시 읽는다(app.js) */
     board();

@@ -363,32 +363,56 @@ async function forget(req, env, o) {
 }
 
 /* ── 경쟁전 ──────────────────────────────────────────────
-   혼자 치는 게임이라 맞상대가 없다. 그래서 이긴다·진다를 "이 티어에서 기대하는
-   속도를 넘었나"로 정한다(TypeClash 의 티어별 기대 WPM 과 같은 결).
-     속도  = 분당 타수(CPM). 코스가 달라도 견줄 수 있는 유일한 값이다
-     기대  = WANT[티어]                       브론즈 100 … 마스터 350 CPM
-     lp    = (속도 − 기대) × .4 × K × 정확도 배율   K 는 배치 5판 동안 2, 그 뒤 1
-   정확도는 얻는 쪽만 깎는다(95%↑ ×1 · 90 ×.8 · 85 ×.6 · 80 ×.4 · 그 아래는 이겨도 잃는다).
-   이기면 최소 +3, 지면 최소 −5, 한 판에 ±50 을 넘지 않는다. 탈주는 −25.
-   하루(24시간)에 얻는 lp 는 200 까지다.
+   보이는 lp 와 숨은 실력(mmr)을 따로 둔다(LoL·발로란트의 MMR 과 같은 결).
+     실력  = 판마다 잰 perf(= CPM × 정확도 배율)의 평균. 단위가 CPM 이라 코스가 달라도
+             견줄 수 있고, 티어가 결국 속도에 묶인다 — 티어가 객관적이게 하는 핵심이다
+     배치  = 처음 5판. lp 를 주지 않고 실력만 잰다. 5판째에 그 실력의 디비전에 앉힌다
+             (다이아 III 까지 — 그 위는 이겨서 오른다). 5연승해도 실력이 브론즈면 브론즈다
+     티어  = 브론즈·실버·골드·플래티넘·다이아는 III·II·I 세 디비전, 디비전마다 100 lp.
+             마스터(1500 lp~)는 하나다. 디비전 d 의 기준 속도는 divCpm(d) = 100 + d×50/3
+     lp    = 40 × (승패 − 기대승률) × 수렴 배율 + 격차 보너스
+             기대승률은 상대 실력과 내 실력의 차이로(100 CPM 차이 = 10:1).
+             수렴 배율은 내 실력의 자리가 lp 보다 위면 이길 때 더 받고 질 때 덜 잃는다
+             (아래면 거꾸로, 0.5~1.5배). 격차 보너스는 perf 차이로 ±5.
+             이기면 최소 +5, 지면 최소 −5, 한 판에 ±50 을 넘지 않는다. 탈주는 −25.
+   하루(24시간)에 얻는 lp 는 200 까지다(배치 자리는 빼고).
    제한 시간은 120초로 못 박는다 — 판마다 조건이 같아야 견줄 수 있다.
-   사다리(lp)는 기기마다 따로다 — 폰 사람은 폰 사람끼리 선다. 기대 속도(WANT)는 아직 같다.
+   사다리(lp·실력)는 기기마다 따로다 — 폰 사람은 폰 사람끼리 선다.
    기기는 표를 낼 때 정해 표에 적고, 끝낼 때는 몸통이 아니라 표의 것을 쓴다. */
 export const RANKED_SECS = 120;
-const STEP = 100, PLACE = 5, QUIT = 25, KEEP = 50, DAY_CAP = 200;
-/* 티어마다 기대하는 속도(CPM). 위로 갈수록 너비가 같아 한 계단이 50 CPM 이다.
-   음절로 세던 옛 값(40…140)에 2.5 를 곱했다 — 한국 지명은 확정 키까지 음절당 2.8타,
-   약칭을 치면 그보다 적다.
-   ponytail: 서울 코스의 어림값이다. 판이 쌓이면 실제 분포의 분위수로 다시 잡는다 */
+const STEP = 100, DIVS = 3, PLACE = 5, PLACE_TOP = 12, QUIT = 25, KEEP = 50, DAY_CAP = 200;
+/* 티어마다 바닥 속도(CPM) — 브론즈 100 … 마스터 350. 한 티어가 50 CPM, 한 디비전이 그 셋째.
+   ponytail: 서울 코스의 어림값이다. 판이 쌓이면 실제 실력 분포의 분위수로 다시 잡는다 */
 export const WANT = [100, 150, 200, 250, 300, 350];
-export function lpDelta(lp, games, cpm, acc) {
-  const want = WANT[Math.min(WANT.length - 1, Math.floor(lp / STEP))];
-  const raw = (cpm - want) * .4 * (games < PLACE ? 2 : 1);
-  const mod = acc >= 95 ? 1 : acc >= 90 ? .8 : acc >= 85 ? .6 : acc >= 80 ? .4 : -.5;
-  let d = Math.round(raw >= 0 ? raw * mod : raw);
-  d = d > 0 || (d === 0 && mod > 0) ? Math.max(3, d) : Math.min(-5, d);
-  return Math.max(-lp, Math.max(-50, Math.min(50, d)));
+export const divCpm = d => WANT[0] + d * (WANT[1] - WANT[0]) / DIVS;
+export const divOf = r => Math.max(0, Math.floor((r - WANT[0]) * DIVS / (WANT[1] - WANT[0])));
+/* 정확도 95% 이상은 그대로, 그 아래는 1% 마다 3% 씩 깎는다(85% → ×.7) */
+export const perf = (cpm, acc) => Math.round(cpm * (acc >= 95 ? 1 : Math.max(0, 1 - (95 - acc) * .03)));
+const BOT_MMR = 150;   // 실력을 아직 모르는 사람의 첫 봇 — 실버 III 쯤
+/* 한 판을 셈한다. lad 는 그 판 전의 {lp, games, mmr}, S 는 1 | .5 | 0, myP 는 내 perf
+   (앞뒤 안 맞는 판은 null — 실력은 그대로 둔다), oppR·oppP 는 상대의 실력·이번 perf.
+   돌려주는 d 는 lp 변화, mmr 은 새 실력, placed 는 이 판으로 배치가 끝났는지 */
+export function rate(lad, S, myP, oppR, oppP) {
+  const { lp = 0, games = 0 } = lad, r0 = lad.mmr ?? null;
+  const mmr = myP == null ? r0
+    : r0 == null ? myP
+    : games < PLACE ? (r0 * games + myP) / (games + 1)
+    : r0 + .15 * (myP - r0);
+  if (games < PLACE - 1) return { d: 0, mmr };
+  if (games === PLACE - 1) return { d: (mmr == null ? 0 : Math.min(PLACE_TOP, divOf(mmr))) * STEP - lp, mmr, placed: true };
+  const me = r0 ?? divCpm(lp / STEP);
+  const E = 1 / (1 + 10 ** ((oppR - me) / 100));
+  const gap = Math.max(-1, Math.min(1, (divOf(me) + .5 - lp / STEP) / DIVS));
+  const conv = S === 0 ? 1 - .5 * gap : 1 + .5 * gap;
+  const edge = S === .5 ? 0 : Math.max(-5, Math.min(5, Math.round(((myP ?? 0) - oppP) / Math.max(oppP, 1) * 20)));
+  let d = Math.round(40 * (S - E) * conv) + edge;
+  if (S === 1) d = Math.max(5, d); else if (S === 0) d = Math.min(-5, d);
+  return { d: Math.max(-lp, Math.max(-50, Math.min(50, d))), mmr };
 }
+/* 탈주·앞뒤 안 맞는 판의 lp. 배치 중엔 잃을 lp 가 없고, 5판째면 그때까지의 실력으로 앉힌다 */
+export const quitDelta = lad => (lad?.games ?? 0) < PLACE ? rate(lad ?? {}, 0, null, 0, 0).d : -Math.min(QUIT, lad.lp ?? 0);
+/* 하루에 얻은 lp — 배치 자리(한 번에 크게 뛴다)는 뚜껑에서 뺀다 */
+const DAY_SQL = "select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and dev = ? and delta > 0 and delta <= 50 and at > ?";
 /* 끝난 판이 앞뒤가 맞는지. 표를 낸 코스·시간으로만 본다 — 몸통의 c·t 는 무시한다.
    다 치지 않았으면 120초가 지나야 하고, 다 쳤으면 한 곳에 0.5초는 들었어야 한다 */
 export function rankedCheck(c, tk, now, who) {
@@ -400,9 +424,9 @@ export function rankedCheck(c, tk, now, who) {
 /* 판 한 줄을 적고 그 사람의 옛 줄을 50 판에서 자른다. 일반전·경쟁전·1대1 이 전부 여기를
    지나므로 코스별 최고 기록(best)도 여기서만 쓴다 — 더 빠를 때만 갈아 끼운다.
    탈주·앞뒤 안 맞는 판은 cpm 0 으로 오니 올리지 않는다 */
-const logPlay = (env, who, mode, dev, slug, secs, e, delta, at) => [
-  env.DB.prepare('insert into played (who, mode, dev, slug, secs, cpm, score, hits, acc, delta, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(who, mode, dev, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, at),
+const logPlay = (env, who, mode, dev, slug, secs, e, delta, at, win = null) => [
+  env.DB.prepare('insert into played (who, mode, dev, slug, secs, cpm, score, hits, acc, delta, win, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(who, mode, dev, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, win, at),
   env.DB.prepare('delete from played where who = ? and rowid not in (select rowid from played where who = ? order by at desc limit ?)')
     .bind(who, who, KEEP),
   ...(e.cpm > 0 ? [env.DB.prepare(
@@ -418,7 +442,7 @@ const logPlay = (env, who, mode, dev, slug, secs, e, delta, at) => [
    또 깎지 않는다. 부른 쪽은 batch 뒤에 tk.duel 이 있으면 settle 을 불러 준다 */
 const forfeit = (env, me, tk, quit, now) => [
   env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ? and dev = ?').bind(quit, now, me, tk.dev),
-  ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now),
+  ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now, 0),
   env.DB.prepare('delete from ticket where who = ?').bind(me),
   ...(tk.duel ? [env.DB.prepare(`update duel set a_cpm = case when a = ? and a_cpm is null then -2 else a_cpm end,
                                                    b_cpm = case when b = ? and b_cpm is null then -2 else b_cpm end
@@ -439,10 +463,10 @@ async function rankedStart(req, env, o) {
     const [old, row] = await env.DB.batch([
       env.DB.prepare('select slug, dev, duel from ticket where who = ?').bind(me),
       /* 탈주는 옛 표를 낸 기기의 사다리에서 깎는다 */
-      env.DB.prepare('select lp from ladder where who = ? and dev = (select dev from ticket where who = ?)').bind(me, me),
+      env.DB.prepare('select lp, games, mmr from ladder where who = ? and dev = (select dev from ticket where who = ?)').bind(me, me),
     ]);
-    const tk = old.results[0], lp = row.results[0]?.lp ?? 0;
-    const quit = tk ? -Math.min(QUIT, lp) : 0;
+    const tk = old.results[0];
+    const quit = tk ? quitDelta(row.results[0]) : 0;
     await env.DB.batch([
       env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
                       on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
@@ -472,42 +496,43 @@ async function rankedEnd(req, env, o) {
     if (!tk) return reply(409, '끝낼 경쟁전이 없습니다.', o);
     if (tk.duel) return duelEnd(env, me, tk, c, now, o);
     const [row, day] = await env.DB.batch([
-      env.DB.prepare('select name, lp, games from ladder where who = ? and dev = ?').bind(me, tk.dev),
-      env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and dev = ? and delta > 0 and at > ?")
-        .bind(me, tk.dev, now - 864e5),
+      env.DB.prepare('select name, lp, games, mmr from ladder where who = ? and dev = ?').bind(me, tk.dev),
+      env.DB.prepare(DAY_SQL).bind(me, tk.dev, now - 864e5),
     ]);
     const lad = row.results[0];
     if (!lad) return reply(409, '끝낼 경쟁전이 없습니다.', o);
     const e = rankedCheck({ ...c, name: lad.name }, { ...tk, id: c.id }, now, me);
-    /* 앞뒤가 안 맞는 판은 탈주와 같게 셈한다 — 표는 이미 탔다 */
-    let d = e.ok ? lpDelta(lad.lp, lad.games, e.cpm, e.acc) : -Math.min(QUIT, lad.lp);
+    /* 혼자 친 판은 내 디비전 기준 속도의 그림자와 겨룬다. 앞뒤가 안 맞는 판은 탈주와 같게
+       셈한다 — 표는 이미 탔다 */
+    const ghost = Math.round(divCpm(lad.lp / STEP)), myP = e.ok ? perf(e.cpm, e.acc) : null;
+    const S = e.ok ? (myP > ghost ? 1 : myP === ghost ? .5 : 0) : 0;
+    const r = e.ok ? rate(lad, S, myP, ghost, ghost) : { d: quitDelta(lad), mmr: lad.mmr, placed: lad.games === PLACE - 1 };
+    let d = r.d;
     /* 채점이 브라우저에 있어 잘 지은 만점을 가릴 수 없다. 하루에 얻는 lp 에 뚜껑을
        덮어 거짓말 한 번의 값을 줄인다.
        ponytail: 뚜껑은 속도만 늦춘다. 사다리가 시달리면 채점(타건 기록 검증)을 서버로 옮긴다 */
-    if (d > 0) d = Math.max(0, Math.min(d, DAY_CAP - (day.results[0]?.n ?? 0)));
+    if (d > 0 && !r.placed) d = Math.max(0, Math.min(d, DAY_CAP - (day.results[0]?.n ?? 0)));
     await env.DB.batch([
-      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ? and dev = ?')
-        .bind(d, d > 0 ? 1 : 0, now, me, tk.dev),
-      ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now),
+      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, mmr = ?, at = ? where who = ? and dev = ?')
+        .bind(d, S === 1 ? 1 : 0, r.mmr ?? null, now, me, tk.dev),
+      ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now, S),
     ]);
     if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
-    return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1, dev: tk.dev }, o);
+    return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1, dev: tk.dev, win: S, placed: !!r.placed }, o);
   });
 }
 
 /* ── 경쟁전 1대1 ─────────────────────────────────────────
    사람끼리 자동 매칭, 20초 안에 짝이 없으면(또는 눌러서) 봇. D1 + 짧은 폴링뿐이다.
    승패는 cpm 이 높은 쪽 → 같으면 acc → 그래도 같으면 무승부. 앞뒤 안 맞는 판·탈주는 진다.
-   lp 는 Elo 식이고 얻는 쪽에는 DAY_CAP 이 그대로 씌워진다.
+   lp 는 위 rate() 로 — 상대 실력은 사람이면 그 사람의 mmr, 봇이면 봇의 속도다.
+   얻는 쪽에는 DAY_CAP 이 그대로 씌워진다.
    두 요청이 같은 줄을 집거나 정산이 두 번 도는 걸 `delete … returning`·
    `update … where done = 0 returning` 한 문장으로 막는다 — 한 줄을 돌려받은 쪽만 이어 간다. */
 export const DUEL_WAIT = 20000, DUEL_LEAD = 3000, DUEL_GRACE = 30000, DUEL_KEYS = 8, DUEL_ACC = 96, DUEL_PAIR = 3;
-export function duelDelta(myLp, games, oppLp, S) {
-  const E = 1 / (1 + 10 ** ((oppLp - myLp) / 400));
-  let d = Math.round((games < PLACE ? 80 : 40) * (S - E));
-  if (S === 1) d = Math.max(3, d); else if (S === 0) d = Math.min(-3, d);
-  return Math.max(-myLp, Math.max(-50, Math.min(50, d)));
-}
+/* 봇의 속도 — 내 lp 가 아니라 내 실력에 맞춘다(±15%). lp 에 맞추면 봇이 늘 반반이라
+   이기기만 하면 오르는 사다리가 된다 */
+export const botCpmFor = (mmr, rnd = Math.random()) => Math.round((mmr ?? BOT_MMR) * (.85 + rnd * .3));
 /* a 쪽에서 본 결과 1 | .5 | 0. cpm < 0 은 못 낸 판(-1 앞뒤 불일치 · -2 탈주) */
 export function duelWinner(a, b) {
   if (a.cpm < 0 || b.cpm < 0) return a.cpm >= 0 ? 1 : 0;
@@ -543,11 +568,11 @@ async function matchFind(req, env, o) {
     const [, lad, old, que] = await env.DB.batch([
       env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
                       on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
-      env.DB.prepare('select lp from ladder where who = ? and dev = ?').bind(me, dev),
+      env.DB.prepare('select lp, mmr from ladder where who = ? and dev = ?').bind(me, dev),
       env.DB.prepare('select id, slug, dev, duel, at from ticket where who = ?').bind(me),
       env.DB.prepare('select at from queue where who = ?').bind(me),
     ]);
-    const tk = old.results[0], q = que.results[0], lp = lad.results[0]?.lp ?? 0;
+    const tk = old.results[0], q = que.results[0], lp = lad.results[0]?.lp ?? 0, mmr = lad.results[0]?.mmr ?? null;
     /* 방금 지어진 짝이면 그 판을 준다. 집힌 사람의 줄은 집을 때 이미 지워져 q 가 없을 수
        있으니, 표가 시작 20초 안이고(q 가 있으면 줄에 선 때보다 늦게 생겼고) 판이 아직 안
        끝났으면 짝으로 본다. 그보다 묵은 표는 아래에서 탈주로 셈한다 */
@@ -557,8 +582,8 @@ async function matchFind(req, env, o) {
     }
     /* 그 밖의 옛 표는 탈주다. 옛 표를 낸 기기의 사다리에서 깎는다 */
     if (tk) {
-      const ol = await env.DB.prepare('select lp from ladder where who = ? and dev = ?').bind(me, tk.dev).first();
-      await env.DB.batch(forfeit(env, me, tk, -Math.min(QUIT, ol?.lp ?? 0), now));
+      const ol = await env.DB.prepare('select lp, games, mmr from ladder where who = ? and dev = ?').bind(me, tk.dev).first();
+      await env.DB.batch(forfeit(env, me, tk, quitDelta(ol), now));
       if (tk.duel) await settle(env, tk.duel, now);
     }
     const mk = (a, b, extra) => {
@@ -582,7 +607,7 @@ async function matchFind(req, env, o) {
         const t = await env.DB.prepare('select id, duel from ticket where who = ?').bind(me).first();
         if (t?.duel) return pair(env, me, t.id, t.duel, now, o);
       }
-      const botCpm = Math.round(WANT[Math.min(WANT.length - 1, Math.floor(lp / STEP))] * (.85 + Math.random() * .3));
+      const botCpm = botCpmFor(mmr);
       const m = mk(meRow, { who: 'bot', name: 'bot', lp }, { slug, botCpm });
       await env.DB.batch([env.DB.prepare('delete from duel where at < ?').bind(now - 864e5), m.duel, tkt(me, m, m.tid)]);
       return pair(env, me, m.tid, m.id, now, o);
@@ -630,27 +655,33 @@ async function settle(env, id, now, force = false) {
   if (!d) return null;
   const hs = [['a', 'b'], ['b', 'a']].filter(([s]) => d[s] !== 'bot');
   const rows = await env.DB.batch(hs.flatMap(([s]) => [
-    env.DB.prepare('select lp, games from ladder where who = ? and dev = ?').bind(d[s], d.dev),
-    env.DB.prepare("select coalesce(sum(delta), 0) as n from played where who = ? and mode = 'ranked' and dev = ? and delta > 0 and at > ?")
-      .bind(d[s], d.dev, now - 864e5),
+    env.DB.prepare('select lp, games, mmr from ladder where who = ? and dev = ?').bind(d[s], d.dev),
+    env.DB.prepare(DAY_SQL).bind(d[s], d.dev, now - 864e5),
   ]));
+  const lads = Object.fromEntries(hs.map(([s], i) => [s, rows[2 * i].results[0] ?? { lp: 0, games: 0, mmr: null }]));
   /* 같은 두 사람이 하루에 DUEL_PAIR 판을 넘기면 얻는 lp 가 없다 — 두 계정으로 서로
      져 주며 lp 를 뽑는 길을 막는다(져 주는 쪽이 lp 0 이면 잃을 것도 없다) */
   const same = hs.length < 2 ? 0 : await env.DB.prepare(`select count(*) as n from duel where done = 1 and id <> ? and at > ?
       and ((a = ? and b = ?) or (a = ? and b = ?))`).bind(id, now - 864e5, d.a, d.b, d.b, d.a).first('n');
   const out = {}, st = [];
   hs.forEach(([s, p], i) => {
-    const lad = rows[2 * i].results[0] ?? { lp: 0, games: 0 }, cpm = d[s + '_cpm'];
+    const lad = lads[s], cpm = d[s + '_cpm'];
     const quit = cpm === null, paid = cpm === -2;   // 안 나타남 · 이미 깎은 탈주
     const S = duelWinner({ cpm: cpm ?? -1, acc: d[s + '_acc'] ?? 0 }, { cpm: d[p + '_cpm'] ?? -1, acc: d[p + '_acc'] ?? 0 });
-    let dl = paid ? 0 : quit ? -Math.min(QUIT, lad.lp) : duelDelta(lad.lp, lad.games, lad.lp + d[p + '_lp'] - d[s + '_lp'], S);   // 격차는 짝지을 때의 것으로 — 두 사람이 서로 반대 값을 받는다
-    if (dl > 0) dl = same >= DUEL_PAIR ? 0 : Math.max(0, Math.min(dl, DAY_CAP - (rows[2 * i + 1].results[0]?.n ?? 0)));
-    out[s] = { d: dl, S, lp: lad.lp + dl, games: lad.games + (paid ? 0 : 1) };
+    /* 상대 실력 — 봇은 제 속도, 사람은 짝지을 때가 아니라 지금의 mmr(없으면 그 lp 의 기준 속도) */
+    const opp = d[p] === 'bot' ? null : lads[p];
+    const oppR = d[p] === 'bot' ? d.bot_cpm : opp.mmr ?? divCpm(opp.lp / STEP);
+    const oc = d[p + '_cpm'], oppP = oc > 0 ? perf(oc, d[p + '_acc'] ?? 0) : 0;
+    const r = paid ? { d: 0, mmr: lad.mmr } : quit ? { d: quitDelta(lad), mmr: lad.mmr, placed: lad.games === PLACE - 1 }
+      : rate(lad, S, cpm >= 0 ? perf(cpm, d[s + '_acc'] ?? 0) : null, oppR, oppP);
+    let dl = r.d;
+    if (dl > 0 && !r.placed) dl = same >= DUEL_PAIR ? 0 : Math.max(0, Math.min(dl, DAY_CAP - (rows[2 * i + 1].results[0]?.n ?? 0)));
+    out[s] = { d: dl, S, lp: lad.lp + dl, games: lad.games + (paid ? 0 : 1), placed: !!r.placed };
     if (!paid) st.push(
-      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, at = ? where who = ? and dev = ?')
-        .bind(dl, S === 1 ? 1 : 0, now, d[s], d.dev),
+      env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, mmr = ?, at = ? where who = ? and dev = ?')
+        .bind(dl, S === 1 ? 1 : 0, r.mmr ?? null, now, d[s], d.dev),
       ...logPlay(env, d[s], 'ranked', d.dev, d.slug, RANKED_SECS,
-        { cpm: Math.max(0, cpm ?? 0), score: 0, hits: d[s + '_hits'] ?? 0, acc: Math.max(0, d[s + '_acc'] ?? 0), name: d[s + '_name'] }, dl, now));
+        { cpm: Math.max(0, cpm ?? 0), score: 0, hits: d[s + '_hits'] ?? 0, acc: Math.max(0, d[s + '_acc'] ?? 0), name: d[s + '_name'] }, dl, now, S));
     /* 안 나타난 사람의 표도 태운다 — 다음 시작에서 또 깎이지 않게 */
     if (quit) st.push(env.DB.prepare('delete from ticket where who = ? and duel = ?').bind(d[s], id));
   });
@@ -676,7 +707,7 @@ async function duelEnd(env, me, tk, c, now, o) {
   if (!r) return send(200, { pending: true }, o);   // 상대가 아직이거나, 같은 순간 상대가 정산을 잡았다 — 틱으로 받는다
   const p = s === 'a' ? 'b' : 'a', m = r.out[s];
   return send(200, { delta: m.d, lp: m.lp, games: m.games, dev: tk.dev,
-                     duel: { win: m.S, oppCpm: Math.max(0, r.d[p + '_cpm'] ?? 0) } }, o);
+                     placed: m.placed, duel: { win: m.S, oppCpm: Math.max(0, r.d[p + '_cpm'] ?? 0) } }, o);
 }
 
 async function matchTick(req, env, o) {
@@ -710,7 +741,7 @@ async function matchTick(req, env, o) {
       const lad = await env.DB.prepare('select lp, games from ladder where who = ? and dev = ?').bind(me, d.dev).first();
       const my = d[s + '_cpm'], their = d[p + '_cpm'];
       res.result = { win: duelWinner({ cpm: my ?? -1, acc: d[s + '_acc'] ?? 0 }, { cpm: their ?? -1, acc: d[p + '_acc'] ?? 0 }),
-                     delta: d[s + '_d'] ?? 0, lp: lad?.lp ?? 0, games: lad?.games ?? 0,
+                     delta: d[s + '_d'] ?? 0, lp: lad?.lp ?? 0, games: lad?.games ?? 0, placed: lad?.games === PLACE,
                      oppCpm: Math.max(0, their ?? 0), myCpm: Math.max(0, my ?? 0) };
     }
     return send(200, res, o);
@@ -746,7 +777,7 @@ async function myGames(req, env, o) {
   return safely(o, async () => {
     const [lad, list, above] = await env.DB.batch([
       env.DB.prepare('select name, lp, games, wins from ladder where who = ? and dev = ?').bind(me, dev),
-      env.DB.prepare('select mode, dev, slug, secs, cpm, score, hits, acc, delta, at from played where who = ? order by at desc limit ?')
+      env.DB.prepare('select mode, dev, slug, secs, cpm, score, hits, acc, delta, win, at from played where who = ? order by at desc limit ?')
         .bind(me, KEEP),
       env.DB.prepare(`select count(*) + 1 as n from ladder where dev = ? and games >= ? and lp >
                       coalesce((select lp from ladder where who = ? and dev = ?), 1e9)`).bind(dev, PLACE, me, dev),
