@@ -12,6 +12,7 @@ export const OWN = {
   community: ['/cm/'],
   bot: ['/bot/'],
   online: ['/online'],
+  compete: ['/compete/'],
 };
 
 export const owns = (name, path) =>

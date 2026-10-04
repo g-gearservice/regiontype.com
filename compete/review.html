@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<!-- 경쟁전 부정 의심 검토. 관리자(중계기 시크릿 ADMIN_IDS)만 목록을 받는다 — 아니면 중계기가 403 이다.
+     이름은 남이 정한 글자라 review.js 가 textContent 로만 넣는다 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com http://localhost:* http://127.0.0.1:*; form-action 'none'; base-uri 'none'">
+<title>경쟁전 검토 — regiontype</title>
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.48">
+<link rel="stylesheet" href="../style.css?v=3.78">
+<link rel="stylesheet" href="../community/community.css?v=3.65">
+<script src="../relay.js?v=3.79"></script>
+<script src="review.js?v=3.79"></script>
+</head>
+<body>
+<header class="cm-top">
+  <a class="logo" href="/">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
+</header>
+<main class="cm" id="main">
+  <h1>경쟁전 검토</h1>
+  <p class="cm-lead">부정 의심으로 레이팅이 멈춘 판. 부정 확정이면 상대에게 승리를 한 번 소급하고, 문제없음이면 그대로 둔다.</p>
+  <p class="cm-say" id="say" role="status"></p>
+  <ol class="cm-list" id="list"></ol>
+</main>
+</body>
+</html>

@@ -184,7 +184,7 @@ const forget = () => { for (const k of KEYS) localStorage.removeItem(k); session
    로그인해 있으면 원본은 서버다. localStorage 는 그 거울일 뿐이다 — 경기 화면은
    토큰을 들여다보지 않고 rt.name 만 읽고(app.js·ranked.js), 중계기가 잠깐 안 되어도
    화면이 비면 안 된다. 그래서 늘 브라우저에 먼저 적고 그다음에 올린다. */
-const API = 'https://g.gearservicevanguard.com';
+const API = self.RT_RELAY;   // relay.js
 /* 프로필은 늘 통째로 올린다 — 한 칸만 보내면 서버가 나머지를 빈 값으로 덮는다.
    handle 은 한 번 정하면 서버가 빈 값으로 덮지 않으므로, 아직 안 정한 사람이
    다른 칸을 고쳐도 아이디가 사라지지 않는다. */

@@ -8,11 +8,7 @@ const opt = (() => { try { return JSON.parse(localStorage.getItem('rt.opt') || '
 document.documentElement.toggleAttribute('data-night', !!opt.night);
 document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
 
-/* 로컬에서 relay 를 wrangler dev 로 띄워 볼 때만 ?relay=http://localhost:8787 을 받는다.
-   배포된 사이트에서는 이 값을 읽지 않는다 — 토큰이 남의 주소로 나가면 안 된다 */
-const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-const asked = new URLSearchParams(location.search).get('relay') || '';
-const RELAY = local && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(asked) ? asked : 'https://g.gearservicevanguard.com';
+const RELAY = self.RT_RELAY;   // relay.js — 로컬에서는 로컬 중계기, ?relay=live 로 운영
 const token = () => { try { return localStorage.getItem('rt.token') || ''; } catch { return ''; } };
 
 const TAG = { brag: ['★', '자랑'], ask: ['?', '질문'], idea: ['+', '제안'], chat: ['~', '잡담'] };
