@@ -772,35 +772,39 @@ console.log('security rule self-check done');
     return { status: r.status, ...(await r.json()) };
   };
   const run = { c: 'seoul-gu', t: 120, name: '가양', score: 1000, hits: 10, tries: 12, acc: 90 };
-  const rows = dev => db.prepare('select who, cpm from speed where dev = ? order by cpm desc').all(dev);
+  const rows = (dev, mode = 'normal') => db.prepare('select who, cpm, name from best where dev = ? and mode = ? order by cpm desc').all(dev, mode);
 
-  assert.equal((await call('/score', { ...run, cpm: 120 }, A)).status, 201);
-  assert.equal((await call('/score', { ...run, cpm: 130, dev: 'tablet' }, B)).status, 201);
+  assert.equal((await call('/played', { ...run, cpm: 120 }, A)).status, 201);
+  assert.equal((await call('/played', { ...run, cpm: 130, dev: 'tablet', name: undefined }, B)).status, 201,
+    '이름이 없어도 로그인한 사람의 판은 오른다');
   assert.equal(rows('pc').length, 2, 'dev 가 없거나 모르는 값이면 pc 로 선다');
-  const m = await call('/score', { ...run, cpm: 300, dev: 'mobile' }, A);
+  assert.equal(rows('pc').find(r => r.who === B).name, '', '이름이 없으면 빈 이름으로 적는다');
+  await call('/played', { ...run, cpm: 100 }, A);
+  assert.equal(rows('pc').find(r => r.who === A).cpm, 120, '느린 판은 최고 기록을 덮지 않는다');
+  const m = await call('/played', { ...run, cpm: 300, dev: 'mobile' }, A);
   assert.equal(m.status, 201);
   assert.equal(m.rank, 1, '폰 순위는 폰끼리 센다');
   assert.equal(m.top.length, 1, '폰 기록을 올리면 폰 순위표가 돌아온다');
+  assert.equal(m.top[0].me, true, '돌려받은 순위표에 내 줄이 표시된다');
   assert.equal(rows('pc').find(r => r.who === A).cpm, 120, '폰 기록이 같은 사람의 pc 줄을 덮지 않는다');
   assert.deepEqual(rows('mobile').map(r => r.who), [A], 'mobile 은 따로 한 줄');
 
   const pcTop = await call('/top?c=seoul-gu&t=120');
   assert.deepEqual(pcTop.top.map(r => r.cpm), [130, 120], 'pc 순위표에 폰 기록(300)이 섞이지 않는다');
+  assert.equal(pcTop.rank, null, '로그인 안 했으면 내 자리가 없다');
+  assert.equal((await call('/top?c=seoul-gu&t=120', null, A)).rank, 2, '로그인했으면 내 자리가 온다');
   assert.deepEqual((await call('/top?c=seoul-gu&t=120&dev=junk')).top.map(r => r.cpm), [130, 120]);
   assert.deepEqual((await call('/top?c=seoul-gu&t=120&dev=mobile')).top.map(r => r.cpm), [300]);
-  assert.equal((await call('/dist', { c: 'seoul-gu', t: 120, dev: 'mobile' }, A)).total, 1, '분포도 기기마다');
+  db.prepare("insert into profile (who, name, at) values (?, '등촌', 0)").run(B);
+  assert.equal(pcTop.top[0].name, '', '닉네임이 없으면 올린 이름 그대로');
+  assert.equal((await call('/top?c=seoul-gu&t=120')).top[0].name, '등촌', '닉네임이 있으면 그것이 앞선다');
+  const sum = await call('/top');
+  assert.deepEqual(sum.bests, [{ slug: 'seoul-gu', secs: 120, n: 2, cpm: 130, name: '등촌' }], 'c 가 없으면 코스마다 1위');
+  assert.deepEqual((await call('/top?mode=ranked')).bests, [], '경쟁전은 따로 센다');
 
-  /* 로그인한 판은 이름 없이도 오른다. 이름은 프로필 닉네임이 먼저, 없으면 몸통, 그것도 없으면 빈 이름 */
-  const nameOf = () => db.prepare("select name from speed where who = ? and dev = 'pc'").get(B).name;
+  /* /score 는 빠졌다. 이름 없는 로그인 판은 /played 가 올리고, 로그인 안 한 판은 막힌다 */
   const { name: _n, ...noName } = run;
-  assert.equal((await call('/score', { ...noName, cpm: 10 }, B)).status, 201, '이름이 없어도 오른다');
-  assert.equal(nameOf(), '', '프로필도 몸통 이름도 없으면 빈 이름(화면은 익명)');
-  await call('/score', { ...run, cpm: 10 }, B);
-  assert.equal(nameOf(), '가양', '프로필이 없으면 몸통 이름');
-  db.prepare("insert into profile (who, name, at) values (?, '나리', 0)").run(B);
-  await call('/score', { ...run, cpm: 10 }, B);
-  assert.equal(nameOf(), '나리', '프로필 닉네임이 몸통 이름보다 먼저');
-  assert.equal((await call('/score', { ...noName, cpm: 10 })).status, 401, '로그인 안 하면 그대로 막힌다');
+  assert.equal((await call('/played', { ...noName, cpm: 10 })).status, 401, '로그인 안 하면 그대로 막힌다');
 
   /* 경쟁전: 표를 낸 기기의 사다리에만 셈한다. 끝낼 때 몸통의 dev 는 못 바꾼다 */
   const start = await call('/ranked/start', { c: 'seoul-gu', name: '가양', dev: 'mobile' }, A);
@@ -809,6 +813,9 @@ console.log('security rule self-check done');
   const end = await call('/ranked/end', { id: start.id, score: 1000, hits: 10, tries: 12, cpm: 200, acc: 100, dev: 'pc' }, A);
   assert.equal(end.status, 200); assert.equal(end.dev, 'mobile', '끝낼 때는 표의 기기를 쓴다');
   assert.ok(end.delta > 0);
+  assert.deepEqual(rows('mobile', 'ranked').map(r => [r.who, r.cpm, r.name]), [[A, 200, '가양']],
+    '경쟁전 판도 그 코스의 경쟁전 최고 기록에 오른다');
+  assert.deepEqual(rows('mobile').map(r => r.cpm), [300], '경쟁전 판은 일반전 순위표에 섞이지 않는다');
   const lad = dev => db.prepare('select lp, games from ladder where who = ? and dev = ?').get(A, dev);
   assert.equal(lad('mobile').lp, end.delta);
   assert.equal(lad('pc'), undefined, '폰 판은 pc 사다리를 건드리지 않는다');
@@ -822,16 +829,16 @@ console.log('security rule self-check done');
   assert.equal((await call('/ladder?dev=mobile')).top[0].lp, lad('mobile').lp, '폰 사다리는 따로');
   const games = await call('/games?dev=mobile', null, A);
   assert.equal(games.ladder.lp, lad('mobile').lp);
-  assert.ok(games.games.every(g => g.dev === 'mobile'), '전적 줄마다 기기가 실린다');
+  assert.deepEqual([...new Set(games.games.map(g => g.dev))].sort(), ['mobile', 'pc'], '전적 줄마다 기기가 실린다');
 
   /* 내리기·지우기는 기기를 가리지 않는다 */
   assert.equal((await call('/forget', {}, A)).status, 200);
-  for (const tb of ['speed', 'ladder', 'played', 'ticket'])
+  for (const tb of ['best', 'ladder', 'played', 'ticket'])
     assert.equal(db.prepare(`select count(*) as n from ${tb} where who = ?`).get(A).n, 0, `/forget 은 ${tb} 를 두 기기 다 지운다`);
-  await call('/score', { ...run, cpm: 300, dev: 'mobile' }, B);
+  await call('/played', { ...run, cpm: 300, dev: 'mobile' }, B);
   db.prepare('insert into user (id, at) values (?, 0)').run(B);
   assert.equal((await call('/auth/erase', { sure: true }, B)).status, 200);
-  assert.equal(db.prepare('select count(*) as n from speed where who = ?').get(B).n, 0, '계정을 지우면 두 기기 줄이 다 간다');
+  assert.equal(db.prepare('select count(*) as n from best where who = ?').get(B).n, 0, '계정을 지우면 두 기기 줄이 다 간다');
   console.log('device split self-check done');
 }
 
@@ -1086,6 +1093,8 @@ console.log('security rule self-check done');
   assert.deepEqual([tA.result.delta, tA.result.lp, tA.result.oppCpm, tA.result.myCpm], [20, 120, 200, 300]);
   assert.deepEqual([lp(A).games, lp(A).wins], [10, 1]);
   assert.equal(db.prepare("select count(*) as n from played where mode = 'ranked'").get().n, 2);
+  assert.deepEqual(db.prepare("select name, cpm from best where mode = 'ranked' order by cpm desc").all().map(r => [r.name, r.cpm]),
+    [['가양', 300], ['등촌', 200]], '1대1 은 정산될 때 두 사람 다 경쟁전 최고 기록에 오른다');
   assert.equal((await call('/ranked/end', fin(pA.id, 300), A)).status, 409, '같은 표로 두 번 끝낼 수 없다');
   assert.equal(db.prepare('select done from duel').get().done, 1);
   assert.deepEqual([lp(A).games, lp(B).games], [10, 10], '정산은 한 번만');

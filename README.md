@@ -10,6 +10,12 @@
 
 A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
+## What's new in 0.9.377
+
+- Focus rings are transparent, including the orange ring around a focused button or the bot. Selection highlight was already transparent. The ranked-aim finger (`.rk-aim`) keeps its outline.
+- Signed-in runs now keep one best per course, time, mode, and device in a `best` table. Normal runs post through `/played`; ranked and 1v1 runs post through `/ranked/end`. Both go through `logPlay`. The Ranking screen lists the top run and player count for each course on the Ranked and Normal tabs, and opening a row shows that board and your place.
+- The home-screen grid fix from 0.9.376 is unchanged.
+
 ## What's new in 0.9.376
 
 - The grid behind the home screen shows again. Since 0.8.333 the page background had been painting over it.
@@ -479,10 +485,13 @@ The key stays in the Worker as `NV_KEY`; without it the path answers 503 and the
 
 ### Leaderboard (`relay/` + D1)
 
-The same Worker adds two more paths. A board is **course plus time limit**. One person, one row on that board — mixing a 5-minute run with a 1-minute run in one row makes the score meaningless.
+The same Worker adds two more paths. A board is **course plus time limit**, with ranked and normal runs kept apart. One person, one row on that board, holding their fastest run — mixing a 5-minute run with a 1-minute run in one row makes the score meaningless.
 
-    POST /score    {c, t, who, name, score, hits, tries} → {rank, top}
-    GET  /top      ?c=course&t=seconds → {top}
+Every run finished while signed in counts: normal runs through `/played`, ranked and 1v1 runs through `/ranked/end`. Both pass through one write (`logPlay`) that keeps the `best` table, so a run lands on the board without a typed name and on any device. The shown name is the account nickname, or the name sent with the run when there is none.
+
+    POST /played   {c, t, dev, name?, score, cpm, acc, hits, tries} → {rank, top}   (sign-in required)
+    GET  /top      ?c=course&t=seconds&mode=ranked|normal&dev= → {top, rank}
+    GET  /top      ?mode=ranked|normal&dev= → {bests}   the top run and player count per course
     POST /dist     {c, t} → {bins, bucket, cap, total, score, over}
     POST /forget   {} → {gone}      drop all of my rows
 
@@ -552,7 +561,7 @@ The distribution is drawn out to the highest score that board can produce. If yo
 
 The name is the only other-person input that appears in the UI. We clip at 12 characters, strip invisible controls, and render with `textContent` only. The browser trims **with the same ruler as the relay** — a name that passes only here gets stored, then every later post is 400, the rank pane folds, and the rename form disappears with it.
 
-We say the name is public in the place you type it (“this name goes on a public leaderboard”), and settings has **remove my rows**. You can fix a bad name without beating your own high score.
+Signing in puts your runs on the public board under your nickname. Turning the account private hides the name and keeps the row, and settings has **remove my rows**. You can fix a bad name without beating your own high score.
 IP is used only for the rate-limit window and is not stored. D1 keeps course, time, `who`, name, and score.
 
 ## Accessibility
