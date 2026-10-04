@@ -16,7 +16,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const RELAY = 'https://g.gearservicevanguard.com';
+const RELAY = self.RT_RELAY;   // relay.js
 const NAME_KEY = 'rt.name';
 /* 중계기와 같은 수다(worker.mjs 의 STEP · DIVS · PLACE). 티어 이름은 여기서만 짓는다.
    한 디비전이 STEP lp, 한 티어가 III·II·I 세 디비전이고 마스터만 하나다 */
@@ -1048,13 +1048,15 @@ function matchClose(leave) {
   $('#rkMatch').hidden = true;
   if (back && back.isConnected) back.focus();
 }
-function matchStep() {
+/* poll 이 거짓이면 글만 고친다. 묻는 건 1초 타이머와 단추뿐이다 — 대기 응답에서 다시 물으면
+   짝수 초 동안 응답이 오는 족족 또 물어 1초에 수십 번 두드리고 RL_MT(분당 120)를 다 써 버린다 */
+function matchStep(poll = true) {
   if (!mm || mm.paired) return;
   const s = Math.floor((Date.now() - mm.t0) / 1000);
   if (s >= BOT_AFTER) mm.bot = true;
   mmText('#rkMatchStat', mm.bot ? t('rkFindingBot', { s }) : t('rkFinding', { s, n: mm.n }));
   $('#rkMatchBot').hidden = mm.bot;
-  if (!mm.busy && (mm.first || s % 2 === 0 || mm.bot)) matchFind();
+  if (poll && !mm.busy && (mm.first || s % 2 === 0 || mm.bot)) matchFind();
   mm.first = false;
 }
 async function matchFind() {
@@ -1071,7 +1073,7 @@ async function matchFind() {
   }
   if (mm !== m) return;
   m.busy = false; m.fails = 0;
-  if (d.wait) { m.n = Number(d.n) || 1; matchStep(); return; }
+  if (d.wait) { m.n = Number(d.n) || 1; matchStep(false); return; }
   if (!d.id || !d.duel) { matchClose(false); say('rkFail'); return; }
   matchPaired(m, d);
 }

@@ -1051,6 +1051,75 @@ async function authSso(req, env, o) {
   });
 }
 
+/* ── 경쟁전(실시간) ── 판정·소켓은 Durable Object(compete-do.mjs)가 한다. 여기는 문 셋뿐이다:
+   POST /compete/ticket  로그인했으면 그 사람, 아니면 게스트로 30초짜리 일회용 표를 받는다(로비 DO 가 낸다).
+                         세션 토큰은 소켓 주소에 싣지 않는다 — 주소는 로그에 남는다. 표는 소켓을 연 뒤
+                         첫 메시지(auth)로 보낸다.
+   GET  /compete/ws      로비 소켓(업그레이드만)
+   GET  /compete/m/<id>  판 소켓(업그레이드만). 판 토큰은 로비가 match.found 로 준다
+   GET/POST /compete/flags  부정 의심 검토 큐와 판정. 로그인한 사람이 시크릿 ADMIN_IDS(쉼표로 이은 who)에
+                         있어야 한다. 일은 로비 DO 가 한다(compete-do.mjs 의 flagQueue · review)
+   Origin 은 fetch() 의 mine() 이 이미 걸렀다 — 브라우저는 소켓에도 Origin 을 싣는다. */
+const lobby = env => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
+async function competeTicket(req, env, o) {
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const me = await sessionWho(env, req);
+  return safely(o, async () => {
+    const r = await lobby(env).fetch('https://lobby/ticket', { method: 'POST', body: JSON.stringify({
+      who: me || 'g' + hex(12), name: plain(c?.name, CAP.name) || (me ? '' : 'guest'), dev: devOf(c?.dev), guest: !me }) });
+    if (!r.ok) return reply(503, '경쟁전 서버가 응답하지 않습니다.', o);
+    return send(200, { ticket: (await r.json()).ticket, guest: !me }, o);
+  });
+}
+async function competeRoute(req, env, o, path) {
+  if (!env.LOBBY || !env.MATCH) return reply(503, '경쟁전 서버가 아직 열리지 않았습니다.', o);
+  const ok = await pass(env.RL_CP, ip(req));
+  if (ok !== true) return shut(ok, o);
+  if (path === '/compete/ticket' && req.method === 'POST') {
+    if (!env.SESSION_KEY) return nokey(o);
+    return competeTicket(req, env, o);
+  }
+  if (path === '/compete/flags' && (req.method === 'GET' || req.method === 'POST')) {
+    const me = await sessionWho(env, req);
+    if (!me || !String(env.ADMIN_IDS ?? '').split(',').map(x => x.trim()).includes(me)) return reply(403, '관리자만 볼 수 있습니다.', o);
+    let body;
+    if (req.method === 'POST') {
+      try { body = JSON.stringify({ ...(await req.json()), by: me }); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+    }
+    return safely(o, async () => {
+      const r = await lobby(env).fetch('https://lobby/flags', { method: req.method, body });
+      return send(r.ok ? 200 : 503, await r.json(), o);
+    });
+  }
+  if (req.method === 'GET' && req.headers.get('upgrade') === 'websocket') {
+    if (path === '/compete/ws') return lobby(env).fetch(req);
+    const id = /^\/compete\/m\/([\w-]{16,40})$/.exec(path)?.[1];
+    if (id) return env.MATCH.get(env.MATCH.idFromName(id)).fetch(req);
+  }
+  return reply(405, '받지 않는 요청입니다.', o);
+}
+
+/* ── 개발 로그인 ── 로컬 중계기(wrangler dev)에서만 열린다. 두 겹으로 잠근다:
+   DEV_LOGIN 변수는 .claude/launch.json 의 `--var DEV_LOGIN:1` 로만 켠다(wrangler.*.toml 에도
+   시크릿에도 없다). 그리고 요청이 들어온 주소가 로컬이어야 한다 — 배포된 워커는 존 라우트로만
+   열려 req.url 이 로컬일 수 없다. Origin 은 꾸밀 수 있어 잠금으로 쓰지 않는다.
+   이름 하나로 테스트 계정을 만들거나 다시 들어간다(같은 이름 = 같은 계정). id 는 'dev' + 이름의
+   sha 앞 32자라 운영 id(hex 32자)와 겹치지 않는다. 패스키 2단계는 건너뛴다 — 패스키는
+   regiontype.com 에 묶여 로컬에서는 통과할 수 없다 */
+export const devLoginOn = (env, url) => env.DEV_LOGIN === '1' && /^(localhost|127\.0\.0\.1)$/.test(new URL(url).hostname);
+async function authDev(req, env, o) {
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const name = plain(c?.name, CAP.name);
+  if (!name) return reply(400, '이름을 적어 주세요.', o);
+  return safely(o, async () => {
+    const who = 'dev' + [...await sha(name)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+    const r = await env.DB.prepare('insert or ignore into user (id, mail, at) values (?, null, ?)').bind(who, Date.now()).run();
+    return send(200, { token: await sign(env.SESSION_KEY, who), isNewAccount: r.meta?.changes === 1 }, o);
+  });
+}
+
 /* 이 응답 하나로 브라우저를 돌려보낸다 — 경로는 여기 고정한 값뿐이고,
    오리진만 pending.back(허용 목록을 통과한 값) 에서 읽는다. 사용자가 보낸
    값으로 경로나 오리진을 짓지 않는다 — 그러면 오픈 리다이렉트가 된다.
@@ -1359,7 +1428,7 @@ async function authIntro(req, env, o) {
    이 목록이 곧 "이 저장소가 사람에 대해 쥐고 있는 전부" 다. 새 표를 만들면서 여기
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
-export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro',
+export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro', 'match_participants', 'match_logs', 'player_ratings',
                       'passkey', 'recovery', 'pending', 'sso', 'post', 'reply', 'mark'];
 
 async function authErase(req, env, o) {
@@ -1816,6 +1885,7 @@ export default {
     if (!mine(o)) return reply(403, '허용된 곳이 아닙니다.', o);
 
     if (path === '/' && req.method === 'POST') return feedback(req, env, o);
+    if (path.startsWith('/compete/')) return competeRoute(req, env, o, path);
     if (path === '/turnstile' && req.method === 'GET') return turnstileConfig(env, o);
     if (path === '/where' && req.method === 'GET') {
       return send(200, regionOf(req.cf, req.headers.get('accept-language')), o);
@@ -1844,6 +1914,7 @@ export default {
         if (path === '/auth/profile') return authProfile(req, env, o);
         if (path === '/auth/intro') return authIntro(req, env, o);
         if (path === '/auth/erase') return authErase(req, env, o);
+        if (path === '/auth/dev' && devLoginOn(env, req.url)) return authDev(req, env, o);
       }
     }
     /* 순위표는 D1 을 붙이기 전에도 사이트가 멀쩡해야 한다 — 없으면 없다고만 한다 */

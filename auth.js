@@ -23,7 +23,7 @@ const VER = new URL(document.currentScript.src).searchParams.get('v') || '';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const grab = url => fetch(asset(url)).then(r => r.json());
 
-const RELAY = 'https://g.gearservicevanguard.com';
+const RELAY = self.RT_RELAY;   // relay.js
 const TOKEN_KEY = 'rt.token', BIND_KEY = 'rt.bind', NAME_KEY = 'rt.name';
 const OPT_KEY = 'rt.opt';
 
@@ -537,6 +537,19 @@ function close() {
 /* ── 손잡이 ──────────────────────────────────────────── */
 function wire() {
   $('#goGoogle').onclick = () => sso('google');
+  /* 개발 로그인 — 로컬 중계기를 쓸 때만 보인다(relay.js). 중계기도 로컬 주소 + DEV_LOGIN 일 때만 받는다 */
+  $('#devForm').hidden = !RELAY.startsWith('http://');
+  $('#devForm').onsubmit = async e => {
+    e.preventDefault();
+    const generation = modalGeneration;
+    say(t('signinWait'));
+    try {
+      const d = await ask('/auth/dev', { name: $('#devIn').value });
+      done(d.token, generation, d.isNewAccount === true);
+    } catch (err) {
+      if (current(generation)) say(err.status === 405 ? '로컬 중계기에 DEV_LOGIN 이 꺼져 있습니다.' : err.message || t('signinFail'), true);
+    }
+  };
 
   $('#twoGo').onclick = () => tryAuth(passkeyTwo, t('askingDevice'), [$('#twoGo'), $('#twoCode')]);
   $('#twoCode').onclick = () => {

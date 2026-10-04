@@ -302,6 +302,15 @@
       <div class="si-btns">
         <button type="button" id="goGoogle" data-i18n="signinGoogle">Google로 시작하기</button>
       </div>
+      <!-- 개발 로그인 — 로컬 중계기에서만 보인다(relay.js · auth.js). 이름 하나로 로컬 테스트 계정에 들어간다.
+           개발 전용이라 화면 말(i18n)에 올리지 않는다 -->
+      <form class="si-code" id="devForm" hidden>
+        <label for="devIn">개발 로그인 (로컬 중계기)</label>
+        <div>
+          <input id="devIn" maxlength="12" required autocomplete="off" spellcheck="false" placeholder="테스트 이름">
+          <button type="submit">들어가기</button>
+        </div>
+      </form>
     </div>
 
     <!-- 2단계 확인 — SSO 를 넘은 뒤 패스키(또는 복구 코드)를 한 번 더 묻는다 -->
@@ -611,9 +620,10 @@
   </form>
 </dialog>
 
-<script src="app.js?v=3.79"></script>
-<script src="auth.js?v=3.51"></script>
-<script src="settings/settings.js?v=3.75"></script>
-<script src="ranked.js?v=3.79"></script>
+<script src="relay.js?v=3.80"></script>
+<script src="app.js?v=3.80"></script>
+<script src="auth.js?v=3.80"></script>
+<script src="settings/settings.js?v=3.80"></script>
+<script src="ranked.js?v=3.80"></script>
 </body>
 </html>

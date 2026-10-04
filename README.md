@@ -10,6 +10,12 @@
 
 A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
+## What's new in 0.9.380
+
+- "Play the bot" now starts a match right away. While waiting for an opponent, a "still waiting" reply from `/match/find` made `ranked.js` ask again on the spot, so during even seconds it polled dozens of times a second and used up the 120-per-minute limit (`RL_MT`). Waiting replies now only update the text; polling stays on the one-second timer.
+- Server-side competitive mode (not yet reachable from the site). The new `rt-compete` worker judges matches in Durable Objects (`relay/compete-do.mjs`: one lobby, one object per match, WebSocket Hibernation) using a shared reducer (`relay/compete.mjs`). It adds human-like bots (`relay/compete-bot.mjs`), Glicko-2 ratings with seasons and tiers (`relay/glicko.mjs`), a rating-window matchmaker, and cheat flags with an admin review page (`compete/review.html`). Tunables live in `relay/compete-config.mjs`; checks run in `node relay/test.mjs` (`--sim` for the 7,000-game bot curve). Launch steps are in `docs/compete-launch.md`.
+- Local development: every page reads the relay address from `relay.js`. On localhost it points at the local relay (`wrangler dev`), where a dev-only sign-in opens when `DEV_LOGIN=1`. `?relay=live` switches back to the production relay.
+
 ## What's new in 0.9.379
 
 - Ranked scoring is rebuilt around a hidden skill rating (`ladder.mmr`) measured in CPM. Each game's performance is `perf = CPM × accuracy factor` (×1 at 95%+, minus 3% per point below). The visible LP is pulled toward that rating, so a tier now means a typing speed: division *d* expects `100 + d × 50/3` CPM (Bronze III 100 · Gold III 200 · Master 350).

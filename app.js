@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.79';
+const VER = '3.80';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2808,7 +2808,7 @@ $('#again').onclick = () => start(G.slug);
    정적 사이트에는 GitHub 토큰을 둘 수 없다. relay/ 의 중계기가 토큰을 쥐고
    이슈를 대신 만든다 — FEEDBACK_URL 이 그 주소다.
    글만으로는 재현할 수 없어 버전·주소·브라우저를 함께 싣는다. */
-const FEEDBACK_URL = 'https://g.gearservicevanguard.com';
+const FEEDBACK_URL = self.RT_RELAY;   // relay.js
 /* 폰 타수는 키보드와 견줄 수 없다 — 순위표는 기기마다 따로 선다(relay 의 devOf) */
 const DEV = matchMedia('(pointer:coarse)').matches ? 'mobile' : 'pc';
 const fbNote = $('#fbNote');
