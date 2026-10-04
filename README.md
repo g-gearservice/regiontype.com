@@ -10,6 +10,11 @@
 
 A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
+## What's new in 0.9.376
+
+- The grid behind the home screen shows again. Since 0.8.333 the page background had been painting over it.
+- Every run you play while signed in is posted to the leaderboard under your account nickname. You no longer type a name on the result screen. A private account, or one with no nickname, shows as Anonymous. `/forget` still removes your current rows; the next signed-in run is posted again.
+
 ## What's new in 0.9.375
 
 - Settings > Security has a "Privacy and this browser" section. A switch turns off the country guess, so the site stops calling `GET /where` and uses only the browser language and time zone. The site sets no cookies; everything it keeps is in `localStorage`. You can ask to be removed from the leaderboard (`/forget`, sign-in required), and clear this browser's saved data by scope: game records, settings (the country-guess choice is kept so a reset does not turn the guess back on), or everything with the `rt.` prefix, which also signs you out.

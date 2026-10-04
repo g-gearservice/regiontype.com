@@ -790,6 +790,18 @@ console.log('security rule self-check done');
   assert.deepEqual((await call('/top?c=seoul-gu&t=120&dev=mobile')).top.map(r => r.cpm), [300]);
   assert.equal((await call('/dist', { c: 'seoul-gu', t: 120, dev: 'mobile' }, A)).total, 1, '분포도 기기마다');
 
+  /* 로그인한 판은 이름 없이도 오른다. 이름은 프로필 닉네임이 먼저, 없으면 몸통, 그것도 없으면 빈 이름 */
+  const nameOf = () => db.prepare("select name from speed where who = ? and dev = 'pc'").get(B).name;
+  const { name: _n, ...noName } = run;
+  assert.equal((await call('/score', { ...noName, cpm: 10 }, B)).status, 201, '이름이 없어도 오른다');
+  assert.equal(nameOf(), '', '프로필도 몸통 이름도 없으면 빈 이름(화면은 익명)');
+  await call('/score', { ...run, cpm: 10 }, B);
+  assert.equal(nameOf(), '가양', '프로필이 없으면 몸통 이름');
+  db.prepare("insert into profile (who, name, at) values (?, '나리', 0)").run(B);
+  await call('/score', { ...run, cpm: 10 }, B);
+  assert.equal(nameOf(), '나리', '프로필 닉네임이 몸통 이름보다 먼저');
+  assert.equal((await call('/score', { ...noName, cpm: 10 })).status, 401, '로그인 안 하면 그대로 막힌다');
+
   /* 경쟁전: 표를 낸 기기의 사다리에만 셈한다. 끝낼 때 몸통의 dev 는 못 바꾼다 */
   const start = await call('/ranked/start', { c: 'seoul-gu', name: '가양', dev: 'mobile' }, A);
   assert.equal(start.status, 201);

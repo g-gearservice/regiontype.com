@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.75';
+const VER = '3.76';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2930,11 +2930,6 @@ $('#fbForm').onsubmit = async e => {
    한 판이다 — 5분과 1분을 한 줄에 세우면 점수에 뜻이 없다.
    채점은 여기 브라우저가 하고 중계기는 앞뒤만 본다. 명예의 전당이지 판정 기록이 아니다. */
 const NAME_KEY = 'rt.name';
-/* worker.mjs 의 plain() 과 같은 자여야 한다. 클라이언트만 통과하는 이름을 저장하면
-   그 뒤 모든 판이 400 을 받고, board() 의 catch 가 순위표를 접으면서 이름을 다시
-   적을 폼까지 함께 사라져 되돌릴 길이 없어진다. trim() 은 제로폭 공백을 안 턴다. */
-const plain = (v, n = 12) =>
-  String(v ?? '').trim().slice(0, n).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
 /* ── 로그인 ───────────────────────────────────────────
    순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
    로그인은 같은 문서의 홈 덮개(auth.js)가 한다 — 여기서는 그 결과로 받아 둔
@@ -2959,7 +2954,7 @@ function drawRanks(list) {
     const li = document.createElement('li');
     li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
     li.querySelector('b').textContent = i + 1;
-    li.querySelector('.who').textContent = r.name;
+    li.querySelector('.who').textContent = r.name || t('anon');
     li.querySelector('.pt').textContent = showSpeed(r.cpm);
     if (r.me) {
       li.classList.add('me');
@@ -2983,61 +2978,46 @@ const boardAsk = async (path, body) => {
   return r.json();
 };
 
-/* 순위표가 안 되어도 결과 화면은 그대로다 — 통째로 접고 만다 */
-async function board() {
+/* 순위표가 안 되어도 결과 화면은 그대로다 — 통째로 접고 만다. up 이 거짓이면 읽기만 한다 */
+async function board(up = true) {
   const sec = $('#board');
   sec.hidden = true;
   const me = localStorage.getItem(NAME_KEY) || '';
   const inn = !!token();
   const play = { c: G.slug, t: G.total };
   try {
-    const d = inn && me && G.score
+    /* 로그인했으면 판마다 오른다. 이름은 중계기가 프로필 닉네임으로 건다 — me 는 프로필이 없을 때의 대안이다 */
+    const d = up && inn && G.score
       ? await boardAsk('/score', { ...play, dev: DEV, name: me, score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}`);
     $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
-    /* 이름이 없으면 이 판은 조용히 안 올라간다. 왜 안 올라갔는지 여기서 말하지
-       않으면 다음에 순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고,
-       기능이 고장난 것으로 읽힌다. */
+    /* 로그인 안 한 판은 안 올라간다. 왜 안 올라갔는지 여기서 말하지 않으면 다음에
+       순위표를 열었을 때 "아직 아무도 없습니다" 만 보이고, 기능이 고장난 것으로 읽힌다. */
     boardSay(d.rank ? t('nth', { n: d.rank })
       : G.score ? t('notOnBoard', { n: showSpeed(G.cpm) })
       : '');
-    /* 로그인 → 이름 → 올라감. 한 번에 하나씩만 묻는다 */
     $('#boardIn').hidden = inn;
-    $('#boardJoin').hidden = !inn || !!me;
     $('#boardDrop').hidden = !inn;
     drawRanks(d.top || []);
     sec.hidden = false;
-  } catch (e) {
-    /* 400 은 저장된 이름이 중계기 기준에 안 맞는다는 뜻이다. 그대로 두면 다음 판도
-       같은 400 을 받아 순위표가 영영 안 뜬다 — 지우고 다시 적을 자리를 내어준다.
-       이름이 있었을 때만 한 번 되돈다 — 안 그러면 /top 이 400 일 때 끝없이 돈다. */
-    if (String(e.message) === '400' && me) { localStorage.removeItem(NAME_KEY); return board(); }
+  } catch {
     sec.hidden = true;
   }
 }
 
-/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 —
-   이 버튼이 사라지면 철회 불가가 된다. 이름도 지워 다음 판이 도로 올라가지 않게 한다 */
+/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 — 이 버튼이
+   사라지면 철회 불가가 된다. 로그인한 판은 늘 오르므로 다음 판은 도로 올라간다. 이름을
+   감추려면 계정 비공개(이름이 빈다)나 닉네임 바꾸기다. 내린 뒤 다시 그릴 때는 읽기만 한다 —
+   올리면 방금 판이 곧바로 되살아난다 */
 $('#boardDrop').onclick = async () => {
   if (!confirm(t('forgetAsk'))) return;
   try {
     const d = await boardAsk('/forget', {});
     localStorage.removeItem(NAME_KEY);
-    await board();
+    await board(false);
     boardSay(d.gone ? t('forgot', { n: d.gone }) : t('forgotNone'));
   } catch { boardSay(t('forgetFail'), true); }
 };
-
-$('#boardJoin').onsubmit = e => {
-  e.preventDefault();
-  const name = plain($('#boardName').value);
-  if (!name) return boardSay(t('badName'), true);
-  localStorage.setItem(NAME_KEY, name);
-  $('#boardJoin').hidden = true;
-  boardSay(t('uploading'));
-  board();
-};
-
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {

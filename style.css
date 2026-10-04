@@ -102,7 +102,7 @@ html,body{height:100%}
    돌아가, 고르기 통의 두 열이 한 열로 접힌다. scrollbar-color 는 상속되니 여기 한 번 */
 :root{scrollbar-color:transparent transparent}
 body{
-  background:var(--bg); color:var(--ink); overflow:hidden;
+  color:var(--ink); overflow:hidden;
   font:500 16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
   -webkit-font-smoothing:antialiased;
 }
@@ -650,21 +650,6 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .board-drop[hidden]{display:none}
 @media (hover:hover) and (pointer:fine){ .board-drop:hover{opacity:1} }
 .board-drop:focus-visible{outline:3px solid var(--accent);outline-offset:2px;opacity:1}
-.board-join{margin-top:16px;max-width:420px;font-size:14px;color:var(--ink-soft)}
-.board-join div{display:flex;gap:8px;margin-top:8px}
-.board-join input{
-  font:inherit;font-size:16px;flex:1;min-width:0;color:var(--ink);
-  background:var(--bg);border:2px solid var(--grid);
-  padding:8px 12px;transition:border-color var(--fast) var(--ease-out);
-}
-.board-join input:focus{outline:0;border-color:var(--block)}
-.board-join button{
-  font:inherit;font-weight:700;color:#fff;background:var(--block);border:0;
-  padding:8px 16px;cursor:pointer;white-space:nowrap;
-  transition:background var(--fast) var(--ease-out);
-}
-.board-join button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover) and (pointer:fine){ .board-join button:hover{background:var(--accent)} }
 
 /* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
    잡고, 끌어다 놓으면 그 칸에 남는다. position:relative 를 여기서 주지 않는다 —
@@ -777,7 +762,6 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 @media (hover:hover) and (pointer:fine){
 }
 .ranks li{border-radius:4px;box-shadow:var(--shadow)}
-.board-join :is(input,button){border-radius:4px}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
 
