@@ -26,7 +26,7 @@ const isDev = () => document.documentElement.hasAttribute('data-dev');
    홈(app.js)과 같은 통, 같은 기본값이다. 키 집합이 어긋나면 한쪽이 저장할 때마다
    다른 쪽 값이 지워진다 */
 const DEF = { time: 120, night: false, sound: true, motion: true, hint: true, grid: true, softkb: true, kbhint: true,
-              lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin' };
+              lang: 'auto', country: 'auto', unit: 'auto', dong: 'admin', where: true };
 const opt = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
 for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
 
@@ -34,7 +34,7 @@ for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
    밖에서 localStorage 만 고치면 다음 토글이 옛 값을 도로 덮어쓴다. 모르는 키·꼴은 버린다 */
 addEventListener('rt-bot-opt', ({ detail }) => {
   const ok = Object.entries(detail || {}).filter(([k, v]) =>
-    Object.hasOwn(DEF, k) && k !== 'lang' && k !== 'country' && typeof v === typeof DEF[k]);
+    Object.hasOwn(DEF, k) && k !== 'lang' && k !== 'country' && k !== 'where' && typeof v === typeof DEF[k]);
   if (!ok.length) return;
   Object.assign(opt, Object.fromEntries(ok));
   saveOpt();
@@ -48,11 +48,24 @@ const saveOpt = kind => {
   document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
   document.documentElement.toggleAttribute('data-no-grid', !opt.grid);
   requestAnimationFrame(syncOptShell);
-  document.querySelectorAll('#options .toggle').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+  paintPressed();
   paintUnit();
   dispatchEvent(new CustomEvent('rt-opt'));
   return false;
 };
+
+const paintPressed = () =>
+  document.querySelectorAll('#options [data-opt]').forEach(b => b.setAttribute('aria-pressed', !!opt[b.dataset.opt]));
+/* 다른 탭이 rt.opt 를 고치면 메모리 opt 를 맞춘다 — 안 그러면 여기서 다음에 저장할 때
+   낡은 값(꺼 둔 where 등)이 도로 덮어쓴다. 여기서 setItem 하면 탭끼리 핑퐁이니 칠하기만 한다 */
+addEventListener('storage', e => {
+  if (e.key !== 'rt.opt' && e.key !== null) return;
+  let next = {};
+  try { next = JSON.parse(localStorage.getItem('rt.opt') || '{}') || {}; } catch {}
+  Object.assign(opt, DEF, next);
+  for (const k of Object.keys(opt)) if (!(k in DEF)) delete opt[k];
+  paintPressed();
+});
 
 /* ── 화면 말 ─────────────────────────────────────────── */
 let UI_LANGS = ['ko'];
@@ -92,28 +105,38 @@ function syncOptShell() {
   const rail = $('.opts-tabs'), p = $('#bitgrid');
   if (!rail || !p || !rail.getClientRects().length) return;
   const cell = Number(p.getAttribute('height'));
-  const railH = rail.getBoundingClientRect().height;
+  /* 레일 높이는 첫 탭 윗변 ~ 마지막 탭 아랫변 — 레일이 스스로 굴러도(아래) 변하지 않는다 */
+  const tabs = rail.children, railH = tabs.length
+    ? tabs[tabs.length - 1].getBoundingClientRect().bottom - tabs[0].getBoundingClientRect().top : 0;
   if (!(cell > 0) || !(railH > 0)) return;
   const vh = window.innerHeight;
   const minCells = Math.max(1, Math.ceil(railH / cell));
   const wantCells = Math.max(minCells, Math.round(vh * 0.56 / cell));
-  const h = wantCells * cell;
-  const top = (vh - h) / 2;
+  /* 가운데에 두되, 위 흐림 띠 안으로는 안 올라간다 — 낮은 창에서 레일이 제목과 겹치고
+     레일 옆에서 시작하는 언어 목록 머리도 흐림에 묻힌다. 그러다 화면 아래를 넘으면 셸을
+     화면 끝에서 자르고 레일이 셸 안에서 굴러간다(아래 흐림 띠만큼 여백을 둬 마지막 탭도 올라선다) */
+  const edge = sel => { const e = $(sel); return e ? e.getBoundingClientRect().height : 0; };
+  const blurT = edge('#options > .backdrop-blur:not(.bot)'), blurB = edge('#options > .backdrop-blur.bot');
+  let h = wantCells * cell;
+  const mid = (vh - h) / 2, top = Math.max(mid, blurT);
+  const tight = top + h > vh;
+  if (tight) h = vh - top;
   const st = document.documentElement.style;
+  const zc = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zc')) || 1;
   st.setProperty('--opt-shell-h', h + 'px');
-  st.setProperty('--opt-shell-dy', '0px');
+  st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
+  st.setProperty('--opt-rail-pb', (tight ? blurB / zc : 0) + 'px');
   st.setProperty('--opt-rail-h', rail.offsetHeight + 'px');
   /* 통은 화면 위·아래까지. 목록이 언어 탭 옆에서 시작하도록 위 padding 만 잰다.
      셸 윗변은 방금 고른 top 을 쓴다 — 들어올 때 getBoundingClientRect 는 아직 바닥이다.
-     맨 아래 글자는 버전 탭에서 멈춘다 */
-  const zc = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zc')) || 1;
+     맨 아래 글자는 버전 탭에서 멈추되, 아래 흐림 띠 밑으로는 안 내려간다 */
   const inner = 28;
-  const railTop = top + (h - railH) / 2;
-  const railBot = railTop + railH;
+  const railTop = top + Math.max(0, (h - railH) / 2);
+  const railBot = Math.min(vh, railTop + railH);
   st.setProperty('--opt-pick-h', (vh / zc) + 'px');
   st.setProperty('--opt-pick-dy', ((-top) / zc) + 'px');
   st.setProperty('--opt-pick-pad-t', (railTop / zc) + 'px');
-  st.setProperty('--opt-pick-pad-b', (Math.max(inner, vh - railBot + inner) / zc) + 'px');
+  st.setProperty('--opt-pick-pad-b', (Math.max(blurB + inner, vh - railBot + inner) / zc) + 'px');
 }
 
 /* 데스크톱 확대는 125% 까지만 레이아웃에 반영한다 — 그 위로는 설정 셸을 같은 비율로
@@ -377,7 +400,7 @@ async function account() {
   const inn = !!token();
   $('#secIn').hidden = !inn;
   $('#secOut').hidden = inn;
-  [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')].forEach(b => { b.disabled = !inn; });
+  [$('#acctKey'), $('#acctCodesNew'), $('#acctOut'), $('#privForget')].forEach(b => { b.disabled = !inn; });
   $('#securityState').textContent = inn ? '확인 중' : '로그인 필요';
   const platform = navigator.userAgentData?.platform || navigator.platform || '';
   const device = /Mac/i.test(platform) ? 'Mac' : /Win/i.test(platform) ? 'Windows PC' : /Linux/i.test(platform) ? 'Linux' : '현재 기기';
@@ -514,7 +537,7 @@ function wire() {
   $('#securityDeviceIcon').src = asset('assets/security-device.svg');
   $('#securityCheck').onclick = account;
   document.addEventListener('click', e => {
-    const tog = e.target.closest('#options .toggle');
+    const tog = e.target.closest('#options [data-opt]');
     if (tog) { opt[tog.dataset.opt] = !opt[tog.dataset.opt]; saveOpt(tog.dataset.opt === 'night' ? 'night' : undefined); }
     const unit = e.target.closest('#optUnit button');
     if (unit) { opt.unit = unit.dataset.v; saveOpt(); }
@@ -565,6 +588,48 @@ function wire() {
     wipeCodes();
     say('');
     account();
+  };
+
+  /* ── 개인정보와 이 브라우저 ── 지운 개수를 말한다. 서버 쪽은 순위표 내리기·계정 삭제 몫이다 */
+  const wipe = hit => {
+    let n = 0;
+    for (const s of [localStorage, sessionStorage]) {
+      try { for (const k of Object.keys(s)) if (hit(k)) { s.removeItem(k); n++; } } catch {}
+    }
+    return n;
+  };
+  const wiped = n => say(n ? t('wiped', { n }) : t('wipedNone'));
+  /* 옛 열쇠(rt.best.*·rt.fast.*)도 같은 게임 기록이다 */
+  $('#privKeys').onclick = () => {
+    if (confirm(t('wipeKeysAsk'))) wiped(wipe(k => /^rt\.(keys|best|fast)\./.test(k)));
+  };
+  /* kind 없이 저장한다 — 부드러운 새로고침으로 넘어가면 #optSay 의 개수가 날아간다 */
+  $('#privOpt').onclick = () => {
+    if (!confirm(t('wipeOptAsk'))) return;
+    const n = wipe(k => k === 'rt.opt' || k === 'rt.ui' || k === 'rt.botsize');
+    const where = opt.where;
+    Object.assign(opt, DEF, { where }); saveOpt();
+    wiped(n);
+  };
+  $('#privAll').onclick = () => {
+    if (!confirm(t('wipeAllAsk'))) return;
+    const n = wipe(k => k.startsWith('rt.'));
+    const where = opt.where;
+    Object.assign(opt, DEF, { where }); saveOpt();
+    wipeCodes();
+    account();
+    wiped(n);
+  };
+  $('#privForget').onclick = async () => {
+    if (!confirm(t('forgetAsk'))) return;
+    const b = $('#privForget');
+    b.disabled = true;
+    try {
+      const d = await ask('/forget', {});
+      try { localStorage.removeItem(NAME_KEY); } catch {}
+      say(d.gone ? t('forgot', { n: d.gone }) : t('forgotNone'));
+    } catch { say(t('forgetFail'), true); }
+    b.disabled = !token();
   };
 
   /* 복사가 조용히 실패하면 사용자는 없는 코드를 저장했다고 믿는다 */
