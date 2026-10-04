@@ -198,6 +198,7 @@ create table if not exists ladder (
   lp    integer not null default 0,
   games integer not null default 0,
   wins  integer not null default 0,
+  mmr   real,                          -- 숨은 실력(CPM 단위). 첫 판 전에는 null — worker.mjs 의 rate()
   at    integer not null,
   primary key (who, dev)
 );
@@ -216,6 +217,7 @@ create table if not exists played (
   hits  integer not null,
   acc   integer not null,
   delta integer,
+  win   real,                     -- 경쟁전 승패 1 | .5 | 0 (탈주·앞뒤 안 맞는 판은 0). 일반전은 null
   at    integer not null
 );
 create index if not exists played_who on played (who, at desc);
