@@ -13,7 +13,7 @@
 const $ = s => document.querySelector(s);
 const VER = new URL(document.currentScript.src).searchParams.get('v') || '';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
-const API = 'https://g.gearservicevanguard.com';
+const API = self.RT_RELAY;   // relay.js
 
 const DONE_KEY = 'rt.intro';
 const read = (k, d = '') => { try { return localStorage.getItem(k) || d; } catch { return d; } };

@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.379",
+    "date": "2026-10-04",
+    "ko": "'봇과 겨루기'를 누르면 바로 봇과 판이 잡힙니다. 대기 중에 서버를 너무 자주 불러 요청 한도(429)에 걸리던 문제를 고쳤습니다.",
+    "en": "'Play the bot' now starts a match right away. While waiting, the page polled the server too often and ran into the rate limit (429)."
+  },
+  {
     "v": "0.9.378",
     "date": "2026-10-04",
     "ko": "폰 Safari 홈에서 로고 아래 위쪽 띠에도 격자가 이어져 보입니다. 위 흐림이 바탕색으로 격자를 덮고 있었습니다.",

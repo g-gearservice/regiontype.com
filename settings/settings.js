@@ -12,7 +12,7 @@ const VER = new URL(document.currentScript.src).searchParams.get('v') || '';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const grab = url => fetch(asset(url)).then(r => r.json());
 
-const RELAY = 'https://g.gearservicevanguard.com';
+const RELAY = self.RT_RELAY;   // relay.js
 const TOKEN_KEY = 'rt.token', BIND_KEY = 'rt.bind', NAME_KEY = 'rt.name';
 const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
 

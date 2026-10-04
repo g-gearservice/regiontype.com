@@ -1,0 +1,121 @@
+# 로컬 전용 — 배포하지 않는다(.claude/launch.json 의 relay-dev). 경로를 가르지 않고 중계기 전부와
+# 경쟁전 DO 를 한 프로세스로 띄운다. 바인딩 이름은 배포 설정(wrangler.*.toml)과 같아야 한다.
+# SESSION_KEY 는 같은 폴더의 .dev.vars, DEV_LOGIN 은 launch.json 의 --var 로 받는다.
+name = "rt-dev"
+main = "entry-dev.mjs"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rt-board"
+database_id = "593224a1-2f33-4ec4-b43a-d9cd246e2d40"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "CompeteLobby"
+
+[[durable_objects.bindings]]
+name = "MATCH"
+class_name = "CompeteMatch"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CompeteLobby", "CompeteMatch"]
+
+[[ratelimits]]
+name = "RL_FB"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 1
+  period = 60
+
+[[ratelimits]]
+name = "RL_SC"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 3
+  period = 60
+
+[[ratelimits]]
+# 로그인 한 번이 POST 만 서넛(sso·take·log 또는 code) 이다 — 사무실·학교처럼
+# IP 를 같이 쓰는 곳에서 세 번째 사람부터 막히던 걸 10 → 20 으로 늘려 줄인다.
+name = "RL_AU"
+namespace_id = "1003"
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[[ratelimits]]
+# /auth/cb 전용 창. GET 이라 harden-zone.mjs(POST 만 셈)에 안 걸리니 여기서
+# 따로 센다. RL_AU 와 섞지 않는 이유는 이 경로가 공급자의 리다이렉트로만 오고
+# (코드 재사용 불가), 로그인 단계별 POST 예산을 깎아 먹으면 안 되어서다.
+name = "RL_CB"
+namespace_id = "1004"
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[ratelimits]]
+# 경쟁전 시작·끝 전용 창. 점수 창(RL_SC)과 나눠 쓰면 일반전 뒤 /score·/played 에
+# 밀려 /ranked/end 가 429 를 받고, 타지 않은 표가 다음 판에서 탈주로 셈된다.
+name = "RL_RK"
+namespace_id = "1005"
+  [ratelimits.simple]
+  limit = 6
+  period = 60
+
+[[ratelimits]]
+# 커뮤니티 쓰기(글·댓글·공감·신고·지우기) 전용 창. 읽기는 세지 않는다
+name = "RL_CM"
+namespace_id = "1006"
+  [ratelimits.simple]
+  limit = 8
+  period = 60
+
+[[ratelimits]]
+# 커뮤니티 읽기(/cm/list·/cm/read). 사람 손으론 닿지 않을 만큼 넉넉하게
+name = "RL_CR"
+namespace_id = "1007"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[[ratelimits]]
+# 봇 대화(/bot/chat). NVIDIA 무료 키는 키 하나에 분당 40 남짓이라 한 IP 가 다 못 먹게
+name = "RL_BT"
+namespace_id = "1008"
+  [ratelimits.simple]
+  limit = 6
+  period = 60
+
+[[ratelimits]]
+# 봇 대화 전체 창. 키는 'all' 하나 — 무료 키 한도(분당 40 남짓) 밑에서 모두가 나눈다
+name = "RL_BA"
+namespace_id = "1009"
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[ratelimits]]
+# 1대1 매칭(/match/*). 찾기 폴링 2초·진행 폴링 1.5초라 분당 서른 남짓 — 넉넉히 둔다
+name = "RL_MT"
+namespace_id = "1011"
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[[ratelimits]]
+# 지금 접속(/online). 탭 하나가 2분에 한 번이라, 학교·사무실처럼 IP 하나를 여럿이
+# 써도 걸리지 않게 넉넉히 둔다
+name = "RL_ON"
+namespace_id = "1010"
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+[[ratelimits]]
+name = "RL_CP"
+namespace_id = "1012"
+  [ratelimits.simple]
+  limit = 30
+  period = 60

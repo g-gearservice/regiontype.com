@@ -1,0 +1,53 @@
+name = "rt-compete"
+main = "entry-compete.mjs"
+compatibility_date = "2026-08-01"
+# 문은 존 라우트뿐 — workers.dev 는 닫는다.
+workers_dev = false
+
+# 이 워커가 받는 경로는 entry.mjs 의 OWN.compete(/compete/*). 판정·소켓은 Durable Object 둘이 한다
+# (compete-do.mjs): 로비 하나와 판마다 하나. 판 DO 는 SQLite 저장소를 쓴다 — 유료 플랜에서 연다.
+# 배포 전에 한 번: wrangler d1 execute rt-board --remote --file migrate-season.sql
+# 배포: wrangler deploy -c wrangler.compete.toml
+# 시크릿(wrangler secret put X -c wrangler.compete.toml):
+#   SESSION_KEY   다른 워커와 같은 값 — 표를 낼 때 로그인한 사람을 읽는다
+#   ADMIN_IDS     부정 의심 검토(/compete/flags)를 할 수 있는 계정 id, 쉼표로 잇는다
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rt-board"
+database_id = "593224a1-2f33-4ec4-b43a-d9cd246e2d40"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "CompeteLobby"
+
+[[durable_objects.bindings]]
+name = "MATCH"
+class_name = "CompeteMatch"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CompeteLobby", "CompeteMatch"]
+
+# 표 받기와 소켓 열기를 IP 마다 센다. 소켓 안 메시지는 DO 가 소켓마다 센다(NET.maxMsgPerSec)
+[[ratelimits]]
+name = "RL_CP"
+namespace_id = "1012"
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+# 시크릿을 넣은 뒤 주석을 푼다 — 그 전에는 이 워커가 실제 요청을 받지 않는다.
+# [[routes]]
+# pattern = "g.gearservicevanguard.com/compete/*"
+# zone_name = "gearservicevanguard.com"
+
+# 하루 한 번(UTC 19:17 = 한국 04:17): 키 기록 보존 기한 삭제 · 봇 CPM 표 보정(compete-do.mjs 의 daily)
+[triggers]
+crons = ["17 19 * * *"]
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
