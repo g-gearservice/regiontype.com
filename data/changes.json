@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.378",
+    "date": "2026-10-04",
+    "ko": "폰 Safari 홈에서 로고 아래 위쪽 띠에도 격자가 이어져 보입니다. 위 흐림이 바탕색으로 격자를 덮고 있었습니다.",
+    "en": "On phone Safari the home grid now continues into the top band under the logo. The top blur was painting over it with the background colour."
+  },
+  {
     "v": "0.9.377",
     "date": "2026-10-04",
     "ko": "단추나 봇을 고를 때 둘레에 뜨던 주황 테두리가 사라졌습니다.",

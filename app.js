@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.77';
+const VER = '3.78';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -331,6 +331,9 @@ function applyGrid(ox, oy, nx, ny = nx) {
   p.setAttribute('x', ox);
   p.setAttribute('y', oy);
   p.querySelector('path').setAttribute('d', `M${nx} 0 V${ny} H0`);
+  /* 폰 홈의 위 흐림(.top-blur)은 --bg 단색 겹이라 이 격자를 덮는다 — 같은 원점·칸을 CSS 에 넘겨 겹에도 그린다 */
+  const s = document.documentElement.style;
+  for (const [k, v] of [['--gx', ox], ['--gy', oy], ['--gw', nx], ['--gh', ny]]) s.setProperty(k, v + 'px');
 }
 /* SVG 유저 좌표 → 화면. 추정하지 않고 CTM 으로 격자 원점·칸을 읽는다. */
 const DECO_CELL = 152;   /* 플레이 밖 장식 격자 칸(px). about.html 과 같은 값 */

@@ -1830,6 +1830,13 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
       top:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h));
     }
     .top-blur > div{grid-area:1/1;position:relative;overflow:hidden;background:var(--bg)}
+    /* 겹이 단색이면 뒤 격자(.grid-bg)가 위 147px 에서 끊긴다 — 같은 선을 겹 바탕에 다시 긋는다.
+       격자 패턴은 칸 오른쪽·아래 가장자리에 1px 선을 긋고 칸에서 잘려 반(.5px)만 남는다. 원점·칸은
+       app.js applyGrid 의 --gx·--gy·--gw·--gh(화면 좌표)이고, 겹은 화면보다 --bleed 만큼 위에서 시작한다 */
+    :root:not([data-no-grid]) #topBlur > div{background:
+      linear-gradient(90deg,var(--grid) .5px,transparent 0) calc(var(--gx,0px) - .5px) 0 / var(--gw,152px) 100%,
+      linear-gradient(180deg,var(--grid) .5px,transparent 0) 0 calc(var(--gy,0px) - .5px + var(--bleed)) / 100% var(--gh,152px),
+      var(--bg)}
     #topBlur > div > #courseBtns{top:var(--bleed);view-transition-name:none}
     .top-blur > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15));mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15))}
     .top-blur > :nth-child(1) > *{filter:blur(calc(1px * var(--blur-k,.55)))}

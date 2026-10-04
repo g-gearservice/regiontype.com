@@ -10,6 +10,10 @@
 
 A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
+## What's new in 0.9.378
+
+- On phone Safari the home grid now runs up into the top band under the logo. That band is not a real blur: it stacks six `--bg` layers holding a blurred copy of the map (`#topBlur`), and those solid layers hid the grid. The layers now draw the same grid lines, taking the origin and cell size from `applyGrid` (`--gx`, `--gy`, `--gw`, `--gh`). Turning the grid off in Settings removes them too.
+
 ## What's new in 0.9.377
 
 - Focus rings are transparent, including the orange ring around a focused button or the bot. Selection highlight was already transparent. The ranked-aim finger (`.rk-aim`) keeps its outline.
