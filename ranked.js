@@ -565,7 +565,7 @@ function markDot() {
 }
 
 /* 말풍선 상태 — sleep / input / thinking / response / busy·fail (Figma 124:90–189).
-   잠김·수면 같은 속말은 쓰지 않는다. busy 일 때 입력만 막고 placeholder 는 botWait/botChatPh */
+   잠김·수면 같은 속말은 쓰지 않는다. busy 일 때 입력만 막고 thinking placeholder 는 botThink */
 function setTalkUI(mode) {
   const form = $('#rkChat'), chips = $('#rkChips'), inp = $('#rkChatIn');
   const go = form && form.querySelector('button[type="submit"]');
@@ -576,7 +576,7 @@ function setTalkUI(mode) {
   bubble.classList.toggle('is-busy', mode === 'busy');
   inp.disabled = busy;
   if (go) go.disabled = busy;
-  inp.placeholder = t(mode === 'thinking' ? 'botWait' : 'botChatPh');
+  inp.placeholder = t(mode === 'thinking' ? 'botThink' : 'botChatPh');
   if (chips) chips.hidden = !(chatting && !busy);
 }
 function syncSleepHint() {
@@ -789,8 +789,10 @@ function wireChat() {
     if (chip === 'night') {
       const on = !document.documentElement.hasAttribute('data-night');
       dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: on } }));
-      setTalkUI('response');
-      speak(t('botNightOn'));
+      if (on) {
+        setTalkUI('response');
+        speak(t('botNightOn'));
+      }
       return;
     }
     if (chip === 'feedback') {
