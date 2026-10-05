@@ -106,7 +106,9 @@ function syncOptShell() {
   if (!rail || !p || !rail.getClientRects().length) return;
   const cell = Number(p.getAttribute('height'));
   /* 레일 높이는 첫 탭 윗변 ~ 마지막 탭 아랫변 — 레일이 스스로 굴러도(아래) 변하지 않는다 */
-  const tabs = rail.children, railH = tabs.length
+  /* 배포에선 개발 탭이 display:none — 숨은 칸을 재면 레일 높이가 0에 가깝고 셸이 비어 보인다 */
+  const tabs = [...rail.children].filter(tb => getComputedStyle(tb).display !== 'none');
+  const railH = tabs.length
     ? tabs[tabs.length - 1].getBoundingClientRect().bottom - tabs[0].getBoundingClientRect().top : 0;
   if (!(cell > 0) || !(railH > 0)) return;
   const vh = window.innerHeight;

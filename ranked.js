@@ -81,7 +81,6 @@ function lockBack(on, el) {
 function openPage(name) {
   if (page === name) return;
   /* 기록은 로그인한 사람만 — 로그인 전엔 로그인 덮개를 연다 */
-  if (name === 'records' && !token()) { closePage(true); $('#signinLink').click(); return; }
   if (page) closePage(true);
   const el = over(name);
   leaveGen++;
@@ -489,6 +488,7 @@ function place(x, y) {
   bubble.style.setProperty('--ring-y', y - fy + 'px');
   /* 말하는 채로 반대편으로 끌려가면 새 방향으로 다시 펼친다 */
   if (turned && !bubble.hidden) unfold();
+  syncSleepHint();
 }
 /* 날지 않고 그 자리에 선다 — 처음 나타날 때 */
 function jump(x, y) {
@@ -503,11 +503,14 @@ function speak(text, form) {
   $('#rkSayText').textContent = text;
   $('#rkName').hidden = !form;
   $('#rkChat').hidden = !chatting;
+  const chips = $('#rkChips');
+  if (chips) chips.hidden = !(chatting && !$('#rkChat').classList.contains('is-thinking') && !$('#rkChat').classList.contains('is-busy'));
   clearTimeout(closing);
   bubble.classList.remove('is-closing');
   bubble.hidden = false;
   if (bot) place(bot.x, bot.y);
   unfold();
+  syncSleepHint();
 }
 /* 펼치기는 다음 프레임에. 말풍선은 미끄러져 오지 않고 그 자리(봇 뒤)에서 펼쳐진다 —
    남은 이동은 끊고 끝자리로 옮긴 뒤 펼친다 */
@@ -525,11 +528,14 @@ function unfold() {
 let closing = 0;
 function hide() {
   chatting = false;
+  setTalkUI(null);
+  const chips = $('#rkChips');
+  if (chips) chips.hidden = true;
   clearTimeout(closing);
-  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing'); bubble.hidden = true; return; }
+  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing', 'is-busy'); bubble.hidden = true; syncSleepHint(); return; }
   bubble.classList.remove('is-open');
   bubble.classList.add('is-closing');
-  closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing'); }, 240);
+  closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing', 'is-busy'); syncSleepHint(); }, 240);
 }
 
 /* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳. 경쟁전을 켜면 왼쪽
@@ -557,6 +563,32 @@ function markDot() {
   el.style.setProperty('--dot-y', (p.top + p.height / 2 - r.top).toFixed(1) + 'px');
   el.style.setProperty('--dot-r', (p.width / 2).toFixed(1) + 'px');
 }
+
+/* 말풍선 상태 — sleep / input / thinking / response / busy·fail (Figma 124:90–189).
+   잠김·수면 같은 속말은 쓰지 않는다. busy 일 때 입력만 막고 thinking placeholder 는 botThink */
+function setTalkUI(mode) {
+  const form = $('#rkChat'), chips = $('#rkChips'), inp = $('#rkChatIn');
+  const go = form && form.querySelector('button[type="submit"]');
+  if (!form || !inp) return;
+  const busy = mode === 'thinking' || mode === 'busy';
+  form.classList.toggle('is-thinking', mode === 'thinking');
+  form.classList.toggle('is-busy', mode === 'busy');
+  bubble.classList.toggle('is-busy', mode === 'busy');
+  inp.disabled = busy;
+  if (go) go.disabled = busy;
+  inp.placeholder = t(mode === 'thinking' ? 'botThink' : 'botChatPh');
+  if (chips) chips.hidden = !(chatting && !busy);
+}
+function syncSleepHint() {
+  const h = $('#rkSleepHint');
+  if (!h || !bot) return;
+  const show = !phone() && out && bot.el.classList.contains('is-asleep') && !chatting && bubble.hidden;
+  h.hidden = !show;
+  if (!show) return;
+  h.textContent = t('botSleep');
+  h.style.transform = `translate3d(${bot.x}px,${bot.y + BOT + 6}px,0)`;
+}
+
 function sleep() {
   /* 폰은 로고로 도로 들어간다. 그 밖에는 끌어다 놓은 자리나 귀퉁이에서 잔다 */
   if (phone()) { tuck(); return; }
@@ -570,6 +602,7 @@ function sleep() {
      시선을 떨구며 감고(buddy.js 의 doze), 다 감기면 ‿ 가 얹힌다(style.css) */
   bot.api.setState('idle');
   bot.api.doze(true);
+  syncSleepHint();
 }
 function wake() {
   if (!bot || intro || touring) return;
@@ -577,6 +610,7 @@ function wake() {
   bot.el.classList.remove('is-asleep');
   bot.api.setState('idle');
   bot.api.doze(false);
+  syncSleepHint();
 }
 function doze() {
   if (!bot || intro || touring) return;
@@ -659,6 +693,7 @@ async function chat() {
   wake();
   clearTimeout(hush);
   chatting = true;
+  setTalkUI('input');
   speak(talk.length ? talk[talk.length - 1].content : t('botAsk', { bot: botName() }));
   $('#rkChatIn').focus({ preventScroll: true });
 }
@@ -704,19 +739,26 @@ function act(a) {
 async function send(text) {
   talk.push({ role: 'user', content: text });
   const my = ++talkReq;
+  setTalkUI('thinking');
   speak(t('botThink'));
   let d;
   try {
     d = await ask('/bot/chat', { msgs: talk.slice(-12), courses: botCourses(), lang: document.documentElement.lang, name: botName() }, true);
   } catch (e) {
     talk.pop();
-    if (my === talkReq && chatting) speak(t(e.status === 429 ? 'botBusy' : 'botChatFail'));
+    if (my === talkReq && chatting) {
+      setTalkUI('busy');
+      speak(t(e.status === 429 ? 'botBusy' : 'botChatFail'));
+    }
     return;
   }
   if (my !== talkReq) return;
   const said = d.say || '👍';
   talk.push({ role: 'assistant', content: said });
-  if (chatting) speak(said);
+  if (chatting) {
+    setTalkUI('response');
+    speak(said);
+  }
   /* 동작은 말을 보여 준 뒤에 — 무엇을 하려는지 먼저 읽힌다 */
   (d.do || []).forEach(act);
 }
@@ -724,7 +766,7 @@ function wireChat() {
   $('#rkChat').addEventListener('submit', e => {
     e.preventDefault();
     const inp = $('#rkChatIn'), text = inp.value.trim();
-    if (!text) return;
+    if (!text || inp.disabled) return;
     inp.value = '';
     send(text);
   });
@@ -734,6 +776,29 @@ function wireChat() {
     e.preventDefault();
     e.stopPropagation();
     endChat();
+  });
+  $('#rkChips')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-chip]');
+    if (!btn || !chatting) return;
+    const chip = btn.dataset.chip;
+    if (chip === 'ranked') {
+      setRanked(true);
+      go(rankedSlug());
+      return;
+    }
+    if (chip === 'night') {
+      const on = !document.documentElement.hasAttribute('data-night');
+      dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: on } }));
+      if (on) {
+        setTalkUI('response');
+        speak(t('botNightOn'));
+      }
+      return;
+    }
+    if (chip === 'feedback') {
+      const fb = document.querySelector('[data-fb-open]');
+      if (fb) fb.click();
+    }
   });
 }
 
