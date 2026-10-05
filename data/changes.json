@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.381",
+    "date": "2026-10-06",
+    "ko": "배포에서 개발 로그인이 보이던 것을 숨기고, 홈 필에서 남쪽 구가 잘리거나 시작하기가 따로 뜨던 것을 고쳤습니다. 게스트가 기록에서 로그인 안내를 보고, 로그인 봇 표정과 홈 봇이 맞으며, 설정이 데스크톱에서 비지 않게 했습니다.",
+    "en": "Hide the dev login on production, keep southern districts tappable on the home fill without a separate Start control, show guests the records sign-in line, match the login bot face to the home bot, and stop the desktop settings screen from going blank."
+  },
+  {
     "v": "0.9.380",
     "date": "2026-10-05",
     "ko": "'봇과 겨루기'를 누르면 바로 봇과 판이 잡힙니다. 대기 중에 서버를 너무 자주 불러 요청 한도(429)에 걸리던 문제를 고쳤습니다.",

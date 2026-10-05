@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.80';
+const VER = '3.81';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -567,7 +567,7 @@ const fingers = () => matchMedia('(pointer:coarse)').matches;
 const HOME_Z = [fingers() ? .2 : .42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
 function clampZoom(z, lo, hi) { return Math.max(lo, Math.min(hi, z)); }
 /* 홈의 기본 배율. 데스크톱은 1배, 손가락 화면은 서울 덩이가 좌우 16px 여백 안에 든다 */
-const homeFit = box => fingers() ? Math.min(1, (innerWidth - 32) / box.w) : 1;
+const homeFit = box => Math.min(1, fingers() ? (innerWidth - 32) / box.w : 1, homeStage().h / box.h);
 
 function makeTile(label, slug, kid) {
   const el = document.createElement('button');

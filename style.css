@@ -1403,6 +1403,7 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 }
 .si-check{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer}
 .si-code{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--ink-soft)}
+.si-code[hidden]{display:none}
 .si-code > div{display:flex;gap:6px}
 .si-code input{
   font:inherit;font-size:16px;color:var(--ink);background:var(--bg);
@@ -2021,10 +2022,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;
   }
   /* 시작 — 주황 동그라미의 재생 삼각형. 글자(시작하기)는 이름으로만 남는다 */
-  #tabDock .tab-acc #navPlay{
-    flex:none;width:42px;height:42px;padding:0;gap:0;justify-content:center;
-    font-size:0;color:var(--on-accent);background:var(--accent);
-  }
+  #tabDock .tab-acc #navPlay{position:absolute;inset:0;padding:0 16px;gap:0;justify-content:flex-end;
+    font-size:0;color:var(--ink);background:none;border-radius:inherit}
+
   .tab-dock .nav-item::before{
     content:"";width:24px;height:24px;flex:none;background:currentColor;
     -webkit-mask:var(--i) center / 100% no-repeat;mask:var(--i) center / 100% no-repeat;
@@ -2428,6 +2428,38 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 :root[data-motion="off"] .rk-bot.is-asleep::before,:root[data-motion="off"] .rk-bot.is-asleep::after{animation:none;opacity:1}
 :root[data-motion="off"] .rk-bot.is-asleep::before{transform:translate(11px,-13px) scale(.7)}
 :root[data-motion="off"] .rk-bot.is-asleep:not(.is-held) .rk-bot-motion{animation:none}
+
+/* 홈봇 칩·수면 안내·busy (Figma 124:90–189). 수면·잠김 속말은 쓰지 않는다 */
+.rk-sleep-hint{
+  position:absolute;left:0;top:0;margin:0;padding:0;z-index:1;pointer-events:none;
+  font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap;
+}
+.rk-sleep-hint[hidden]{display:none}
+.rk-chips{
+  display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;
+}
+.rk-chips[hidden]{display:none}
+.rk-chips button{
+  font:inherit;font-size:12px;font-weight:700;line-height:1.2;
+  padding:6px 10px;border-radius:999px;border:0;cursor:pointer;
+  color:var(--ink);background:#fff;
+}
+.rk-chips button[data-chip="ranked"]{color:#fff;background:var(--ink)}
+.rk-chips button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.rk-say.is-busy{background:var(--ranked);color:#fff}
+.rk-say.is-busy input:disabled{
+  opacity:.72;color:var(--rk-ink,#fff);
+  background:color-mix(in srgb,var(--ranked) 70%,#000);
+  border-color:transparent;
+}
+.rk-say form.is-busy button:disabled,.rk-say form.is-thinking button:disabled{opacity:.55;cursor:not-allowed}
+.rk-say form.is-thinking input:disabled{
+  background:color-mix(in srgb,var(--rk-on,var(--ranked)) 78%,#fff);
+  border-color:transparent;color:var(--rk-ink,#fff);
+}
+/* 데스크톱 설정 제목 — Figma 22:2 Extra Bold */
+#options .head{font-weight:800}
+
 .rk-say{
   position:absolute;left:0;top:0;width:min(300px,calc(100vw - 32px));
   background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);border:0;border-radius:14px;

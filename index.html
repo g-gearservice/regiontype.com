@@ -182,6 +182,7 @@
        .rk-dim 은 처음 온 사람에게 넵바만 남기고 홈을 덮는 막이다 -->
   <div class="rk-layer" id="rkLayer" hidden>
     <div class="rk-dim" id="rkDim" hidden></div>
+    <p class="rk-sleep-hint" id="rkSleepHint" data-i18n="botSleep" hidden>눌러서 채팅</p>
     <div class="rk-say" id="rkSay" role="status" aria-live="polite" hidden>
       <!-- 봇과 겹치는 곳에만 보이는 테두리. 봇 몸 윤곽을 <use> 로 따 와 말풍선 안에 깐다 -->
       <svg class="rk-ring" id="rkRing" aria-hidden="true"><use></use></svg>
@@ -197,9 +198,14 @@
         </div>
       </form>
       <!-- 봇에게 말 걸기(ranked.js 의 chat). 중계기 /bot/chat 이 NVIDIA 모델에 묻는다 -->
+      <div class="rk-chips" id="rkChips" hidden>
+        <button type="button" data-chip="ranked" data-i18n="botChipRanked">경쟁전 시작</button>
+        <button type="button" data-chip="night" data-i18n="botChipNight">야간 모드</button>
+        <button type="button" data-chip="feedback" data-i18n="botChipFeedback">피드백</button>
+      </div>
       <form id="rkChat" hidden>
         <div>
-          <input id="rkChatIn" maxlength="300" autocomplete="off" data-i18n-aria="botChatIn" aria-label="봇에게 말 걸기" data-i18n-ph="botChatPh" placeholder="무엇이든 물어보세요">
+          <input id="rkChatIn" maxlength="300" autocomplete="off" data-i18n-aria="botChatIn" aria-label="봇에게 말 걸기" data-i18n-ph="botChatPh" placeholder="또는 말로 해 주세요">
           <button type="submit" data-i18n="fbSend">보내기</button>
         </div>
       </form>
@@ -348,9 +354,9 @@
   </div>
   <div class="opts-shell">
     <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
-      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="true" data-dev-only data-status="development"><span data-i18n="language">언어</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="false" tabindex="-1" data-dev-only data-status="development"><span data-i18n="language">언어</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
       <button type="button" class="opts-tab" role="tab" id="optsTabRegion" aria-controls="optsRegion" aria-selected="false" tabindex="-1" data-dev-only data-status="development"><span data-i18n="region">지역</span> <span class="opts-tab-status" data-i18n="tabDev">개발</span></button>
-      <button type="button" class="opts-tab" role="tab" id="optsTabGame" aria-controls="optsGame" aria-selected="false" tabindex="-1" data-i18n="game">게임</button>
+      <button type="button" class="opts-tab" role="tab" id="optsTabGame" aria-controls="optsGame" aria-selected="true" data-i18n="game">게임</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabVideo" aria-controls="optsVideo" aria-selected="false" tabindex="-1" data-i18n="video">화면</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabAudio" aria-controls="optsAudio" aria-selected="false" tabindex="-1" data-i18n="audio">소리</button>
       <button type="button" class="opts-tab" role="tab" id="optsTabSecurity" aria-controls="optsSecurity" aria-selected="false" tabindex="-1" data-i18n="security">보안</button>
@@ -358,7 +364,7 @@
       <button type="button" class="opts-tab" role="tab" id="optsTabVersion" aria-controls="optsVersion" aria-selected="false" tabindex="-1" data-i18n="version">버전</button>
     </nav>
     <div class="opts-panels">
-      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0" data-dev-only>
+      <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0" data-dev-only hidden>
         <div id="optLang" class="opts-lang-pick" role="radiogroup"
              data-i18n-aria="language" aria-label="언어"></div>
         <!-- pick 위·아래 흐림 띠. fillLangPick 이 #optLang 을 replaceChildren 하므로 자식이 아니라 형제로 둔다 -->
@@ -369,7 +375,7 @@
         <p class="opts-region-pending" data-i18n="regionPending">지금은 서울만 지원합니다. 다른 지역은 개발 중입니다.</p>
       </div>
       <!-- 게임 — 타자 속도 단위. 저장되는 값은 늘 CPM 이고 여기서 고르는 건 보이는 자다 -->
-      <div id="optsGame" class="opts-panel" role="tabpanel" aria-labelledby="optsTabGame" tabindex="0" hidden>
+      <div id="optsGame" class="opts-panel" role="tabpanel" aria-labelledby="optsTabGame" tabindex="0">
         <dl class="opts">
           <dt data-i18n="speedUnit">타자 속도 단위</dt>
           <dd>
@@ -620,10 +626,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=3.80"></script>
-<script src="app.js?v=3.80"></script>
-<script src="auth.js?v=3.80"></script>
-<script src="settings/settings.js?v=3.80"></script>
-<script src="ranked.js?v=3.80"></script>
+<script src="relay.js?v=3.81"></script>
+<script src="app.js?v=3.81"></script>
+<script src="auth.js?v=3.81"></script>
+<script src="settings/settings.js?v=3.81"></script>
+<script src="ranked.js?v=3.81"></script>
 </body>
 </html>
