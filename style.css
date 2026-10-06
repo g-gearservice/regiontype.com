@@ -186,6 +186,10 @@ body{
   /* 보안 판은 따로 굴리지 않는다 — 자기 높이 안에서 굴리면 내용이 판 끝에서 잘려 막대 밑까지 못 간다.
      막대 끝까지 늘어난 .opts-shell 이 함께 굴리고, 위아래 자리는 그 안쪽 여백이 맞춘다 */
   :root body:is(.set,.setting) #options #optsSecurity:not([hidden]){overflow:visible;flex:none;min-height:auto;margin-top:0}
+  /* 보안 판은 끝까지 굴리면 마지막 줄이 아래 띠(폰 --blur-bot 200px + 안전 여백) 위로 다 올라선다. 포커스도 띠 밑에 갇히지 않는다 */
+  :root body:is(.set,.setting) #options .opts-shell:has(#optsSecurity:not([hidden])){
+    padding-bottom:calc(var(--bleed) + 200px + env(safe-area-inset-bottom) + 24px);
+    scroll-padding:calc(var(--bleed) + var(--oh)) 0 calc(var(--bleed) + 200px + env(safe-area-inset-bottom))}
   /* @@signin */
   /* 로그인 덮개도 문서 안으로 — 위아래 여백까지 늘리고 안쪽 여백에 --bleed 를 더해 카드 자리는 그대로(아래는 독 높이 포함) */
   body > .si-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
@@ -391,8 +395,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .opts-tab{
   font:inherit;font-weight:700;font-size:22px;text-align:right;white-space:nowrap;
   width:fit-content;align-self:flex-end;
-  /* 비활성은 반투명 teal 이라 흰 글자면 배경 위에서 읽히지 않는다 — 글자는 잉크로 */
-  color:var(--ink);background:color-mix(in srgb,var(--block) 34%,transparent);
+  /* 비활성은 판 없이 글자만 선다(보안 탭을 골랐을 때의 결을 모든 탭의 기본으로) — 글자는 잉크로 */
+  color:var(--ink);background:transparent;
   border:0;border-radius:14px;padding:8px 18px 10px;cursor:pointer;
   /* font-size 도 같이 잇는다 — font-weight 는 뺀다: 가변 폭이 아닌 폰트라
      700→800 은 어차피 중간값 없이 그대로 튄다, 이어봤자 헛일이다 */
@@ -408,7 +412,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (hover:hover) and (pointer:fine){
   .opts-tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--block) 52%,transparent)}
 }
-.opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+/* 탭은 판이 없어 초점이 글자만으로는 안 보인다 — 어디서나 투명인 초점 테두리(위 :focus-visible)를 탭에서만 되살린다 */
+.opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;outline-color:var(--accent)!important}
 /* 개발 탭은 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
 .opts-tab[data-status="development"]{border:2px dashed currentColor}
 .opts-tab-status{
@@ -1626,6 +1631,27 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
      둬야 끝까지 굴렸을 때 마지막 줄이 띠 위로 올라선다 */
   padding-bottom:max(8px,calc((110px - var(--opt-shell-bot)) / var(--zc)))}
 .opts-shell:has(#optsSecurity:not([hidden])) .opts-tab:not([aria-selected="true"]){background:transparent}
+/* 데스크톱 보안 판은 따로 굴리지 않는다 — .opts-shell 이 덮개 위아래 끝까지 늘어 스크롤 통이 되고, 내용이 위·아래 흐림 띠
+   밑으로 지나간다(띠는 통 밖 덮개의 자식이라 제자리). 위 padding 은 셸이 서던 자리, 아래 padding 은 셸 아랫변까지라
+   레일·판의 첫 자리는 그대로다. 레일은 sticky 로 서 있고 판만 흐른다. 마지막 줄을 띠 위로 올리는 여백은 판 아래 padding 이 맡는다 */
+@media not (pointer:coarse){
+  #options .opts-shell:has(#optsSecurity:not([hidden])){
+    position:absolute;inset:0;width:auto;max-width:none;height:auto;margin:0;
+    align-items:flex-start;justify-content:center;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+    padding:calc(((100vh - var(--opt-shell-h)) / 2 + var(--opt-shell-dy)) / var(--zc)) calc(var(--screen-pad-x) / var(--zc))
+            calc(var(--opt-shell-bot) / var(--zc));
+    /* 포커스가 흐림 띠 밑에 갇히지 않게 — 위는 셸이 서던 자리(위 띠 아래), 아래는 띠 높이(.page-blur --blur-bot 110px) */
+    scroll-padding-top:calc(((100vh - var(--opt-shell-h)) / 2 + var(--opt-shell-dy)) / var(--zc));
+    scroll-padding-bottom:calc(110px / var(--zc));
+  }
+  /* 가운데 맞춤이 하던 자리를 위 여백으로 옮긴다 — 레일 테 위변은 가운데일 때와 같다(-12px 음수 여백 몫 6px 를 덜어).
+     sticky top 은 통의 padding 안쪽에서 재므로 같은 값이면 제자리에 붙어 선다 */
+  #options .opts-shell:has(#optsSecurity:not([hidden])) .opts-tabs{align-self:flex-start;position:sticky;
+    margin-top:calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2 - 6px);
+    top:calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2 - 6px)}
+  #options .opts-shell:has(#optsSecurity:not([hidden])) .opts-panels{align-self:flex-start}
+  #options #optsSecurity:not([hidden]){overflow:visible;flex:none;min-height:auto}
+}
 .security-content{width:min(100%,452px)}
 .security-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .security-health{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:212px;padding:0;overflow:hidden}
