@@ -2820,10 +2820,9 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
     flex:none;align-self:center;display:inline-flex;align-items:center;gap:6px;
     min-height:44px;padding:0 16px;border-radius:999px;scroll-snap-align:start;
     font-size:16px;font-weight:700;text-align:start;
-    color:var(--ink);background:#e7eef1;border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);box-shadow:none;
+    color:var(--ink);background:transparent;border:1px solid transparent;box-shadow:none;
   }
-  /* 칩은 흐림 띠 위에 바로 앉으니 비치지 않게 불투명으로 채운다 — 바로 밑 탭 독과 같은 판색 */
-  :root[data-night] body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab:not([aria-selected="true"]){background:#2d383e}
+  /* 안 고른 탭은 데스크톱처럼 판도 테두리도 없이 글자만 선다 — 낮 · 밤 모두 투명 */
   /* 고른 칩은 색만으로 서지 않는다 — 채움 · 굵기 · 앞의 체크 표가 함께 간다 */
   body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab[aria-selected="true"]{
     background:var(--block-hi);color:#fff;font-weight:800;border-color:var(--block-hi);
