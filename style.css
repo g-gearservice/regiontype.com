@@ -1632,7 +1632,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   /* 판 아랫단은 화면 아래 흐림 띠(.page-blur --blur-bot 110px) 안에 든다 — 띠가 덮는 만큼 여백을
      둬야 끝까지 굴렸을 때 마지막 줄이 띠 위로 올라선다. --blur-bot 은 띠 자신에만 걸려 여기선 안 보이니 숫자로 둔다 */
   padding-bottom:max(8px,calc((110px - var(--opt-shell-bot)) / var(--zc)))}
-.opts-shell:has(#optsSecurity:not([hidden])) .opts-tab:not([aria-selected="true"]){background:transparent}
 /* 데스크톱 보안 판은 따로 굴리지 않는다 — .opts-shell 이 덮개 위아래 끝까지 늘어 스크롤 통이 되고, 내용이 위·아래 흐림 띠
    밑으로 지나간다(띠는 통 밖 덮개의 자식이라 제자리). 위 padding 은 셸이 서던 자리, 아래 padding 은 셸 아랫변까지라
    레일·판의 첫 자리는 그대로다. 레일은 sticky 로 서 있고 판만 흐른다. 마지막 줄을 띠 위로 올리는 여백은 판 아래 padding 이 맡는다 */
