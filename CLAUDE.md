@@ -40,6 +40,11 @@ A 를 올리면 B 는 0으로 되돌린다. C 는 늘 VER 을 따르므로 되�
 거기서 일하고(`static-0.6.270`), 끝나면 `main` 에 머지해 배포한다. 머지가 된 뒤에야
 옛 브랜치를 지운다.
 
+**봇이 직접 PR 을 올릴 때는 `agent-static-0.0.N` 브랜치를 쓴다.** N 은 봇이 직접
+올린 PR 의 순번이다 — 지금까지 열린 `agent-static-*` PR 수에 1을 더한다
+(`gh pr list --state all --limit 1000 --json headRefName -q '.[].headRefName' | grep -c '^agent-static-'`).
+VER 과 무관하게 0.0 고정이고 N 만 늘린다. 사람이 고른 `static-A.B.C` 와 섞지 않는다.
+
 **Pages 설정에는 손대지 않는다.** 소스 브랜치·도메인 따위는 사람이 만진다 —
 읽지도 바꾸지도 않는다.
 
