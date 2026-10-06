@@ -400,6 +400,35 @@ async function tryAuth(run, doing, btns) {
   btns.forEach(b => b.disabled = false);
 }
 
+/* 패스키를 등록한 브라우저. 한 줄에 브라우저 이름과 마지막 사용만 싣는다 —
+   credential id·user handle 같은 날 WebAuthn 값은 받아도 그리지 않는다.
+   이름은 밖에서 온 글자라 textContent 로만 넣는다.
+   ponytail: 중계기가 아직 이 목록을 주지 않는다(passkey 표에 브라우저·마지막 사용
+   칸이 없고 /auth/me 는 개수만 준다). 그래서 지금은 늘 빈 상태다. 나중에 /auth/me 가
+   browsers: [{ browser, used }] (used 는 epoch ms) 를 주면 이 함수가 그대로 받는다 */
+function paintBrowsers(list) {
+  const ul = $('#securityBrowsers');
+  const rows = (Array.isArray(list) ? list : [])
+    .filter(b => b && typeof b.browser === 'string' && b.browser.trim())
+    .map(b => ({ browser: b.browser.trim().slice(0, 40), used: Number(b.used) }));
+  ul.replaceChildren(...rows.map(({ browser, used }) => {
+    const li = document.createElement('li');
+    li.className = 'security-browser';
+    li.textContent = t('secBrowserRow', { browser, when: usedAgo(used) });
+    return li;
+  }));
+  ul.hidden = !rows.length;
+  $('#securityBrowsersNone').hidden = !!rows.length;
+}
+/* '어제' · '3일 전' — 날짜 경계로 센다. 말은 Intl 이 그 언어로 짓는다 */
+function usedAgo(ms) {
+  if (!(ms > 0)) return t('secBrowserNever');
+  const day = d => { const x = new Date(d); return Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()) / 864e5; };
+  const days = Math.max(0, day(Date.now()) - day(ms));
+  try { return new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' }).format(-days, 'day'); }
+  catch { return String(days); }
+}
+
 let CODES = [];      // 복구 코드. 판이 떠 있는 동안만 산다
 let securityRequest = 0;
 
@@ -418,6 +447,7 @@ async function account() {
   $('#securityTwoSwitch').setAttribute('aria-pressed', 'false');
   $('#securityTwoText').textContent = '패스키 등록 상태를 확인합니다.';
   $('#acctWarn').hidden = $('#acctCodes').hidden = true;
+  paintBrowsers([]);
   if (!inn) return;
   const a = await me().catch(() => null);
   if (request !== securityRequest) return;
@@ -435,6 +465,7 @@ async function account() {
   $('#securityTwo').textContent = a.keys > 0 ? '사용 중' : '꺼짐';
   $('#securityTwoSwitch').setAttribute('aria-pressed', String(a.keys > 0));
   $('#securityTwoText').textContent = a.keys > 0 ? '패스키로 로그인 시 한 번 더 확인합니다.' : '패스키를 추가하면 2단계 인증이 켜집니다.';
+  paintBrowsers(a.browsers);
   $('#acctWarn').hidden = a.keys !== 1;
   $('#acctCodes').hidden = !a.codes;
   if (a.codes) $('#acctCodes').textContent = t('codesLeft', { n: a.codes });
