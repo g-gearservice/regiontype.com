@@ -213,8 +213,14 @@ function fillLangPick() {
   fillPick(box, 'rtLang', LANG_CONTINENTS.map(([k, codes]) => [k, codes.filter(c => UI_LANGS.includes(c))]),
            langLabel, UI_LANGS.includes(opt.lang) ? opt.lang : LANG);
 }
-/* 지역 탭은 개발 중이라 나라 고르기를 그리지 않는다. 안내는 HTML 의 pending 문장 */
-function fillRegionPick() {}
+/* 지역 고르기는 개발용이다 — 배포에서는 탭·판이 숨고 world.json 도 안 받으니 그리지 않는다.
+   대륙 묶음에 없는 나라는 '그 밖' 없이 빠진다(CONTINENTS 주석) */
+function fillRegionPick() {
+  const box = $('#optRegion');
+  if (!box || !isDev() || !WORLD.countries.length) return;
+  fillPick(box, 'rtCountry', CONTINENTS.map(([k, ids]) => [k, ids.filter(haveCountry)]),
+           countryName, haveCountry(opt.country) ? opt.country : 'KR', LANG);
+}
 
 /* ── 탭 ──────────────────────────────────────────────
    MM 스타일 세로 레일. role="tab" 사이를 화살표/Home/End 로 옮기고, 고른 탭만
@@ -726,7 +732,7 @@ function softApply() {
   if (ui) {
     softApply();
     grab('data/i18n.json').then(all => { I18N = all; }).catch(() => {});
-    if (isDev()) grab('data/world.json').then(w => { WORLD = w; }).catch(() => {});
+    if (isDev()) grab('data/world.json').then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
   }
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });
 

@@ -1826,9 +1826,11 @@ async function boot() {
   addEventListener('rt-opt', () => {
     const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
     for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
-    const dong = opt.dong;
+    const dong = opt.dong, country = opt.country;
     Object.assign(opt, next);
-    if (opt.dong !== dong) renderCourses();
+    /* 나라 고르기는 개발에서만 열린다 — 배포는 showCountry 가 KR 로 되돌린다 */
+    if (opt.country !== country && isDev()) showCountry(resolveCountry());
+    else if (opt.dong !== dong) renderCourses();
     document.documentElement.toggleAttribute('data-night', opt.night);
     document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
     document.documentElement.toggleAttribute('data-no-grid', !opt.grid);

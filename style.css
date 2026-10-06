@@ -441,7 +441,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   @media (pointer:coarse){ .opts-panel:not([hidden]){transform:translateX(calc(var(--dir,0) * 16px))} }
 }
 /* 언어·지역 고르기 — 대륙 fieldset + 2열 라디오. 지역 판과 같은 스크롤 통 */
-.opts-lang-pick{
+.opts-lang-pick,.opts-region-pick{
   /* 대륙 fieldset 은 통을 가로지르고, 홀로 선 '자동' 칸은 한 열만 차지한다 —
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
   display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
@@ -475,7 +475,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 :root:not([data-dev]) :is(.opts-tab,.opts-panel)[data-dev-only]{display:none!important}
 :root[data-dev] .opts-tab[data-dev-only]{display:revert}
 :root[data-dev] .opts-panel[data-dev-only]:not([hidden]){display:flex}
-.opts-region-pick{display:none}
+/* 지역 고르기도 개발에서만 그린다 — 판이 숨어도 배포에서 목록이 남지 않게 한 번 더 막는다 */
+:root:not([data-dev]) .opts-region-pick{display:none!important}
 /* 대륙마다 끊어 2열로 펼친다 — 스크롤 목록보다 한눈에 듄다. 칸이 좁아지면
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */
 .region-group{border:0;margin:0;padding:0;min-inline-size:0}
@@ -2850,7 +2851,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   body:is(.set,.setting) #optsGame .profile-help:empty{display:none}
 
   /* 언어 판 — 대륙 머리말(작은 대문자) 아래 한 장의 카드 */
-  body:is(.set,.setting) #options .opts-lang-pick{
+  body:is(.set,.setting) #options :is(.opts-lang-pick,.opts-region-pick){
     display:flex;flex-direction:column;gap:22px;max-width:none;height:auto;max-height:none;
     margin:0;padding:6px 0 0;overflow:visible;
   }
