@@ -20,4 +20,8 @@ One file: `README.md`, written in English only. Do not add to or edit the Chines
 
 A release is `vA.B.C`. A (large change) and B (small change) are chosen by hand from what changed. C is `VER` from `app.js` without the dot: `VER = '1.45'` → `v0.4.145`. Raising A resets B to zero. `VER` goes up by `0.01` on every change. Never lower `?v=`. Each release gets a new branch `static-A.B.C`; the Pages source is that branch, not `main`.
 
+### Version for Agents
+
+A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `static-A.B.C`. N is the number of `agent-static-*` pull requests opened so far, plus one. `0.0` stays fixed whatever `VER` is; only N grows. Never mix it with a hand-chosen `static-A.B.C`.
+
 Cursor also loads `.cursor/rules/commits-and-docs.mdc` on every session.

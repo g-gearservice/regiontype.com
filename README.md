@@ -384,6 +384,14 @@ The changelog lists **only this release**. Stacking older bullets hides what act
 
 Never lower a `?v=` query. If you do, it collides with an old number and the cache never turns over.
 
+### Version for Agents
+
+A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `static-A.B.C`.
+
+- **N** — the bot's own pull request count: the number of `agent-static-*` pull requests opened so far, plus one
+- **0.0** — fixed, whatever `VER` is. Only N grows
+- Never mix it with a hand-chosen `static-A.B.C`
+
 ## Run
 
     python3 -m http.server 3000
