@@ -331,7 +331,9 @@ function applyGrid(ox, oy, nx, ny = nx) {
   p.setAttribute('x', ox);
   p.setAttribute('y', oy);
   p.querySelector('path').setAttribute('d', `M${nx} 0 V${ny} H0`);
-  /* 폰 홈의 위 흐림(.top-blur)은 --bg 단색 겹이라 이 격자를 덮는다 — 같은 원점·칸을 CSS 에 넘겨 겹에도 그린다 */
+  /* 폰 홈의 위 흐림(.top-blur)은 --bg 단색 겹이라 이 격자를 덮는다 — 같은 원점·칸을 CSS 에 넘겨 겹에도 그린다.
+     그 겹은 폰 Safari 탭(bleedOn)에만 있다 — 다른 곳에서는 지도가 움직이는 매 프레임 :root 를 건드리지 않는다 */
+  if (!bleedOn.matches) return;
   const s = document.documentElement.style;
   for (const [k, v] of [['--gx', ox], ['--gy', oy], ['--gw', nx], ['--gh', ny]]) s.setProperty(k, v + 'px');
 }
