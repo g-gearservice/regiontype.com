@@ -1636,6 +1636,10 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .security-device{display:flex;flex-direction:column;gap:10px;font-size:11px}
 .security-device .profile-label{margin:0}
 .device-current{display:flex;align-items:center;gap:8px;padding:6px;border:1px solid var(--ink);border-radius:8px;background:color-mix(in srgb,var(--block-hi) 11%,transparent);font-weight:600}
+/* 등록된 브라우저 — 로그인된 기기 칩과 같은 결이지만 따로 둔다(그 칩을 고치지 않게) */
+.security-browsers{display:flex;flex-direction:column;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.security-browser{padding:6px;border:1px solid var(--ink);border-radius:8px;background:color-mix(in srgb,var(--block-hi) 11%,transparent);font-size:11px;color:var(--ink);overflow-wrap:anywhere}
+#securityBrowsersNone{margin-top:8px}
 #securityDeviceIcon{width:16px;height:16px;object-fit:contain;flex:none}
 :root[data-night] #securityDeviceIcon{filter:invert(1)}
 .security-history{font-size:11px;color:var(--ink)}
