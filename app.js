@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.83';
+const VER = '3.84';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2690,6 +2690,7 @@ function finish() {
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
+    $('#rCount').dataset.of = G.items.length;
     $('#rAcc').textContent = G.acc + '%';
     $('#rBest').textContent = G.cpm > prev ? t('bestNew') : prev ? t('bestPrev', { n: showSpeed(prev) }) : '';
     if (G.cpm > prev) localStorage.setItem(key, G.cpm);

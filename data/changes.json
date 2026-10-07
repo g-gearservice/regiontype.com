@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.384",
+    "date": "2026-10-07",
+    "ko": "결과 화면을 새로 꾸몄습니다. 타/분을 크게 보여 주고, 들른 곳·정확도를 칸으로 나눴으며, 순위표를 옆에 둡니다.",
+    "en": "Redesigned the result screen: speed is shown large, places and accuracy sit in their own cells, and the leaderboard sits alongside."
+  },
+  {
     "v": "0.9.383",
     "date": "2026-10-07",
     "ko": "결과 카드에 이전 결과와 현재 결과가 겹쳐 그려지던 것을 고쳤습니다.",
