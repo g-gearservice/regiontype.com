@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.383",
+    "date": "2026-10-07",
+    "ko": "결과 카드에 이전 결과와 현재 결과가 겹쳐 그려지던 것을 고쳤습니다.",
+    "en": "Fixed the result card drawing the previous result on top of the current one."
+  },
+  {
     "v": "0.9.382",
     "date": "2026-10-06",
     "ko": "홈 봇, 모달, 빈 화면 문구가 지원하는 모든 언어에서 서로 맞습니다.",
