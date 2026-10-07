@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.82';
+const VER = '3.83';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2709,16 +2709,16 @@ function finish() {
 
 /* 결과 카드 — SVG를 그대로 이미지로 굽는다 (9:16, 스토리용).
    스토리는 위아래 UI 가 가리므로 글자는 위 250·아래 340 px 안쪽에 둔다 */
-let cardReady = Promise.resolve(), cardShot = null;
+let cardReady = Promise.resolve(), cardShot = null, cardSeq = 0;
 function drawCard() {
   let done;
+  const seq = ++cardSeq;
   cardShot = null;
   cardReady = new Promise(r => done = r);
   const cv = $('#card'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height, pad = 90;
   const css = getComputedStyle(document.body);
   const bg = css.backgroundColor, ink = css.color;
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
   const svg = $('#map').cloneNode(true);
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
@@ -2760,6 +2760,8 @@ function drawCard() {
   };
   const img = new Image();
   img.onload = () => {
+    if (seq !== cardSeq) return done();                       // 더 새 판이 이미 그리는 중 — 옛 그림을 덧칠하지 않는다
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);             // 바탕은 그릴 때마다 여기서 새로 깐다
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
     const top = 480, bottom = 1150;                           // 지도 칸 — 위는 머릿글, 아래는 점수·CTA 몫
     let w = W - pad * 2, h = w * vb[3] / vb[2];
