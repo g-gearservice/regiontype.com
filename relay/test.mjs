@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, devLoginOn } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail, normPhone } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, derToRaw, readClientData, readAuthData, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -542,9 +542,11 @@ assert.equal(validClaims({ ...goodClaims, nonce: 'n2' }, PROV, 'n1'), false, 'no
 /* 4) 복구 코드 — 해시로만 맞춰 보고, 쓰면 지우고, 재발급은 옛 코드를 통째로
    지운다. 평문 code 가 아니라 해시 h 만 저장하는지도 소스에서 확인한다. */
 const issueSrc = fn('issueRecoveryCodes');
-assert.ok(/delete from recovery where who = \?/.test(issueSrc), '재발급이 옛 코드를 지우지 않는다');
-assert.ok(/insert into recovery[\s\S]*bind\(h, who, now\)/.test(issueSrc), '해시만 저장해야 한다');
-assert.ok(!/\.bind\(code,/.test(issueSrc), '평문 코드가 저장되면 안 된다');
+const storeSrc = fn('storeRecoveryCodes');
+assert.ok(issueSrc.includes('storeRecoveryCodes'), '재발급이 저장 경로를 건너뛰면 옛 코드가 남는다');
+assert.ok(/delete from recovery where who = \?/.test(storeSrc), '재발급이 옛 코드를 지우지 않는다');
+assert.ok(/insert into recovery[\s\S]*bind\(h, who, now\)/.test(storeSrc), '해시만 저장해야 한다');
+assert.ok(!/\.bind\(code,/.test(storeSrc), '평문 코드가 저장되면 안 된다');
 assert.ok(/select who from recovery where hash = \?/.test(authCodeSrc), '코드가 아니라 해시로 맞춰 봐야 한다');
 assert.ok(authCodeSrc.includes("delete from recovery where hash = ?") &&
   authCodeSrc.indexOf('맞지 않는 코드입니다') < authCodeSrc.indexOf("delete from recovery where hash = ?"),
@@ -644,8 +646,8 @@ good('origin-allowlist', "const SITE = ['https://regiontype.com', 'https://www.r
 bad('token-stays-server', 'const t = env.GH_TOKEN;', '브라우저 코드에 토큰이 보이면 안 된다');
 
 /* Cloudflare MCP 가 떠다 주는 값 — 판정은 그래도 여기 표가 한다 */
-good('workers-known', ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online']);
-good('workers-known', ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online'].reverse(), '순서는 상관없다');
+good('workers-known', ['regiontype-com', 'rt-feedback', 'rt-mail', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online']);
+good('workers-known', ['regiontype-com', 'rt-feedback', 'rt-mail', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online'].reverse(), '순서는 상관없다');
 bad('workers-known', ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online', 'crypto-miner'], '모르는 워커를 놓치면 안 된다');
 bad('workers-known', ['regiontype-com'], '워커가 사라진 것도 사고다');
 
@@ -689,9 +691,9 @@ console.log('security rule self-check done');
   const post = { tag: 'brag', title: '강서구 1분 컷', body: '<img src=x onerror=alert(1)>\n\n\n\n둘째 줄\u202e' };
 
   assert.equal((await call('/cm/post', post)).status, 401, '로그인 없이는 못 쓴다');
+  for (const w of [A, B, C, D]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
   const nn = await call('/cm/post', post, A);
   assert.equal(nn.status, 409, '닉네임이 없으면 못 쓴다'); assert.ok(nn.noname);
-  for (const w of [A, B, C, D]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
   for (const [w, name, shut] of [[A, '가양', 0], [B, '나리', 0], [C, '다온', 1], [D, '라온', 0]])
     db.prepare("insert into profile (who, name, at, handle, shut) values (?, ?, 0, ?, ?)").run(w, name, name === '가양' ? 'gayang' : '', shut);
 
@@ -783,6 +785,7 @@ console.log('security rule self-check done');
   const env = { DB, SESSION_KEY: 'k'.repeat(32), RL_SC: open, RL_RK: open, RL_AU: open };
   const A = 'a'.repeat(32), B = 'b'.repeat(32);
   const tok = { [A]: await sign(env.SESSION_KEY, A), [B]: await sign(env.SESSION_KEY, B) };
+  for (const w of [A, B]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
   const call = async (path, body, who) => {
     const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com' + path, {
       method: body ? 'POST' : 'GET', body: body && JSON.stringify(body),
@@ -856,9 +859,12 @@ console.log('security rule self-check done');
   for (const tb of ['best', 'ladder', 'played', 'ticket'])
     assert.equal(db.prepare(`select count(*) as n from ${tb} where who = ?`).get(A).n, 0, `/forget 은 ${tb} 를 두 기기 다 지운다`);
   await call('/played', { ...run, cpm: 300, dev: 'mobile' }, B);
-  db.prepare('insert into user (id, at) values (?, 0)').run(B);
   assert.equal((await call('/auth/erase', { sure: true }, B)).status, 200);
+  assert.equal(db.prepare('select count(*) as n from user where id = ?').get(B).n, 0, '사람 줄도 지운다');
   assert.equal(db.prepare('select count(*) as n from best where who = ?').get(B).n, 0, '계정을 지우면 두 기기 줄이 다 간다');
+  assert.equal((await call('/played', { ...run, cpm: 110 }, B)).status, 401, '지우기 전에 낸 토큰은 그 뒤엔 거절된다');
+  assert.equal((await call('/auth/me', null, B)).status, 401, '지운 계정의 /auth 도 거절된다');
+  assert.equal((await call('/auth/me', null, A)).status, 200, '남은 계정의 토큰은 그대로다');
   console.log('device split self-check done');
 }
 
@@ -1046,6 +1052,7 @@ console.log('security rule self-check done');
   const [A, B, C] = ['a', 'b', 'c'].map(x => x.repeat(32));
   const tok = {};
   for (const w of [A, B, C]) tok[w] = await sign(env.SESSION_KEY, w);
+  for (const w of [A, B, C]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
   const call = async (path, body, who, e = env) => {
     const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com' + path, {
       method: 'POST', body: JSON.stringify(body ?? {}),
@@ -1338,13 +1345,39 @@ console.log('security rule self-check done');
   console.log('compete core self-check done');
 }
 
-/* ── 개발 로그인(/auth/dev) — 로컬 주소 + DEV_LOGIN 두 겹이 다 있어야만 열린다 ── */
+/* ── 로컬 로그인 · 복구 메일 ── 이름 우회는 닫혀 있고, 확인된 주소만 메일을 받는다 ── */
 {
-  assert.equal(devLoginOn({ DEV_LOGIN: '1' }, 'http://127.0.0.1:8788/auth/dev'), true);
-  assert.equal(devLoginOn({ DEV_LOGIN: '1' }, 'http://localhost:8788/auth/dev'), true);
-  assert.equal(devLoginOn({}, 'http://127.0.0.1:8788/auth/dev'), false, 'DEV_LOGIN 이 없으면 닫힌다');
-  assert.equal(devLoginOn({ DEV_LOGIN: '1' }, 'https://g.gearservicevanguard.com/auth/dev'), false, '배포 주소면 변수가 있어도 닫힌다');
-  assert.equal(devLoginOn({ DEV_LOGIN: 'true' }, 'http://127.0.0.1:8788/auth/dev'), false, '1 만 켠다');
+  assert.equal(localLoginOk('https://regiontype.com', 'google', {}), true, '배포는 메일을 요구하지 않는다');
+  assert.equal(localLoginOk('http://localhost:3000', 'apple', { email: LOCAL_LOGIN, email_verified: true }), false, '로컬 Apple 은 닫는다');
+  assert.equal(localLoginOk('http://127.0.0.1:3000', 'google', { email: ' ' + LOCAL_LOGIN.toUpperCase(), email_verified: true }), true);
+  assert.equal(localLoginOk('http://localhost:3000', 'google', { email: LOCAL_LOGIN, email_verified: 'true' }), false, '검증 표시는 참이어야 한다');
+  assert.equal(localLoginOk('http://localhost:3000', 'google', { email: 'other@example.com', email_verified: true }), false);
+  assert.equal(normMail('  G@GearServiceVanguard.com '), LOCAL_LOGIN);
+  assert.equal(normMail('a@b.com\nBcc: x@y.z'), '');
+
+  const { handle } = await import('../mail/mail.mjs');
+  const sent = [];
+  const MAIL_KEY = 'mail-key-0123456789';
+  const mailEnv = {
+    MAIL_KEY, MAIL_FROM: 'recover@regiontype.com',
+    EMAIL: { send: async m => { sent.push(m); return { messageId: 'm1' }; } },
+  };
+  const MAIL = { fetch: (url, init) => handle(new Request(url, init), mailEnv) };
+  const denied = await handle(new Request('https://rt-mail/send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), mailEnv);
+  assert.equal(denied.status, 401, '열쇠 없는 호출은 보내지 않는다');
+  const injected = await handle(new Request('https://rt-mail/send', {
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + MAIL_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify({ to: 'a@b.com\nBcc: x@y.z', subject: 'hi', text: 'body' }),
+  }), mailEnv);
+  assert.equal(injected.status, 400, '헤더를 늘리는 주소는 거절한다');
+  const html = await handle(new Request('https://rt-mail/send', {
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + MAIL_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify({ to: 'a@b.co', subject: 'hi', text: 'body', html: '<b>no</b>' }),
+  }), mailEnv);
+  assert.equal(html.status, 400, 'html 은 받지 않는다');
+  assert.equal(sent.length, 0);
 
   const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(':memory:');
@@ -1358,31 +1391,175 @@ console.log('security rule self-check done');
   const DB = { prepare: q => stmt(q), batch: async ss => Promise.all(ss.map(s =>
     /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
   const openRL = { limit: async () => ({ success: true }) };
-  const base = { DB, SESSION_KEY: 'k'.repeat(32), RL_AU: openRL };
-  /* 로컬에서 띄운 중계기처럼 — 요청 주소와 Origin 이 둘 다 로컬이다 */
-  const dev = async (env, host, name) => {
-    const r = await relayWorker.fetch(new Request(host + '/auth/dev', { method: 'POST', body: JSON.stringify({ name }),
-      headers: { origin: 'http://localhost:3000', 'content-type': 'application/json' } }), env);
-    return { status: r.status, ...(await r.json()) };
+  const base = { DB, SESSION_KEY: 'k'.repeat(32), RL_AU: openRL, RL_CB: openRL, MAIL, MAIL_KEY,
+    GOOGLE_ID: 'client-123', GOOGLE_SECRET: 'sek' };
+  const call = async (path, body, extra = {}) => {
+    const headers = { origin: extra.origin || 'https://regiontype.com', 'content-type': 'application/json', ...(extra.headers || {}) };
+    const r = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com' + path, {
+      method: extra.method || 'POST', body: body == null ? undefined : JSON.stringify(body), headers,
+    }), extra.env || base);
+    const text = await r.text();
+    let json = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
+    return { status: r.status, headers: r.headers, ...json };
   };
-  assert.equal((await dev(base, 'http://127.0.0.1:8788', '가양')).status, 405, 'DEV_LOGIN 없이는 없는 경로');
-  assert.equal((await dev({ ...base, DEV_LOGIN: '1' }, 'https://g.gearservicevanguard.com', '가양')).status, 405,
-    '운영 주소로 온 요청은 Origin 이 로컬이어도 안 받는다');
-  const on = { ...base, DEV_LOGIN: '1' };
-  const a = await dev(on, 'http://127.0.0.1:8788', '가양');
-  assert.equal(a.status, 200);
-  assert.equal(a.isNewAccount, true);
-  const who = await open(on.SESSION_KEY, a.token);
-  assert.match(who, /^dev[0-9a-f]{32}$/, '운영 id(hex 32)와 겹치지 않는 모양');
-  const again = await dev(on, 'http://127.0.0.1:8788', ' 가양 ');
-  assert.equal(again.isNewAccount, false, '같은 이름 = 같은 계정');
-  assert.equal(await open(on.SESSION_KEY, again.token), who);
-  assert.notEqual(await open(on.SESSION_KEY, (await dev(on, 'http://127.0.0.1:8788', '나리')).token), who);
-  assert.equal((await dev(on, 'http://127.0.0.1:8788', '  ')).status, 400, '빈 이름');
-  const me = await relayWorker.fetch(new Request('http://127.0.0.1:8788/auth/me', {
-    headers: { origin: 'http://localhost:3000', authorization: 'Bearer ' + a.token } }), on);
-  assert.equal(me.status, 200, '받은 토큰으로 로그인 상태가 된다');
-  console.log('dev login self-check done');
+  const dev = await call('/auth/dev', { name: '가양' }, { env: { ...base, DEV_LOGIN: '1' }, origin: 'http://localhost:3000' });
+  assert.equal(dev.status, 405, '이름만으로 세션을 만들지 않는다');
+
+  const who = 'ab'.repeat(16);
+  db.prepare('insert into user (id, mail, at) values (?, null, ?)').run(who, Date.now());
+  const token = await sign(base.SESSION_KEY, who);
+  const auth = { authorization: 'Bearer ' + token };
+  const owner = 'owner@example.com';
+  const stranger = 'stranger@example.com';
+  const before = sent.length;
+  const unknown = await call('/auth/rescue', { email: stranger });
+  assert.equal(unknown.status, 200);
+  assert.equal(sent.length, before, '확인되지 않은 주소에는 메일이 없다');
+  assert.ok(!JSON.stringify(unknown).includes(stranger), '응답에 주소를 싣지 않는다');
+
+  const started = await call('/auth/mail', { email: owner }, { headers: auth });
+  assert.equal(started.status, 200, started.msg);
+  assert.equal(sent.length, before + 1);
+  assert.equal(sent.at(-1).to, owner);
+  assert.equal(sent.at(-1).from, 'recover@regiontype.com');
+  assert.equal(sent.at(-1).html, undefined);
+  const code = sent.at(-1).text.match(/[a-z0-9]{10}/).at(-1);
+  const badCode = await call('/auth/mail/confirm', { code: 'zzzzzzzzzz' }, { headers: auth });
+  assert.equal(badCode.status, 400, '틀린 코드');
+  const confirmed = await call('/auth/mail/confirm', { code }, { headers: auth });
+  assert.equal(confirmed.status, 200, confirmed.msg);
+  const me = await call('/auth/me', null, { method: 'GET', headers: auth });
+  assert.equal(me.mailbox, true);
+  assert.ok(!JSON.stringify(me).includes(owner) && !JSON.stringify(me).includes('@'), '계정 응답에 주소가 없다');
+
+  const still = sent.length;
+  const againUnknown = await call('/auth/rescue', { email: stranger });
+  assert.equal(againUnknown.status, unknown.status);
+  assert.equal(againUnknown.msg, unknown.msg, '없는 주소와 있는 주소의 말이 같다');
+  assert.equal(sent.length, still);
+
+  const rescued = await call('/auth/rescue', { email: owner });
+  assert.equal(rescued.status, 200);
+  assert.equal(rescued.msg, unknown.msg);
+  assert.equal(sent.at(-1).to, owner);
+  assert.equal(sent.filter(m => m.to === stranger).length, 0);
+  const codes = [...sent.at(-1).text.matchAll(/[a-z0-9]{10}/g)].map(m => m[0]);
+  assert.equal(codes.length, 8);
+  const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const oldHash = toHex(await sha(code));
+  assert.equal(db.prepare('select 1 as n from recovery where hash = ?').get(oldHash), undefined, '확인 코드는 복구 코드가 아니다');
+  const fresh = toHex(await sha(codes[0]));
+  assert.ok(db.prepare('select who from recovery where hash = ?').get(fresh), '보낸 코드만 저장된다');
+
+  const b = 'bind-value';
+  const tag = 't'.repeat(43);
+  const state = b64u(await sha(b));
+  const take = b64u(await sha(state + tag));
+  db.prepare('insert into pending (id, kind, who, until) values (?, ?, ?, ?)').run(take, 'two', who, Date.now() + 60_000);
+  const once = await call('/auth/code', { b, t: tag, code: codes[0] });
+  assert.equal(once.status, 200, once.msg);
+  db.prepare('insert into pending (id, kind, who, until) values (?, ?, ?, ?)').run(take, 'two', who, Date.now() + 60_000);
+  const twice = await call('/auth/code', { b, t: tag, code: codes[0] });
+  assert.equal(twice.status, 401, '복구 코드는 한 번만 쓴다');
+
+  const past = 'p'.repeat(10);
+  db.prepare('insert into pending (id, kind, who, until, sub) values (?, ?, ?, ?, ?)').run(
+    toHex(await sha(past)), 'mail', who, Date.now() - 1000, 'ab'.repeat(32));
+  const expired = await call('/auth/mail/confirm', { code: past }, { headers: auth });
+  assert.equal(expired.status, 400, '만료된 확인은 거절한다');
+
+  const stateG = 'g'.repeat(43);
+  const jwt = claims => 'h.' + b64u(new TextEncoder().encode(JSON.stringify(claims))) + '.s';
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(JSON.stringify({ id_token: jwt({
+      iss: 'https://accounts.google.com', aud: 'client-123', exp: Date.now() / 1000 + 300,
+      nonce: stateG, sub: 'sub-1',
+    }) }), { status: 200 });
+    db.prepare('insert into pending (id, kind, who, until, back) values (?, ?, null, ?, ?)').run(
+      stateG, 'sso-google', Date.now() + 60_000, 'https://regiontype.com');
+    const prod = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/auth/cb?code=c&state=' + stateG), base);
+    assert.equal(prod.status, 302);
+    assert.ok(prod.headers.get('location').includes('signin=ok'), '배포 로그인은 메일 없이 통과한다');
+
+    globalThis.fetch = async () => new Response(JSON.stringify({ id_token: jwt({
+      iss: 'https://accounts.google.com', aud: 'client-123', exp: Date.now() / 1000 + 300,
+      nonce: stateG, sub: 'sub-1', email: 'other@example.com', email_verified: true,
+    }) }), { status: 200 });
+    db.prepare('insert into pending (id, kind, who, until, back) values (?, ?, null, ?, ?)').run(
+      stateG, 'sso-google', Date.now() + 60_000, 'http://localhost:3000');
+    const localBad = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/auth/cb?code=c&state=' + stateG), base);
+    assert.ok(localBad.headers.get('location').includes('signin=fail'), '다른 메일은 로컬에서 거절한다');
+
+    globalThis.fetch = async () => new Response(JSON.stringify({ id_token: jwt({
+      iss: 'https://accounts.google.com', aud: 'client-123', exp: Date.now() / 1000 + 300,
+      nonce: stateG, sub: 'sub-1', email: LOCAL_LOGIN, email_verified: true,
+    }) }), { status: 200 });
+    db.prepare('insert into pending (id, kind, who, until, back) values (?, ?, null, ?, ?)').run(
+      stateG, 'sso-google', Date.now() + 60_000, 'http://localhost:3000');
+    const localOk = await relayWorker.fetch(new Request('https://g.gearservicevanguard.com/auth/cb?code=c&state=' + stateG), base);
+    assert.ok(localOk.headers.get('location').includes('signin=ok'), '허용된 메일만 로컬에서 통과한다');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+
+  const ssoState = 's'.repeat(43);
+  const live = await call('/auth/sso', { p: 'google', s: ssoState });
+  assert.equal(live.status, 200, live.msg);
+  assert.match(live.url, /scope=openid(?!\+email|%20email)/, '배포 scope 는 openid 뿐이다');
+  const localSso = await call('/auth/sso', { p: 'google', s: 'l'.repeat(43) }, { origin: 'http://localhost:3000' });
+  assert.match(localSso.url, /scope=openid\+email/);
+  const apple = await call('/auth/sso', { p: 'apple', s: 'a'.repeat(43) }, { origin: 'http://127.0.0.1:3000', env: { ...base, APPLE_ID: 'a', APPLE_KEY: 'k', APPLE_TEAM: 't', APPLE_KID: 'kid' } });
+  assert.equal(apple.status, 403, '로컬 Apple 은 시작부터 거절한다');
+
+  assert.equal(normPhone(' 010-1234-5678 '), '+821012345678');
+  assert.equal(normPhone('+82 10 1234 5678'), '+821012345678');
+  assert.equal(normPhone('01012345678\nBcc: x'), '');
+  assert.equal(normPhone('not-a-phone'), '');
+
+  const phone = '+821012345678';
+  const mailBefore = sent.length;
+  const noSms = await call('/auth/phone', { phone }, { headers: auth });
+  assert.equal(noSms.status, 503, '문자 설정이 없으면 확인을 시작하지 않는다');
+  assert.ok(!JSON.stringify(noSms).includes('8210'), '거절 응답에 번호를 싣지 않는다');
+  assert.equal(sent.length, mailBefore, '문자는 메일로 나가지 않는다');
+  const noRescue = await call('/auth/phone/rescue', { phone });
+  assert.equal(noRescue.status, 503);
+  assert.equal(noRescue.msg, noSms.msg);
+  assert.equal(sent.length, mailBefore);
+
+  const smsSent = [];
+  const SMS = { fetch: async (_url, init) => { smsSent.push(JSON.parse(init.body)); return new Response('{}', { status: 200 }); } };
+  const smsEnv = { ...base, SMS, SMS_KEY: 'sms-test-key' };
+  const strangerPhone = '+821099999999';
+  const unknownPhone = await call('/auth/phone/rescue', { phone: strangerPhone }, { env: smsEnv });
+  assert.equal(unknownPhone.status, 200);
+  assert.equal(smsSent.length, 0, '확인되지 않은 번호에는 문자가 없다');
+  assert.ok(!JSON.stringify(unknownPhone).includes('9999'));
+
+  const startedPhone = await call('/auth/phone', { phone }, { headers: auth, env: smsEnv });
+  assert.equal(startedPhone.status, 200, startedPhone.msg);
+  assert.equal(smsSent.length, 1);
+  assert.equal(smsSent[0].to, phone);
+  assert.equal(sent.length, mailBefore, '확인 코드도 메일 통로를 쓰지 않는다');
+  const phoneCode = smsSent[0].text.match(/[a-z0-9]{10}/).at(-1);
+  const badPhone = await call('/auth/phone/confirm', { code: 'zzzzzzzzzz' }, { headers: auth, env: smsEnv });
+  assert.equal(badPhone.status, 400);
+  const okPhone = await call('/auth/phone/confirm', { code: phoneCode }, { headers: auth, env: smsEnv });
+  assert.equal(okPhone.status, 200, okPhone.msg);
+  const mePhone = await call('/auth/me', null, { method: 'GET', headers: auth });
+  assert.equal(mePhone.phone, true);
+  assert.equal(mePhone.mailbox, true);
+  assert.ok(!JSON.stringify(mePhone).includes(phone) && !JSON.stringify(mePhone).includes('8210'), '계정 응답에 번호가 없다');
+
+  const rescuedPhone = await call('/auth/phone/rescue', { phone }, { env: smsEnv });
+  assert.equal(rescuedPhone.status, 200);
+  assert.equal(rescuedPhone.msg, unknownPhone.msg, '없는 번호와 있는 번호의 말이 같다');
+  assert.equal(smsSent.at(-1).to, phone);
+  assert.equal(sent.length, mailBefore);
+
+  console.log('local login and recovery mail self-check done');
 }
 
 /* ── 경쟁전 실시간 서버(compete-do.mjs) — 가짜 DO 환경 · 가짜 소켓 · 손으로 돌리는 시계 ──
@@ -1691,6 +1868,7 @@ console.log('security rule self-check done');
   assert.equal((await wfetch('/compete/flags', { headers: okOrigin }, { ...wenv, ADMIN_IDS: adm })).status, 403, '로그인 없으면 못 본다');
   assert.equal((await wfetch('/compete/flags', { headers: { ...okOrigin, authorization: 'Bearer ' + tokNo } }, { ...wenv, ADMIN_IDS: adm })).status, 403, 'ADMIN_IDS 밖');
   assert.equal((await wfetch('/compete/flags', { headers: { ...okOrigin, authorization: 'Bearer ' + tokAdm } })).status, 403, 'ADMIN_IDS 가 없으면 아무도');
+  db.prepare('insert into user (id, at) values (?, 0)').run(adm);
   const fr = await wfetch('/compete/flags', { headers: { ...okOrigin, authorization: 'Bearer ' + tokAdm } }, { ...wenv, ADMIN_IDS: 'x, ' + adm });
   assert.deepEqual([fr.status, hit.at(-1)[1]], [200, 'https://lobby/flags'], '관리자면 로비로 넘긴다');
 

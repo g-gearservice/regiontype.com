@@ -161,7 +161,7 @@ export const RULES = [
     want: '소스·설정은 사이트 자산으로 나가지 않는다',
     test: src => {
       const lines = src.split('\n').map(s => s.trim());
-      const gone = ['relay', 'tools', 'wrangler.toml', '.dev.vars', '.claude']
+      const gone = ['relay', 'tools', 'mail', 'wrangler.toml', '.dev.vars', '.claude']
         .filter(p => !lines.includes(p));
       return gone.length ? `자산으로 새어 나갈 수 있다: ${gone.join(', ')}` : '';
     } },
@@ -198,9 +198,9 @@ export const RULES = [
      이 값은 Cloudflare MCP 에서 떠 온다 — 스케줄이 workers_list 를 불러
      --facts 로 넘겨준다. 계정에 모르는 워커가 앉아 있으면 여기서 걸린다. */
   { id: 'workers-known', need: 'cf:workers', sev: 'high',
-    want: '계정에 아는 워커만 (regiontype-com · rt-feedback · 나눠 낸 rt-auth·board·community·bot·online)',
+    want: '계정에 아는 워커만 (regiontype-com · rt-feedback · rt-mail · 나눠 낸 rt-auth·board·community·bot·online)',
     test: names => {
-      const known = ['regiontype-com', 'rt-feedback', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online'];
+      const known = ['regiontype-com', 'rt-feedback', 'rt-mail', 'rt-auth', 'rt-board', 'rt-community', 'rt-bot', 'rt-online'];
       const odd = names.filter(n => !known.includes(n));
       const gone = known.filter(n => !names.includes(n));
       return [odd.length ? `모르는 워커: ${odd.join(', ')}` : '',

@@ -89,10 +89,11 @@ create index if not exists best_top on best (mode, slug, secs, dev, cpm desc, at
 -- ── 로그인 ────────────────────────────────────────────────
 -- 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
 -- 1차 인증은 Google·Apple(SSO) 이 하고, 패스키는 계정에 하나라도 있으면 그
--- 위에 얹는 2단계다. mail 은 계속 비워 둔다 — 메일도 이름도 받지 않는다.
+-- 위에 얹는 2단계다. mail 은 계속 비워 둔다 — 로그인 때 받은 메일은 저장하지 않는다.
+-- 복구용으로 확인한 주소는 mailbox 표의 해시만 남긴다.
 create table if not exists user (
   id   text primary key,          -- 난수 16바이트 hex. 사람을 가리키는 유일한 값이다
-  mail text unique,               -- 늘 null. 자리만 남겨 둔다 — 받는 값이 아니다
+  mail text unique,               -- 늘 null. 복구 주소는 mailbox.hash 다
   at   integer not null
 );
 -- 패스키 한 개 = 기기 한 대. 한 사람이 여럿 가질 수 있다.
@@ -139,9 +140,27 @@ create table if not exists recovery (
 );
 create index if not exists recovery_who on recovery (who);
 
+-- 확인된 복구 메일. 주소 원문은 저장하지 않는다 — 조회는 sha256(정규화된 주소).
+-- 이미 있는 DB 에는 이 파일을 다시 적용하면 표가 붙는다(create table if not exists).
+create table if not exists mailbox (
+  who  text primary key,
+  hash text not null unique,      -- sha256 hex. 화면·이슈·/auth/me 로 나가지 않는다
+  at   integer not null
+);
+
+-- 확인된 복구 전화. 번호 원문은 저장하지 않는다 — 조회는 sha256(E.164).
+-- 문자 설정이 없으면 이 표에 줄이 생기지 않는다. 이미 있는 DB 에는 이 파일을
+-- 다시 적용하면 표가 붙는다(create table if not exists).
+create table if not exists phonebox (
+  who  text primary key,
+  hash text not null unique,      -- sha256 hex. 화면·이슈·/auth/me 로 나가지 않는다
+  at   integer not null
+);
+
 -- 로그인 도중의 일회용 상태. 서버가 낸 것인지 확인해야 하므로 남겨 둔다.
 -- kind 는 'reg'(패스키 등록) | 'sso-google' | 'sso-apple'(SSO 진행 중) |
--- 'take'(SSO 를 마치고 토큰을 받으러 오길 기다림) | 'two'(2단계 확인 중) 다.
+-- 'take'(SSO 를 마치고 토큰을 받으러 오길 기다림) | 'two'(2단계 확인 중) |
+-- 'mail'(복구 메일 확인) | 'phone'(복구 전화 확인) 이다.
 --
 -- ★ 이미 pending 표가 있는 DB 에 이 파일을 다시 적용하는 경우:
 -- `create table if not exists` 는 표가 이미 있으면 아무것도 안 한다 — 새로

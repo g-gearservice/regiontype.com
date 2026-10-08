@@ -1305,7 +1305,8 @@ body.setting #regions .nav-bot,body.paging #regions .nav-bot{transform:translate
 #regions{--cam-dur:.5s;--cam-ease:cubic-bezier(.22,.75,.2,1)}
 #courseBtns{
   position:absolute;left:0;top:0;transform-origin:0 0;
-  transition:transform var(--cam-dur) var(--cam-ease);
+  /* translate 는 커서 기울기. transform 과 한 속성에 두면 마우스가 초점 이동을 끊는다 */
+  transition:transform var(--cam-dur) var(--cam-ease), translate var(--cam-dur) var(--cam-ease);
 }
 #courseBtns .grid-btn{transition:transform var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease)}
 #courseBtns .grid-btn > span{transition:transform var(--cam-dur) var(--cam-ease)}
@@ -1404,6 +1405,7 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   transition:background var(--fast) var(--ease-out);
 }
 .si-btns > :is(button,a) + :is(button,a){border-top:1px solid var(--land-line)}
+.si-btns > [hidden]{display:none}
 /* 주황 위에 주황 테두리는 안 보인다 — 안쪽으로 먹 테두리를 두른다 */
 .si-btns > :is(button,a):focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 .si-btns > button[disabled]{background:var(--land);color:var(--ink-soft);cursor:default}
@@ -1419,6 +1421,13 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   border:1px solid var(--accent-deep);border-left-width:4px;padding:10px 12px;text-align:left;
 }
 .si-note{font-size:15px;color:var(--ink-soft)}
+/* 고지는 글이다. 왼선은 구역을 나눌 뿐이고, 뜻은 문장이 말한다 */
+.si-notice{
+  margin:0;font-size:14px;line-height:1.6;color:var(--ink);text-align:left;
+  border:1px solid var(--grid);border-left:4px solid var(--ink);padding:10px 12px;max-width:28em;
+}
+.si-notice a{color:var(--accent-text)}
+.si-notice a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .si-codes{
   list-style:none;display:grid;grid-template-columns:repeat(2,auto);gap:6px 24px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;letter-spacing:.08em;
@@ -1437,6 +1446,9 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   border:0;padding:8px 16px;cursor:pointer;
 }
 .si-code button:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.si-code input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+#optsSecurity .si-code{margin-top:8px}
+#optsSecurity .si-code input{width:auto;flex:1;min-width:0}
 .si-lost{font-size:14px;color:var(--ink-soft);max-width:32em;text-align:left}
 .si-lost summary{cursor:pointer;padding:6px 0}
 .si-lost p{line-height:1.6;padding-bottom:6px}

@@ -119,3 +119,8 @@ namespace_id = "1012"
   [ratelimits.simple]
   limit = 30
   period = 60
+
+# 복구 메일은 regiontype.com 의 rt-mail 만 보낸다. 브라우저에 열린 경로가 아니다.
+[[services]]
+binding = "MAIL"
+service = "rt-mail"

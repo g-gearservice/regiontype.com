@@ -32,7 +32,13 @@
      POST /auth/log    2단계: 패스키로 넘는다              → 세션 토큰
      POST /auth/code   2단계: {b,t,code} 복구 코드로 넘는다 → 세션 토큰
      POST /auth/codes  복구 코드 재발급 (로그인 필요, 복구 코드가 없을 때만 자동 발급, 옛 코드는 전량 교체)
-     GET  /auth/me     계정 화면이 볼 값 (로그인 필요) → {keys, codes} 개수만 — who·sub 같은
+     POST /auth/mail   로그인한 사람이 복구 메일을 확인하기 시작한다 → 그 주소로만 확인 코드
+     POST /auth/mail/confirm {code}  확인 코드를 맞추면 그 사서함을 이 계정에 묶는다
+     POST /auth/rescue {email}  확인된 주소라면 새 복구 코드를 그 주소로만 보낸다
+     POST /auth/phone  로그인한 사람이 복구 전화를 확인하기 시작한다 → 문자 설정이 없으면 503
+     POST /auth/phone/confirm {code}  확인 코드를 맞추면 그 번호의 해시만 이 계정에 묶는다
+     POST /auth/phone/rescue {phone}  확인된 번호라면 새 복구 코드를 문자로만 보낸다. 설정이 없으면 503
+     GET  /auth/me     계정 화면이 볼 값 (로그인 필요) → {keys, codes, mailbox, phone} — who·sub·메일·번호는
                         식별자는 안 싣는다. 이 브라우저의 localStorage 만으론 다른 기기에서
                         만든 패스키·거기서 쓴 복구 코드를 몰라 "남은 비상구" 숫자가 틀릴 수 있다
      GET  /where    이 요청의 나라 코드 (cf.country). 도시는 안 보낸다
@@ -64,6 +70,9 @@
        wrangler secret put TURNSTILE_SITEKEY // 공개 키지만 배포별 설정으로 둔다
        wrangler secret put TURNSTILE_SECRET  // Turnstile 서버 검증 비밀키
        wrangler secret put NV_KEY       // build.nvidia.com API 키 — 봇 대화
+       wrangler secret put MAIL_KEY     // rt-mail 과 같은 값. 없으면 복구 메일만 503
+       wrangler secret put SMS_KEY      // 문자 서비스와 같은 값. 없으면 전화 확인은 503.
+                                          // 메일은 문자 대신 쓰지 않는다
        wrangler deploy                                                        */
 
 import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac,
@@ -923,9 +932,10 @@ async function authReg(req, env, o) {
 }
 
 /* ── SSO (Google · Apple) ────────────────────────────────
-   1차 인증은 공급자가 한다. scope 를 openid 하나로 묶어 메일도 이름도 받지
-   않는다 — id_token 의 sub(공급자 안에서만 뜻이 있는 불투명한 식별자) 하나가
-   사람 하나를 가리킨다.
+   1차 인증은 공급자가 한다. 배포 출처는 scope 를 openid 하나로 묶어 메일도
+   이름도 받지 않는다 — id_token 의 sub 하나가 사람 하나를 가리킨다. 로컬
+   출처만 email 을 더 묻고, 허용 목록과 맞는지 본 뒤 바로 버린다. user.mail
+   에는 적지 않는다.
 
    id_token 은 각 공급자의 토큰 엔드포인트에서 TLS 로 직접 받는다(서버 대
    서버, authorization code 와 맞바꾼 값). 그래서 JWKS 로 서명을 다시 검증하지
@@ -939,11 +949,11 @@ const PROVIDERS = {
     iss: ['https://accounts.google.com', 'accounts.google.com'],
     ready: env => !!(env.GOOGLE_ID && env.GOOGLE_SECRET),
     id: env => env.GOOGLE_ID,
-    authURL(env, state) {
+    authURL(env, state, opt = {}) {
       const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       u.search = new URLSearchParams({
-        client_id: env.GOOGLE_ID, redirect_uri: REDIRECT, response_type: 'code',
-        scope: 'openid', state, nonce: state,
+        client_id: env.GOOGLE_ID, redirect_uri: opt.redirect || REDIRECT, response_type: 'code',
+        scope: opt.email ? 'openid email' : 'openid', state, nonce: state,
       });
       return u.toString();
     },
@@ -1043,11 +1053,13 @@ async function authSso(req, env, o) {
   const p = Object.hasOwn(PROVIDERS, c.p) ? c.p : null;
   const s = cut(c.s, 60);
   if (!p || !/^[\w-]{43}$/.test(s)) return reply(400, '요청이 이상합니다.', o);
+  /* 로컬 출처는 Google 만. Apple 은 그 메일을 주지 않으니 바로 닫는다. */
+  if (localOrigin(o) && p !== 'google') return reply(403, '이 곳에서는 허용된 Google 계정으로만 들어올 수 있습니다.', o);
   if (!PROVIDERS[p].ready(env)) return nokey(o);
   const me = await sessionWho(env, req);   // 있으면 기존 계정에 공급자를 더 붙이는 것이다
   return safely(o, async () => {
     await challenge(env, `sso-${p}`, me, { id: s, back: o });
-    return send(200, { url: PROVIDERS[p].authURL(env, s) }, o);
+    return send(200, { url: PROVIDERS[p].authURL(env, s, { email: localOrigin(o) }) }, o);
   });
 }
 
@@ -1100,23 +1112,186 @@ async function competeRoute(req, env, o, path) {
   return reply(405, '받지 않는 요청입니다.', o);
 }
 
-/* ── 개발 로그인 ── 로컬 중계기(wrangler dev)에서만 열린다. 두 겹으로 잠근다:
-   DEV_LOGIN 변수는 .claude/launch.json 의 `--var DEV_LOGIN:1` 로만 켠다(wrangler.*.toml 에도
-   시크릿에도 없다). 그리고 요청이 들어온 주소가 로컬이어야 한다 — 배포된 워커는 존 라우트로만
-   열려 req.url 이 로컬일 수 없다. Origin 은 꾸밀 수 있어 잠금으로 쓰지 않는다.
-   이름 하나로 테스트 계정을 만들거나 다시 들어간다(같은 이름 = 같은 계정). id 는 'dev' + 이름의
-   sha 앞 32자라 운영 id(hex 32자)와 겹치지 않는다. 패스키 2단계는 건너뛴다 — 패스키는
-   regiontype.com 에 묶여 로컬에서는 통과할 수 없다 */
-export const devLoginOn = (env, url) => env.DEV_LOGIN === '1' && /^(localhost|127\.0\.0\.1)$/.test(new URL(url).hostname);
-async function authDev(req, env, o) {
+/* 로컬 출처에서 시작한 로그인만 이 메일로 제한한다. 배포 출처는 그대로 열려 있다.
+   메일은 맞는지 보고 버린다 — user.mail 은 계속 null 이다. */
+export const LOCAL_LOGIN = 'g@gearservicevanguard.com';
+export const localOrigin = o => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(o || ''));
+export function localLoginOk(origin, provider, claims) {
+  if (!localOrigin(origin)) return true;
+  if (provider !== 'google' || !claims) return false;
+  const email = String(claims.email ?? '').trim().toLowerCase();
+  return claims.email_verified === true && email === LOCAL_LOGIN;
+}
+
+const ADDR = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+export function normMail(s) {
+  const e = String(s ?? '').trim().toLowerCase();
+  if (e.length < 6 || e.length > 254) return '';
+  if (/[\s<>()"\\]/.test(e) || e.includes('..')) return '';
+  if (!ADDR.test(e)) return '';
+  return e;
+}
+
+/* E.164. 한국 지역번호(0으로 시작)는 +82 로 접는다. 줄바꿈이 끼면 거절한다. */
+export function normPhone(s) {
+  let e = String(s ?? '').trim().replace(/[\s().-]/g, '');
+  if (e.startsWith('00')) e = '+' + e.slice(2);
+  if (/^0\d{9,10}$/.test(e)) e = '+82' + e.slice(1);
+  if (!/^\+[1-9]\d{7,14}$/.test(e)) return '';
+  return e;
+}
+
+/* rt-mail 서비스 바인딩만 부른다. 주소는 로그에 남기지 않는다. */
+async function deliver(env, to, subject, text) {
+  if (!env.MAIL?.fetch || !env.MAIL_KEY) return false;
+  try {
+    const r = await env.MAIL.fetch('https://rt-mail/send', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + env.MAIL_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ to, subject, text }),
+    });
+    return r.ok === true;
+  } catch { return false; }
+}
+
+/* 문자만. env.MAIL 로는 절대 보내지 않는다 — 메일을 문자인 척하지 않는다. */
+async function deliverSms(env, to, text) {
+  if (!env.SMS?.fetch || !env.SMS_KEY) return false;
+  try {
+    const r = await env.SMS.fetch('https://rt-sms/send', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + env.SMS_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ to, text }),
+    });
+    return r.ok === true;
+  } catch { return false; }
+}
+
+const RESCUE = { msg: '확인된 주소라면 복구 코드를 보냈습니다.' };
+
+async function authMail(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const name = plain(c?.name, CAP.name);
-  if (!name) return reply(400, '이름을 적어 주세요.', o);
+  const email = normMail(c?.email);
+  if (!email) return reply(400, '요청이 이상합니다.', o);
+  if (!env.MAIL?.fetch || !env.MAIL_KEY) return reply(503, '메일 설정이 덜 되었습니다.', o);
   return safely(o, async () => {
-    const who = 'dev' + [...await sha(name)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
-    const r = await env.DB.prepare('insert or ignore into user (id, mail, at) values (?, null, ?)').bind(who, Date.now()).run();
-    return send(200, { token: await sign(env.SESSION_KEY, who), isNewAccount: r.meta?.changes === 1 }, o);
+    const code = oneCode();
+    const id = toHex(await sha(code));
+    const hash = toHex(await sha(email));
+    await challenge(env, 'mail', me, { id, sub: hash });
+    const text = `확인 코드입니다. 5분 안에 입력하세요.\n\n${code}\n`;
+    const sent = await deliver(env, email, 'regiontype mailbox code', text);
+    if (!sent) {
+      await env.DB.prepare('delete from pending where id = ?').bind(id).run();
+      return reply(503, '메일을 보내지 못했습니다.', o);
+    }
+    return send(200, { msg: '확인 코드를 보냈습니다.' }, o);
+  });
+}
+
+async function authMailConfirm(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const code = String(c?.code ?? '').trim().toLowerCase();
+  if (!/^[a-z0-9]{10}$/.test(code)) return reply(400, '요청이 이상합니다.', o);
+  return safely(o, async () => {
+    const row = await claim(env, toHex(await sha(code)), 'mail');
+    if (!row || row.who !== me || !row.sub) return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
+    try {
+      await env.DB.prepare(
+        'insert into mailbox (who, hash, at) values (?, ?, ?) on conflict(who) do update set hash = excluded.hash, at = excluded.at'
+      ).bind(me, row.sub, Date.now()).run();
+    } catch { return reply(400, '그 주소는 확인할 수 없습니다.', o); }
+    return send(200, { msg: '확인했습니다.' }, o);
+  });
+}
+
+/* 로그인하지 않은 사람이 부른다. 주소가 확인됐든 아니든 응답은 같다.
+   확인된 주소에만 새 코드를 보내고, 보내기에 실패하면 옛 코드는 그대로 둔다. */
+async function authRescue(req, env, o) {
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const email = normMail(c?.email);
+  if (!email) return reply(400, '요청이 이상합니다.', o);
+  if (!env.MAIL?.fetch || !env.MAIL_KEY) return reply(503, '메일 설정이 덜 되었습니다.', o);
+  return safely(o, async () => {
+    const row = await env.DB.prepare('select who from mailbox where hash = ?').bind(toHex(await sha(email))).first();
+    if (row?.who) {
+      const codes = newCodes();
+      const text = `복구 코드입니다. 각각 한 번만 쓸 수 있습니다.\n\n${codes.join('\n')}\n`;
+      if (await deliver(env, email, 'regiontype recovery codes', text))
+        await storeRecoveryCodes(env, row.who, codes);
+    }
+    return send(200, RESCUE, o);
+  });
+}
+
+const PHONE_RESCUE = { msg: '확인된 번호라면 복구 코드를 보냈습니다.' };
+
+async function authPhone(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const phone = normPhone(c?.phone);
+  if (!phone) return reply(400, '요청이 이상합니다.', o);
+  if (!env.SMS?.fetch || !env.SMS_KEY) return reply(503, '문자 설정이 덜 되었습니다.', o);
+  return safely(o, async () => {
+    const code = oneCode();
+    const id = toHex(await sha(code));
+    const hash = toHex(await sha(phone));
+    await challenge(env, 'phone', me, { id, sub: hash });
+    const text = `확인 코드입니다. 5분 안에 입력하세요.\n\n${code}\n`;
+    const sent = await deliverSms(env, phone, text);
+    if (!sent) {
+      await env.DB.prepare('delete from pending where id = ?').bind(id).run();
+      return reply(503, '문자를 보내지 못했습니다.', o);
+    }
+    return send(200, { msg: '확인 코드를 보냈습니다.' }, o);
+  });
+}
+
+async function authPhoneConfirm(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const code = String(c?.code ?? '').trim().toLowerCase();
+  if (!/^[a-z0-9]{10}$/.test(code)) return reply(400, '요청이 이상합니다.', o);
+  return safely(o, async () => {
+    const row = await claim(env, toHex(await sha(code)), 'phone');
+    if (!row || row.who !== me || !row.sub) return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
+    try {
+      await env.DB.prepare(
+        'insert into phonebox (who, hash, at) values (?, ?, ?) on conflict(who) do update set hash = excluded.hash, at = excluded.at'
+      ).bind(me, row.sub, Date.now()).run();
+    } catch { return reply(400, '그 번호는 확인할 수 없습니다.', o); }
+    return send(200, { msg: '확인했습니다.' }, o);
+  });
+}
+
+/* 로그인하지 않은 사람이 부른다. 번호가 확인됐든 아니든, 문자를 보낼 수 있을 때의 응답은 같다.
+   보내는 쪽(SMS)이 없으면 503 이고, 메일은 대신 나가지 않는다. */
+async function authPhoneRescue(req, env, o) {
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const phone = normPhone(c?.phone);
+  if (!phone) return reply(400, '요청이 이상합니다.', o);
+  if (!env.SMS?.fetch || !env.SMS_KEY) return reply(503, '문자 설정이 덜 되었습니다.', o);
+  return safely(o, async () => {
+    const row = await env.DB.prepare('select who from phonebox where hash = ?').bind(toHex(await sha(phone))).first();
+    if (row?.who) {
+      const codes = newCodes();
+      const text = `복구 코드입니다. 각각 한 번만 쓸 수 있습니다.\n\n${codes.join('\n')}\n`;
+      if (await deliverSms(env, phone, text))
+        await storeRecoveryCodes(env, row.who, codes);
+    }
+    return send(200, PHONE_RESCUE, o);
   });
 }
 
@@ -1163,6 +1338,8 @@ async function authCb(req, env) {
     if (!claims || !prov.iss.includes(claims.iss) || claims.aud !== prov.id(env)
         || !(claims.exp > Date.now() / 1000) || claims.nonce !== state || !claims.sub)
       return redir(back, 'signin=fail');
+    /* 로컬에서 시작한 로그인만 메일을 본다. 맞으면 버리고, user.mail 에는 안 적는다. */
+    if (!localLoginOk(back, p, claims)) return redir(back, 'signin=fail');
 
     const tag = rand(32);
     const id = await takeId(state, tag);
@@ -1285,13 +1462,14 @@ async function authCode(req, env, o) {
    남는다. crypto 바이트 하나(0~255)를 36 으로 그냥 나누면 앞쪽 글자가 살짝
    더 잘 나온다(256 이 36 의 배수가 아니라서) — 252(=36×7) 를 넘는 값은 버린다. */
 const CODE_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';   // 36자
-async function issueRecoveryCodes(env, who) {
-  const pick = () => {
-    let b;
-    do { b = crypto.getRandomValues(new Uint8Array(1))[0]; } while (b >= 252);
-    return CODE_ALPHABET[b % 36];
-  };
-  const codes = Array.from({ length: 8 }, () => Array.from({ length: 10 }, pick).join(''));
+const pickCodeChar = () => {
+  let b;
+  do { b = crypto.getRandomValues(new Uint8Array(1))[0]; } while (b >= 252);
+  return CODE_ALPHABET[b % 36];
+};
+const oneCode = () => Array.from({ length: 10 }, pickCodeChar).join('');
+const newCodes = () => Array.from({ length: 8 }, oneCode);
+async function storeRecoveryCodes(env, who, codes) {
   const now = Date.now();
   const hashes = await Promise.all(codes.map(code => sha(code).then(toHex)));
   await env.DB.batch([
@@ -1299,6 +1477,10 @@ async function issueRecoveryCodes(env, who) {
     ...hashes.map(h => env.DB.prepare(
       'insert into recovery (hash, who, at) values (?, ?, ?)').bind(h, who, now)),
   ]);
+}
+async function issueRecoveryCodes(env, who) {
+  const codes = newCodes();
+  await storeRecoveryCodes(env, who, codes);
   return codes;
 }
 
@@ -1429,7 +1611,7 @@ async function authIntro(req, env, o) {
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
 export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro', 'match_participants', 'match_logs', 'player_ratings',
-                      'passkey', 'recovery', 'pending', 'sso', 'post', 'reply', 'mark'];
+                      'passkey', 'recovery', 'mailbox', 'phonebox', 'pending', 'sso', 'post', 'reply', 'mark'];
 
 async function authErase(req, env, o) {
   const me = await sessionWho(env, req);
@@ -1454,9 +1636,10 @@ async function authErase(req, env, o) {
          통째로 없던 일이 된다 — 반쯤 지워진 계정이 남지 않는다 */
       env.DB.prepare('delete from user where id = ?').bind(me),
     ]);
-    /* 세션 토큰은 서명만으로 서는 무상태라 지운 뒤에도 모양은 멀쩡하다. 가리키는
-       줄이 없으니 무엇을 물어도 빈손이고, 다시 로그인하면 새 사람으로 시작한다 —
-       그게 '지웠다' 의 뜻이다. 화면은 받는 즉시 토큰을 버린다. */
+    /* user 줄이 실제로 없어진 뒤에만 200 이다. 그 전에 낸 토큰은 서명이 맞아도
+       sessionWho 가 거절한다. 화면은 이 성공 응답만 믿고 세션을 버린다. */
+    const still = await env.DB.prepare('select 1 as n from user where id = ?').bind(me).first();
+    if (still) return reply(500, '계정을 지우지 못했습니다.', o);
     return send(200, { gone: rows.reduce((n, r) => n + (r.meta?.changes ?? 0), 0) }, o);
   });
 }
@@ -1465,16 +1648,19 @@ async function authMe(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
   return safely(o, async () => {
-    const [keys, codes, row, intro] = await env.DB.batch([
+    const [keys, codes, row, intro, box, hand] = await env.DB.batch([
       env.DB.prepare('select count(*) as n from passkey where who = ?').bind(me),
       env.DB.prepare('select count(*) as n from recovery where who = ?').bind(me),
       env.DB.prepare('select name, bio, face, lang, handle, botname, push, shut from profile where who = ?').bind(me),
       env.DB.prepare('select 1 as n from intro where who = ?').bind(me),
+      env.DB.prepare('select 1 as n from mailbox where who = ?').bind(me),
+      env.DB.prepare('select 1 as n from phonebox where who = ?').bind(me),
     ]);
     /* intro 는 '가입 안내를 이미 마쳤다' 는 표시다. 화면(auth.js·welcome.js)이
        이걸 보고 안내를 다시 띄울지 정한다 — 두 번 묻지 않기 위한 값 하나다. */
     return send(200, { keys: keys.results[0]?.n ?? 0, codes: codes.results[0]?.n ?? 0,
-                       profile: row.results[0] ?? null, intro: !!intro.results[0] }, o);
+                       profile: row.results[0] ?? null, intro: !!intro.results[0],
+                       mailbox: !!box.results[0], phone: !!hand.results[0] }, o);
   });
 }
 
@@ -1914,7 +2100,12 @@ export default {
         if (path === '/auth/profile') return authProfile(req, env, o);
         if (path === '/auth/intro') return authIntro(req, env, o);
         if (path === '/auth/erase') return authErase(req, env, o);
-        if (path === '/auth/dev' && devLoginOn(env, req.url)) return authDev(req, env, o);
+        if (path === '/auth/mail' && req.method === 'POST') return authMail(req, env, o);
+        if (path === '/auth/mail/confirm') return authMailConfirm(req, env, o);
+        if (path === '/auth/rescue') return authRescue(req, env, o);
+        if (path === '/auth/phone' && req.method === 'POST') return authPhone(req, env, o);
+        if (path === '/auth/phone/confirm') return authPhoneConfirm(req, env, o);
+        if (path === '/auth/phone/rescue') return authPhoneRescue(req, env, o);
       }
     }
     /* 순위표는 D1 을 붙이기 전에도 사이트가 멀쩡해야 한다 — 없으면 없다고만 한다 */
