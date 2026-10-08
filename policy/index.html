@@ -50,14 +50,15 @@
   <a class="logo" href="/">region<span>type</span><i class="dot"></i></a>
 
   <h1>개인정보처리방침</h1>
-  <p class="updated">2026년 9월 18일 시행</p>
+  <p class="updated">2026년 10월 8일 시행</p>
 
   <p class="lead">regiontype은 지명 타자연습입니다. 게임 자체는 로그인 없이 그대로
   돌고, 아래 값들은 순위표에 이름을 올리기로 한 사람에게만 생깁니다.</p>
 
   <h2>안 받는 것</h2>
-  <p>비밀번호를 받지 않습니다. 회원가입 메일도, 실명도 받지 않습니다. 광고나
-  방문자 분석 스크립트를 넣지 않고, 쿠키도 쓰지 않습니다.</p>
+  <p>비밀번호를 받지 않습니다. 로그인 공급자에게 메일·전화번호·실명을 요청하지
+  않습니다. 광고나 방문자 분석 스크립트를 넣지 않고, 쿠키도 쓰지 않습니다.
+  복구를 위해 직접 적는 메일과 전화번호는 아래 절에 적었습니다.</p>
 
   <h2>로그인 (Google·Apple)</h2>
   <p>로그인은 Google 또는 Apple 계정으로 합니다. Google에는 <code>openid</code>
@@ -74,6 +75,28 @@
   <h2>복구 코드</h2>
   <p>패스키를 켜면 일회용 복구 코드 8개를 한 번만 보여줍니다. 저장은 그 코드의
   해시값만 하고, 코드 원문은 서버에 남지 않습니다. 코드를 쓰면 그 줄은 지워집니다.</p>
+
+  <h2>복구 메일</h2>
+  <p>패스키와 복구 코드를 모두 잃었을 때를 위해, 메일 주소를 직접 적을 수
+  있습니다. 적는 이유는 본인 확인과 계정 복구입니다. 로그인 공급자에게 그
+  주소를 요청하지는 않습니다. 확인된 주소에만
+  <code>recover@regiontype.com</code> 이 평문으로 일회용 코드를 보냅니다.
+  그 코드와 확인 요청은 5분 동안만 유효합니다. 확인이 끝나면 주소 원문은
+  저장하지 않고 해시만 남깁니다. 계정 조회, 공개 프로필, 공개 이슈에는
+  주소를 싣지 않습니다. 확인되지 않은 주소에는 보내지 않으며, 화면의 안내
+  문구는 주소가 확인됐는지와 상관없이 같습니다.</p>
+  <p>메일이나 전화번호를 묻기 전에, 무엇을 받는지, 왜 받는지(본인 확인과 계정
+  복구), 누가 보내는지, 일회용 코드와 확인 요청이 5분 동안만 유효한지, 그
+  주소나 번호가 공개 프로필과 공개 이슈에 보이지 않는지를 화면의 글로 먼저
+  알립니다.</p>
+
+  <h2>복구 전화</h2>
+  <p>같은 이유로 전화번호를 직접 적을 수 있습니다. 문자는 보내는 쪽이 설정되어
+  있을 때만 나갑니다. 보내는 쪽이 없으면 요청은 실패하고, 문자는 나가지
+  않습니다. 복구 메일을 문자 대신 보내지 않습니다. 문자가 나갈 때는 일회용
+  코드이고, 그 코드와 확인 요청은 5분 동안만 유효합니다. 확인이 끝나면 번호
+  원문은 저장하지 않고 해시만 남깁니다. 계정 조회, 공개 프로필, 공개 이슈에는
+  번호를 싣지 않습니다.</p>
 
   <h2>로그인 세션</h2>
   <p>로그인 상태는 쿠키가 아니라 브라우저의 localStorage에 담긴 토큰으로 유지합니다.
@@ -104,8 +127,10 @@
 
   <h2>제3자</h2>
   <p>이 서비스가 실제로 주고받는 곳은 로그인을 처리하는 Google·Apple, 피드백이
-  올라가는 GitHub, 사이트와 로그인 서버를 올려 두는 Cloudflare, 그리고 홈 봇과의
-  대화를 받는 NVIDIA뿐입니다. 봇에게 친 글(최근 몇 마디)은 대답을 짓도록 NVIDIA의
+  올라가는 GitHub, 사이트와 로그인 서버를 올려 두고 복구 메일을
+  <code>recover@regiontype.com</code> 에서 평문으로 보내는 Cloudflare, 그리고
+  홈 봇과의 대화를 받는 NVIDIA뿐입니다. 문자를 보내는 쪽은 따로 설정되어 있을
+  때만 쓰며, 없으면 문자를 보내지 않습니다. 봇에게 친 글(최근 몇 마디)은 대답을 짓도록 NVIDIA의
   AI 모델로 넘어가니, 개인정보는 적지 마세요. 로그인 정보는 함께 가지 않습니다.
   그 밖의 광고·분석·추적 서비스는 쓰지 않습니다.</p>
 
@@ -115,15 +140,16 @@
 
   <div class="lang-split">
   <h1>Privacy Policy</h1>
-  <p class="updated">Effective September 18, 2026</p>
+  <p class="updated">Effective October 8, 2026</p>
 
   <p class="lead">regiontype is a place-name typing drill. The game itself works
   without signing in. Everything below only applies once you choose to sign in
   and post to the leaderboard.</p>
 
   <h2>What we don't collect</h2>
-  <p>No passwords. No signup email, no real name. No ads, no analytics
-  scripts, no cookies.</p>
+  <p>No passwords. We do not ask Google or Apple for an email, a phone
+  number, or a real name. No ads, no analytics scripts, no cookies. An email
+  or phone number you type yourself for recovery is described below.</p>
 
   <h2>Signing in (Google · Apple)</h2>
   <p>Sign-in goes through Google or Apple. We request only the
@@ -143,6 +169,30 @@
   <p>Turning on a passkey shows eight one-time recovery codes, once. We store
   only their hash, never the codes themselves. Using a code deletes that
   entry.</p>
+
+  <h2>Recovery email</h2>
+  <p>If you lose both the passkey and the recovery codes, you can type an email
+  address yourself. The reason is to verify who you are and to recover the
+  account. We do not ask the sign-in provider for that address. Only a
+  confirmed address receives a one-time code, as plain text, from
+  <code>recover@regiontype.com</code>. That code and its challenge last five
+  minutes. After confirmation we do not store the address, only a hash. Account
+  lookup, public profiles, and public issues do not include the address. An
+  unconfirmed address is sent nothing, and the words on the screen are the same
+  whether or not the address was confirmed.</p>
+  <p>Before asking for an email or a phone number, the screen states in words
+  what is collected, why (to verify who you are and to recover the account),
+  who sends it, that the one-time code and its challenge last five minutes,
+  and that the address or number is not shown on a public profile or a public
+  issue.</p>
+
+  <h2>Recovery phone</h2>
+  <p>For the same reason you can type a phone number yourself. A text is sent
+  only when a sender is configured. If it is not, the request fails and nothing
+  is sent. Recovery email is not used as a stand-in for a text. When a text
+  does go out, it is a one-time code, and that code and its challenge last five
+  minutes. After confirmation we do not store the number, only a hash. Account
+  lookup, public profiles, and public issues do not include the number.</p>
 
   <h2>Sessions</h2>
   <p>Sign-in state lives in a token in your browser's localStorage, not a
@@ -178,7 +228,10 @@
   <h2>Third parties</h2>
   <p>The only outside parties this service actually talks to are Google and
   Apple (for sign-in), GitHub (for feedback), Cloudflare (hosting the site
-  and the sign-in server), and NVIDIA (for chatting with the home bot). What you
+  and the sign-in server, and sending recovery mail as plain text from
+  <code>recover@regiontype.com</code>), and NVIDIA (for chatting with the home bot).
+  A text-message sender is used only when one is configured; otherwise no text
+  is sent. What you
   type to the bot (the last few lines) is sent to an NVIDIA AI model to write the
   reply, so please don't type personal details; your sign-in is not sent with it.
   No advertising, analytics, or tracking services.</p>

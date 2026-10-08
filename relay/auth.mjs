@@ -5,9 +5,10 @@
    Google·Apple 이 하고(OIDC), 계정에 패스키가 있으면 그 위에 2단계로 얹는다.
    복구 코드는 패스키가 없는 기기에서 2단계를 넘는 비상구다.
 
-   세션은 서명한 무상태 토큰이다.
-   ponytail: 무상태라 낱개로 끊을 수 없다 — 급하면 SESSION_KEY 를 갈아 전부 끊는다.
-   낱개 로그아웃이 필요해지면 session 표를 만들어 대조로 올린다. */
+   세션은 서명한 토큰이다. 서명이 맞아도 사람 줄이 없으면 로그인이 아니다 —
+   계정을 지우면 user 가 사라지고, 그 전에 낸 토큰은 그때부터 거절된다.
+   ponytail: 토큰마다 끊는 표는 없다. 지운 계정만 여기서 걸리고, 살아있는 계정은
+   서명 그대로 통과한다. 급하면 SESSION_KEY 를 갈아 전부 끊는다. */
 
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -58,7 +59,13 @@ export async function open(key, token) {
    사이트와 같은 도메인의 서브도메인으로 되돌려야 한다. */
 const bearer = req => (req.headers.get('authorization') || '').replace(/^Bearer /, '');
 
-export const who = (env, req) => env.SESSION_KEY ? open(env.SESSION_KEY, bearer(req)) : null;
+export async function who(env, req) {
+  if (!env.SESSION_KEY) return null;
+  const id = await open(env.SESSION_KEY, bearer(req));
+  if (!id) return null;
+  const row = await env.DB.prepare('select 1 as n from user where id = ?').bind(id).first();
+  return row ? id : null;
+}
 
 /* ── 패스키 (WebAuthn) ────────────────────────────────────
    등록 때 브라우저가 getPublicKey() 로 SPKI 를 그대로 준다. 그래서 서버에

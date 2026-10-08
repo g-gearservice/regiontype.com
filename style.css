@@ -589,18 +589,36 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .countdown.on{display:grid}
 
 /* ── 결과 ─────────────────────────────── */
-.result-wrap{display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap}
-#card{width:min(360px,100%);height:auto;box-shadow:0 12px 28px -18px rgba(40,60,70,.6)}
-.scores p{display:flex;align-items:baseline;gap:10px}
-.scores b{font-size:44px;font-weight:800;letter-spacing:-.02em}
-.scores span{color:var(--ink-soft)}
-.scores .best{color:var(--accent-text);font-weight:700;min-height:24px;display:block}
-.scores .menu{margin-top:24px;gap:3px}
-.scores .menu button{font-size:20px;padding:4px 14px 6px}
-/* 폰 결과는 끝난 지도(#play 의 .stage)를 뒤에 깔고, 카드·점수·다시 하기/공유를 아래에서
-   올라오는 유리 시트에 담는다. 공유는 굴리지 않아도 보여야 한다 — 카드를 작은 견본으로
-   왼쪽에 두고 점수를 그 옆에, 단추 둘을 그 밑에 편다. 순위표는 시트 안에서 굴린다 */
-.res-sheet{display:contents}
+/* 데스크톱은 카드 | 점수 | 순위표 세 단. 폭이 모자라면 아래로 접힌다.
+   타/분이 주인공이다 — 크게 하나, 들른 곳·정확도는 그 밑의 두 칸 */
+.res-sheet{display:flex;flex-wrap:wrap;align-items:flex-start;gap:40px 56px}
+.result-wrap{flex:0 0 auto;max-width:100%;display:flex;gap:56px;align-items:flex-start;flex-wrap:wrap}
+#card{width:300px;max-width:100%;height:auto;box-shadow:0 12px 28px -18px rgba(40,60,70,.6)}
+.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:start;width:400px;max-width:100%;padding-top:8px}
+.scores > *{grid-column:1 / -1;margin:0}
+.scores p{display:flex;flex-direction:column-reverse;gap:2px}
+.scores p span{color:var(--ink-soft);font-size:14px;font-weight:600}
+.scores b{font-size:40px;line-height:1.1;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.scores p:first-child{order:-2}
+.scores p:first-child b{font-size:128px;line-height:.95;letter-spacing:-.04em}
+.scores p:first-child span{font-size:15px;font-weight:700}
+.scores p:is(:nth-child(2),:nth-child(3)){grid-column:auto;background:var(--card);border-radius:8px;padding:18px 20px;box-shadow:var(--shadow)}
+#rCount[data-of]::after{content:" / " attr(data-of);font-size:.5em;font-weight:600;color:var(--ink-soft)}
+.scores .best{display:block;color:var(--accent-text);font-weight:700;font-size:15px}
+.scores .best:empty{display:none}
+/* 기록 줄은 색만이 아니라 테두리로 띄운다 */
+#rBest{order:-1;justify-self:start;border:2px solid var(--accent);border-radius:999px;padding:5px 12px 6px}
+.scores .menu{flex-direction:row;width:auto;min-width:0;margin-top:12px;gap:10px}
+.scores .menu :is(#again,#save){min-height:52px;border-radius:10px;font-size:18px;padding:0 26px;display:flex;align-items:center;justify-content:center;gap:8px}
+#again{background:var(--accent);color:var(--on-accent);font-weight:800}
+#save{background:none;color:var(--ink);border:2px solid var(--block)}
+#save::before{content:"";width:1.1em;height:1.1em;flex:0 0 auto;background:currentColor;
+  -webkit-mask:var(--i) center / 100% no-repeat;mask:var(--i) center / 100% no-repeat;
+  --i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4v11M7 10l5 5 5-5M5 20h14'/></svg>")}
+#board{flex:1 1 320px;max-width:420px;padding-top:8px}
+/* 폰 결과는 끝난 지도(#play 의 .stage)를 뒤에 깔고, 점수·다시 하기/공유를 아래에서
+   올라오는 유리 시트에 담는다. 공유는 굴리지 않아도 보여야 한다 — 타/분을 크게,
+   두 칸을 그 밑에, 단추 둘을 그 밑에 편다. 순위표는 시트 안에서 굴린다 */
 @media (pointer:coarse){
   #result{padding:0;justify-content:flex-end;overflow:hidden;bottom:calc(-1 * var(--under))}
   #result .screen-head{position:absolute;z-index:2;margin:0;top:calc(env(safe-area-inset-top) + 8px);left:12px}
@@ -611,18 +629,21 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
     box-shadow:var(--glass-hi),var(--glass-lg);border-top:1px solid var(--glass-line);
   }
   #result.on .res-sheet{animation:sheet-rise .42s var(--ease-out) backwards}
-  .result-wrap{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 16px}
-  #card{grid-row:1 / span 5;width:auto;height:156px;border-radius:10px}
-  .scores{display:contents}
-  .scores p{gap:8px}
-  .scores b{font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums}
-  .scores span{font-size:14px}
-  .scores .best{min-height:0;font-size:14px}
-  .scores .best:empty{display:none}
-  .scores .menu{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;width:auto;min-width:0;margin-top:14px;gap:8px}
-  .scores .menu :is(#again,#save){min-height:50px;border-radius:14px;font-size:18px;padding:10px 12px;white-space:nowrap}
-  .scores .menu #save{background:var(--accent);color:var(--on-accent)}
-  #board{margin-top:6px}
+  /* 폰은 지도가 뒤에 깔려 있으니 카드 견본을 빼고 숫자를 바로 올린다. 카드는 저장용으로 계속 그린다 */
+  .result-wrap{display:block}
+  #card{display:none}
+  .scores{width:auto;gap:8px;padding-top:0}
+  .scores p:first-child{grid-column:1}
+  .scores p:first-child b{font-size:64px}
+  .scores p:first-child span{font-size:13px}
+  .scores b{font-size:26px;line-height:1.15}
+  .scores p span{font-size:13px}
+  .scores p:is(:nth-child(2),:nth-child(3)){background:var(--glass-fill);box-shadow:none;border-radius:12px;padding:10px 14px}
+  #rBest{grid-column:2;justify-self:end;align-self:end;margin-bottom:6px;font-size:13px;padding:4px 10px 5px}
+  .scores .best{font-size:14px}
+  .scores .menu{display:grid;grid-template-columns:1fr 1fr;margin-top:8px;gap:8px}
+  .scores .menu :is(#again,#save){min-height:50px;border-radius:14px;padding:10px 12px;white-space:nowrap}
+  #board{margin-top:6px;max-width:none;padding-top:0}
   .res-head{margin:18px 0 10px}
   .ranks{max-width:none}
 }
@@ -630,7 +651,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (prefers-reduced-motion:reduce){ #result.on .res-sheet{animation:rise-fade .2s ease-out backwards} }
 :root[data-motion="off"] #result.on .res-sheet{animation:rise-fade .2s ease-out backwards}
 @keyframes rise-fade{from{opacity:0}}
-.res-head{margin:34px 0 14px;font-size:20px;font-weight:800}
+.res-head{margin:0 0 14px;font-size:20px;font-weight:800}
 .res-head span{color:var(--ink-soft);font-weight:500}
 
 /* 순위표 — 내 줄은 테두리와 '나' 라벨을 함께 붙인다:
@@ -646,7 +667,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .ranks li.me{border-color:var(--block)}
 .ranks .tag{
   align-self:center;font-size:12px;font-weight:700;line-height:1;
-  color:#fff;background:var(--block);padding:3px 6px 4px;
+  color:#fff;background:var(--block-deep);padding:3px 6px 4px;border-radius:3px;
 }
 .board-say{margin:-6px 0 12px;min-height:22px;color:var(--accent-text);font-weight:700}
 .board-say.bad{color:var(--bad)}
@@ -764,7 +785,9 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   transition:background var(--fast) var(--ease-out);
 }
 @media (hover:hover) and (pointer:fine){
-  .menu button:hover, .menu a:hover, #save:hover, #again:hover{background:var(--accent)}
+  .menu button:hover, .menu a:hover, #save:hover{background:var(--accent)}
+  #again:hover{background:var(--accent-deep)}
+  #save:hover{color:var(--on-accent);border-color:var(--accent)}
   .step:hover{color:var(--accent)}
   .toggle:hover{border-color:var(--accent)}
 }
@@ -772,7 +795,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
                          border-color var(--fast) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
 }
-.ranks li{border-radius:4px;box-shadow:var(--shadow)}
+.ranks li{border-radius:6px;box-shadow:var(--shadow)}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
 
@@ -1289,7 +1312,8 @@ body.setting #regions .nav-bot,body.paging #regions .nav-bot{transform:translate
 #regions{--cam-dur:.5s;--cam-ease:cubic-bezier(.22,.75,.2,1)}
 #courseBtns{
   position:absolute;left:0;top:0;transform-origin:0 0;
-  transition:transform var(--cam-dur) var(--cam-ease);
+  /* translate 는 커서 기울기. transform 과 한 속성에 두면 마우스가 초점 이동을 끊는다 */
+  transition:transform var(--cam-dur) var(--cam-ease), translate var(--cam-dur) var(--cam-ease);
 }
 #courseBtns .grid-btn{transition:transform var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease)}
 #courseBtns .grid-btn > span{transition:transform var(--cam-dur) var(--cam-ease)}
@@ -1388,6 +1412,7 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   transition:background var(--fast) var(--ease-out);
 }
 .si-btns > :is(button,a) + :is(button,a){border-top:1px solid var(--land-line)}
+.si-btns > [hidden]{display:none}
 /* 주황 위에 주황 테두리는 안 보인다 — 안쪽으로 먹 테두리를 두른다 */
 .si-btns > :is(button,a):focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 .si-btns > button[disabled]{background:var(--land);color:var(--ink-soft);cursor:default}
@@ -1403,6 +1428,13 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   border:1px solid var(--accent-deep);border-left-width:4px;padding:10px 12px;text-align:left;
 }
 .si-note{font-size:15px;color:var(--ink-soft)}
+/* 고지는 글이다. 왼선은 구역을 나눌 뿐이고, 뜻은 문장이 말한다 */
+.si-notice{
+  margin:0;font-size:14px;line-height:1.6;color:var(--ink);text-align:left;
+  border:1px solid var(--grid);border-left:4px solid var(--ink);padding:10px 12px;max-width:28em;
+}
+.si-notice a{color:var(--accent-text)}
+.si-notice a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .si-codes{
   list-style:none;display:grid;grid-template-columns:repeat(2,auto);gap:6px 24px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;letter-spacing:.08em;
@@ -1421,6 +1453,9 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
   border:0;padding:8px 16px;cursor:pointer;
 }
 .si-code button:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.si-code input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+#optsSecurity .si-code{margin-top:8px}
+#optsSecurity .si-code input{width:auto;flex:1;min-width:0}
 .si-lost{font-size:14px;color:var(--ink-soft);max-width:32em;text-align:left}
 .si-lost summary{cursor:pointer;padding:6px 0}
 .si-lost p{line-height:1.6;padding-bottom:6px}

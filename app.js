@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.83';
+const VER = '3.88';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -636,11 +636,22 @@ function paintTile(tile) {
     `translate3d(${tile.x.x.toFixed(2)}px,${tile.y.x.toFixed(2)}px,0) scale(${tile.s.x.toFixed(4)})`;
   tile.el.style.opacity = tile.o.x.toFixed(3);
 }
-/* now 면 트랜지션 없이 바로(끌기·휠·처음 그리기) — 손을 1:1 로 따라와야 한다 */
+/* now 면 트랜지션 없이 바로(끌기·휠·처음 그리기) — 손을 1:1 로 따라와야 한다.
+   커서 기울기는 translate 에 둔다. transform 에 같이 적으면 마우스가 움직일 때마다
+   목표가 바뀌어, 가는 중인 초점 이동이 처음부터 다시 시작된다 */
 function paintCam(now = false) {
   const el = $('#courseBtns');
   el.style.transition = now || calm() ? 'none' : '';
-  el.style.transform = `translate3d(${(COURSE.px + GZ.nx.to).toFixed(2)}px,${(COURSE.py + GZ.ny.to).toFixed(2)}px,0) scale(${(COURSE.z || 1).toFixed(4)})`;
+  el.style.transform = `translate3d(${COURSE.px.toFixed(2)}px,${COURSE.py.toFixed(2)}px,0) scale(${(COURSE.z || 1).toFixed(4)})`;
+  el.style.translate = `${GZ.nx.to.toFixed(2)}px ${GZ.ny.to.toFixed(2)}px`;
+  courseKick();
+}
+/* 기울기만 옮긴다. 카메라 transform 은 그대로라 초점 이동은 제 시간으로 끝까지 간다 */
+function paintNudge() {
+  const el = $('#courseBtns');
+  if (calm()) el.style.transition = 'none';
+  else if (el.style.transition === 'none') el.style.transition = '';
+  el.style.translate = `${GZ.nx.to.toFixed(2)}px ${GZ.ny.to.toFixed(2)}px`;
   courseKick();
 }
 /* 줄인 움직임에서는 트랜지션 없이 바로 옮긴다 */
@@ -683,14 +694,22 @@ function liveOf(el) {
   return { z: m.a, px: m.e, py: m.f };
 }
 const liveCam = () => liveOf($('#courseBtns'));
+/* 커서 기울기의 지금 값. transform 과 따로라 계산된 transform 에는 안 들어 있다 */
+function liveNudge(el) {
+  const raw = getComputedStyle(el).translate;
+  if (!raw || raw === 'none') return { x: 0, y: 0 };
+  const n = raw.match(/-?[\d.]+/g) || [];
+  return { x: parseFloat(n[0]) || 0, y: n.length > 1 ? parseFloat(n[1]) || 0 : 0 };
+}
 /* 무늬 원점을 붙잡은 점 A 에 두고 칸을 z 배로 — 선이 A 쪽으로 모인다.
    A 는 늘 큰 칸의 모서리라 z = 1/d 에서 선이 작은 칸 격자와 딱 겹친다.
    카메라는 통의 지금 값을 읽는다 — 칸과 한 치도 어긋나지 않는다 */
 function courseGridArgs(cw, ch) {
   const on = $('#regions').classList.contains('on');
   const { z: cam, px, py } = on ? liveCam() : { z: 1, px: 0, py: 0 };
+  const n = on ? liveNudge($('#courseBtns')) : { x: 0, y: 0 };
   const { z: gz, px: gx, py: gy } = on ? liveOf(GK) : { z: 1, px: 0, py: 0 };
-  return [gx * cam + px, gy * cam + py, cw * gz * cam, ch * gz * cam];
+  return [gx * cam + px + n.x, gy * cam + py + n.y, cw * gz * cam, ch * gz * cam];
 }
 
 /* 격자만 JS 가 그린다(SVG 무늬 속성은 트랜지션이 없다). 통이 움직이는 동안 매 프레임
@@ -1130,8 +1149,9 @@ function aimNudge(x, y) {
   const ny = !on || x == null ? 0 : grip((y - innerHeight / 2) / (innerHeight / 2)) * NUDGE;
   if (nx === GZ.nx.to && ny === GZ.ny.to) return;
   GZ.nx.x = GZ.nx.to = nx; GZ.ny.x = GZ.ny.to = ny;
-  /* 끄는 동안은 손을 1:1 로 따라가는 중이라 트랜지션을 다시 켜지 않는다 */
-  if (!drag) paintCam();
+  /* 끄는 동안은 손을 1:1 로 따라가는 중이라 트랜지션을 다시 켜지 않는다.
+     기울기만 옮긴다 — 카메라 transform 을 다시 쓰면 초점 이동이 끊긴다 */
+  if (!drag) paintNudge();
 }
 $('#regions').addEventListener('pointermove', e => {
   if (drag || e.pointerType !== 'mouse') return;
@@ -1174,8 +1194,8 @@ addEventListener('pointermove', e => {
     if (drag.kind === 'home') {
       try { drag.host.setPointerCapture(drag.id); } catch {}
       /* 카메라가 아직 미끄러지는 중이면 지금 선 자리에서 잡는다 — 목표에서 잡으면 튄다 */
-      const c = liveCam();
-      COURSE.z = c.z; COURSE.px = c.px - GZ.nx.to; COURSE.py = c.py - GZ.ny.to;
+      const c = liveCam(), n = liveNudge($('#courseBtns'));
+      COURSE.z = c.z; COURSE.px = c.px + n.x - GZ.nx.to; COURSE.py = c.py + n.y - GZ.ny.to;
       GZ.cz.x = GZ.cz.to = c.z;
       paintCam(true);
       drag.px = COURSE.px - sx; drag.py = COURSE.py - sy;
@@ -2692,6 +2712,7 @@ function finish() {
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
+    $('#rCount').dataset.of = G.items.length;
     $('#rAcc').textContent = G.acc + '%';
     $('#rBest').textContent = G.cpm > prev ? t('bestNew') : prev ? t('bestPrev', { n: showSpeed(prev) }) : '';
     if (G.cpm > prev) localStorage.setItem(key, G.cpm);
@@ -3267,8 +3288,10 @@ if (location.search.includes('rt=1')) {
 
 /* 소개·방침처럼 다른 문서로 나갔다가 뒤로 오면 이 화면은 뒤로/앞으로
    캐시(bfcache)에서 통째로 되살아나 스크립트가 다시 돌지 않는다. 그때만 새로 읽는다.
-   storage 이벤트는 안 쓴다 — 그건 '다른 탭'에서만 오고, 같은 탭의 뒤로 가기에는 안 온다 */
+   storage 는 다른 탭에서만 온다 — 같은 탭의 뒤로 가기에는 안 온다. 다른 탭이
+   계정을 지우거나 로그아웃해 rt.token 이 사라지면 이 탭의 '내 계정' 도 내린다 */
 addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
+addEventListener('storage', e => { if (e.key === 'rt.token' || e.key === null) paintUI(); });
 
 /* ?v= 표류. 페이지가 셋(홈·로그인·설정)이라 손으로 적는 자리가 여섯이다 — 개발에서만
    짖는다. 파비콘(rel=icon)은 뺀다: 그림이 바뀔 때만 움직이는 별개의 캐시 열쇠다 */

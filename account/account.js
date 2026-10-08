@@ -371,14 +371,22 @@ $('#accountErase').onclick = async () => {
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + read('rt.token') },
       body: JSON.stringify({ sure: true }),
     });
-    if (!r.ok) throw r;
+    /* 200 이어도 본문이 성공이 아니면 지운 것이 아니다. 실패로 보이면 세션을 둔다 */
+    const data = await r.json().catch(() => null);
+    if (!r.ok || !data || data.ok !== true) throw r;
     /* 서버에서 지워진 뒤에야 이 브라우저를 비운다 — 먼저 비우면 실패했을 때
-       토큰을 잃어 제 계정을 지울 길조차 없어진다 */
-    for (const k of ['rt.token', 'rt.name', 'rt.bio', 'rt.character']) {
-      try { localStorage.removeItem(k); } catch {}
+       토큰을 잃어 제 계정을 지울 길조차 없어진다.
+       location.replace('./') 는 #account 에서 해시만 바뀌고 문서는 그대로라
+       지운 뒤에도 로그인 상태가 남는다. 키를 전부 지우고 화면을 내린다. */
+    try { forget(); }
+    catch {
+      btn.disabled = false;
+      say('계정은 지워졌지만 이 브라우저의 로그인 흔적을 지우지 못했습니다. 브라우저 설정을 확인해 주세요.');
+      return;
     }
-    try { sessionStorage.removeItem('rt.bind'); } catch {}
-    location.replace('./');
+    session();
+    if (typeof paintUI === 'function') paintUI();
+    say('계정을 지웠습니다.');
   } catch {
     btn.disabled = false;
     say('계정을 지우지 못했습니다. 잠시 후 다시 시도해 주세요 — 계정은 그대로 있습니다.');
@@ -402,7 +410,12 @@ function syncOptions() {
 }
 addEventListener('rt-account', () => { session(); syncOptions(); });
 addEventListener('storage', e => {
-  if (e.key === null || e.key === 'rt.token' || e.key === 'rt.name' || e.key === 'rt.bio') session();
+  /* 다른 탭이 토큰을 지우면(계정 삭제·로그아웃) 이 탭도 로그인 화면을 내린다.
+     같은 탭의 removeItem 은 storage 가 안 오므로, 지운 자리는 session() 을 직접 부른다 */
+  if (e.key === null || e.key === 'rt.token') {
+    session();
+    if (typeof paintUI === 'function') paintUI();
+  } else if (e.key === 'rt.name' || e.key === 'rt.bio') session();
   if (e.key === null || e.key === 'rt.opt') {
     syncOptions();
   }
@@ -413,6 +426,7 @@ if (checkedToken) fetch(API + '/auth/me', {headers: {authorization: 'Bearer ' + 
     if (checkedToken !== read('rt.token')) return;
     if (r.status === 401) {
       forget(); session();
+      if (typeof paintUI === 'function') paintUI();
     } else if (!r.ok) $('#accountSession').textContent = '계정 상태를 확인할 수 없습니다. 잠시 후 다시 접속해 주세요.';
     /* 서버에 남은 프로필이 원본이다 — 이 브라우저에 있던 값은 여기서 덮는다 */
     else return r.json().then(data => apply(data.profile));

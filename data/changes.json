@@ -1,5 +1,29 @@
 [
   {
+    "v": "0.9.388",
+    "date": "2026-10-08",
+    "ko": "계정을 지운 뒤에도 로그인된 채로 남아 있던 것을 고쳤습니다. 삭제가 끝나면 이 브라우저의 로그인 흔적이 지워지고, 그 전에 받은 토큰으로는 기록을 올리거나 계정을 쓸 수 없습니다.",
+    "en": "Fixed staying signed in after an account is deleted. A successful delete clears the session in this browser, and a token issued before the delete can no longer post scores or use the account."
+  },
+  {
+    "v": "0.9.387",
+    "date": "2026-10-08",
+    "ko": "2단계 로그인에서 복구 코드 버튼은 패스키가 실패한 뒤에만 나타납니다. 이메일·전화번호로 인증할 수 있고, 주소나 번호를 묻기 전에 수집 이유와 정책을 알립니다.",
+    "en": "On the second sign-in step the recovery-code button appears only after a passkey attempt fails. You can verify by email or phone, and a notice explains what is collected and where the policy is before you enter an address or number."
+  },
+  {
+    "v": "0.9.386",
+    "date": "2026-10-08",
+    "ko": "개발 로그인을 없앴습니다. 로컬에서는 g@gearservicevanguard.com 만 로그인됩니다. 확인한 메일로 새 복구 코드를 받을 수 있습니다. 홈에서 다른 구로 초점을 옮기는 동안 커서를 움직여도 그 이동이 처음부터 다시 시작되지 않습니다.",
+    "en": "Removed developer sign-in. On localhost only g@gearservicevanguard.com can sign in. A confirmed mailbox can receive a new set of recovery codes. Moving the cursor while the home map shifts focus to another district no longer restarts that move."
+  },
+  {
+    "v": "0.9.384",
+    "date": "2026-10-07",
+    "ko": "결과 화면을 새로 꾸몄습니다. 타/분을 크게 보여 주고, 들른 곳·정확도를 칸으로 나눴으며, 순위표를 옆에 둡니다.",
+    "en": "Redesigned the result screen: speed is shown large, places and accuracy sit in their own cells, and the leaderboard sits alongside."
+  },
+  {
     "v": "0.9.383",
     "date": "2026-10-07",
     "ko": "결과 카드에 이전 결과와 현재 결과가 겹쳐 그려지던 것을 고쳤습니다.",

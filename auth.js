@@ -95,8 +95,11 @@ const VIEWS = ['vSignin', 'vTwo'];
 let live = false;
 function show(id) {
   VIEWS.forEach(v => { $('#' + v).hidden = v !== id; });
-  /* 화면이 바뀌면 손이 갈 첫 자리로 포커스를 옮긴다 — 키보드만으로도 이어진다 */
-  const first = live && $('#' + id).querySelector('button:not([disabled]), input:not([disabled])');
+  if (id === 'vTwo') resetTwo();
+  /* 화면이 바뀌면 손이 갈 첫 자리로 포커스를 옮긴다 — 키보드만으로도 이어진다.
+     숨긴 버튼은 건너뛴다. */
+  const first = live && [...$('#' + id).querySelectorAll('button:not([disabled]), input:not([disabled])')]
+    .find(el => !el.closest('[hidden]') && el.getClientRects().length);
   if (first) first.focus();
 }
 
@@ -131,21 +134,35 @@ async function passkeyTwo(generation) {
   if (current(generation)) done(out.token, generation);
 }
 
-/* 패스키를 부르는 버튼은 전부 이 문을 지난다 — 취소와 진짜 실패는 다른 말이다 */
+/* 복구 코드 버튼은 패스키가 실패한 뒤에만 연다. 코드 칸은 그 버튼을 누르기 전에는 열지 않는다. */
+function resetTwo() {
+  ['twoCode', 'codeForm', 'rescueForm', 'phoneAuthForm'].forEach(id => {
+    const el = $('#' + id);
+    if (el) el.hidden = true;
+  });
+}
+function showCodeDoor() {
+  const code = $('#twoCode');
+  if (code) code.hidden = false;
+}
+
+/* 패스키를 부르는 버튼은 전부 이 문을 지난다 — 취소와 진짜 실패는 다른 말이다.
+   성공은 이 함수가 버튼을 드러내기 전에 덮개를 닫으므로 복구 버튼이 깜빡이지 않는다. */
 async function tryAuth(run, doing, btns) {
-  if (!canPasskey()) return say(t('noPasskey'), true);
+  if (!canPasskey()) { showCodeDoor(); return say(t('noPasskey'), true); }
   const generation = modalGeneration;
-  btns.forEach(b => b.disabled = true);
+  btns.forEach(b => { if (b) b.disabled = true; });
   say(doing);
   try {
     await run(generation);
   } catch (e) {
     if (!current(generation)) return;
+    showCodeDoor();
     say(e && e.name === 'NotAllowedError' ? t('cancelled')
       : e && e.status === 401 ? t('noKey')
       : t('loginFail'), true);
   }
-  if (current(generation)) btns.forEach(b => b.disabled = false);
+  if (current(generation)) btns.forEach(b => { if (b) b.disabled = false; });
 }
 
 /* ── SSO ─────────────────────────────────────────────── */
@@ -160,8 +177,22 @@ async function sso(p) {
     /* bind 는 이 브라우저에만 남는다. 공급자에게는 그 해시(state)만 간다 */
     const bind = toB64u(crypto.getRandomValues(new Uint8Array(32)));
     sessionStorage.setItem(BIND_KEY, bind);
-    const { url } = await ask('/auth/sso', { p, s: await shaB64u(bind) });
-    if (current(generation)) location.assign(url);
+    /* 로컬 중계기에는 Google 비밀이 없어 콜백 DB 도 갈라진다. 로그인은 운영 중계기로
+       보내고, 그 토큰을 검사하는 쪽도 그 중계기가 되게 릴레이 선택을 바꿔 둔다. */
+    let relay = RELAY;
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && RELAY.startsWith('http://')) {
+      localStorage.setItem('rt.relay', 'live');
+      relay = self.RT_LIVE || 'https://g.gearservicevanguard.com';
+    }
+    const head = { 'content-type': 'application/json' };
+    const tok = token();
+    if (tok) head.authorization = 'Bearer ' + tok;
+    const r = await fetch(relay + '/auth/sso', {
+      method: 'POST', headers: head, body: JSON.stringify({ p, s: await shaB64u(bind) }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.msg || t('signinFail'));
+    if (current(generation)) location.assign(d.url);
   } catch {
     if (!current(generation)) return;
     say(t('signinFail'), true);
@@ -527,8 +558,12 @@ function close() {
   TWO = null;
   sessionStorage.removeItem(BIND_KEY);
   $('#codeIn').value = '';
-  $('#codeForm').hidden = true;
-  [$('#goGoogle'), $('#twoGo'), $('#twoCode')].forEach(b => { b.disabled = false; });
+  const rescueIn = $('#rescueIn');
+  if (rescueIn) rescueIn.value = '';
+  const phoneAuthIn = $('#phoneAuthIn');
+  if (phoneAuthIn) phoneAuthIn.value = '';
+  resetTwo();
+  [$('#goGoogle'), $('#twoGo'), $('#twoCode'), $('#twoMail'), $('#twoPhone')].forEach(b => { if (b) b.disabled = false; });
   say('');
   setBackgroundInert(false);
   if (opener) { opener.focus(); opener = null; }
@@ -538,21 +573,115 @@ function close() {
 /* ── 손잡이 ──────────────────────────────────────────── */
 function wire() {
   $('#goGoogle').onclick = () => sso('google');
-  /* 개발 로그인 — 로컬 중계기를 쓸 때만 보인다(relay.js). 중계기도 로컬 주소 + DEV_LOGIN 일 때만 받는다 */
-  $('#devForm').hidden = !RELAY.startsWith('http://');
-  $('#devForm').onsubmit = async e => {
+  const rescue = $('#rescueForm');
+  if (rescue) rescue.onsubmit = async e => {
     e.preventDefault();
     const generation = modalGeneration;
     say(t('signinWait'));
     try {
-      const d = await ask('/auth/dev', { name: $('#devIn').value });
-      done(d.token, generation, d.isNewAccount === true);
+      await ask('/auth/rescue', { email: $('#rescueIn').value.trim() });
+      if (!current(generation)) return;
+      $('#rescueIn').value = '';
+      say(t('rescueSent'));
+      $('#codeForm').hidden = false;
+      $('#codeIn').focus();
     } catch (err) {
-      if (current(generation)) say(err.status === 405 ? '로컬 중계기에 DEV_LOGIN 이 꺼져 있습니다.' : err.message || t('signinFail'), true);
+      if (!current(generation)) return;
+      say(err.status === 503 ? (t('mailFail') || err.message) : (err.message || t('signinFail')), true);
+    }
+  };
+  const mailSay = (msg, bad) => {
+    const el = $('#mailSay');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('bad', !!bad);
+  };
+  const mailForm = $('#mailForm');
+  if (mailForm) mailForm.onsubmit = async e => {
+    e.preventDefault();
+    mailSay(t('signinWait'));
+    try {
+      await ask('/auth/mail', { email: $('#mailIn').value.trim() });
+      $('#mailIn').value = '';
+      $('#mailConfirm').hidden = false;
+      $('#mailCode').focus();
+      mailSay(t('mailSent'));
+    } catch (err) {
+      mailSay(err.status === 503 ? (t('mailFail') || err.message) : (err.message || t('signinFail')), true);
+    }
+  };
+  const mailConfirm = $('#mailConfirm');
+  if (mailConfirm) mailConfirm.onsubmit = async e => {
+    e.preventDefault();
+    mailSay(t('signinWait'));
+    try {
+      await ask('/auth/mail/confirm', { code: $('#mailCode').value.trim() });
+      $('#mailCode').value = '';
+      mailSay(t('mailOk'));
+    } catch (err) {
+      mailSay(err.message || t('signinFail'), true);
+    }
+  };
+  const phoneSay = (msg, bad) => {
+    const el = $('#phoneSay');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('bad', !!bad);
+  };
+  const phoneForm = $('#phoneForm');
+  if (phoneForm) phoneForm.onsubmit = async e => {
+    e.preventDefault();
+    phoneSay(t('signinWait'));
+    try {
+      await ask('/auth/phone', { phone: $('#phoneIn').value.trim() });
+      $('#phoneIn').value = '';
+      $('#phoneConfirm').hidden = false;
+      $('#phoneCode').focus();
+      phoneSay(t('phoneCodeSent'));
+    } catch (err) {
+      phoneSay(err.status === 503 ? (t('phoneFail') || err.message) : (err.message || t('signinFail')), true);
+    }
+  };
+  const phoneConfirm = $('#phoneConfirm');
+  if (phoneConfirm) phoneConfirm.onsubmit = async e => {
+    e.preventDefault();
+    phoneSay(t('signinWait'));
+    try {
+      await ask('/auth/phone/confirm', { code: $('#phoneCode').value.trim() });
+      $('#phoneCode').value = '';
+      phoneSay(t('phoneOk'));
+    } catch (err) {
+      phoneSay(err.message || t('signinFail'), true);
     }
   };
 
-  $('#twoGo').onclick = () => tryAuth(passkeyTwo, t('askingDevice'), [$('#twoGo'), $('#twoCode')]);
+  $('#twoGo').onclick = () => tryAuth(passkeyTwo, t('askingDevice'),
+    [$('#twoGo'), $('#twoCode'), $('#twoMail'), $('#twoPhone')]);
+  $('#twoMail').onclick = () => {
+    $('#rescueForm').hidden = false;
+    $('#rescueIn').focus();
+  };
+  const phoneAuth = $('#phoneAuthForm');
+  if (phoneAuth) phoneAuth.onsubmit = async e => {
+    e.preventDefault();
+    const generation = modalGeneration;
+    say(t('signinWait'));
+    try {
+      await ask('/auth/phone/rescue', { phone: $('#phoneAuthIn').value.trim() });
+      if (!current(generation)) return;
+      $('#phoneAuthIn').value = '';
+      say(t('phoneRescueSent'));
+      $('#codeForm').hidden = false;
+      $('#codeIn').focus();
+    } catch (err) {
+      if (!current(generation)) return;
+      say(err.status === 503 ? (t('phoneFail') || err.message) : (err.message || t('signinFail')), true);
+    }
+  };
+  $('#twoPhone').onclick = () => {
+    $('#phoneAuthForm').hidden = false;
+    $('#phoneAuthIn').focus();
+  };
   $('#twoCode').onclick = () => {
     $('#codeForm').hidden = false;
     $('#codeIn').focus();
