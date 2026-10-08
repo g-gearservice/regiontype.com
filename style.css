@@ -186,6 +186,11 @@ body{
   /* 보안 판은 따로 굴리지 않는다 — 자기 높이 안에서 굴리면 내용이 판 끝에서 잘려 막대 밑까지 못 간다.
      막대 끝까지 늘어난 .opts-shell 이 함께 굴리고, 위아래 자리는 그 안쪽 여백이 맞춘다 */
   :root body:is(.set,.setting) #options #optsSecurity:not([hidden]){overflow:visible;flex:none;min-height:auto;margin-top:0}
+  /* 보안 판은 끝까지 굴리면 마지막 줄이 아래 띠(폰 --blur-bot 200px + 안전 여백) 위로 다 올라선다. 포커스도 띠 밑에 갇히지 않는다 */
+  /* 200px 를 숫자로 둔다 — --blur-bot 은 띠(.backdrop-blur) 자신에만 걸려 형제인 .opts-shell 에선 안 보인다 */
+  :root body:is(.set,.setting) #options .opts-shell:has(#optsSecurity:not([hidden])){
+    padding-bottom:calc(var(--bleed) + 200px + env(safe-area-inset-bottom) + 24px);
+    scroll-padding:calc(var(--bleed) + var(--oh)) 0 calc(var(--bleed) + 200px + env(safe-area-inset-bottom))}
   /* @@signin */
   /* 로그인 덮개도 문서 안으로 — 위아래 여백까지 늘리고 안쪽 여백에 --bleed 를 더해 카드 자리는 그대로(아래는 독 높이 포함) */
   body > .si-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
@@ -391,8 +396,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .opts-tab{
   font:inherit;font-weight:700;font-size:22px;text-align:right;white-space:nowrap;
   width:fit-content;align-self:flex-end;
-  /* 비활성은 반투명 teal 이라 흰 글자면 배경 위에서 읽히지 않는다 — 글자는 잉크로 */
-  color:var(--ink);background:color-mix(in srgb,var(--block) 34%,transparent);
+  /* 비활성은 판 없이 글자만 선다(보안 탭을 골랐을 때의 결을 모든 탭의 기본으로) — 글자는 잉크로 */
+  color:var(--ink);background:transparent;
   border:0;border-radius:14px;padding:8px 18px 10px;cursor:pointer;
   /* font-size 도 같이 잇는다 — font-weight 는 뺀다: 가변 폭이 아닌 폰트라
      700→800 은 어차피 중간값 없이 그대로 튄다, 이어봤자 헛일이다 */
@@ -408,7 +413,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (hover:hover) and (pointer:fine){
   .opts-tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--block) 52%,transparent)}
 }
-.opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+/* 탭은 판이 없어 초점이 글자만으로는 안 보인다 — 어디서나 투명인 초점 테두리(위 :focus-visible)를 탭에서만 되살린다 */
+.opts-tab:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;outline-color:var(--accent)!important}
 /* 개발 탭은 색만으로 구분하지 않는다 — 테두리 뱃지와 '개발' 글자가 함께 선다 */
 .opts-tab[data-status="development"]{border:2px dashed currentColor}
 .opts-tab-status{
@@ -441,7 +447,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   @media (pointer:coarse){ .opts-panel:not([hidden]){transform:translateX(calc(var(--dir,0) * 16px))} }
 }
 /* 언어·지역 고르기 — 대륙 fieldset + 2열 라디오. 지역 판과 같은 스크롤 통 */
-.opts-lang-pick{
+.opts-lang-pick,.opts-region-pick{
   /* 대륙 fieldset 은 통을 가로지르고, 홀로 선 '자동' 칸은 한 열만 차지한다 —
      아래 .region-grid 와 같은 auto-fit 자라 2열이 1열로 접힐 때 함께 접힌다 */
   display:grid; grid-template-columns:repeat(auto-fit,minmax(14em,var(--opt-col)));
@@ -475,7 +481,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 :root:not([data-dev]) :is(.opts-tab,.opts-panel)[data-dev-only]{display:none!important}
 :root[data-dev] .opts-tab[data-dev-only]{display:revert}
 :root[data-dev] .opts-panel[data-dev-only]:not([hidden]){display:flex}
-.opts-region-pick{display:none}
+/* 지역 고르기도 개발에서만 그린다 — 판이 숨어도 배포에서 목록이 남지 않게 한 번 더 막는다 */
+:root:not([data-dev]) .opts-region-pick{display:none!important}
 /* 대륙마다 끊어 2열로 펼친다 — 스크롤 목록보다 한눈에 듄다. 칸이 좁아지면
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */
 .region-group{border:0;margin:0;padding:0;min-inline-size:0}
@@ -1658,9 +1665,30 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 /* 판은 레일 윗변에서 시작해 아래로 흐른다(Figma 에서 카드 윗변 = 첫 탭 윗변) */
 #optsSecurity:not([hidden]){justify-content:flex-start;overflow:auto;margin-top:max(0px,calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2));min-height:0;padding:.38rem 8px 8px 2px;flex:1 1 0;
   /* 판 아랫단은 화면 아래 흐림 띠(.page-blur --blur-bot 110px) 안에 든다 — 띠가 덮는 만큼 여백을
-     둬야 끝까지 굴렸을 때 마지막 줄이 띠 위로 올라선다 */
+     둬야 끝까지 굴렸을 때 마지막 줄이 띠 위로 올라선다. --blur-bot 은 띠 자신에만 걸려 여기선 안 보이니 숫자로 둔다 */
   padding-bottom:max(8px,calc((110px - var(--opt-shell-bot)) / var(--zc)))}
-.opts-shell:has(#optsSecurity:not([hidden])) .opts-tab:not([aria-selected="true"]){background:transparent}
+/* 데스크톱 보안 판은 따로 굴리지 않는다 — .opts-shell 이 덮개 위아래 끝까지 늘어 스크롤 통이 되고, 내용이 위·아래 흐림 띠
+   밑으로 지나간다(띠는 통 밖 덮개의 자식이라 제자리). 위 padding 은 셸이 서던 자리, 아래 padding 은 셸 아랫변까지라
+   레일·판의 첫 자리는 그대로다. 레일은 sticky 로 서 있고 판만 흐른다. 마지막 줄을 띠 위로 올리는 여백은 판 아래 padding 이 맡는다 */
+@media not (pointer:coarse){
+  #options .opts-shell:has(#optsSecurity:not([hidden])){
+    position:absolute;inset:0;width:auto;max-width:none;height:auto;margin:0;
+    align-items:flex-start;justify-content:center;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+    padding:calc(((100vh - var(--opt-shell-h)) / 2 + var(--opt-shell-dy)) / var(--zc)) calc(var(--screen-pad-x) / var(--zc))
+            calc(var(--opt-shell-bot) / var(--zc));
+    /* 포커스가 흐림 띠 밑에 갇히지 않게 — 위는 셸이 서던 자리(위 띠 아래), 아래는 띠 높이(.page-blur --blur-bot 110px) */
+    /* 110px 를 숫자로 둔다 — --blur-bot 은 띠(.page-blur) 자신에만 걸려 형제인 .opts-shell 에선 안 보인다 */
+    scroll-padding-top:calc(((100vh - var(--opt-shell-h)) / 2 + var(--opt-shell-dy)) / var(--zc));
+    scroll-padding-bottom:calc(110px / var(--zc));
+  }
+  /* 가운데 맞춤이 하던 자리를 위 여백으로 옮긴다 — 레일 테 위변은 가운데일 때와 같다(-12px 음수 여백 몫 6px 를 덜어).
+     sticky top 은 통의 padding 안쪽에서 재므로 같은 값이면 제자리에 붙어 선다 */
+  #options .opts-shell:has(#optsSecurity:not([hidden])) .opts-tabs{align-self:flex-start;position:sticky;
+    margin-top:calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2 - 6px);
+    top:calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2 - 6px)}
+  #options .opts-shell:has(#optsSecurity:not([hidden])) .opts-panels{align-self:flex-start}
+  #options #optsSecurity:not([hidden]){overflow:visible;flex:none;min-height:auto}
+}
 .security-content{width:min(100%,452px)}
 .security-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .security-health{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:212px;padding:0;overflow:hidden}
@@ -1671,6 +1699,10 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .security-device{display:flex;flex-direction:column;gap:10px;font-size:11px}
 .security-device .profile-label{margin:0}
 .device-current{display:flex;align-items:center;gap:8px;padding:6px;border:1px solid var(--ink);border-radius:8px;background:color-mix(in srgb,var(--block-hi) 11%,transparent);font-weight:600}
+/* 등록된 브라우저 — 로그인된 기기 칩과 같은 결이지만 따로 둔다(그 칩을 고치지 않게) */
+.security-browsers{display:flex;flex-direction:column;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.security-browser{padding:6px;border:1px solid var(--ink);border-radius:8px;background:color-mix(in srgb,var(--block-hi) 11%,transparent);font-size:11px;color:var(--ink);overflow-wrap:anywhere}
+#securityBrowsersNone{margin-top:8px}
 #securityDeviceIcon{width:16px;height:16px;object-fit:contain;flex:none}
 :root[data-night] #securityDeviceIcon{filter:invert(1)}
 .security-history{font-size:11px;color:var(--ink)}
@@ -2824,10 +2856,9 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
     flex:none;align-self:center;display:inline-flex;align-items:center;gap:6px;
     min-height:44px;padding:0 16px;border-radius:999px;scroll-snap-align:start;
     font-size:16px;font-weight:700;text-align:start;
-    color:var(--ink);background:#e7eef1;border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);box-shadow:none;
+    color:var(--ink);background:transparent;border:1px solid transparent;box-shadow:none;
   }
-  /* 칩은 흐림 띠 위에 바로 앉으니 비치지 않게 불투명으로 채운다 — 바로 밑 탭 독과 같은 판색 */
-  :root[data-night] body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab:not([aria-selected="true"]){background:#2d383e}
+  /* 안 고른 탭은 데스크톱처럼 판도 테두리도 없이 글자만 선다 — 낮 · 밤 모두 투명 */
   /* 고른 칩은 색만으로 서지 않는다 — 채움 · 굵기 · 앞의 체크 표가 함께 간다 */
   body:is(.set,.setting) #options .opts-shell .opts-tabs .opts-tab[aria-selected="true"]{
     background:var(--block-hi);color:#fff;font-weight:800;border-color:var(--block-hi);
@@ -2885,7 +2916,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   body:is(.set,.setting) #optsGame .profile-help:empty{display:none}
 
   /* 언어 판 — 대륙 머리말(작은 대문자) 아래 한 장의 카드 */
-  body:is(.set,.setting) #options .opts-lang-pick{
+  body:is(.set,.setting) #options :is(.opts-lang-pick,.opts-region-pick){
     display:flex;flex-direction:column;gap:22px;max-width:none;height:auto;max-height:none;
     margin:0;padding:6px 0 0;overflow:visible;
   }
