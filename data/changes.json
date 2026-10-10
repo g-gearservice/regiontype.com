@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.389",
+    "date": "2026-10-10",
+    "ko": "영어권 코스(호주·캐나다·뉴질랜드·아일랜드·인도·필리핀·남아공·영국)의 약칭을 실제 쓰는 것으로 바로잡았습니다(QLD·NSW·KZN 등). 악센트·하이픈·아포스트로피는 빼고 쳐도 맞습니다(Quebec, KwaZulu Natal, Hawkes Bay). 영어 화면 문구도 다듬었습니다.",
+    "en": "Abbreviations for English-language courses (Australia, Canada, New Zealand, Ireland, India, the Philippines, South Africa, the UK) now match real usage, such as QLD, NSW and KZN. Accents, hyphens and apostrophes are optional when typing (Quebec, KwaZulu Natal, Hawkes Bay). English interface wording was also polished."
+  },
+  {
     "v": "0.9.388",
     "date": "2026-10-08",
     "ko": "계정을 지운 뒤에도 로그인된 채로 남아 있던 것을 고쳤습니다. 삭제가 끝나면 이 브라우저의 로그인 흔적이 지워지고, 그 전에 받은 토큰으로는 기록을 올리거나 계정을 쓸 수 없습니다.",
