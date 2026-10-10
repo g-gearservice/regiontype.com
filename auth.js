@@ -267,18 +267,16 @@ function done(tok, generation, isNewAccount = false) {
 const over = () => $('#signin');
 let opener = null;
 /* ── Grok 봇(bloub) ──────────────────────────────────────
-   로고 오른쪽 위에서 떠 있다. 끌어서 뒤의 비트맵 칸에 얹으면 그 칸을 물고
-   커진 채 눈을 뜨고 깜빡인다(엔진 상태 idle). 끄는 동안 Option(맥·리눅스)
-   이나 Ctrl(윈도)을 누르고 있으면 한 마리가 더 생긴다.
-   ponytail: 붙은 봇은 제 칸의 화면 좌표를 매 프레임 따라 읽는다 — 지도를 밀든
-   줄이든 늘 맞는다. 칸 수만큼 도는 게 아니라 붙은 봇 수만큼이라 값이 싸다 */
+   로고 오른쪽 위에서 떠 있다. 끌어다 놓은 자리에 내려앉아 잠들고, 로고 근처에 놓으면
+   제자리로 돌아간다. 끄는 동안 Option(맥·리눅스)이나 Ctrl(윈도)을 누르고 있으면
+   한 마리가 더 생긴다. 뒤의 지도는 구마다 도트 묶음이라 봇이 칸에 붙지 않는다 */
 const motionOff = () => matchMedia('(prefers-reduced-motion:reduce)').matches
   || document.documentElement.dataset.motion === 'off';
 const BOT = 44;
 const WIN = /Win/i.test(navigator.userAgentData?.platform || navigator.platform || '');
 const cloneKey = e => e.altKey || (WIN && e.ctrlKey);
 const bots = [];
-let mountBuddy = null, follow = 0;
+let mountBuddy = null;
 
 async function botMaker() {
   if (!mountBuddy) ({ mountBuddy } = await import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href));
@@ -300,8 +298,6 @@ const boxOf = (sel, pad) => {
   return { l: r.left - pad, t: r.top - pad, r: r.right + pad, b: r.bottom + pad };
 };
 const inBox = (x, y, z) => !!z && x >= z.l && x <= z.r && y >= z.t && y <= z.b;
-const blocked = () => ['.si-logo', '#vSignin .si-head', '#vSignin .si-btns']
-  .map(sel => boxOf(sel, 14)).filter(Boolean);
 /* 로고 근처에 놓으면 제자리(로고 옆 동글뱅이)로 돌아간다 */
 const overLogo = (x, y) => inBox(x, y, boxOf('.si-logo', 28));
 /* WAAPI 이동을 집는 중에 끊어도 목표점으로 순간이동하지 않게, 지금 화면에 그려진
@@ -365,11 +361,9 @@ function place(b) {
   b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0)`;
   b.el.style.width = b.el.style.height = b.size + 'px';
 }
-/* 칸에서 내려온다 — 칸은 제 그림을 되찾고 봇은 손에 잡히는 크기로 돌아간다.
+/* 제자리(로고 옆)에서 내려온다 — 손에 잡히는 크기로 돌아간다.
    이름을 unseat 로 둔 것은 botGrab 안의 지역 drop(포인터업)과 가려지지 않게 하려는 것이다 */
 function unseat(b) {
-  if (b.tile) b.tile.classList.remove('has-bot');
-  b.tile = null;
   b.home = false;
   b.el.classList.remove('is-home');
   b.size = BOT;
@@ -384,36 +378,6 @@ function wake(b, on) {
     if (typeof b.api.doze === 'function') b.api.doze(!on);
   }
 }
-/* 봇 아래에 있는 비트맵 칸. elementsFromPoint 는 못 쓴다 — 덮개가 떠 있는 동안
-   칸은 pointer-events:none 이라 hit-test 에서 통째로 빠진다. 좌표로 직접 고른다.
-   스물다섯 칸이라 값이 싸고, 무엇이 위에 덮였든 결과가 같다 */
-function tileUnder(x, y) {
-  if (blocked().some(z => inBox(x, y, z))) return null;
-  for (const el of document.querySelectorAll('#courseBtns .grid-btn')) {
-    if (parseFloat(getComputedStyle(el).opacity) < .5) continue;
-    const r = el.getBoundingClientRect();
-    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return el;
-  }
-  return null;
-}
-function followFrame() {
-  follow = 0;
-  let live = false;
-  for (const b of bots) {
-    if (!b.tile) continue;
-    if (!b.tile.isConnected) { unseat(b); place(b); continue; }
-    const r = b.tile.getBoundingClientRect();
-    /* 칸이 곧 몸이다 — 자리도 크기도 칸에서 받는다. 지도를 밀거나 줄여도 맞는다 */
-    b.size = r.width;
-    b.x = r.left;
-    b.y = r.top;
-    place(b);
-    live = true;
-  }
-  if (live && !over().hidden) follow = requestAnimationFrame(followFrame);
-}
-const followKick = () => { if (!follow) follow = requestAnimationFrame(followFrame); };
-
 async function addBot(x, y) {
   const make = await botMaker().catch(() => null);
   if (!make) return null;
@@ -423,7 +387,7 @@ async function addBot(x, y) {
   motion.className = 'si-bot-motion';
   el.append(motion);
   $('#siBots').append(el);
-  const b = { el, motion, api: make(motion, { calm: motionOff }), tile: null,
+  const b = { el, motion, api: make(motion, { calm: motionOff }),
     x, y, size: BOT, home: false, settle: null, bodySettle: null };
   bots.push(b);
   place(b);
@@ -465,30 +429,11 @@ function botGrab(e, b) {
       if (ev.type !== 'pointercancel') { px = ev.clientX; py = ev.clientY; }
       t.x = px - t.size / 2; t.y = py - t.size / 2;
       place(t);
-      /* 로고의 복귀 범위는 타일 금지 범위보다 넓다. 먼저 보지 않으면 그 바깥 14px
-         고리에서는 뒤에 깔린 비트맵 칸이 이겨, 집으로 놓아도 칸에 붙어 버린다. */
       if (overLogo(px, py)) { park(t); return; }
-      const tile = tileUnder(px, py);
-      /* 칸이 아닌 빈 곳에서는 그 자리에 내려앉아 잠든다. */
-      if (!tile) {
-        const from = { x: t.x, y: t.y - 5, size: t.size };
-        wake(t, false);
-        springTo(t, t.x, t.y, from);
-        return;
-      }
-      t.el.hidden = false;
-      /* 한 칸에 한 마리만 — 먼저 앉아 있던 놈은 내려온다 */
-      bots.forEach(o => { if (o !== t && o.tile === tile) { unseat(o); place(o); } });
-      t.tile = tile;
-      tile.classList.add('has-bot');
-      wake(t, true);
-      const r = tile.getBoundingClientRect();
-      /* host는 지금부터 타일 크기다. 그 큰 상자의 중심을 포인터에 맞춘 좌표에서
-         시작하고 안쪽 몸만 이전 크기로 줄여 두면, 확대 첫 프레임도 포인터 중심이다. */
-      const from = { x: px - r.width / 2, y: py - r.width / 2, size: t.size };
-      t.size = r.width;
-      springTo(t, r.left, r.top, from);
-      followKick();
+      /* 그 자리에 내려앉아 잠든다 */
+      const from = { x: t.x, y: t.y - 5, size: t.size };
+      wake(t, false);
+      springTo(t, t.x, t.y, from);
     };
     t.el.addEventListener('pointermove', move);
     t.el.addEventListener('pointerup', drop, { once: true });
@@ -498,13 +443,10 @@ function botGrab(e, b) {
 }
 async function wakeBuddy() {
   if (!bots.length) { const p = parkAt(); await addBot(p.x, p.y); }
-  bots.forEach(b => { if (!b.tile) park(b, false); b.api.start(); });
-  followKick();
+  bots.forEach(b => { park(b, false); b.api.start(); });
 }
 function sleepBuddy() {
-  cancelAnimationFrame(follow); follow = 0;
-  /* 앉아 있던 칸을 반드시 돌려준다 — has-bot 이 남으면 그 구가 홈에서 투명한 채
-     굳는다(도봉구가 사라져 보이던 이유). 복제본은 그 판의 놀이라 정리한다 */
+  /* 복제본은 그 판의 놀이라 정리한다 */
   while (bots.length > 1) { const b = bots.pop(); unseat(b); b.api.stop(); b.el.remove(); }
   bots.forEach(b => { park(b, false); b.api.stop(); b.api.lookAway(); });
 }

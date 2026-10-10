@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.9.396",
+    "date": "2026-10-10",
+    "ko": "구를 펼치면 서울 지도에서 그 구를 이루던 도트가 그대로 동 지도의 도트로 옮겨 가고, 나머지 동 도트와 이름은 흐림에서 또렷해집니다. 다른 구와 구 이름은 흐려지며 사라지고, 접으면 거꾸로 돌아갑니다. 펼친 구를 지도 위 큰 원으로 띄우던 것은 없애고, 아래 막대의 '뒤로'로 서울 지도에 돌아갑니다.",
+    "en": "Opening a district now carries its dots from the Seoul map into the neighborhood map, while the remaining neighborhood dots and names sharpen out of a blur. The other districts and their names blur away, and folding back plays it in reverse. The large district circle above the map is gone; use Back in the bottom bar to return to Seoul."
+  },
+  {
+    "v": "0.9.395",
+    "date": "2026-10-10",
+    "ko": "홈의 서울 화면도 구 원 대신 서울 모양의 도트 지도가 됐습니다. 구 하나가 제 도트 묶음이고, 누르면 그 구가 칠해지며 Shift 로 맞닿은 구를 함께 고를 수 있습니다. 구를 펼치면 서울 지도는 접히고 그 구 지도만 보입니다. 봇을 지도 칸에 붙이는 기능은 없앴습니다.",
+    "en": "The Seoul home screen is now a dot map in the shape of Seoul instead of 25 district circles. Each district is its own group of dots that lights up when picked, and Shift picks touching districts together. Opening a district folds the Seoul map away and shows only that district. The bot no longer docks onto map tiles."
+  },
+  {
     "v": "0.9.394",
     "date": "2026-10-10",
     "ko": "홈에서 구를 펼치면 동이 원 대신 실제 지도 모양의 도트로 깔립니다. 동 하나가 제 도트 묶음이고, 누르면 그 동이 통째로 칠해집니다. Shift 로 맞닿은 동을 여럿 고르면 각 동이 함께 칠해지고, 고른 동들만 칠 수 있습니다.",

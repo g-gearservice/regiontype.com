@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.94';
+const VER = '3.96';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -387,39 +387,6 @@ function decoGrid() {
   const rows = Math.max(1, Math.round(innerHeight / ch));
   return { cw, ch, cols, rows };
 }
-function resolveCell(c, r, cols, rows) {
-  const col = c < 0 ? cols + c : c;
-  const row = r < 0 ? rows + r : r;
-  return [Math.max(0, Math.min(cols - 1, col)), Math.max(0, Math.min(rows - 1, row))];
-}
-/* 서울 자치구 칸의 자리. maps/ 구 윤곽과 seoul-gu.geom 중심점을 8×7 덩이에 옮겼다.
-   한강 남쪽이 아래, 강서가 서끝, 강동이 동끝, 도봉이 북끝 */
-const SEOUL_MAP = [8, 7];
-const SEOUL_CELLS = {
-  'dobong-dong': [5, 0],
-  'eunpyeong-dong': [2, 1], 'gangbuk-dong': [4, 1], 'nowon-dong': [5, 1],
-  'jongno-dong': [3, 2], 'seongbuk-dong': [4, 2], 'jungnang-dong': [6, 2],
-  'gangseo-dong': [0, 3], 'mapo-dong': [2, 3], 'seodaemun-dong': [3, 3],
-  'jung-dong': [4, 3], 'dongdaemun-dong': [5, 3], 'gangdong-dong': [7, 3],
-  'yangcheon-dong': [1, 4], 'yeongdeungpo-dong': [2, 4], 'yongsan-dong': [3, 4],
-  'seongdong-dong': [5, 4], 'gwangjin-dong': [6, 4],
-  'guro-dong': [1, 5], 'dongjak-dong': [3, 5], 'gangnam-dong': [5, 5], 'songpa-dong': [6, 5],
-  'geumcheon-dong': [2, 6], 'gwanak-dong': [3, 6], 'seocho-dong': [4, 6],
-};
-/* 코스 칸은 화면 가운데 덩이로 선다. 자리표(at)가 없으면 한 줄 여섯 칸까지 줄짓는다.
-   머리글 줄(0)은 비운다.
-   ponytail: 칸이 모자라는 좁은 화면에서는 끝 칸에 겹친다 — 넘치면 페이지를 나눈다 */
-function courseCell(k, n, cols, rows, at) {
-  const map = COURSE.map || SEOUL_MAP;
-  const w = at ? map[0] : Math.max(1, Math.min(n, cols - 2, 6));
-  const h = at ? map[1] : Math.ceil(n / w);
-  const c0 = Math.floor((cols - w) / 2);
-  const r0 = Math.max(1, Math.floor((rows - h) / 2));
-  const [dc, dr] = at || [k % w, Math.floor(k / w)];
-  /* 서울 덩이는 칸이 모자라도 겹치지 않는다 — 아래는 끌어 보면 된다 */
-  if (at) return [c0 + dc, r0 + dr];
-  return resolveCell(c0 + dc, r0 + dr, cols, rows);
-}
 /* 행정동 칸 자리. geom 의 s 가 겹치지 않으면 그걸 쓰고, 없으면 중심점으로 빈칸을 메운다.
    칸이 구 윤곽을 닮게, 같은 자리는 두지 않는다 */
 function packGeom(items) {
@@ -506,9 +473,8 @@ document.addEventListener('click', e => {
 
 /* ── 코스 로드 ──────────────────────────────────────── */
 const grab = url => fetch(asset(url)).then(r => r.json());
-/* 서울 칸 데이터는 boot 의 다른 짐(i18n·world·sense)을 기다리지 않고 곧장 나선다.
-   로그인 화면에서 돌아올 때 점이 제 칸으로 날아가려면, 새 문서가 처음 그려지는
-   순간에 칸이 이미 서 있어야 한다 — 늦게 서면 짝을 못 찾고 그냥 흐려진다 */
+/* 서울 칸 데이터는 boot 의 다른 짐(i18n·world·sense)을 기다리지 않고 곧장 나선다 —
+   새 문서가 처음 그려지는 순간에 지도가 이미 서 있게 */
 const KR = Promise.all([grab('data/kr-tree.json'), grab('data/kr-names.json')]);
 /* 제 글자로 쓰는 말은 따로 찍은 표를 로마자 위에 덮는다 — 일본어 江南区·シンチョン洞,
    중국어 江南区·新村洞, 키릴 Каннам-гу. 없는 칸은 로마자로 남는다(tools/build_kr_*.py) */
@@ -522,6 +488,8 @@ async function krNames() {
 }
 const loadCourse = slug => grab(`data/${slug}.course.json`);
 const loadGeom = slug => grab(`data/${slug}.geom.json`);
+/* 서울 지도는 첫 화면이다 — boot 의 다른 짐을 기다리지 않고 곧장 받는다 */
+const SEOUL_GEOM = loadGeom('seoul-gu');
 const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
 
 /* ── 코스 고르기 — 격자 한 칸 버튼 ─────────────────────
@@ -535,9 +503,7 @@ const MARK = new Set();   // 함께 고른 칸들. PICK 은 그 가운데 마지
 /* 같은 단계의 이웃 칸인가. 격자로 한 칸 넘게 떨어지면 복수 선택을 놓는다 */
 function nextTo(a, b) {
   if (!a || !b || !a.kid !== !b.kid || (a.kid && a.parent !== b.parent)) return false;
-  if (a.kid) return !!a.adj && a.adj.has(b);   // 동은 구 지도에서 도트가 맞닿는가
-  if (!a.gc || !b.gc) return false;
-  return Math.max(Math.abs(a.gc[0] - b.gc[0]), Math.abs(a.gc[1] - b.gc[1])) <= 1;
+  return !!a.adj && a.adj.has(b);   // 지도에서 도트가 맞닿는가 — 구는 서울 지도, 동은 구 지도
 }
 let OPEN = null;      // 펼친 칸 { tile, bw, bh, kids }
 let openGen = 0;
@@ -752,140 +718,60 @@ function courseFrame() {
   courseRaf = busy ? requestAnimationFrame(courseFrame) : 0;
 }
 
-/* 펼친 덩이 중심에서 원래 자리로 가는 단위 벡터. 겹치면 등각으로 가른다 */
-function radialPush(ox, oy, cx, cy, i, n) {
-  const dx = ox - cx, dy = oy - cy, len = Math.hypot(dx, dy);
-  if (len < 1e-6) {
-    const a = (2 * Math.PI * i) / Math.max(1, n);
-    return [Math.cos(a), Math.sin(a)];
-  }
-  return [dx / len, dy / len];
-}
-
-/* 칸마다 목표 자리를 새로 잡는다. 목표가 그대로면 스프링은 건드리지 않는다 */
+/* 칸마다 목표 자리를 새로 잡는다. 목표가 그대로면 스프링은 건드리지 않는다.
+   서울은 도트 지도 한 장(COURSE.map), 구를 펼치면 서울 지도는 접히고 그 구의 동 지도(OPEN.map)만 선다 */
+const SEOUL_D = 4;   // 서울 지도 도트 한 알 = 큰 칸의 1/4. 32×27 이 예전 8×7 원 덩이와 넓이가 거의 같다
 function planCourses(snap = false) {
   const tops = COURSE.tiles.filter(tile => !tile.kid);
-  if (!tops.length) return;
+  const seoul = COURSE.map;
+  if (!tops.length || !seoul) return;
   const { cw, ch, cols, rows } = decoGrid();
-  const coarse = tile => courseCell(tops.indexOf(tile), tops.length, cols, rows, tile.cell);
-  /* 이웃 판정은 지도에서의 자리로 한다 — 펼친 동안 둘레로 밀려나도 기준은 그대로다 */
-  tops.forEach(tile => { tile.gc = coarse(tile); });
   const fold = (list, stepMax) => {
     const step = Math.min(stepMax, .3 / Math.max(1, list.length));
     list.sort((a, b) => b.order - a.order).forEach((tile, i) =>
       aimTile(tile, tile.parent.x.to, tile.parent.y.to, tile.parent.s.to / Math.max(tile.bw || 1, tile.bh || 1), 0, i * step));
   };
+  /* 서울 지도 자리. 원점은 큰 칸 경계(머리글 줄 아래)라 배경 격자 선이 도트와 맞는다 */
+  const d0 = SEOUL_D, f0 = cw / d0, g0 = ch / d0;
+  const c0 = Math.max(0, Math.floor((cols * d0 - seoul.bw) / 2 / d0)) * d0;
+  const r0 = Math.max(1, Math.floor((rows * d0 - seoul.bh) / 2 / d0)) * d0;
   if (!OPEN) {
+    seoul.el.classList.remove('haze');
     tops.forEach(tile => {
-      const [c, r] = coarse(tile);
-      aimTile(tile, c * cw, r * ch, 1, 1, 0, snap);
-      asideTile(tile, false);
+      tile.el.setAttribute('aria-expanded', 'false');
+      aimTile(tile, (c0 + tile.bx) * f0, (r0 + tile.by) * g0, 1 / d0, 1, 0, snap);
     });
+    aimTile(seoul, c0 * f0, r0 * g0, 1 / d0, 1, 0, snap);
     fold(COURSE.tiles.filter(tile => tile.gone), .02);
-    aimGrid(1, GZ.ax.to, GZ.ay.to);
+    aimGrid(1 / d0, c0 * f0, r0 * g0);
     /* 손가락 화면의 배율은 칸 크기에서 나온다 — 칸이 바뀌면(첫 syncGrid·회전) 다시 맞춘다 */
     if (snap || fingers()) syncHomeCam(snap);
     courseKick();
     return;
   }
   const { tile: host, kids, map } = OPEN;
+  /* 서울 지도와 다른 구는 제자리에서 흐려지며 접힌다(눌리지 않는다). 구 이름도 같이 흐려진다 */
+  seoul.el.classList.add('haze');
+  aimTile(seoul, seoul.x.to, seoul.y.to, seoul.s.to, 0);
+  /* 펼친 구 칸도 같이 접힌다 — 위 단계로는 아래 막대의 뒤로(#navBack)로 돌아간다 */
+  tops.forEach(tile => aimTile(tile, tile.x.to, tile.y.to, tile.s.to, 0));
   /* 구 지도의 도트 한 알 = 잔격자 한 칸(배경 격자 선이 도트와 맞는다). 지도를 화면에 억지로 넣으면
      종로 55줄이 7px 도트가 되어 이름을 못 읽는다 — 인게임 폰처럼 도트 크기(HOME_DOT)를 먼저 정하고,
-     넘치는 지도는 끌어서 본다 */
-  /* 손가락 화면은 지도 폭이 화면(좌우 16px)에 들게 한다 — 끌 자리가 좁고, 이름은 핀치로 키워 읽는다 */
+     넘치는 지도는 끌어서 본다. 손가락 화면은 지도 폭이 화면(좌우 16px)에 들게 하고 이름은 핀치로 읽는다 */
   const dot = fingers() ? Math.min(HOME_DOT, (innerWidth - 32) / map.bw) : HOME_DOT;
   const d = Math.max(2, Math.round(Math.min(cw, ch) / dot));
-  const k = Math.max(2, Math.round(d * .6));   // 펼친 구 칸은 큰 칸의 6할쯤
-  /* 지도가 화면 격자보다 크면 격자를 지도 둘레(구 칸 한 겹)까지 넓힌다 — 안 넓히면 둘레 구가
-     빈자리를 못 찾고 제자리(지도 위)에 떨어진다 */
-  const m = 2 * k + 1;   // 지도 둘레에 구 칸 두 겹 자리
-  const F = Math.max(cols * d, map.bw + 2 * m);
-  /* 둘레 구 스물넷이 앉을 넓이(칸 하나에 세 배 여유)가 모자라면 아래로 늘린다 — 작은 구를 폰에서 펼칠 때 */
-  const R = Math.max(rows * d, d + map.bh + m,
-                     d + Math.ceil(((map.bw + 2 * k) * (map.bh + 2 * k) + 3 * tops.length * k * k) / F));
   const fw = cw / d, fh = ch / d;
-  const taken = new Set();
-  const id = (c, r) => c + ',' + r;
-  const block = (c0, r0, w, h) => {
-    for (let c = c0; c < c0 + w; c++) for (let r = r0; r < r0 + h; r++) taken.add(id(c, r));
-  };
-  const free = (c, r, size) => {
-    for (let dc = 0; dc < size; dc++) for (let dr = 0; dr < size; dr++) {
-      const x = c + dc, y = r + dr;
-      if (x < 0 || y < 0 || x >= F || y >= R || taken.has(id(x, y))) return false;
-    }
-    return true;
-  };
-  /* 머리글 줄과 아래 왼쪽 이름 줄은 비워 둔다 */
-  block(0, 0, F, d);
-  block(0, (rows - 1) * d, 2 * d, d);
-  /* (c, r) 에서 가장 가까운 빈자리를 size 칸 걸음으로 찾는다 — 구역 칸끼리 줄이 맞는다.
-     away 가 있으면 같은 거리에서 그 점에서 먼 쪽을 고른다.
-     ponytail: 자리마다 고리를 넓혀 가며 훑는다 — 칸이 수천 개가 되면 빈칸 목록을 따로 둔다 */
-  /* step 은 훑는 걸음. size 걸음이면 자리끼리 줄이 맞지만, 붐비는 곳에서는 걸음 사이 빈자리를 건너뛰어
-     못 찾고 제자리(남의 칸 위)에 떨어진다 — 줄이 필요 없는 둘레 구는 한 칸씩 훑는다 */
-  const near = (c, r, away, size = 1, step = size) => {
-    for (let ring = 0; ring * step < F + R; ring++) {
-      let best = null, score = Infinity;
-      for (let i = -ring; i <= ring; i++) for (let j = -ring; j <= ring; j++) {
-        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
-        const x = c + i * step, y = r + j * step;
-        if (!free(x, y, size)) continue;
-        const sc = i * i + j * j - (away ? .01 * Math.hypot(x - away[0], y - away[1]) : 0);
-        if (sc < score) { score = sc; best = [x, y]; }
-      }
-      if (best) { block(best[0], best[1], size, size); return best; }
-    }
-    return [c, r];
-  };
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const [hc, hr] = coarse(host);
-  const x0 = clamp(hc * d - (map.bw >> 1), Math.min(m, F - map.bw - m), Math.max(m, F - map.bw - m));
-  const y0 = clamp(hr * d - (map.bh >> 1), d, Math.max(d, R - map.bh - m));
-  block(x0, y0, map.bw, map.bh);
-  /* 지도는 제 모양 그대로, 펼친 구 칸은 지도 왼쪽 위 바깥 가까운 빈자리에 */
-  const place = new Map([[host, near(x0 - k, y0, null, k, 1)]]);
-  kids.forEach(tile => place.set(tile, [x0 + tile.bx, y0 + tile.by]));
-  const corners = [[x0, y0], [x0 + map.bw - k, y0 + map.bh - k], place.get(host)];
-  const zx0 = Math.min(...corners.map(p => p[0])) - 1, zx1 = Math.max(...corners.map(p => p[0])) + k;
-  const zy0 = Math.min(...corners.map(p => p[1])) - 1, zy1 = Math.max(...corners.map(p => p[1])) + k;
-  block(zx0, zy0, zx1 - zx0 + 1, zy1 - zy0 + 1);
-  const mx = (zx0 + zx1) / 2, my = (zy0 + zy1) / 2;
-  /* 둘레 구는 원래 지도 덩이 중심에서 본 방위로 펼친 블록 바깥에 고리를 만든다.
-     호스트가 한쪽에 있어도 강동은 동, 도봉은 북으로 나간다. 각이 겹치면 near 가 민다 */
-  const others = tops.filter(tile => tile !== host);
-  let sx = 0, sy = 0;
-  tops.forEach(tile => { const [c, r] = coarse(tile); sx += c * d; sy += r * d; });
-  const ox = sx / tops.length, oy = sy / tops.length;
-  others.map((tile, i) => {
-    const [oc, or] = coarse(tile);
-    const [ux, uy] = radialPush(oc * d, or * d, ox, oy, i, others.length);
-    return { tile, ux, uy, ang: Math.atan2(uy, ux) };
-  }).sort((a, b) => a.ang - b.ang).forEach(({ tile, ux, uy }) => {
-    const tx = ux > 0 ? (zx1 + 1 - mx) / ux : ux < 0 ? (zx0 - 1 - mx) / ux : Infinity;
-    const ty = uy > 0 ? (zy1 + 1 - my) / uy : uy < 0 ? (zy0 - 1 - my) / uy : Infinity;
-    const dist = Math.max(1, Math.min(tx, ty));
-    const c = clamp(Math.round(mx + ux * dist), 0, F - 1);
-    const r = clamp(Math.round(my + uy * dist), 0, R - 1);
-    /* 도트 한 알(1/d)로는 너무 작다 — 펼친 구 칸과 같은 k 칸으로 둔다 */
-    const [pc, pr] = near(c, r, [mx, my], k, 1);
-    aimTile(tile, pc * fw, pr * fh, k / d, 1);
-    asideTile(tile, true);
+  /* 지도는 화면 가운데 큰 칸 경계에서 — 머리글 줄(큰 칸 한 줄)은 비운다 */
+  const x0 = Math.max(0, Math.floor((cols * d - map.bw) / 2 / d) * d);
+  const y0 = Math.max(d, Math.floor((rows * d - map.bh) / 2 / d) * d);
+  /* 동 칸은 투명한 문이라 번질 것이 없다 — 보이는 번짐은 도트가 한다(flyDots) */
+  kids.forEach((tile, i) => {
+    tile.order = i;
+    aimTile(tile, (x0 + tile.bx) * fw, (y0 + tile.by) * fh, 1 / d, 1);
   });
-  const [pc, pr] = place.get(host);
-  aimTile(host, pc * fw, pr * fh, k / d, 1);
-  asideTile(host, LANG !== 'ko');   // 펼친 구 칸은 동 칸만 하다 — 로마자는 -gu 를 뗀다
-  /* 하나씩 번진다 — 부모 칸에서 가까운 구역부터. 전체가 .6초를 넘지 않게 간격을 죈다 */
-  const step = Math.min(.035, .6 / kids.length);
-  kids.map(tile => [tile, place.get(tile)])
-    .sort((p, q) => Math.hypot(p[1][0] - pc, p[1][1] - pr) - Math.hypot(q[1][0] - pc, q[1][1] - pr))
-    .forEach(([tile, [c, r]], i) => {
-      tile.order = i;
-      aimTile(tile, c * fw, r * fh, 1 / d, 1, i * step);
-    });
   aimTile(map, x0 * fw, y0 * fh, 1 / d, 1);
   fold(COURSE.tiles.filter(tile => tile.gone), .02);
-  aimGrid(1 / d, hc * cw, hr * ch);
+  aimGrid(1 / d, Math.round(x0 / d) * cw, Math.round(y0 / d) * ch);
   focusHome(snap);
   courseKick();
 }
@@ -929,58 +815,138 @@ function pickTile(tile, add = false) {
     MARK.clear(); MARK.add(tile); PICK = tile;
   }
   COURSE.tiles.forEach(x => x.el.setAttribute('aria-pressed', String(MARK.has(x))));
-  if (OPEN) OPEN.kids.forEach(k => k.g && k.g.classList.toggle('on', MARK.has(k)));
+  COURSE.tiles.forEach(k => k.g && k.g.classList.toggle('on', MARK.has(k)));   // 지도에서 그 칸 도트 묶음을 칠한다
   const head = $('#coursePick');
   if (head) head.setAttribute('aria-pressed', String(!tile));
   tellPick();
 }
-/* 접히는 구역을 고르고 있었거나 초점이 거기 있었으면 부모 칸으로 돌린다 */
-function foldKids() {
+/* 접히는 구역을 고르고 있었거나 초점이 거기 있었으면 부모 칸으로 돌린다.
+   back 이면 서울 지도로 돌아가는 길이다 — 동 도트가 구 도트 자리로 되돌아간다.
+   아니면 다른 구가 펼쳐지는 중이라 서울 지도는 흐린 채로 있고, 동 지도만 흐려진다 */
+function foldKids(back = false) {
   COURSE.tiles.forEach(tile => {
     if (tile.kid && !tile.gone) { tile.gone = true; tile.el.classList.add('gone'); }
   });
   if (!OPEN) return;
-  const { map, tile: host } = OPEN;
+  const { map, tile: host, pairs = [] } = OPEN;
   map.gone = true;
-  aimTile(map, host.x.to, host.y.to, host.s.to / Math.max(map.bw, map.bh), 0);
+  map.el.classList.add('haze');
+  aimTile(map, map.x.to, map.y.to, map.s.to, 0);
   OPEN.tile.el.setAttribute('aria-expanded', 'false');
   [...MARK].forEach(tile => { if (tile.gone) MARK.delete(tile); });
   if (PICK && PICK.gone) pickTile(OPEN.tile);
   if (OPEN.kids.some(tile => tile.el.contains(document.activeElement))) OPEN.tile.el.focus();
+  const land = () => host.g && host.g.classList.remove('lift');
+  if (back) flyDots(pairs, map, true, land);
+  else land();
+}
+/* ── 구를 펼치고 접을 때 도트가 옮겨 간다 ──
+   펼치면 서울 지도에서 그 구를 이루던 도트(이름이 앉았던 자리까지)가 그대로 동 지도의 도트가 되어
+   제자리로 가고, 나머지 동 도트와 동 이름은 흐림에서 또렷해진다. 다른 구와 구 이름은 흐려지며
+   사라진다. 접으면 거꾸로 간다. 나는 도트는 통(#courseBtns) 안의 덧그림 한 장(.course-morph)에
+   월드 좌표로 그리고, 그동안 양쪽 지도의 그 도트는 숨긴다 */
+let MORPH = null;
+/* 도트 지도 map 의 격자 칸 [gx, gy] 가 통 안에서 서는 자리와 도트 반지름 */
+function dotAt(map, [gx, gy]) {
+  const { cw, ch } = decoGrid(), s = map.s.to;
+  return [map.x.to + (gx + .5) * cw * s, map.y.to + (gy + .5) * ch * s, .46 * Math.min(cw, ch) * s];
+}
+/* 구 도트 하나마다 동 도트 하나를 짝짓는다 — 구 모양 안의 상대 자리가 가장 가까운 것끼리.
+   동 이름 밑에 비운 도트(.under)는 빼고, 이미 짝이 난 동 도트는 다시 쓰지 않는다 */
+function pairDots(host, map) {
+  const src = host.cells || [];
+  if (!src.length) return [];
+  const xs = src.map(c => c[0]), ys = src.map(c => c[1]);
+  const bx = Math.min(...xs), by = Math.min(...ys);
+  const bw = Math.max(...xs) - bx + 1, bh = Math.max(...ys) - by + 1;
+  const dst = [];
+  map.tiles.forEach(kid => {
+    const els = kid.g ? kid.g.querySelectorAll('circle') : [];
+    kid.cells.forEach((c, i) => {
+      if (els[i] && !els[i].classList.contains('under'))
+        dst.push({ kid, c, el: els[i], u: (c[0] + .5) / map.bw, v: (c[1] + .5) / map.bh });
+    });
+  });
+  if (!dst.length) return [];
+  const used = new Set();
+  return src.map(c => {
+    const u = (c[0] + .5 - bx) / bw, v = (c[1] + .5 - by) / bh;
+    let best = 0, bd = Infinity;
+    const full = used.size >= dst.length;
+    dst.forEach((t, j) => {
+      if (!full && used.has(j)) return;
+      const d = (t.u - u) ** 2 + (t.v - v) ** 2;
+      if (d < bd) { bd = d; best = j; }
+    });
+    used.add(best);
+    return { from: c, to: dst[best] };
+  });
+}
+/* 짝지은 도트를 서울 지도 → 동 지도(back 이면 거꾸로)로 날린다. 다 닿으면 done.
+   새 비행이 오면 하던 비행은 바로 끝낸 셈 친다. 줄인 움직임에서는 날지 않고 바로 끝난다 */
+function flyDots(pairs, map, back, done) {
+  if (MORPH) { clearTimeout(MORPH.timer); MORPH.end(); }
+  const hide = pairs.map(p => p.to.el);
+  hide.forEach(el => { el.style.visibility = 'hidden'; });
+  const svg = calm() || !pairs.length ? null : document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const m = { end() {
+    if (MORPH === m) MORPH = null;
+    if (svg) svg.remove();
+    hide.forEach(el => { el.style.visibility = ''; });
+    done();
+  } };
+  if (!svg) { m.end(); return; }
+  MORPH = m;
+  const tf = ([x, y, r]) => `translate(${x.toFixed(2)}px,${y.toFixed(2)}px) scale(${r.toFixed(3)})`;
+  const host = OPEN.tile, step = Math.min(.004, .12 / pairs.length);
+  svg.setAttribute('class', 'course-morph');
+  svg.setAttribute('aria-hidden', 'true');
+  const flights = pairs.map((p, i) => {
+    const a = dotAt(COURSE.map, p.from), b = dotAt(map, p.to.c);
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('r', '1');
+    /* 지금 보이던 색에서 떠나 도착할 곳의 색으로 — 골라진 구는 강조색이다 */
+    c.classList.toggle('on', !!(back ? p.to.kid.g : host.g)?.classList.contains('on'));
+    c.style.transform = tf(back ? b : a);
+    c.style.transitionDelay = (i * step).toFixed(3) + 's';
+    svg.append(c);
+    return [c, back ? a : b, MARK.has(back ? host : p.to.kid)];
+  });
+  $('#courseBtns').append(svg);
+  svg.getBoundingClientRect();   // 떠나는 자리를 먼저 그려야 트랜지션이 걸린다
+  flights.forEach(([c, to, on]) => { c.style.transform = tf(to); c.classList.toggle('on', on); });
+  m.timer = setTimeout(() => m.end(), CAM_MS + pairs.length * step * 1000 + 40);
 }
 function closeCourse() {
   openGen++;
   if (!OPEN) return false;
-  foldKids();
+  /* 동 칸이나 뒤로에 있던 초점은 다시 선 구 칸으로 — 둘 다 곧 사라진다 */
+  const host = OPEN.tile, a = document.activeElement;
+  const refocus = OPEN.kids.some(tile => tile.el.contains(a)) || (a && a.id === 'navBack');
+  foldKids(true);
   OPEN = null;
   planCourses();
+  paintBack();
+  if (refocus) host.el.focus({ preventScroll: true });
   /* 접었다고 서울 전체로 물러나지 않는다 — 보던 구에 그대로 남는다.
      전체로 돌아가는 건 Esc 나 머리글을 눌러 고르기를 풀었을 때다 */
   syncHomeCam();
   return true;
 }
-async function openCourse(host) {
-  if (host.kid || host.gone) return;
-  if (!host.el.hasAttribute('aria-expanded') || (OPEN && OPEN.tile === host)) { closeCourse(); return; }
-  const n = ++openGen;
-  let geom;
-  try { geom = await loadGeom(host.slug); } catch { return; }
-  if (n !== openGen) return;
-  foldKids();
-  /* 구 지도를 인게임처럼 도트로 깐다 — 동 하나는 제 도트 묶음이다. 도트·이름은 지도 한 장(map)에
-     그리고, 동 칸(버튼)은 제 도트 상자에 투명하게 앉아 키보드·aria·카메라·복수 선택을 맡는다.
-     도트를 동 버튼 안에 넣으면 뒤에 오는 동의 도트가 앞 동의 이름을 덮는다 */
+/* geom 을 인게임처럼 도트 지도로 깐다 — 항목 하나는 제 도트 묶음이다. 도트·이름은 지도 한 장(map)에
+   그리고, 칸(버튼)은 제 도트 상자에 투명하게 앉아 키보드·aria·카메라·복수 선택을 맡는다.
+   도트를 칸 버튼 안에 넣으면 뒤에 오는 칸의 도트가 앞 칸의 이름을 덮는다. 서울(구)과 펼친 구(동)가 같이 쓴다.
+   make(it) 은 그 항목의 칸(makeTile)을 돌려준다 */
+const MAPS = new WeakMap();   // .course-map → map
+function buildDotMap(geom, make) {
   const cells = cellsOf(geom), owner = new Map();
   cells.forEach((cs, i) => cs.forEach(([x, y]) => owner.set(x + ',' + y, i)));
-  const kids = geom.items.map((it, i) => {
-    const own = COURSE.tree && COURSE.tree.children[`${host.slug}/${it.name}`];
-    const tile = makeTile(LANG === 'ko' ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name, true),
-                          own || host.slug, true);
-    tile.el.setAttribute('aria-label', placeName(COURSE.names, host.slug, it.name));
+  const tiles = geom.items.map((it, i) => {
+    const tile = make(it);
     tile.el.classList.add('dots');
     const xs = cells[i].map(c => c[0]), ys = cells[i].map(c => c[1]);
     const bx = Math.min(...xs), by = Math.min(...ys);
-    Object.assign(tile, { name: it.name, parent: host, bx, by, adj: new Set(),
+    Object.assign(tile, { name: it.name, bx, by, adj: new Set(), cells: cells[i],
                           bw: Math.max(...xs) - bx + 1, bh: Math.max(...ys) - by + 1 });
     tile.el.style.setProperty('--bw', tile.bw);
     tile.el.style.setProperty('--bh', tile.bh);
@@ -988,11 +954,11 @@ async function openCourse(host) {
     tile.el.addEventListener('blur', () => tile.g && tile.g.classList.remove('hot'));
     return tile;
   });
-  /* 대각선까지 맞닿으면 이웃이다 — 도트 지도에서 붙어 보이는 동은 같이 고를 수 있다 */
+  /* 대각선까지 맞닿으면 이웃이다 — 도트 지도에서 붙어 보이는 칸은 같이 고를 수 있다 */
   cells.forEach((cs, i) => cs.forEach(([x, y]) => {
     for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
       const j = owner.get((x + dx) + ',' + (y + dy));
-      if (j !== undefined && j !== i) { kids[i].adj.add(kids[j]); kids[j].adj.add(kids[i]); }
+      if (j !== undefined && j !== i) { tiles[i].adj.add(tiles[j]); tiles[j].adj.add(tiles[i]); }
     }
   }));
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1002,57 +968,104 @@ async function openCourse(host) {
   const el = document.createElement('div');
   el.className = 'course-map';
   el.append(svg);
-  const map = { el, bw: geom.cols, bh: geom.rows_n, x: sp(0, .05), y: sp(0, .05), s: sp(1, .0005),
+  const map = { el, tiles, bw: geom.cols, bh: geom.rows_n, x: sp(0, .05), y: sp(0, .05), s: sp(1, .0005),
                 o: sp(1, .0005), f: sp(1, .0005), wait: 0, order: 0 };
+  MAPS.set(el, map);
   el.style.setProperty('--bw', map.bw);
   el.style.setProperty('--bh', map.bh);
-  [map, ...kids].forEach(tile => {
-    ['x', 'y', 's'].forEach(k => { tile[k].x = tile[k].to = host[k].x; });
-    tile.s.x = tile.s.to = host.s.x / Math.max(tile.bw, tile.bh);
-    tile.o.x = tile.o.to = 0;
-    tile.el.inert = true;
-    paintTile(tile);
-  });
-  host.el.after(el, ...kids.map(tile => tile.el));
   const items = geom.items.map(g => ({ name: g.name }));
   drawDots(svg, geom, items);
+  const cw = geom.cell;
   items.forEach((it, i) => {
-    if (it.label) it.label.textContent = kids[i].label;
-    if (it.el) { it.el.dataset.i = i; kids[i].g = it.el; }
+    if (it.label) it.label.textContent = tiles[i].short;   // 지도 위는 짧은 이름 — 머리글이 온 이름을 말한다
+    if (!it.el) return;
+    it.el.dataset.i = i; tiles[i].g = it.el;
+    /* 구역 하나를 빈틈없이 덮는 투명한 판 — 도트(원) 사이 틈에 커서가 빠져도 그 구역에 머문다.
+       칸 네모를 이어 붙인 것이라 이웃 칸끼리 틈이 없다. 도트보다 먼저 두어 아래에 깔린다 */
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('class', 'hit');
+    hit.setAttribute('d', cells[i].map(([x, y]) => `M${x * cw} ${y * cw}h${cw}v${cw}h${-cw}z`).join(''));
+    it.el.prepend(hit);
   });
   /* 이름 밑 도트는 비운다 — drawDots 가 다음 프레임에 이름 자리를 잡은 뒤에 */
   requestAnimationFrame(() => requestAnimationFrame(() =>
     items.forEach(it => (it.under || []).forEach(c => c.classList.add('under')))));
+  return map;
+}
+/* 아래 막대의 뒤로 — 구를 펼쳤을 때만 선다. 막대 폭이 바뀌니 알약도 다시 잰다 */
+function paintBack() {
+  const b = $('#navBack');
+  if (!b || b.hidden === !OPEN) return;
+  b.hidden = !OPEN;
+  relayoutNavShapes();
+}
+async function openCourse(host) {
+  if (host.kid || host.gone) return;
+  if (!host.el.hasAttribute('aria-expanded') || (OPEN && OPEN.tile === host)) { closeCourse(); return; }
+  const n = ++openGen;
+  let geom;
+  try { geom = await loadGeom(host.slug); } catch { return; }
+  if (n !== openGen) return;
+  foldKids();
+  const map = buildDotMap(geom, it => {
+    const own = COURSE.tree && COURSE.tree.children[`${host.slug}/${it.name}`];
+    const tile = makeTile(LANG === 'ko' ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name, true),
+                          own || host.slug, true);
+    tile.el.setAttribute('aria-label', placeName(COURSE.names, host.slug, it.name));
+    tile.parent = host;
+    return tile;
+  });
+  const kids = map.tiles;
+  /* 동 지도는 처음부터 제자리에 흐린 채로 선다 — 번지는 건 지도가 아니라 도트다(flyDots) */
+  map.el.classList.add('haze');
+  map.el.firstChild.style.transition = 'none';
+  host.el.after(map.el, ...kids.map(tile => tile.el));
   COURSE.tiles.push(...kids);
   host.el.setAttribute('aria-expanded', 'true');
-  OPEN = { tile: host, kids, map };
+  OPEN = { tile: host, kids, map, pairs: [] };
   /* 펼친 칸이 곧 current 다 — 접었을 때 그 구가 그대로 골라져 있다 */
   pickTile(host);
+  const had = host.el.contains(document.activeElement);
   planCourses();
+  paintBack();
+  /* 구 칸은 접혀 눌리지 않는다 — 키보드 초점은 위로 돌아갈 길(뒤로)로 옮긴다 */
+  if (had && $('#navBack')) $('#navBack').focus({ preventScroll: true });
+  [map, ...kids].forEach(tile => aimTile(tile, tile.x.to, tile.y.to, tile.s.to, tile.o.to, 0, true));
+  /* 동 이름 밑 도트(.under)는 buildDotMap 이 두 프레임 뒤에 비운다 — 그 뒤에 짝을 짓는다 */
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (!OPEN || OPEN.map !== map) return;
+    map.el.firstChild.getBoundingClientRect();
+    map.el.firstChild.style.transition = '';
+    map.el.classList.remove('haze');
+    OPEN.pairs = pairDots(host, map);
+    if (host.g) host.g.classList.add('lift');   // 구 도트는 이제 나는 도트다
+    flyDots(OPEN.pairs, map, false, () => {});
+  }));
 }
 
 /* 설정 게임 탭의 동 구분. 법정동이면 구 칸이 법정동 코스(-bdong)를 가리킨다 */
 const dongSlug = slug => opt.dong === 'legal' ? slug.replace(/-dong$/, '-bdong') : slug;
 async function renderCourses() {
   /* 서울만 연다. 설정 지역 탭은 개발 중이라 고른 나라가 홈 지도를 바꾸지 않는다 */
-  const [tree, names] = await krNames();
+  const [[tree, names], geom] = await Promise.all([krNames(), SEOUL_GEOM]);
   const root = 'seoul-gu';
   openGen++;
   OPEN = null;
-  const was = PICK && (PICK.kid ? PICK.parent.name : PICK.name);
+  paintBack();
+  const was =PICK && (PICK.kid ? PICK.parent.name : PICK.name);
   GZ.px.x = GZ.px.to = 0; GZ.px.v = 0;
   GZ.py.x = GZ.py.to = 0; GZ.py.v = 0;
   GZ.cz.x = GZ.cz.to = 1; GZ.cz.v = 0;
-  COURSE = { tree, names, root, px: 0, py: 0, z: 1, map: SEOUL_MAP,
-    tiles: courseList(root, tree).map(it => {
-    const tile = makeTile(placeName(names, root, it.name), dongSlug(it.slug), false);
-    tile.name = it.name;
+  /* 서울은 구 원 스물다섯이 아니라 도트 지도다 — 구 하나가 제 도트 묶음(seoul-gu.geom) */
+  const slugOf = new Map(courseList(root, tree).map(it => [it.name, it.slug]));
+  const map = buildDotMap(geom, it => {
+    const tile = makeTile(placeName(names, root, it.name), dongSlug(slugOf.get(it.name)), false);
     tile.short = placeName(names, root, it.name, true);
-    tile.cell = SEOUL_CELLS[it.slug];
     tile.el.setAttribute('aria-expanded', 'false');
     return tile;
-  }) };
-  $('#courseBtns').replaceChildren(...COURSE.tiles.map(tile => tile.el));
+  });
+  COURSE = { tree, names, root, px: 0, py: 0, z: 1, map, tiles: map.tiles };
+  $('#courseBtns').replaceChildren(map.el, ...COURSE.tiles.map(tile => tile.el));
   paintCourseHead('');
   pickTile(COURSE.tiles.find(tile => tile.name === was) || null);
   planCourses(true);
@@ -1065,7 +1078,8 @@ document.addEventListener('click', e => {
   if (document.body.matches('.signing, .setting, .paging')) return;
   const b = e.target.closest('#courseBtns .grid-btn');
   const g = e.target.closest('#courseBtns .course-map [data-i]');
-  const tile = g ? OPEN && OPEN.kids[+g.dataset.i] : b && TILE.get(b);
+  const map = g && MAPS.get(g.closest('.course-map'));
+  const tile = map ? map.tiles[+g.dataset.i] : b && TILE.get(b);
   if (tile) {
     /* 한 번 누르면 그 구로 포커스, 같은 구를 한 번 더 누르면 행정동을 편다.
        세 번째는 openCourse 가 접는다. 동 칸은 아래가 없으니 고르기만 한다.
@@ -1082,6 +1096,7 @@ document.addEventListener('click', e => {
     }
   }
   if (e.target.closest('#coursePick')) { pickTile(null); syncHomeCam(); }
+  if (e.target.closest('#navBack')) closeCourse();
   /* 고른 칸이 있으면 그 코스로, 없으면 서울 코스로 */
   if (e.target.closest('#navPlay') && COURSE.root) {
     /* 여러 칸은 한 코스 안에서만 고를 수 있으니, 그 코스를 고른 곳만 남겨 친다 */
@@ -1751,7 +1766,7 @@ function tabGo(to) {
   });
 }
 function tabDock() {
-  $('#tabDock .tab-acc').append($('#courseName'), $('#navPlay'));
+  $('#tabDock .tab-acc').append($('#navBack'), $('#courseName'), $('#navPlay'));
   $('#tabBar').append(...['#regions a[href="#ranking"]', '#regions a[href="community/"]',
     '#regions .nav-bot a[href="settings/"]'].map(s => $(s)));
   $('#tabDock').append($('#signinLink'));
@@ -3189,11 +3204,11 @@ if (location.search.includes('rt=1')) {
   console.assert(m('울릉', seom) === '울릉도', '섬 이름도 도 접미를 탄다');
   console.assert(m('독', seom) === null, '한 글자 어간은 약칭으로 인정하지 않는다');
 
-  /* Shift 복수 선택은 격자로 붙어 있는 칸까지만 */
-  const tl = (c, r, kid, parent) => ({ gc: [c, r], kid, parent });
-  console.assert(nextTo(tl(3, 3), tl(4, 4)) === true, '대각선도 이웃이다');
-  console.assert(nextTo(tl(3, 3), tl(5, 3)) === false, '한 칸 넘게 떨어지면 이웃이 아니다');
-  console.assert(nextTo(tl(3, 3), tl(3, 4, true, 1)) === false, '구와 동은 같은 단계가 아니다');
+  /* Shift 복수 선택은 지도에서 도트가 맞닿은 칸까지만 — 구는 서울 지도, 동은 구 지도 */
+  const gA = { adj: new Set() }, gB = { adj: new Set([gA]) };
+  gA.adj.add(gB);
+  console.assert(nextTo(gA, gB) === true && nextTo(gA, { adj: new Set() }) === false, '구도 맞닿아야 이웃이다');
+  console.assert(nextTo(gA, { kid: true, parent: gA, adj: new Set([gA]) }) === false, '구와 동은 같은 단계가 아니다');
   const dA = { kid: true, parent: 1, adj: new Set() }, dB = { kid: true, parent: 1, adj: new Set([dA]) };
   dA.adj.add(dB);
   const dC = { kid: true, parent: 1, adj: new Set() }, dD = { kid: true, parent: 2, adj: new Set([dA]) };
@@ -3251,19 +3266,6 @@ if (location.search.includes('rt=1')) {
   console.assert(courseList('seoul-gu', tree).map(c => c.slug).join() === 'gangseo-dong',
     '서울 칸은 자치구 코스만');
   console.assert(courseList('us-admin', null).length === 0, 'tree 없으면 칸 없이 머리글만');
-  console.assert(courseCell(0, 18, 9, 6).join() === '1,1', '코스 덩이는 가운데서 시작');
-  console.assert(courseCell(17, 18, 9, 6).join() === '6,3', '한 줄 여섯 칸씩 내려간다');
-  console.assert(courseCell(0, 25, 12, 8, SEOUL_CELLS['gangseo-dong']).join() === '2,4', '강서는 덩이 서쪽');
-  console.assert(courseCell(0, 25, 12, 8, SEOUL_CELLS['gangdong-dong']).join() === '9,4', '강동은 덩이 동쪽');
-  console.assert(courseCell(0, 25, 12, 8, SEOUL_CELLS['dobong-dong']).join() === '7,1', '도봉은 덩이 북쪽');
-  console.assert(courseCell(0, 25, 12, 8, SEOUL_CELLS['gwanak-dong']).join() === '5,7', '관악은 덩이 남쪽');
-  console.assert(courseCell(0, 25, 12, 4, SEOUL_CELLS['gangseo-dong'])[1]
-    !== courseCell(0, 25, 12, 4, SEOUL_CELLS['gwanak-dong'])[1], '짧은 화면에서도 남북이 겹치지 않는다');
-  const rp = (ox, oy, i, n) => radialPush(ox, oy, 5, 5, i, n).map(v => Math.round(v * 1e3) / 1e3);
-  console.assert(rp(10, 5, 0, 4).join() === '1,0', '동쪽으로 민다');
-  console.assert(rp(5, 0, 0, 4).join() === '0,-1', '위쪽으로 민다');
-  console.assert(rp(5, 5, 0, 4).join() === '1,0', '겹치면 등각');
-  console.assert(rp(5, 5, 1, 4).join() === '0,1', '등각 다음');
   const packed = packGeom([{ name: 'a', c: [0, 0] }, { name: 'b', c: [10, 0] }, { name: 'c', c: [0, 10] }]);
   console.assert(packed.size[0] >= 2 && packed.size[1] >= 2, '행정동 자리표는 넓이를 따른다');
   console.assert(new Set(Object.values(packed.cells).map(p => p.join())).size === 3, '행정동은 겹치지 않는다');
