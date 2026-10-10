@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.90';
+const VER = '3.91';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -607,7 +607,7 @@ function kidName(name) {
 function placeName(names, parent, name, short = false) {
   const en = LANG !== 'ko' && names && names[`${parent}/${name}`];
   if (!en) return short ? shortAdmin(name) : adminLabel(name);
-  return short ? en.replace(/-(do|si)$/, '') : en;
+  return short ? en.replace(/-(do|si|gu|dong)$/, '') : en;
 }
 /* 칸 글자 크기. 밀려난 칸은 짧은 이름으로 바꾸고 k 배로 키운다 — 칸이 1/d 로 줄어도
    화면 글자는 k/d 배인 구역 칸 글자와 같아진다. 어느 칸이든 폭을 넘으면 폭에 맞춰 줄인다.
@@ -618,7 +618,10 @@ function asideTile(tile, on, k = 1) {
   if (!span.scrollWidth) return;   // 숨은 화면에서는 잴 수 없다
   /* 폰 한국어는 칸 폭을 거의 다 쓴다 — 네 글자 구가 깨알이 되지 않게. 칸을 넘기면
      실기기에서 이웃 이름과 붙어 '서대문구중구' 로 읽혀 폭 안에서 멈춘다 */
-  const f = Math.min(on ? k : 1, tile.el.clientWidth * (fingers() && LANG === 'ko' ? .98 : .86) / span.scrollWidth);
+  /* 골라진 칸은 안쪽 점선 고리(::after, 폭의 82%)가 있다. 한국어는 글자 테두리로 고리를 끊고
+     넘어가지만, 긴 로마자는 양 끝이 고리에 잘려 읽히므로 고리 안에 든다 */
+  const fill = MARK.has(tile) && LANG !== 'ko' ? .66 : fingers() && LANG === 'ko' ? .98 : .86;
+  const f = Math.min(on ? k : 1, tile.el.clientWidth * fill / span.scrollWidth);
   const first = !tile.fitted;
   tile.fitted = true;
   if (tile.f.to === f && !first) return;
@@ -856,7 +859,7 @@ function planCourses(snap = false) {
   });
   const [pc, pr] = place.get(host);
   aimTile(host, pc * fw, pr * fh, k / d, 1);
-  asideTile(host, false);
+  asideTile(host, LANG !== 'ko');   // 펼친 구 칸은 동 칸만 하다 — 로마자는 -gu 를 뗀다
   /* 하나씩 번진다 — 부모 칸에서 가까운 구역부터. 전체가 .6초를 넘지 않게 간격을 죈다 */
   const step = Math.min(.035, .6 / kids.length);
   kids.map(tile => [tile, place.get(tile)])
@@ -950,7 +953,7 @@ async function openCourse(host) {
   const w = Math.max(...xs) - x0 || 1, h = Math.max(...ys) - y0 || 1;
   const kids = its.map(it => {
     const own = COURSE.tree && COURSE.tree.children[`${host.slug}/${it.name}`];
-    const tile = makeTile(LANG === 'ko' ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name),
+    const tile = makeTile(LANG === 'ko' ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name, true),
                           own || host.slug, true);
     tile.el.setAttribute('aria-label', placeName(COURSE.names, host.slug, it.name));
     Object.assign(tile, { name: it.name, parent: host, u: (it.c[0] - x0) / w, v: (it.c[1] - y0) / h });
@@ -3201,6 +3204,9 @@ if (location.search.includes('rt=1')) {
   LANG = 'vi';
   console.assert(placeName(roman, 'kr-admin', '충청북도') === 'Chungcheongbuk-do', '한국어 밖에서는 로마자 표');
   console.assert(placeName(roman, 'kr-admin', '충청북도', true) === 'Chungcheongbuk', '짧은 로마자는 -do 를 뗀다');
+  console.assert(placeName({ 'seoul-gu/서대문구': 'Seodaemun-gu' }, 'seoul-gu', '서대문구', true) === 'Seodaemun', '짧은 로마자는 -gu 도 뗀다');
+  console.assert(placeName({ 'x/홍은1동': 'Hongeun 1-dong', 'x/필동1가': 'Pil-dong 1-ga' }, 'x', '홍은1동', true) === 'Hongeun 1'
+    && placeName({ 'x/필동1가': 'Pil-dong 1-ga' }, 'x', '필동1가', true) === 'Pil-dong 1-ga', '동 칸은 끝의 -dong 만 뗀다');
   console.assert(placeName(null, 'kr-admin', '경기도') === '경기도', '표가 없으면 한국어로 떨어진다');
   LANG = 'ko';
   console.assert(placeName(roman, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');

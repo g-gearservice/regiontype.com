@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.391",
+    "date": "2026-10-10",
+    "ko": "한국어가 아닌 화면에서 서울 행정동·법정동 칸이 한국어로 남던 것을 고쳤습니다. 동 이름이 로마자(Sinchon-dong, Hongeun 1-dong)로 보이고, 밀려난 구 칸은 -gu 를 떼고 짧게 보입니다. 치는 이름은 그대로 한국어입니다.",
+    "en": "Seoul neighborhood (dong) tiles no longer stay in Korean in other interface languages. They now show romanized names such as Sinchon-dong and Hongeun 1-dong, and a district tile pushed aside drops -gu to fit. The names you type are still Korean."
+  },
+  {
     "v": "0.9.390",
     "date": "2026-10-10",
     "ko": "설정의 언어 탭을 정식으로 열었습니다. 개발 표시를 떼고, 다른 탭처럼 눌러서 26개 언어 중 화면 말을 고를 수 있습니다. 자동으로 두면 브라우저 언어를 따릅니다.",
