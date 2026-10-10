@@ -867,8 +867,9 @@ function near(el) {
   /* 폰은 독 밑으로 파고들지 않게 clampXY 가 독 윗선에 세운다 */
   return clampXY(x, r.top > innerHeight / 2 ? r.top - BOT * .85 : r.bottom - BOT * .1);
 }
+/* 홈은 도트 지도다 — 칸 하나 대신 보이는 지도(서울, 또는 펼친 구)를 가리킨다 */
 function midTile() {
-  const tiles = [...document.querySelectorAll('#courseBtns .grid-btn:not(.gone)')]
+  const tiles = [...document.querySelectorAll('#courseBtns .course-map')]
     .filter(el => parseFloat(getComputedStyle(el).opacity) >= .5);
   const d = el => {
     const r = el.getBoundingClientRect();
