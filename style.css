@@ -325,6 +325,36 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 /* 고른 칸은 색에 더해 안쪽 테두리로도 드러낸다 */
 #courseBtns .grid-btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);box-shadow:inset 0 0 0 5px var(--ink)}
+/* 펼친 구 — 인게임처럼 구 지도를 도트로 깐다(app.js openCourse). 동 칸(.dots)은 제 도트 상자에 앉은
+   투명한 문일 뿐이고, 보이는 도트·이름은 지도 한 장(.course-map)이 그린다. 누르는 건 도트다 */
+#courseBtns .grid-btn.dots{
+  width:calc(var(--deco-cw) * var(--bw)); height:calc(var(--deco-ch) * var(--bh));
+  padding:0; border-radius:0; background:none; box-shadow:none; pointer-events:none;
+}
+#courseBtns .grid-btn.dots > span,#courseBtns .grid-btn.dots::before{display:none}
+#courseBtns .course-map{
+  position:absolute; left:0; top:0; transform-origin:0 0; pointer-events:none; z-index:1;
+  width:calc(var(--deco-cw) * var(--bw)); height:calc(var(--deco-ch) * var(--bh));
+  transition:transform var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease);
+}
+#courseBtns .course-map > svg{display:block; width:100%; height:100%; overflow:visible}
+#courseBtns .course-map circle{fill:var(--block); pointer-events:auto; cursor:pointer; transition:fill var(--fast)}
+#courseBtns .course-map circle.under{opacity:0; pointer-events:none}
+/* 고른 동은 색에 더해 도트마다 테두리로도 드러낸다 — 색만으로 가르지 않는다 */
+#courseBtns .course-map g.on circle{fill:var(--accent); stroke:var(--ink); stroke-width:2.5}
+#courseBtns .course-map g.hot circle{fill:var(--accent)}
+@media (hover:hover) and (pointer:fine){
+  #courseBtns .course-map g:hover circle{fill:var(--accent)}
+}
+#courseBtns .course-map text{
+  fill:var(--ink); font-weight:700; text-anchor:middle; dominant-baseline:central; pointer-events:none;
+  paint-order:stroke; stroke:var(--bg); stroke-width:.24em; stroke-linejoin:round;
+}
+@media (prefers-reduced-motion:reduce){ #courseBtns .course-map{transition:none} }
+:root[data-motion="off"] #courseBtns .course-map{transition:none}
+/* 로그인·설정 덮개 아래에서는 다른 칸처럼 바탕 비트맵이 된다 — 눌리지 않고 이름도 빠진다 */
+body:is(.signing,.setting,.paging) #courseBtns .course-map circle{fill:var(--land); pointer-events:none}
+body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 
 :root[data-night] #card,
 :root[data-night] #typein{box-shadow:none}
