@@ -746,8 +746,7 @@ function softApply() {
   if (ui) { I18N = { [ui.lang]: ui.pack }; UI_LANGS = ui.langs; }
   else {
     try { I18N = await grab('data/i18n.json'); } catch {}
-    /* 배포는 아직 한국어만이다(app.js 의 UI_LANGS 와 같은 갈림) */
-    UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
+    UI_LANGS = Object.keys(I18N);
   }
   /* 'auto' 는 홈이 정한 말을 빌린다(pickLang). 홈이 늦게 정하면 덮개를 열 때 다시 맞춘다 */
   LANG = pickLang();
@@ -762,7 +761,7 @@ function softApply() {
   if (isSetHash()) open(location.hash.slice(1));
   if (ui) {
     softApply();
-    grab('data/i18n.json').then(all => { I18N = all; }).catch(() => {});
+    grab('data/i18n.json').then(all => { I18N = all; UI_LANGS = Object.keys(all); }).catch(() => {});
     if (isDev()) grab('data/world.json').then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
   }
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });

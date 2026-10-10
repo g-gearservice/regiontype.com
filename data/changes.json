@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.390",
+    "date": "2026-10-10",
+    "ko": "설정의 언어 탭을 정식으로 열었습니다. 개발 표시를 떼고, 다른 탭처럼 눌러서 26개 언어 중 화면 말을 고를 수 있습니다. 자동으로 두면 브라우저 언어를 따릅니다.",
+    "en": "The Language tab in Settings is now generally available. The development label is gone, and like the other tabs it lets you pick any of 26 interface languages. Automatic follows your browser language."
+  },
+  {
     "v": "0.9.389",
     "date": "2026-10-10",
     "ko": "영어권 코스(호주·캐나다·뉴질랜드·아일랜드·인도·필리핀·남아공·영국)의 약칭을 실제 쓰는 것으로 바로잡았습니다(QLD·NSW·KZN 등). 악센트·하이픈·아포스트로피는 빼고 쳐도 맞습니다(Quebec, KwaZulu Natal, Hawkes Bay). 영어 화면 문구도 다듬었습니다.",

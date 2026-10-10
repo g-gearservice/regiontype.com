@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.89';
+const VER = '3.90';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1836,14 +1836,11 @@ async function boot() {
     sense(),
   ]);
   I18N = i18n;
-  /* 한국어 말고는 아직 덜 됐다 — 지명이 플레이 화면에서 한국어로 남고, 로마자는
-     칸을 넘쳐 잘린다. 다 될 때까지 개발에서만 연다 */
-  UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
+  UI_LANGS = Object.keys(I18N);
   WORLD = world;
   LANG_COUNTRY = buildLangCountry(world);
-  // 개발에서 골라 둔 나라·언어가 localStorage 에 남아 있어도 배포에서는 되돌린다
+  // 개발에서 골라 둔 나라가 localStorage 에 남아 있어도 배포에서는 되돌린다
   if (!isDev() && opt.country !== 'auto') { opt.country = 'auto'; saveOpt(); }
-  if (!isDev() && opt.lang !== 'auto') { opt.lang = 'auto'; saveOpt(); }
   COUNTRY = resolveCountry();
   LANG = resolveLang();
   paintUI();
