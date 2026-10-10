@@ -510,7 +510,7 @@
               <div class="profile-actions"><button type="button" class="profile-button" id="acctOut">이 브라우저에서 로그아웃</button></div>
             </details>
           </div>
-          <div id="secOut" hidden><p class="profile-help">로그인하면 패스키와 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
+          <div id="secOut" hidden><p class="profile-help" data-i18n="secOutHelp">로그인하면 패스키와 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
           <section class="profile-section" aria-labelledby="privTitle">
             <h3 class="profile-label" id="privTitle">개인정보와 이 브라우저</h3>
             <div class="profile-row"><div><strong>접속 지역 추정</strong><p class="profile-help" id="privWhereHelp">중계기가 IP 로 추정한 나라 코드와 시간대(도시 제외)를 받아 언어 기본값에 씁니다. 끄면 이 브라우저의 언어·시간대만 씁니다. 다음에 열 때부터 적용. 꺼도 순위표·로그인 같은 다른 요청은 중계기를 거치며, IP 는 요청 제한에만 쓰고 저장하지 않습니다. 정밀 위치(GPS)는 쓰지 않고 권한도 요청하지 않습니다.</p></div><button type="button" class="profile-switch" data-opt="where" aria-label="접속 지역 추정" aria-describedby="privWhereHelp"></button></div>
@@ -633,7 +633,7 @@
       <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase">계정 삭제</button><a class="profile-button" href="settings/#security">보안 설정</a></div>
       <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
       <p id="accountSession" class="profile-help" role="status"></p>
-      <a id="accountSignin" class="profile-button" href="signin/" hidden>로그인</a>
+      <a id="accountSignin" class="profile-button" href="signin/" data-i18n="signinBtn" hidden>로그인</a>
     </div>
   </div>
 </div>
@@ -679,8 +679,8 @@
 </dialog>
 
 <script src="relay.js?v=3.85"></script>
-<script src="app.js?v=3.91"></script>
-<script src="auth.js?v=3.87"></script>
+<script src="app.js?v=3.93"></script>
+<script src="auth.js?v=3.92"></script>
 <script src="settings/settings.js?v=3.90"></script>
 <script src="ranked.js?v=3.88"></script>
 </body>

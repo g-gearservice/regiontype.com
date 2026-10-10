@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.91';
+const VER = '3.93';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -510,6 +510,16 @@ const grab = url => fetch(asset(url)).then(r => r.json());
    로그인 화면에서 돌아올 때 점이 제 칸으로 날아가려면, 새 문서가 처음 그려지는
    순간에 칸이 이미 서 있어야 한다 — 늦게 서면 짝을 못 찾고 그냥 흐려진다 */
 const KR = Promise.all([grab('data/kr-tree.json'), grab('data/kr-names.json')]);
+/* 제 글자로 쓰는 말은 따로 찍은 표를 로마자 위에 덮는다 — 일본어 江南区·シンチョン洞,
+   중국어 江南区·新村洞, 키릴 Каннам-гу. 없는 칸은 로마자로 남는다(tools/build_kr_*.py) */
+const NAME_LANGS = ['ja', 'zh', 'uk', 'bg'];
+const LOCAL_NAMES = {};
+async function krNames() {
+  const [tree, roman] = await KR;
+  if (!NAME_LANGS.includes(LANG)) return [tree, roman];
+  const own = await (LOCAL_NAMES[LANG] ??= grab(`data/kr-names.${LANG}.json`).catch(() => ({})));
+  return [tree, { ...roman, ...own }];
+}
 const loadCourse = slug => grab(`data/${slug}.course.json`);
 const loadGeom = slug => grab(`data/${slug}.geom.json`);
 const load = slug => Promise.all([loadCourse(slug), loadGeom(slug)]);
@@ -602,12 +612,13 @@ function kidName(name) {
   if (m) return m[1] + m[2];
   return /^.{2,}[시군]$/.test(n) ? n.slice(0, -1) : n;
 }
-/* 칸에 보이는 지명. 화면 말이 한국어가 아니면 로마자 표(kr-names.json)에서 꺼낸다 —
+/* 칸에 보이는 지명. 화면 말이 한국어가 아니면 krNames() 의 표에서 꺼낸다 —
    치는 이름은 그대로 한국어다. short 면 밀려난 칸에 쓸 짧은 이름 */
 function placeName(names, parent, name, short = false) {
   const en = LANG !== 'ko' && names && names[`${parent}/${name}`];
   if (!en) return short ? shortAdmin(name) : adminLabel(name);
-  return short ? en.replace(/-(do|si|gu|dong)$/, '') : en;
+  /* 짧은 이름은 단위를 뗀다. 한자는 두 글자 넘는 이름만 — 中区·明洞 이 中·明 이 되면 못 읽는다 */
+  return short ? en.replace(/-(do|si|gu|dong|гу|дон)$|(?<=\D\D)[洞区]$/, '') : en;
 }
 /* 칸 글자 크기. 밀려난 칸은 짧은 이름으로 바꾸고 k 배로 키운다 — 칸이 1/d 로 줄어도
    화면 글자는 k/d 배인 구역 칸 글자와 같아진다. 어느 칸이든 폭을 넘으면 폭에 맞춰 줄인다.
@@ -976,7 +987,7 @@ async function openCourse(host) {
 const dongSlug = slug => opt.dong === 'legal' ? slug.replace(/-dong$/, '-bdong') : slug;
 async function renderCourses() {
   /* 서울만 연다. 설정 지역 탭은 개발 중이라 고른 나라가 홈 지도를 바꾸지 않는다 */
-  const [tree, names] = await KR;
+  const [tree, names] = await krNames();
   const root = 'seoul-gu';
   openGen++;
   OPEN = null;
@@ -3207,6 +3218,8 @@ if (location.search.includes('rt=1')) {
   console.assert(placeName({ 'seoul-gu/서대문구': 'Seodaemun-gu' }, 'seoul-gu', '서대문구', true) === 'Seodaemun', '짧은 로마자는 -gu 도 뗀다');
   console.assert(placeName({ 'x/홍은1동': 'Hongeun 1-dong', 'x/필동1가': 'Pil-dong 1-ga' }, 'x', '홍은1동', true) === 'Hongeun 1'
     && placeName({ 'x/필동1가': 'Pil-dong 1-ga' }, 'x', '필동1가', true) === 'Pil-dong 1-ga', '동 칸은 끝의 -dong 만 뗀다');
+  console.assert(['江南区', '中区', 'シンチョン洞', '明洞', 'Каннам-гу'].map(v => placeName({ 'x/y': v }, 'x', 'y', true)).join()
+    === '江南,中区,シンチョン,明洞,Каннам', '한자·가나·키릴 짧은 이름');
   console.assert(placeName(null, 'kr-admin', '경기도') === '경기도', '표가 없으면 한국어로 떨어진다');
   LANG = 'ko';
   console.assert(placeName(roman, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');

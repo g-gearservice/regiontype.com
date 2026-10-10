@@ -64,9 +64,13 @@ function parseUiLang(tag, langs) {
   return null;
 }
 
-function devLang() {
+/* home 이면 홈(app.js paintUI)이 <html lang> 에 적은 말을 빌린다 — sense() 의 HERE.lang 까지
+   본 결과라 여기서 다시 고르면 어긋난다. 처음 읽을 때는 HTML 의 lang="ko" 가 아직 그대로라
+   쓰지 않고 같은 규칙으로 고른다 */
+function uiLang(home = false) {
   const langs = Object.keys(I18N);
   if (opt.lang !== 'auto' && langs.includes(opt.lang)) return opt.lang;
+  if (home && langs.includes(document.documentElement.lang)) return document.documentElement.lang;
   for (const tag of [...(navigator.languages || []), navigator.language]) {
     const hit = parseUiLang(tag, langs);
     if (hit) return hit;
@@ -536,6 +540,7 @@ let modalGeneration = 0;
 const current = generation => generation === modalGeneration && !over().hidden;
 function open() {
   if (!over().hidden) return;
+  LANG = uiLang(true); applyI18n(over());   // 홈이 말을 늦게 정해도 열 때마다 맞춘다
   modalGeneration += 1;
   dispatchEvent(new CustomEvent('rt-open-signin'));
   opener = document.activeElement;
@@ -741,9 +746,7 @@ function wire() {
 
 (async () => {
   try { I18N = await grab('data/i18n.json'); } catch {}
-  /* 배포는 아직 한국어만이다(app.js 의 UI_LANGS 와 같은 갈림) */
-  const dev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) || location.protocol === 'file:';
-  LANG = dev ? devLang() : 'ko';
+  LANG = uiLang();
   applyI18n(over());
   wire();
 

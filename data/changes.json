@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.9.393",
+    "date": "2026-10-10",
+    "ko": "서울 구·동 칸 이름이 화면 말의 글자로 보입니다. 일본어는 江南区·シンチョン洞, 중국어는 江南区·新村洞, 우크라이나어·불가리아어는 Каннам-гу 처럼 나옵니다. 한자를 확인하지 못한 동은 로마자로 남습니다.",
+    "en": "Seoul district and neighborhood tiles now use the script of your interface language: 江南区 and シンチョン洞 in Japanese, 江南区 and 新村洞 in Chinese, Каннам-гу in Ukrainian and Bulgarian. Neighborhoods whose Chinese characters could not be confirmed stay romanized."
+  },
+  {
+    "v": "0.9.392",
+    "date": "2026-10-10",
+    "ko": "로그인 화면이 언제나 한국어로 뜨던 것을 고쳤습니다. 이제 홈과 같은 화면 말을 따르고, 보안 탭의 로그인 안내 문구도 26개 언어로 보입니다.",
+    "en": "The sign-in screen no longer always appears in Korean. It now follows the same interface language as the home screen, and the sign-in hint in the Security tab is translated into all 26 languages."
+  },
+  {
     "v": "0.9.391",
     "date": "2026-10-10",
     "ko": "한국어가 아닌 화면에서 서울 행정동·법정동 칸이 한국어로 남던 것을 고쳤습니다. 동 이름이 로마자(Sinchon-dong, Hongeun 1-dong)로 보이고, 밀려난 구 칸은 -gu 를 떼고 짧게 보입니다. 치는 이름은 그대로 한국어입니다.",
