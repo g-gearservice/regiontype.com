@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.88';
+const VER = '3.90';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -281,9 +281,14 @@ function adminLabel(name) {
   }
   return n;
 }
+/* 라틴 악센트·하이픈·아포스트로피는 판정에서 지운다 — Québec 을 Quebec 으로,
+   KwaZulu-Natal 을 KwaZulu Natal 로 쳐도 맞는다. 결합 부호는 U+0300–036F 만:
+   가나 탁점(U+3099)까지 지우면 が 가 か 가 된다. */
+const foldKey = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC')
+  .replace(/['\u2018\u2019`.]/g, '').replace(/[-\u2010-\u2015]/g, ' ').replace(/\s+/g, ' ');
 function matchInput(raw, items, spacy = false) {
   const key = s => {
-    let t = String(s).normalize('NFC');
+    let t = foldKey(s);
     if (!spacy) t = t.replace(/\s/g, '');
     return t.toLowerCase();
   };
@@ -1831,14 +1836,11 @@ async function boot() {
     sense(),
   ]);
   I18N = i18n;
-  /* 한국어 말고는 아직 덜 됐다 — 지명이 플레이 화면에서 한국어로 남고, 로마자는
-     칸을 넘쳐 잘린다. 다 될 때까지 개발에서만 연다 */
-  UI_LANGS = isDev() ? Object.keys(I18N) : ['ko'];
+  UI_LANGS = Object.keys(I18N);
   WORLD = world;
   LANG_COUNTRY = buildLangCountry(world);
-  // 개발에서 골라 둔 나라·언어가 localStorage 에 남아 있어도 배포에서는 되돌린다
+  // 개발에서 골라 둔 나라가 localStorage 에 남아 있어도 배포에서는 되돌린다
   if (!isDev() && opt.country !== 'auto') { opt.country = 'auto'; saveOpt(); }
-  if (!isDev() && opt.lang !== 'auto') { opt.lang = 'auto'; saveOpt(); }
   COUNTRY = resolveCountry();
   LANG = resolveLang();
   paintUI();
@@ -2683,7 +2685,7 @@ function claim(it) {
 /* 치고 있는 입력이 아직 확정 안 된 어느 이름(또는 별칭)의 앞부분이면 그 타수, 아니면 0.
    Monkeytype 이 칠 중인 낱말을 '맞게 친 데까지'만 쳐 주는 것(countChars 의
    creditPartial)과 같다. 견주는 모양은 matchInput 과 같게 — 대소문자·띄어쓰기를 접는다 */
-const typedForm = (s, spacy) => jamo((spacy ? String(s) : String(s).replace(/\s/g, '')).toLowerCase());
+const typedForm = (s, spacy) => jamo((spacy ? foldKey(s) : foldKey(s).replace(/\s/g, '')).toLowerCase());
 function partKeys(raw, items, spacy = false) {
   const key = s => typedForm(s, spacy);
   const k = key(raw);
@@ -3089,6 +3091,15 @@ if (location.search.includes('rt=1')) {
   console.assert(ms('new york', us) === 'New York', '영문 대소문자');
   console.assert(ms('NY', us) === 'New York', '우편 약칭');
   console.assert(ms('ny', us) === 'New York', '우편 약칭 소문자');
+  const acc = [{ name: 'Québec', aliases: ['QC'], claimed: false },
+               { name: 'KwaZulu-Natal', aliases: ['KZN'], claimed: false },
+               { name: "Hawke's Bay", aliases: [], claimed: false },
+               { name: 'Dún Laoghaire–Rathdown', aliases: [], claimed: false }];
+  console.assert(ms('quebec', acc) === 'Québec', '악센트 없이');
+  console.assert(ms('KwaZulu Natal', acc) === 'KwaZulu-Natal' && ms('kwazulu-natal', acc) === 'KwaZulu-Natal', '하이픈은 띄어쓰기와 같다');
+  console.assert(ms('Hawkes Bay', acc) === "Hawke's Bay", '아포스트로피 생략');
+  console.assert(ms('Dun Laoghaire-Rathdown', acc) === 'Dún Laoghaire–Rathdown', '엔대시와 하이픈');
+  console.assert(foldKey('が') === 'が' && foldKey('강서구') === '강서구', '가나 탁점·한글은 그대로');
   const kj = mk(['전라남도', '광주광역시']);
   kj[0].aliases.push('KJ'); kj[1].aliases.push('KJ');
   console.assert(m('KJ', kj) === null, '겹치는 우편 약칭은 확정하지 않는다');
