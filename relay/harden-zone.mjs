@@ -49,6 +49,8 @@ const SETTINGS = {
 };
 
 /* Only the static site. The relay sets its own CORS headers and must stay fetchable. */
+/* Framing: only the site itself and g.gearservice's work page (its live viewport) may embed it. The CSP below decides
+   that, so there is no X-Frame-Options: it cannot name an origin, and DENY would override the allowance. */
 const HEADER_RULE = {
   ref: 'rt-security-headers',
   description: 'regiontype security headers',
@@ -56,13 +58,12 @@ const HEADER_RULE = {
   action: 'rewrite',
   action_parameters: { headers: Object.fromEntries(Object.entries({
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'X-Frame-Options': 'DENY',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
     'Cross-Origin-Opener-Policy': 'same-origin',
     /* No script/style/connect limits — they would need the inline JSON-LD and relay hosts
        listed, and a mistake breaks play. These directives cannot break the app. */
     'Content-Security-Policy':
-      "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'; upgrade-insecure-requests",
+      "frame-ancestors 'self' https://gdotgear.services; base-uri 'self'; object-src 'none'; form-action 'self'; upgrade-insecure-requests",
   }).map(([k, value]) => [k, { operation: 'set', value }])) },
 };
 

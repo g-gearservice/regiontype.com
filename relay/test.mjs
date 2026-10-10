@@ -581,8 +581,7 @@ const bad = (id, fact, why) => assert.equal(one(id, fact).state, 'fail', why ?? 
 const HEAD = {
   'strict-transport-security': 'max-age=31536000; includeSubDomains',
   'content-security-policy':
-    "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
-  'x-frame-options': 'DENY',
+    "frame-ancestors 'self' https://gdotgear.services; base-uri 'self'; object-src 'none'; form-action 'self'",
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
@@ -600,8 +599,10 @@ bad('site-hsts', page({ 'strict-transport-security': 'max-age=31536000' }),
 
 good('site-csp', page());
 bad('site-csp', page({ 'content-security-policy': "base-uri 'self'" }), '한 지시어만으로는 부족하다');
+bad('site-csp', page({ 'content-security-policy': "frame-ancestors *; base-uri 'self'; object-src 'none'; form-action 'self'" }),
+    '아무나 담을 수 있게 열면 걸러야 한다');
 good('site-frame', page());
-bad('site-frame', page({ 'x-frame-options': 'SAMEORIGIN' }));
+bad('site-frame', page({ 'x-frame-options': 'DENY' }), 'XFO 가 있으면 CSP 허용을 덮어쓴다');
 good('site-nosniff', page());
 bad('site-nosniff', drop('x-content-type-options'));
 good('site-permissions', page());
