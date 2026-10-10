@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.87">
+<link rel="stylesheet" href="style.css?v=3.96">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -137,6 +137,8 @@
   <!-- 설정·시작·계정은 아래 막대. 폰에서도 같은 알약이다. 폰의 봇은 로고 뒤에 산다(ranked.js 의 tuck) -->
   <nav class="nav-bot" data-i18n-aria="navDock" aria-label="놀이 메뉴">
     <span class="nav-shape" id="navBotShape" aria-hidden="true"></span>
+    <!-- 구를 펼쳤을 때만 선다 — 서울 지도로 돌아간다(app.js paintBack) -->
+    <button type="button" class="nav-item" id="navBack" data-i18n="back" hidden>뒤로</button>
     <a class="nav-item" href="settings/" data-i18n="options">설정</a>
     <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start">시작하기</button>
     <!-- 로그인은 홈 덮개를 연다. 로그인해 있으면 라벨과 길이 '내 계정' 으로 바뀐다 -->
@@ -679,9 +681,9 @@
 </dialog>
 
 <script src="relay.js?v=3.85"></script>
-<script src="app.js?v=3.93"></script>
-<script src="auth.js?v=3.92"></script>
+<script src="app.js?v=3.96"></script>
+<script src="auth.js?v=3.95"></script>
 <script src="settings/settings.js?v=3.90"></script>
-<script src="ranked.js?v=3.88"></script>
+<script src="ranked.js?v=3.95"></script>
 </body>
 </html>
