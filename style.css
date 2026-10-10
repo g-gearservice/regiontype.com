@@ -339,7 +339,15 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   width:calc(var(--deco-cw) * var(--bw)); height:calc(var(--deco-ch) * var(--bh));
   transition:transform var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease);
 }
-#courseBtns .course-map > svg{display:block; width:100%; height:100%; overflow:visible}
+#courseBtns .course-map > svg{display:block; width:100%; height:100%; overflow:visible;
+  transition:filter var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease)}
+/* 구를 펼치면 서울 지도는 흐려지며 사라지고 동 지도는 흐림에서 또렷해진다. 그 구의 도트(.lift)는
+   그동안 덧그림(.course-morph)이 동 도트 자리로 날라 간다 — 접으면 거꾸로 (app.js flyDots) */
+#courseBtns .course-map.haze > svg{filter:blur(6px); opacity:0}
+#courseBtns .course-map g.lift circle{visibility:hidden}
+#courseBtns .course-morph{position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none; z-index:2}
+#courseBtns .course-morph circle{fill:var(--block); transition:transform var(--cam-dur) var(--cam-ease),fill var(--cam-dur) var(--cam-ease)}
+#courseBtns .course-morph circle.on{fill:var(--accent)}
 #courseBtns .course-map circle{fill:var(--block); pointer-events:none; transition:fill var(--fast)}
 #courseBtns .course-map circle.under{opacity:0}
 /* 누르고 머무는 건 구역 판(.hit)이다 — 도트 사이 틈까지 그 구역이다 */
@@ -355,8 +363,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
   fill:var(--ink); font-weight:700; text-anchor:middle; dominant-baseline:central; pointer-events:none;
   paint-order:stroke; stroke:var(--bg); stroke-width:.24em; stroke-linejoin:round;
 }
-@media (prefers-reduced-motion:reduce){ #courseBtns .course-map{transition:none} }
-:root[data-motion="off"] #courseBtns .course-map{transition:none}
+@media (prefers-reduced-motion:reduce){ #courseBtns .course-map,#courseBtns .course-map > svg{transition:none} }
+:root[data-motion="off"] #courseBtns .course-map,:root[data-motion="off"] #courseBtns .course-map > svg{transition:none}
 /* 로그인·설정 덮개 아래에서는 다른 칸처럼 바탕 비트맵이 된다 — 눌리지 않고 이름도 빠진다 */
 body:is(.signing,.setting,.paging) #courseBtns .course-map circle{fill:var(--land)}
 body:is(.signing,.setting,.paging) #courseBtns .course-map .hit{pointer-events:none}
@@ -1588,6 +1596,8 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #regions .nav-bot .nav-item{padding:14px 18px}
 /* 시작하기 채움은 #navBotShape 가 그린다 — 호버 틴트를 두면 알약이 옮겨도 남는다 */
 #regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
+/* 뒤로는 구를 펼쳤을 때만 선다(app.js paintBack) — .nav-item 의 inline-flex 가 hidden 을 이긴다 */
+#navBack[hidden]{display:none}
 /* 폰에서만 몸을 갖는 조각(햄버거·메뉴·봇 자리). 데스크톱에는 자리를 안 차지한다 */
 .nav-burger,.sheet-bot,.sheet-more,.tab-dock{display:none}
 /* 구역 이름은 아래 막대와 같은 x, 막대가 비운 틈에 앉는다. 높이 = --dock-gap */
@@ -2128,6 +2138,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     -webkit-mask:var(--i) center / 100% no-repeat;mask:var(--i) center / 100% no-repeat;
   }
   .tab-dock #navPlay::before{width:20px;height:20px;margin-left:2px}
+  /* 뒤로 — 미니 막대 왼쪽 끝의 꺾쇠. 시작(막대 전체를 덮는 문) 위에 올라앉는다 */
+  #tabDock .tab-acc #navBack{--i:url(assets/chevron-left.svg?v=3.18);flex:none;width:40px;height:40px;
+    margin-left:-14px;padding:0;gap:0;justify-content:center;font-size:0;z-index:2}
 
   /* 탭 알약 — 칸 폭을 못 박아 두어, 접힐 때 칸이 찌그러지지 않고 알약 밖으로 잘려 나간다 */
   .tab-bar{
