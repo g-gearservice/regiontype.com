@@ -52,14 +52,13 @@ const siteRules = key => [
     test: p => {
       const v = h(p, 'content-security-policy');
       if (!v) return 'Content-Security-Policy 가 없다';
-      const gone = missing(v, "frame-ancestors 'none'", "base-uri 'self'",
+      const gone = missing(v, "frame-ancestors 'self' https://gdotgear.services", "base-uri 'self'",
                               "object-src 'none'", "form-action 'self'");
       return gone.length ? `빠진 지시어: ${gone.join(', ')}` : '';
     } },
   { id: `${key}-frame`, need: `probe:${key}`, sev: 'mid',
-    want: 'X-Frame-Options: DENY',
-    test: p => /^deny$/i.test(h(p, 'x-frame-options')) ? ''
-             : `X-Frame-Options 가 DENY 가 아니다: ${h(p, 'x-frame-options') || '없음'}` },
+    want: 'X-Frame-Options 없음 — 누가 담을 수 있는지는 CSP frame-ancestors 가 정한다',
+    test: p => h(p, 'x-frame-options') ? `X-Frame-Options 가 있다(CSP 허용을 덮어쓴다): ${h(p, 'x-frame-options')}` : '' },
   { id: `${key}-nosniff`, need: `probe:${key}`, sev: 'mid',
     want: 'X-Content-Type-Options: nosniff',
     test: p => /^nosniff$/i.test(h(p, 'x-content-type-options')) ? ''
