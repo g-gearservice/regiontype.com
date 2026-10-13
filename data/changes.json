@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.397",
+    "date": "2026-10-13",
+    "ko": "구를 펼치면 도트가 한 알씩 날아가지 않습니다. 동 지도가 흐림에서 또렷해지고, 서울 지도는 흐려지며 사라집니다. 뒤로 가면 반대로 돌아옵니다.",
+    "en": "Opening a district no longer flies each dot into place. The neighborhood map sharpens out of a blur while the Seoul map blurs away, and Back plays that in reverse."
+  },
+  {
     "v": "0.9.396",
     "date": "2026-10-10",
     "ko": "구를 펼치면 서울 지도에서 그 구를 이루던 도트가 그대로 동 지도의 도트로 옮겨 가고, 나머지 동 도트와 이름은 흐림에서 또렷해집니다. 다른 구와 구 이름은 흐려지며 사라지고, 접으면 거꾸로 돌아갑니다. 펼친 구를 지도 위 큰 원으로 띄우던 것은 없애고, 아래 막대의 '뒤로'로 서울 지도에 돌아갑니다.",

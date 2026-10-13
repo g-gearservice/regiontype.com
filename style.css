@@ -341,13 +341,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 #courseBtns .course-map > svg{display:block; width:100%; height:100%; overflow:visible;
   transition:filter var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease)}
-/* 구를 펼치면 서울 지도는 흐려지며 사라지고 동 지도는 흐림에서 또렷해진다. 그 구의 도트(.lift)는
-   그동안 덧그림(.course-morph)이 동 도트 자리로 날라 간다 — 접으면 거꾸로 (app.js flyDots) */
+/* 구를 펼치면 서울 지도는 흐려지며 사라지고 동 지도는 흐림에서 또렷해진다.
+   도트를 한 알씩 옮기지 않는다 — 지도 한 장의 filter·opacity 만 움직인다 */
 #courseBtns .course-map.haze > svg{filter:blur(6px); opacity:0}
-#courseBtns .course-map g.lift circle{visibility:hidden}
-#courseBtns .course-morph{position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none; z-index:2}
-#courseBtns .course-morph circle{fill:var(--block); transition:transform var(--cam-dur) var(--cam-ease),fill var(--cam-dur) var(--cam-ease)}
-#courseBtns .course-morph circle.on{fill:var(--accent)}
 #courseBtns .course-map circle{fill:var(--block); pointer-events:none; transition:fill var(--fast)}
 #courseBtns .course-map circle.under{opacity:0}
 /* 누르고 머무는 건 구역 판(.hit)이다 — 도트 사이 틈까지 그 구역이다 */
