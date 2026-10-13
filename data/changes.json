@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.397",
+    "date": "2026-10-13",
+    "ko": "게임 안 지도의 지명과 앞뒤 대기 이름이 화면 말을 따릅니다. 홈 칸과 같은 표라서 일본어는 江南区·シンチョン洞, 중국어는 江南区·新村洞, 그 밖은 로마자로 보입니다. 치는 글자는 그대로 한국어입니다.",
+    "en": "Place names on the in-game map, and the previous and next names beside the prompt, now follow the interface language — the same tables as the home tiles (江南区 and シンチョン洞 in Japanese, 江南区 and 新村洞 in Chinese, romanization otherwise). The letters you type stay Korean."
+  },
+  {
     "v": "0.9.396",
     "date": "2026-10-10",
     "ko": "구를 펼치면 서울 지도에서 그 구를 이루던 도트가 그대로 동 지도의 도트로 옮겨 가고, 나머지 동 도트와 이름은 흐림에서 또렷해집니다. 다른 구와 구 이름은 흐려지며 사라지고, 접으면 거꾸로 돌아갑니다. 펼친 구를 지도 위 큰 원으로 띄우던 것은 없애고, 아래 막대의 '뒤로'로 서울 지도에 돌아갑니다.",

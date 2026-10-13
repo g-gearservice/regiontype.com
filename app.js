@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.96';
+const VER = '3.97';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -582,7 +582,8 @@ function kidName(name) {
   return /^.{2,}[시군]$/.test(n) ? n.slice(0, -1) : n;
 }
 /* 칸에 보이는 지명. 화면 말이 한국어가 아니면 krNames() 의 표에서 꺼낸다 —
-   치는 이름은 그대로 한국어다. short 면 밀려난 칸에 쓸 짧은 이름 */
+   홈 칸과 게임 안 지도·앞뒤 대기 이름이 같이 쓴다. 치는 글자는 그대로 한국어다.
+   short 면 밀려난 칸에 쓸 짧은 이름 */
 function placeName(names, parent, name, short = false) {
   const en = LANG !== 'ko' && names && names[`${parent}/${name}`];
   if (!en) return short ? shortAdmin(name) : adminLabel(name);
@@ -1966,7 +1967,7 @@ async function start(slug, only, rk) {
   if (fingers()) { kbMode(opt.softkb); go('play'); if (!opt.softkb) $('#typein').focus(); }
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
-  const [course, geom] = await load(slug);
+  const [[course, geom], [, names]] = await Promise.all([load(slug), krNames()]);
   const zoom = playZoom(geom);
   /* only 가 있으면 고른 곳만 친다. 나머지 도트는 배경으로 남아 어디인지 보인다 */
   const pick = only ? course.items.filter(it => only.has(it.name)) : course.items;
@@ -1980,7 +1981,7 @@ async function start(slug, only, rk) {
     return { ...it, meta: { description: '', ...it.meta },
              aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
   });
-  G = { slug, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
+  G = { slug, names, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
        total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
        cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
   $('#typein').lang = course.lang || document.documentElement.lang;
@@ -1988,6 +1989,9 @@ async function start(slug, only, rk) {
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
   drawDots(svg, geom, items);
+  /* 홈 칸과 같은 표. drawDots 는 치는 이름(adminLabel)을 먼저 넣고, 여기만 화면 말로 바꾼다.
+     이름 자리 재기(coverDots)는 다음 프레임이라 이 글자로 앉는다 */
+  items.forEach(it => { if (it.label) it.label.textContent = shownName(it.name); });
 
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
@@ -2158,7 +2162,7 @@ function say(head, body) {
 function fillSide(el, it, hideName) {
   if (!el) return;
   if (!it || hideName) { el.replaceChildren(); return; }
-  el.innerHTML = `<span class="q-name">${promptName(it)}</span>`;
+  el.innerHTML = `<span class="q-name">${shownName(it.name)}</span>`;
 }
 
 function paintQueue() {
@@ -2247,8 +2251,10 @@ function paintTyped(raw, composing = false) {
 const target = () => G.seq ? G.items[G.idx] : null;
 
 /* 안내에 띄울 이름. 행정명을 한 자로 줄여 붙인다 — 서울시, 제주도.
-   경기도·강남구처럼 이미 짧으면 정식 명칭 그대로다. */
+   경기도·강남구처럼 이미 짧으면 정식 명칭 그대로다. 치는 글자다. */
 const promptName = it => adminLabel(it.name);
+/* 지도와 앞뒤 대기에 보이는 이름. 홈 칸과 같은 표(placeName)다 */
+const shownName = name => placeName(G && G.names, G && G.slug, name);
 
 /* 칠 수 있는 가장 긴 이름의 길이. 안내에 '서울시'가 떠 있어도
    '서울특별시'까지 쳐져야 하므로 별칭 길이도 같이 잰다. */
@@ -3289,6 +3295,13 @@ if (location.search.includes('rt=1')) {
   console.assert(placeName(null, 'kr-admin', '경기도') === '경기도', '표가 없으면 한국어로 떨어진다');
   LANG = 'ko';
   console.assert(placeName(roman, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');
+  const gWas = G;
+  G = { names: { 'gangseo-dong/화곡1동': 'ファゴク1洞' }, slug: 'gangseo-dong' };
+  LANG = 'ja';
+  console.assert(shownName('화곡1동') === 'ファゴク1洞', '게임 안 이름표는 화면 말의 표');
+  LANG = 'ko';
+  console.assert(shownName('화곡1동') === '화곡1동', '한국어 게임 이름표는 한국어');
+  G = gWas;
   LANG = langWas;
   const spr = sp(0, .05); spr.to = 100;
   let peak = 0;
