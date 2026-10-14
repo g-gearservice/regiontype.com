@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.399",
+    "date": "2026-10-14",
+    "ko": "로그인 화면을 열 때 고른 구의 테두리가 남지 않고 투명하게 가라앉습니다. 홈 아래 코스 줄의 '서울'도 화면 말로 보입니다(Seúl, Séoul, 首尔…).",
+    "en": "Opening the sign-in screen no longer leaves a selected district's outline showing — it fades out with the map. The course line under the home map names Seoul in your language too (Seúl, Séoul, 首尔…)."
+  },
+  {
     "v": "0.9.398",
     "date": "2026-10-14",
     "ko": "한국어가 아닌 화면에서는 지명을 그 말로 칩니다. 일본어는 로마자나 가나(밑에 읽기 길잡이), 중국어는 성조 없는 병음, 그 밖은 로마자·키릴 이름을 악센트·붙임표 없이 쳐도 맞습니다. 지명 한 줄 소개가 26개 언어로 보이고, 내 계정·보안·개인정보 화면도 화면 말을 따릅니다. 로그인 화면은 처음 열 때부터 화면 말로 뜨고, 고른 구의 테두리가 글자 위로 비치지 않습니다.",

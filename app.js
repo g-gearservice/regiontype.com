@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.98';
+const VER = '3.99';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -63,7 +63,7 @@ function homeTitle() {
   const pack = WORLD.countries.find(c => c.id === 'KR');
   const region = pack && (pack.regions || []).find(r => r.main === 'seoul-gu' || r.id === 'seoul');
   const title = region && region.title;
-  if (title && typeof title === 'object') return title[LANG] || title.ko || title.en || '서울';
+  if (title && typeof title === 'object') return title[LANG] || title.en || title.ko || '서울';
   return title || '서울';
 }
 
