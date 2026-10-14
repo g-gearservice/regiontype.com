@@ -248,7 +248,8 @@ seoul = {
             'id': 'seoul',
             'root': _tree.get('root', 'seoul-gu'),
             'children': _tree.get('children', {}),
-            'title': {'ko': '서울', 'en': 'Seoul', 'ja': 'ソウル'},
+            # 화면 말마다 그 말의 이름 — 없으면 홈 머리글이 한국어로 떨어진다(app.js homeTitle)
+            'title': {'ko': '서울', 'en': 'Seoul', 'ja': 'ソウル', 'zh': '首尔', 'de': 'Seoul', 'fr': 'Séoul', 'es': 'Seúl', 'pt': 'Seul', 'it': 'Seul', 'nl': 'Seoel', 'pl': 'Seul', 'cs': 'Soul', 'sv': 'Seoul', 'nb': 'Seoul', 'fi': 'Soul', 'uk': 'Сеул', 'ro': 'Seul', 'hu': 'Szöul', 'bg': 'Сеул', 'el': 'Σεούλ', 'tr': 'Seul', 'vi': 'Seoul', 'th': 'โซล', 'id': 'Seoul', 'ms': 'Seoul', 'ar': 'سيول'},
             'description': {
                 'ko': '한강이 가로지르는 수도. 25개 자치구부터 423개 행정동까지.',
                 'en': 'The capital on the Hangang. 25 districts, 423 dongs.',

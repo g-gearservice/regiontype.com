@@ -71,9 +71,9 @@ addEventListener('storage', e => {
 let UI_LANGS = ['ko'];
 let I18N = { ko: {} }, LANG = 'ko';
 let WORLD = { countries: [] };
-/* 없는 키는 빈 값을 낸다 — 부르는 쪽이 HTML 에 적힌 말을 덮지 않게 */
+/* 그 말에 없는 키는 app.js 처럼 영어로 떨어진다. 아무 데도 없으면 빈 값 — 부르는 쪽이 HTML 에 적힌 말을 덮지 않게 */
 const t = (key, vars) => {
-  let s = (I18N[LANG] || {})[key] || (I18N.ko || {})[key] || '';
+  let s = (I18N[LANG] || {})[key] || (I18N.en || {})[key] || (I18N.ko || {})[key] || '';
   if (s && vars) s = String(s).replace(/\{(\w+)\}/g, (_, k) => vars[k]);
   return s;
 };
@@ -438,14 +438,14 @@ async function account() {
   $('#secIn').hidden = !inn;
   $('#secOut').hidden = inn;
   [$('#acctKey'), $('#acctCodesNew'), $('#acctOut'), $('#privForget')].forEach(b => { b.disabled = !inn; });
-  $('#securityState').textContent = inn ? '확인 중' : '로그인 필요';
+  $('#securityState').textContent = t(inn ? 'secChecking' : 'secStateOut');
   const platform = navigator.userAgentData?.platform || navigator.platform || '';
-  const device = /Mac/i.test(platform) ? 'Mac' : /Win/i.test(platform) ? 'Windows PC' : /Linux/i.test(platform) ? 'Linux' : '현재 기기';
-  $('#securityDevice').textContent = inn ? device + ' · 이 브라우저' : '로그인이 필요합니다';
+  const device = /Mac/i.test(platform) ? 'Mac' : /Win/i.test(platform) ? 'Windows PC' : /Linux/i.test(platform) ? 'Linux' : t('secDeviceAny');
+  $('#securityDevice').textContent = inn ? t('secDeviceHere', { device }) : t('secDeviceOut');
   $('#securityKeys').textContent = '';
-  $('#securityTwo').textContent = inn ? '확인 중' : '로그인 필요';
+  $('#securityTwo').textContent = t(inn ? 'secChecking' : 'secStateOut');
   $('#securityTwoSwitch').setAttribute('aria-pressed', 'false');
-  $('#securityTwoText').textContent = '패스키 등록 상태를 확인합니다.';
+  $('#securityTwoText').textContent = t('secTwoChecking');
   $('#acctWarn').hidden = $('#acctCodes').hidden = true;
   paintBrowsers([]);
   if (!inn) return;
@@ -454,17 +454,17 @@ async function account() {
   /* 못 읽었으면 숫자를 지어내지 않는다 — 줄을 숨긴다. 토큰이 죽었으면 로그인부터다 */
   if (!a) {
     if (!token()) return account();
-    $('#securityState').textContent = '확인할 수 없음';
-    $('#securityTwo').textContent = '확인 불가';
-    $('#securityTwoText').textContent = '보안 상태 진단을 눌러 다시 확인해 주세요.';
+    $('#securityState').textContent = t('secStateUnknown');
+    $('#securityTwo').textContent = t('secTwoUnknown');
+    $('#securityTwoText').textContent = t('secTwoRetry');
     $('#acctWarn').hidden = $('#acctCodes').hidden = true;
     return;
   }
-  $('#securityState').textContent = a.keys > 0 ? '패스키 보호 중' : '추가 보호 필요';
-  $('#securityKeys').textContent = '등록된 패스키 ' + a.keys + '개';
-  $('#securityTwo').textContent = a.keys > 0 ? '사용 중' : '꺼짐';
+  $('#securityState').textContent = t(a.keys > 0 ? 'secStateKey' : 'secStateWeak');
+  $('#securityKeys').textContent = t('secKeys', { n: a.keys });
+  $('#securityTwo').textContent = t(a.keys > 0 ? 'secTwoOn' : 'secTwoOff');
   $('#securityTwoSwitch').setAttribute('aria-pressed', String(a.keys > 0));
-  $('#securityTwoText').textContent = a.keys > 0 ? '패스키로 로그인 시 한 번 더 확인합니다.' : '패스키를 추가하면 2단계 인증이 켜집니다.';
+  $('#securityTwoText').textContent = t(a.keys > 0 ? 'secTwoOnHow' : 'secTwoOffHow');
   paintBrowsers(a.browsers);
   $('#acctWarn').hidden = a.keys !== 1;
   $('#acctCodes').hidden = !a.codes;
@@ -761,7 +761,13 @@ function softApply() {
   if (isSetHash()) open(location.hash.slice(1));
   if (ui) {
     softApply();
-    grab('data/i18n.json').then(all => { I18N = all; UI_LANGS = Object.keys(all); }).catch(() => {});
+    /* 지난번에 적어 둔 말 팩은 새로 생긴 키가 없을 수 있다 — 전체 팩이 오면 다시 입힌다.
+       보안 탭의 상태 줄은 account() 가 t() 로 채우므로 그것도 다시 돈다 */
+    grab('data/i18n.json').then(all => {
+      I18N = all; UI_LANGS = Object.keys(all);
+      applyI18n(over());
+      if (!$('#optsSecurity').hidden) account();
+    }).catch(() => {});
     if (isDev()) grab('data/world.json').then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
   }
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });

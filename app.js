@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.96';
+const VER = '4.02';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -63,7 +63,7 @@ function homeTitle() {
   const pack = WORLD.countries.find(c => c.id === 'KR');
   const region = pack && (pack.regions || []).find(r => r.main === 'seoul-gu' || r.id === 'seoul');
   const title = region && region.title;
-  if (title && typeof title === 'object') return title[LANG] || title.ko || title.en || '서울';
+  if (title && typeof title === 'object') return title[LANG] || title.en || title.ko || '서울';
   return title || '서울';
 }
 
@@ -306,6 +306,174 @@ function matchInput(raw, items, spacy = false) {
   }
   return null;
 }
+/* ── 화면 말로 치기 ─────────────────────────────────────
+   화면 말이 한국어가 아니면 칸에 보이는 그 말의 이름을 그 말로 친다(ムアク洞, 江西区,
+   Mueak-dong, Муак-дон). 말마다 '열쇠'로 접어 견준다 — 보이는 이름, IME 조합 중 글자,
+   확정된 글자, 직접 친 로마자·병음이 같은 열쇠가 된다.
+     ja  히라가나. 한자 마디(江西·区·洞·街)는 kr-read.ja 의 읽기, 가타카나는 히라가나로.
+         로마자는 목표 가나를 따라가며 갈래를 고른다(si·shi, tu·tsu, nn·n', 겹자음 っ) —
+         일본 타자 게임(寿司打·e-typing)이 IME 를 끄고 로마자를 받는 것과 같다
+     zh  성조 없는 병음 글자. 한자는 kr-read.zh 의 읽기, ü 는 v
+     그 밖  foldKey 에 NFD 로 안 풀리는 글자 표(FOLD)를 더 접는다 — Monkeytype lazy mode 처럼
+         악센트 없이 쳐도 맞는다
+   띄어쓰기·붙임표는 열쇠에서 지운다 — 'Gangseo-gu' 를 gangseogu 로 쳐도 맞는다.
+   타수는 열쇠로 센다: ja 는 가장 짧은 로마자, zh 는 병음 글자, 그 밖은 접은 글자 수 */
+const FOLD = { ß: 'ss', ẞ: 'ss', æ: 'ae', Æ: 'ae', œ: 'oe', Œ: 'oe', ø: 'o', Ø: 'o', ł: 'l', Ł: 'l',
+               đ: 'd', Đ: 'd', ð: 'd', Ð: 'd', ı: 'i', ĳ: 'ij', Ĳ: 'ij', þ: 'th', Þ: 'th' };
+const latinKey = s => foldKey(String(s).normalize('NFKC')).replace(/[ßẞæÆœŒøØłŁđĐðÐıĳĲþÞ]/g, c => FOLD[c])
+  .toLowerCase().replace(/[\s,·]/g, '');
+const kata2hira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+/* 가나 → 로마자 갈래. 첫 것이 가장 짧은 것(타수에 쓴다). 두 글자 마디(きゃ·てぃ)가 먼저 견줘진다 */
+const ROMA = (() => {
+  const t = {};
+  const row = (kana, roma) => [...kana].forEach((k, i) => { if (roma[i]) t[k] = roma[i].split('|'); });
+  row('あいうえお', ['a', 'i', 'u|wu|whu', 'e', 'o']);
+  row('かきくけこ', ['ka|ca', 'ki', 'ku|cu|qu', 'ke', 'ko|co']);
+  row('さしすせそ', ['sa', 'si|shi|ci', 'su', 'se|ce', 'so']);
+  row('たちつてと', ['ta', 'ti|chi', 'tu|tsu', 'te', 'to']);
+  row('なにぬねの', ['na', 'ni', 'nu', 'ne', 'no']);
+  row('はひふへほ', ['ha', 'hi', 'hu|fu', 'he', 'ho']);
+  row('まみむめも', ['ma', 'mi', 'mu', 'me', 'mo']);
+  row('やゆよ', ['ya', 'yu', 'yo']);
+  row('らりるれろ', ['ra', 'ri', 'ru', 're', 'ro']);
+  row('わをゔ', ['wa', 'wo', 'vu']);
+  row('がぎぐげご', ['ga', 'gi', 'gu', 'ge', 'go']);
+  row('ざじずぜぞ', ['za', 'zi|ji', 'zu', 'ze', 'zo']);
+  row('だぢづでど', ['da', 'di', 'du', 'de', 'do']);
+  row('ばびぶべぼ', ['ba', 'bi', 'bu', 'be', 'bo']);
+  row('ぱぴぷぺぽ', ['pa', 'pi', 'pu', 'pe', 'po']);
+  row('ぁぃぅぇぉゃゅょっ', ['xa|la', 'xi|li', 'xu|lu', 'xe|le', 'xo|lo', 'xya|lya', 'xyu|lyu', 'xyo|lyo', 'xtu|ltu|xtsu']);
+  t['ん'] = ['nn', "n'", 'xn'];
+  t['ー'] = ['-'];
+  /* 요음: 자음 줄 + ゃゅょ(ぇ). し·ち·じ 는 sh·ch·j 갈래도 */
+  const yo = { き: 'k', ぎ: 'g', し: 's|sh', じ: 'z|j|jy', ち: 't|ch|cy', に: 'n', ひ: 'h', び: 'b', ぴ: 'p', み: 'm', り: 'r' };
+  for (const [k, c] of Object.entries(yo)) {
+    const heads = c.split('|');
+    for (const [s, v] of [['ゃ', 'a'], ['ゅ', 'u'], ['ょ', 'o'], ['ぇ', 'e']])
+      t[k + s] = heads.map(h => (/(sh|ch|j)$/.test(h) ? h : h + 'y') + v);
+  }
+  Object.assign(t, { いぇ: ['ye'], うぃ: ['wi', 'whi'], うぇ: ['we', 'whe'], うぉ: ['who'], ふぁ: ['fa'], ふぃ: ['fi'],
+                     ふぇ: ['fe'], ふぉ: ['fo'], てぃ: ['thi'], でぃ: ['dhi'], とぅ: ['twu'], どぅ: ['dwu'],
+                     てゃ: ['tha'], てゅ: ['thu'], てょ: ['tho'], でゃ: ['dha'], でゅ: ['dhu'], でょ: ['dho'] });
+  return t;
+})();
+/* 히라가나 목표 T 의 p 자리부터 로마자·가나가 섞인 입력 s 의 i 자리부터를 따라간다.
+   돌려주는 것: { p: 맞게 따라간 목표 가나 수, part: 끝이 로마자 한 마디를 치다 만 것인가,
+   bad: 따라가지 못한 것이 남았나 }. 갈래가 여럿이면 가장 멀리 간 것을 고른다 */
+function kanaWalk(s, T, i = 0, p = 0) {
+  if (i >= s.length) return { p, part: false, bad: false };
+  const ch = s[i];
+  let best = { p, part: false, bad: true };
+  const take = r => { if (!r) return; if (!r.bad && (best.bad || r.p >= best.p)) best = r;
+                      else if (best.bad && r.p > best.p) best = r; };
+  if (!/[a-z']/.test(ch)) return T[p] === ch ? kanaWalk(s, T, i + 1, p + 1) : best;
+  for (const len of [2, 1]) {
+    const unit = T.slice(p, p + len);
+    for (const o of (unit.length === len && ROMA[unit]) || []) {
+      if (s.startsWith(o, i)) take(kanaWalk(s, T, i + o.length, p + len));
+      else if (o.startsWith(s.slice(i))) take({ p, part: true, bad: false });
+    }
+  }
+  /* 겹자음은 っ 하나다(kka → っか). ん 은 뒤가 모음·y·n 이 아니면 n 하나로 된다 */
+  if (T[p] === 'っ' && /[bcdfghjkmprstvwz]/.test(ch) && s[i + 1] === ch) take(kanaWalk(s, T, i + 1, p + 1));
+  if (T[p] === 'ん' && ch === 'n') {
+    if (i + 1 === s.length) take({ p, part: true, bad: false });
+    else if (!/[aiueoyn']/.test(s[i + 1])) take(kanaWalk(s, T, i + 1, p + 1));
+  }
+  return best;
+}
+/* 읽기 길잡이 로마자 — 헵번식(shi·chi·tsu·fu·ji)으로 보인다. 치는 건 어느 갈래든 맞는다.
+   short 면 가장 짧은 갈래(si·ti·tu)로 — 타수는 이것으로 센다(romaKeys) */
+function romaGuide(T, short = false) {
+  const pick = o => short ? o.reduce((a, b) => b.length < a.length ? b : a) : o.find(x => /^(shi|chi|tsu|fu|ji|sh|ch|j)/.test(x)) || o[0];
+  const out = [];
+  for (let p = 0; p < T.length;) {
+    const two = T.length - p > 1 && ROMA[T.slice(p, p + 2)];
+    const unit = two ? T.slice(p, p + 2) : T[p];
+    let r = two ? pick(two) : T[p] === 'ん' ? (/^[あいうえおやゆよ]/.test(T[p + 1] || '') || p + 1 === T.length ? 'nn' : 'n')
+      : T[p] === 'っ' ? '' : ROMA[T[p]] ? pick(ROMA[T[p]]) : T[p];
+    out.push([r, unit.length]);
+    p += unit.length;
+  }
+  /* っ 은 뒤 마디의 첫 자음을 겹친다 */
+  out.forEach((g, i) => { if (!g[0] && out[i + 1]) g[0] = out[i + 1][0][0]; });
+  return out;
+}
+const romaKeys = T => romaGuide(T, true).reduce((n, g) => n + g[0].length, 0);
+/* 제 말 자판 그대로 쳐도 로마자 이름이 맞게 — 키 자리를 영문으로 읽는다(그리스·아랍·태국 자판).
+   목표는 로마자라 이 글자들이 목표 쪽에 나올 일은 없다 */
+const LAYOUT = Object.fromEntries(Object.entries({
+  el: ';q ςw εe ρr τt υy θu ιi οo πp αa σs δd φf γg ηh ξj κk λl ζz χx ψc ωv βb νn μm',
+  ar: 'ضq صw ثe قr فt غy عu هi خo حp شa سs يd بf لg اh تj نk مl ئz ءx ؤc رv ىn ةm',
+  th: 'ๆq ไw ำe พr ะt ัy ีu รi นo ยp ฟa หs กd ดf เg ้h ่j าk สl ผz ปx แc อv ิb ืn ทm',
+}).map(([l, s]) => [l, new Map(s.split(' ').map(p => [...p]))]));
+/* 키릴 이름은 헷갈리기 쉬운 짝을 한 글자로 접는다 — 목표와 입력 양쪽을 같이 접는다.
+   й·ё·ї·ѝ 는 foldKey(NFD)가 이미 и·е·і·и 로 접는다 */
+const CYR_FOLD = new Map([['ґ', 'г'], ['ы', 'и'], ['э', 'е'], ['і', 'и'], ['є', 'е'], ['\u02bc', '']]);
+const CYR = { uk: CYR_FOLD, bg: CYR_FOLD };
+/* 화면 말 프로필. read 는 kr-read.<말>.json — { 키: [[보이는 글자, 읽기], …] } */
+function tongueFor(lang, read) {
+  const subs = Object.values(read || {}).flat().filter(([d, r]) => d !== r && /[^぀-ヿ0-9,]/.test(d));
+  const reading = new Map(subs.map(([d, r]) => [d, r]));
+  const heads = [...reading.keys()].sort((a, b) => b.length - a.length);
+  const swap = s => heads.reduce((t, d) => t.split(d).join(reading.get(d)), s);
+  if (lang === 'ja') {
+    const key = s => kata2hira(swap(String(s).normalize('NFKC'))).toLowerCase().replace(/[\s,·・]/g, '');
+    return { lang, ime: true, key, keys: k => romaKeys(k),
+             walk: (raw, k) => kanaWalk(key(raw), k), split: s => splitBy(s, d => key(d)) };
+  }
+  const lay = LAYOUT[lang], fold = CYR[lang];
+  const key = lang === 'zh'
+    ? s => latinKey(swap(String(s).normalize('NFKC').replace(/[üǖǘǚǜ]/gi, 'v'))).replace(/'/g, '')
+    : s => {
+      let t = String(s);
+      /* 자판 자리 읽기는 NFKC 앞에서 — NFKC 는 태국어 ำ 를 ํ+า 둘로 쪼갠다 */
+      if (lay) t = t.replace(/لا/g, 'b').replace(/./g, c => lay.get(c) || c);
+      t = t.normalize('NFKC');
+      if (lang === 'tr') t = t.replace(/[Iİ]/g, 'i');
+      t = latinKey(t);
+      return fold ? t.replace(/./g, c => fold.get(c) ?? c) : t;
+    };
+  return { lang, ime: lang === 'zh', key, keys: k => k.length,
+           walk: (raw, k) => { const t = key(raw); let p = 0;
+                               while (p < t.length && t[p] === k[p]) p++;
+                               return { p, part: false, bad: p < t.length }; },
+           split: s => splitBy(s, d => key(d)) };
+}
+/* 보이는 이름을 [글자, 그 글자의 열쇠] 로 — 열쇠의 몇째 자까지 쳤는지로 몇 글자를 채울지 고른다.
+   한자 덩어리(江西)는 통째로 한 마디라 다 쳐야 함께 찬다 */
+function splitBy(s, key) {
+  const ch = [...String(s).normalize('NFC')], out = [], han = /[\u4e00-\u9fff]/;
+  for (let i = 0; i < ch.length;) {
+    /* 한 글자로는 읽기가 안 나오는 한자(江 혼자는 표에 없고 江西 가 있다)는 읽기가 나올 때까지 늘린다 */
+    let j = i + 1;
+    if (han.test(ch[i])) while (j < ch.length && j - i < 6 && han.test(key(ch.slice(i, j).join('')))) j++;
+    if (han.test(key(ch.slice(i, j).join('')))) j = i + 1;   // 끝내 안 나오면 한 글자씩
+    const d = ch.slice(i, j).join('');
+    out.push([d, key(d)]);
+    i = j;
+  }
+  return out;
+}
+/* 라틴 문자 이름은 치는 꼴로 보인다 — 소문자, 붙임표·띄어쓰기 없이(Gangseo-gu → gangseogu).
+   판정은 원래 둘 다 접으니 보이는 것만 손가락이 칠 그대로다. 지도 이름표는 지명 그대로 둔다 */
+const typeForm = s => /^[\p{Script=Latin}\d\s'’.,·\-\u2010-\u2015]+$/u.test(s) ? s.toLowerCase().replace(/[\s\-\u2010-\u2015]/g, '') : s;
+let TONGUE = null;   // 한국어 화면이면 null — 치는 것이 it.name 이다
+const sayOf = it => it.say || it.name;     // 칠 이름
+const altsOf = it => it.alts || it.aliases;
+/* 화면 말 판정. 이름을 다 치면 맞고, 줄인 이름(江南·Gangseo)은 그 말로 이어질 미점령 칸이
+   자기뿐일 때만 맞는다 — matchInput 과 같은 규칙. 앞에 붙은 오타는 접미로 흘려보낸다 */
+function matchTongue(raw, items, done = false) {
+  const open = items.filter(it => !it.claimed);
+  const full = (it, form) => { const r = TONGUE.walk(raw, TONGUE.key(form));
+    return !r.bad && (r.p === TONGUE.key(form).length || (done && r.part && /ん$/.test(TONGUE.key(form)) && r.p === TONGUE.key(form).length - 1)); };
+  const exact = open.find(it => full(it, sayOf(it)));
+  if (exact) return exact;
+  if (!done) return null;
+  return open.find(it => altsOf(it).some(a => full(it, a)) &&
+    open.every(x => x === it || (!TONGUE.key(sayOf(x)).startsWith(TONGUE.key(raw)) && !altsOf(x).some(a => full(x, a))))) || null;
+}
+
 /* ── 사운드 (WebAudio 삑 소리, 소재 확보 전 임시) ────── */
 let ac;
 function beep(freq, dur = .07, type = 'sine') {
@@ -486,6 +654,15 @@ async function krNames() {
   const own = await (LOCAL_NAMES[LANG] ??= grab(`data/kr-names.${LANG}.json`).catch(() => ({})));
   return [tree, { ...roman, ...own }];
 }
+/* 한 줄 소개의 번역. 원문은 코스의 meta.description(한국어)이고, 화면 말이 한국어가
+   아니면 data/kr-intro.<말>.json 에서 '코스/이름' 으로 꺼낸다. 없는 칸은 원문이다 */
+const INTROS = {};
+const intros = () => LANG === 'ko' ? Promise.resolve({})
+  : (INTROS[LANG] ??= grab(`data/kr-intro.${LANG}.json`).catch(() => ({})));
+/* 화면 말로 칠 때의 읽기 마디(tools/build_kr_read.py). 글자와 치는 것이 다른 말만 있다 */
+const READS = {};
+const reads = () => ['ja', 'zh'].includes(LANG)
+  ? (READS[LANG] ??= grab(`data/kr-read.${LANG}.json`).catch(() => ({}))) : Promise.resolve(null);
 const loadCourse = slug => grab(`data/${slug}.course.json`);
 const loadGeom = slug => grab(`data/${slug}.geom.json`);
 /* 서울 지도는 첫 화면이다 — boot 의 다른 짐을 기다리지 않고 곧장 받는다 */
@@ -582,7 +759,8 @@ function kidName(name) {
   return /^.{2,}[시군]$/.test(n) ? n.slice(0, -1) : n;
 }
 /* 칸에 보이는 지명. 화면 말이 한국어가 아니면 krNames() 의 표에서 꺼낸다 —
-   치는 이름은 그대로 한국어다. short 면 밀려난 칸에 쓸 짧은 이름 */
+   홈 칸과 게임 안 지도·앞뒤 대기 이름이 같이 쓴다. 치는 글자는 그대로 한국어다.
+   short 면 밀려난 칸에 쓸 짧은 이름 */
 function placeName(names, parent, name, short = false) {
   const en = LANG !== 'ko' && names && names[`${parent}/${name}`];
   if (!en) return short ? shortAdmin(name) : adminLabel(name);
@@ -1966,7 +2144,7 @@ async function start(slug, only, rk) {
   if (fingers()) { kbMode(opt.softkb); go('play'); if (!opt.softkb) $('#typein').focus(); }
   const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
-  const [course, geom] = await load(slug);
+  const [[course, geom], [, names], intro, read] = await Promise.all([load(slug), krNames(), intros(), reads()]);
   const zoom = playZoom(geom);
   /* only 가 있으면 고른 곳만 친다. 나머지 도트는 배경으로 남아 어디인지 보인다 */
   const pick = only ? course.items.filter(it => only.has(it.name)) : course.items;
@@ -1980,14 +2158,26 @@ async function start(slug, only, rk) {
     return { ...it, meta: { description: '', ...it.meta },
              aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
   });
-  G = { slug, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
+  /* 한국어가 아닌 화면 말이면 칸에 보이는 그 말의 이름을 친다. 표에 없는 칸(나라 코스·
+     한자가 없는 동)은 제 이름과 제 별칭 그대로다 */
+  TONGUE = LANG === 'ko' ? null : tongueFor(LANG, read);
+  if (TONGUE) items.forEach(it => {
+    if (!names || !names[`${slug}/${it.name}`]) return;
+    it.say = typeForm(placeName(names, slug, it.name));
+    const short = typeForm(placeName(names, slug, it.name, true));
+    it.alts = short !== it.say ? [short] : [];
+  });
+  G = { slug, names, intro, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
        total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
-       cell: geom.cell, spacy: items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
-  $('#typein').lang = course.lang || document.documentElement.lang;
+       cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
+  $('#typein').lang = TONGUE ? LANG : course.lang || document.documentElement.lang;
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
   drawDots(svg, geom, items);
+  /* 홈 칸과 같은 표. drawDots 는 치는 이름(adminLabel)을 먼저 넣고, 여기만 화면 말로 바꾼다.
+     이름 자리 재기(coverDots)는 다음 프레임이라 이 글자로 앉는다 */
+  items.forEach(it => { if (it.label) it.label.textContent = shownName(it.name); });
 
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
@@ -2147,9 +2337,11 @@ function link(svg, geom, items, cells) {
 
 /* 지도 아래 정보 줄. 윗줄과 아랫줄을 따로 갱신한다 —
    '보임'에서는 윗줄이 지금 칠 곳, 아랫줄이 직전에 맞힌 곳의 설명이 된다. */
-function say(head, body) {
+function say(head, body, tip = '') {
   const f = $('#fact');
-  if (!f.firstElementChild) f.innerHTML = '<span></span>';
+  /* 문서는 ltr 이라 아랍어 소개의 마침표가 앞으로 튄다 — 글마다 방향을 스스로 잡게 한다 */
+  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span>';
+  f.querySelector('.tip').textContent = tip;
   if (body !== undefined) f.querySelector('span').textContent = body;
   if (head !== undefined) setTarget(head);
   f.classList.add('on');
@@ -2158,7 +2350,10 @@ function say(head, body) {
 function fillSide(el, it, hideName) {
   if (!el) return;
   if (!it || hideName) { el.replaceChildren(); return; }
-  el.innerHTML = `<span class="q-name">${promptName(it)}</span>`;
+  const span = document.createElement('span');
+  span.className = 'q-name';
+  span.textContent = TONGUE ? sayOf(it) : shownName(it.name);   // 치는 줄은 치는 꼴 그대로(gangseogu)
+  el.replaceChildren(span);
 }
 
 function paintQueue() {
@@ -2176,6 +2371,7 @@ function setTarget(name) {
   box.replaceChildren();
   box.style.setProperty('--n', [...name].length);   // 손가락 화면에서 긴 이름을 폭에 맞춰 줄인다
   G.want = name;
+  G.parts = TONGUE ? TONGUE.split(name) : null;
   for (const ch of name) {
     const el = document.createElement('b');
     el.textContent = ch;
@@ -2193,6 +2389,7 @@ function setTarget(name) {
 function paintTyped(raw, composing = false) {
   const box = $('#qLetters') || $('#typing');
   if (!G.want) return;
+  if (TONGUE) return paintTongue(box, raw);
   const buf = (G.spacy ? raw.replace(/^\s+/, '') : raw.replace(/\s/g, ''));
   // 앞에 붙은 찌꺼기를 흘려보낸다. 스페이스로 확정할 때 IME 가 조합을 끝내며
   // 비운 입력창에 글자를 도로 넣는 일이 있어, 앞에서부터만 비교하면 그 뒤로
@@ -2240,19 +2437,85 @@ function paintTyped(raw, composing = false) {
     el.classList.toggle('cur-r', (!!typed && last) || (!rest.length && n >= need && i === need - 1));
   });
   $('#typing').classList.toggle('bad', bad);
+  placeCaret();
 }
+
+/* 커서 한 개를 cur-l(그 글자 앞) 또는 cur-r(그 글자 뒤) 자리로 미끄러뜨린다. 칠 때마다 깜빡임을 끊고,
+   0.5초 손을 놓으면 다시 깜빡인다 — Monkeytype 의 smooth caret 과 같은 결 */
+let caretIdle = 0;
+function placeCaret() {
+  const host = $('#typing'), box = $('#qLetters');
+  if (!host || !box) return;
+  let c = host.querySelector(':scope > .caret');
+  if (!c) { c = document.createElement('i'); c.className = 'caret'; c.setAttribute('aria-hidden', 'true'); host.append(c); }
+  const at = box.querySelector('.cur-l') || box.querySelector('.cur-r');
+  c.hidden = !at;
+  if (!at) return;
+  const h = host.getBoundingClientRect(), r = at.getBoundingClientRect(), gap = 1;
+  const x = (at.classList.contains('cur-l') ? r.left - gap : r.right + gap) - h.left - 1.5;
+  c.style.height = r.height * .78 + 'px';
+  c.style.transform = `translate(${x.toFixed(1)}px, ${(r.top - h.top + r.height * .12).toFixed(1)}px)`;
+  c.classList.remove('idle');
+  clearTimeout(caretIdle);
+  caretIdle = setTimeout(() => c.classList.add('idle'), 500);
+}
+addEventListener('resize', () => { if (G && G.want) placeCaret(); });
 
 
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
 const target = () => G.seq ? G.items[G.idx] : null;
 
+/* 화면 말로 칠 때의 색칠. 친 것을 열쇠로 접어 목표 열쇠의 몇째 자까지 따라왔는지 보고,
+   마디(江西·ムアク·g) 단위로 보이는 글자를 채운다. 치다 만 로마자·병음은 다음 글자에
+   'ing' 로 선다. 따라가지 못한 것이 남으면 오타다 */
+function paintTongue(box, raw) {
+  const want = [...G.want], T = TONGUE.key(G.want), r = TONGUE.walk(raw, T);
+  let at = 0, done = 0, ing = -1;
+  for (const [d, k] of G.parts) {
+    const n = [...d].length;
+    if (at + k.length <= r.p) { at += k.length; done += n; continue; }
+    if (r.p > at || r.part) ing = done;
+    break;
+  }
+  /* 틀리면 Monkeytype 처럼 그 자리 글자가 빨개진다. 이름을 다 친 뒤 더 친 것은 짙은 빨강으로 뒤에 붙는다 */
+  const bad = !!raw.trim() && r.bad, extra = bad && done >= want.length ? TONGUE.key(raw).slice(T.length) || ' ' : '';
+  const n = want.length + (extra ? 1 : 0);
+  while (box.children.length < n) box.append(document.createElement('b'));
+  while (box.children.length > n) box.lastChild.remove();
+  [...box.children].forEach((el, i) => {
+    el.textContent = i < want.length ? want[i] : extra;
+    el.classList.toggle('on', i < done);
+    el.classList.toggle('ing', i === ing && !bad);
+    el.classList.toggle('err', bad && i === done && i < want.length);
+    el.classList.toggle('over', i >= want.length);
+    el.classList.toggle('cur-l', i === done + (bad ? 1 : 0));
+    el.classList.toggle('cur-r', i === n - 1 && done + (bad ? 1 : 0) >= n);
+  });
+  $('#typing').classList.toggle('bad', bad);
+  placeCaret();
+  return r;
+}
+
 /* 안내에 띄울 이름. 행정명을 한 자로 줄여 붙인다 — 서울시, 제주도.
-   경기도·강남구처럼 이미 짧으면 정식 명칭 그대로다. */
-const promptName = it => adminLabel(it.name);
+   경기도·강남구처럼 이미 짧으면 정식 명칭 그대로다. 치는 글자다. */
+const promptName = it => TONGUE ? sayOf(it) : adminLabel(it.name);
+/* 지도와 앞뒤 대기에 보이는 이름. 홈 칸과 같은 표(placeName)다 */
+const shownName = name => placeName(G && G.names, G && G.slug, name);
+/* 치는 이름 밑의 읽기 길잡이 — 일본어는 로마자, 중국어는 병음. 일본·중국 타자 게임이
+   이름 밑에 읽기를 다는 것과 같다. 힌트를 끄면 숨긴다. 그 밖의 말은 이름이 곧 치는 글자다 */
+const tipOf = it => {
+  const name = sayOf(it);
+  /* 베트남어 Telex·VNI 는 s·f·r·x·j·w 를 성조·모음 키로 먹어 로마자 이름을 망친다 — 첫 칸에서 끄라고 한다 */
+  if (TONGUE && TONGUE.lang === 'vi' && opt.hint && !G.hits) return t('tipTelex');
+  if (!TONGUE || !opt.hint || !/[\u3040-\u30ff\u4e00-\u9fff]/.test(name)) return '';
+  if (TONGUE.lang === 'ja') return romaGuide(TONGUE.key(name)).map(g => g[0]).join('');
+  return TONGUE.lang === 'zh' ? TONGUE.split(name).map(([, k]) => k).join(' ') : '';
+};
+const introOf = it => (G.intro && G.intro[`${G.slug}/${it.name}`]) || it.meta.description;
 
 /* 칠 수 있는 가장 긴 이름의 길이. 안내에 '서울시'가 떠 있어도
    '서울특별시'까지 쳐져야 하므로 별칭 길이도 같이 잰다. */
-const typeCap = it => it
+const typeCap = it => it && !TONGUE
   ? Math.max(it.name.length, ...(it.aliases || []).map(a => a.length))
   : 0;
 
@@ -2312,7 +2575,7 @@ function aim() {
   const t = target();
   G.items.forEach(i => i.el.classList.toggle('target', i === t));
   // 이름과 설명은 언제나 같은 곳을 가리켜야 한다. 치는 동안 그곳을 읽게 된다
-  if (t) say(promptName(t), t.meta.description);
+  if (t) say(promptName(t), introOf(t), tipOf(t));
   paintQueue();
   $('#fact').classList.toggle('aim', !!t);
   G.items.forEach(i => {
@@ -2495,7 +2758,43 @@ const tintBar = () => { $('meta[name="theme-color"]').content = getComputedStyle
 new MutationObserver(tintBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-night'] });
 tintBar();
 
-function judge(raw) {
+/* 화면 말로 칠 때의 입력 한 번. 이름을 다 치면 확정 키 없이 바로 맞는다 — 일본·중국 타자
+   게임처럼 읽기를 끝까지 치면 넘어간다. IME 조합 중이어도 맞으면 조합을 끊고 비운다
+   (조합 중 value 만 비우면 IME 가 제 버퍼를 도로 넣는다 — 위의 글자 수 자르기와 같은 손).
+   스페이스는 조합을 바꾸는 키(일본어 변환)일 수 있어 조합 중에는 보지 않는다. 조합 밖의
+   스페이스는 줄인 이름(江南·Gangseo)을 확정하거나, 틀린 입력을 털어 낸다 */
+function tongueInput(inp, val, composing) {
+  const r = paintTyped(val, composing);
+  G.part = G.seq && r && !r.bad ? TONGUE.keys(TONGUE.key(G.want).slice(0, r.p)) : 0;
+  const len = TONGUE.key(val).length;
+  if (len > G.typed) G[G.part || !len ? 'ok' : 'bad'] += len - G.typed;
+  G.typed = len;
+  $('#statSpeed').textContent = speedIn(cpmNow());
+  const hit = matchTongue(val, G.seq ? [target()] : G.items);
+  const commit = !hit && !composing && /\s/.test(val) && (r && r.bad || matchTongue(val, G.items, true));
+  if (!hit && !commit) return;
+  const had = document.activeElement === inp;
+  if (composing && had) inp.blur();
+  inp.value = '';
+  if (composing && had) inp.focus();
+  judge(val, !!hit);
+}
+/* 맞힌 칸의 타수 — 다 맞게 따라간 꼴(이름 또는 줄인 이름)의 가장 짧은 정석 키 수 */
+function tongueKeys(it, raw) {
+  const forms = [sayOf(it), ...altsOf(it)].map(f => TONGUE.key(f));
+  const k = forms.find(f => { const r = TONGUE.walk(raw, f); return !r.bad && r.p === f.length; }) || forms[0];
+  return TONGUE.keys(k);
+}
+function judge(raw, auto = false) {
+  if (TONGUE) {
+    if (!raw.trim()) return;
+    const hit = auto ? matchTongue(raw, G.items) : matchTongue(raw, G.items, true);
+    G.part = 0; G.typed = 0;
+    if (!hit || (G.seq && hit !== target())) { G.bad++; return miss(); }
+    G.ok++;
+    G.chars += tongueKeys(hit, raw) + (auto ? 0 : 1);   // 확정 키를 눌렀으면 그것도 한 타
+    return claim(hit);
+  }
   const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');
   if (!answer) return;
   const hit = matchInput(answer, G.items, G.spacy);
@@ -2527,6 +2826,7 @@ $('#typein').addEventListener('input', e => {
     inp.value = val;
     if (had) inp.focus();
   }
+  if (TONGUE) return tongueInput(inp, val, composing);
   paintTyped(val, composing);
   G.part = partKeys(val, G.seq ? [target()] : G.items.filter(it => !it.claimed), G.spacy);
   /* 정확도도 키 단위다(Monkeytype getAccuracy) — 새로 들어온 키가 맞는 앞부분을 이으면
@@ -2569,7 +2869,7 @@ const KB_FLICK = 18;   // 이만큼(px) 위로 밀고 떼면 윗글자(ㄲ·ㅒ�
 /* 이 코스를 칠 자판 — { lay: 'ko'|'en', sym: '12,' } 또는 null(기기 키보드). 항목마다 이름이나
    별칭 하나는 자판 글자·공백·코스의 숫자/문장부호로만 되어 있어야 한다(Québec 은 못 친다) */
 function kbFor(items) {
-  const forms = items.map(it => [it.name, ...it.aliases].map(n => String(n).normalize('NFC')));
+  const forms = items.map(it => [sayOf(it), ...altsOf(it)].map(n => String(n).normalize('NFC')));
   const lay = forms.flat().some(n => /[가-힣]/.test(n)) ? 'ko' : 'en';
   const letter = lay === 'ko' ? /^[가-힣]$/ : /^[a-z]$/i;
   const ok = n => [...n].every(c => letter.test(c) || c === ' ' || KB_SYM.test(c));
@@ -2630,7 +2930,9 @@ function kbHint() {
   KB.el.querySelectorAll('.kb-next').forEach(b => b.classList.remove('kb-next', 'kb-flick'));
   if (KB.el.hidden || !opt.kbhint || !G || G.ranked || !G.want) return;
   /* 영어는 대소문자까지 짚는다 — 판정은 안 가려도 글자 칸 색칠(paintTyped)은 가린다 */
-  const form = s => G.kb && G.kb.lay === 'en' ? (G.spacy ? s : s.replace(/\s/g, '')) : typedForm(s, G.spacy);
+  /* 화면 말로 칠 때는 열쇠(소문자, 붙임표·띄어쓰기 없음)로 짚는다 — 다 치면 바로 넘어가 확정 키가 없다 */
+  const form = s => TONGUE ? TONGUE.key(s)
+    : G.kb && G.kb.lay === 'en' ? (G.spacy ? s : s.replace(/\s/g, '')) : typedForm(s, G.spacy);
   const typed = form($('#typein').value.replace(/^\s+/, '')), want = form(G.want);
   const ch = !want.startsWith(typed) ? null : want[typed.length];
   const b = ch === undefined ? KB.el.querySelector(G.spacy ? '.kb-enter' : '.kb-space')
@@ -2756,7 +3058,7 @@ function claim(it) {
   cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump');
   setTimeout(() => cb.classList.remove('bump'), 160);
   // 순서형은 바로 뒤 aim() 이 다음 목표의 이름과 설명으로 갈아끼운다
-  if (!G.seq) say(it.name, it.meta.description);
+  if (!G.seq) say(sayOf(it), introOf(it), tipOf(it));
   beep(520 + G.combo * 40, .08, 'triangle');
   if (G.hits === G.items.length) return finish();
   if (G.seq) { while (G.items[G.idx] && G.items[G.idx].claimed) G.idx++; }
@@ -2798,7 +3100,7 @@ function finish() {
     G.cpm = cpmNow(true);
     G.acc = accNow();
     /* 옛 열쇠(rt.best.* 점수, rt.fast.* 음절 CPM)는 지금 타수와 견줄 수 없다 */
-    const key = `rt.keys.${G.slug}.t${G.total}`;
+    const key = `rt.keys.${G.slug}.t${G.total}` + (TONGUE ? '.' + TONGUE.lang : '');   // 말마다 따로 겨룬다
     const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
@@ -2829,7 +3131,7 @@ function drawCard() {
   const cv = $('#card'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height, pad = 90;
   const css = getComputedStyle(document.body);
-  const bg = css.backgroundColor, ink = css.color;
+  const bg = css.getPropertyValue('--bg').trim() || getComputedStyle(document.documentElement).backgroundColor, ink = css.color;   // 배경은 html 에 있다 — body 는 투명
 
   const svg = $('#map').cloneNode(true);
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
@@ -2872,7 +3174,7 @@ function drawCard() {
   const img = new Image();
   img.onload = () => {
     if (seq !== cardSeq) return done();                       // 더 새 판이 이미 그리는 중 — 옛 그림을 덧칠하지 않는다
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);             // 바탕은 그릴 때마다 여기서 새로 깐다
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);             // 바탕은 그릴 때마다 여기서 새로 깐다
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
     const top = 480, bottom = 1150;                           // 지도 칸 — 위는 머릿글, 아래는 점수·CTA 몫
     let w = W - pad * 2, h = w * vb[3] / vb[2];
@@ -3289,6 +3591,54 @@ if (location.search.includes('rt=1')) {
   console.assert(placeName(null, 'kr-admin', '경기도') === '경기도', '표가 없으면 한국어로 떨어진다');
   LANG = 'ko';
   console.assert(placeName(roman, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');
+  const gWas = G;
+  G = { names: { 'gangseo-dong/화곡1동': 'ファゴク1洞' }, slug: 'gangseo-dong' };
+  LANG = 'ja';
+  console.assert(shownName('화곡1동') === 'ファゴク1洞', '게임 안 이름표는 화면 말의 표');
+  const it = { name: '화곡1동', meta: { description: '원문' } };
+  G.intro = { 'gangseo-dong/화곡1동': '訳文' };
+  console.assert(introOf(it) === '訳文', '소개 번역');
+  G.intro = {};
+  console.assert(introOf(it) === '원문', '번역이 없으면 원문 소개');
+  LANG = 'ko';
+  console.assert(shownName('화곡1동') === '화곡1동', '한국어 게임 이름표는 한국어');
+  /* 화면 말로 치기 */
+  const jaRead = { 'seoul-gu/강서구': [['江西', 'カンソ'], ['区', 'ク']], 'x/무악동': [['ムアク', 'ムアク'], ['洞', 'ドン']] };
+  const ja = tongueFor('ja', jaRead), T = ja.key('ムアク洞');
+  console.assert(T === 'むあくどん' && ja.key('江西区') === 'かんそく', '가타카나·한자 마디는 히라가나 읽기로 접힌다');
+  const ok = (raw, k) => { const r = ja.walk(raw, k); return !r.bad && r.p === k.length; };
+  console.assert(ok('muakudonn', T) && ok('むあくどん', T) && ok('ムアク洞', T) && ok('muakuどん', T),
+    '로마자·히라가나·가타카나·섞어 친 것 모두 같은 이름');
+  console.assert(!ok('muakudon', T) && ja.walk('muakudon', T).part, '끝의 ん 은 nn — 치다 만 것으로 본다');
+  const sh = ja.key('シンチョン洞');
+  console.assert(ok('sinntyonndonn', sh) && ok('shinchondonn', sh) && ok('shintyonndonn', sh), 'si·shi, tyo·cho, n 은 자음 앞에서 하나');
+  console.assert(ok('kkaxtu', 'っかっ') && ok('fu', 'ふ') && ok('hu', 'ふ') && ok('tsu', 'つ') && ok('jo', 'じょ'), '겹자음 っ·헵번·훈령 갈래');
+  console.assert(ja.walk('muax', T).bad && !ja.walk('muak', T).bad && ja.walk('muak', T).part, '틀린 키는 오타, 치다 만 마디는 진행');
+  console.assert(romaKeys('かんそく') === 7 && romaKeys('しゃ') === 3, '자음 앞 ん 은 한 타, 요음은 가장 짧게(sya)');
+  console.assert(romaKeys(T) === 9 && romaGuide(T).map(g => g[0]).join('') === 'muakudonn', '타수는 가장 짧은 로마자, 길잡이는 헵번식');
+  console.assert(romaGuide(sh).map(g => g[0]).join('') === 'shinchondonn', '길잡이: 자음 앞 ん 은 n');
+  const zh = tongueFor('zh', { 'seoul-gu/강서구': [['江', 'jiang'], ['西', 'xi'], ['区', 'qu']] }), Z = zh.key('江西区');
+  console.assert(Z === 'jiangxiqu' && zh.key("jiang'xi qu") === Z && zh.key('Jiāng Xī Qū') === Z && zh.key('江西qu') === Z,
+    '병음은 성조·띄어쓰기·구분표를 접고 한자와 섞어도 같다');
+  console.assert(zh.split('江西区').map(p => p.join(':')).join() === '江:jiang,西:xi,区:qu', '중국어는 글자마다 채운다');
+  const de = tongueFor('de'), el = tongueFor('el'), uk = tongueFor('uk'), tr = tongueFor('tr');
+  console.assert(typeForm('Gangseo-gu') === 'gangseogu' && typeForm('Hongeun 1-dong') === 'hongeun1dong'
+    && typeForm('江西区') === '江西区' && typeForm('Каннам-гу') === 'Каннам-гу', '라틴 이름만 치는 꼴(소문자·붙임)로');
+  console.assert(de.key('Hongeun 1-dong') === 'hongeun1dong' && de.key('hongeun1dong') === de.key('Hongeun 1 dong'), '붙임표·띄어쓰기는 없어도 된다');
+  console.assert(de.key('Straße') === 'strasse' && de.key('Øl') === 'ol', 'NFD 로 안 풀리는 글자도 접는다');
+  console.assert(el.key('γανγσεο') === 'gangseo', '그리스 자판 그대로 친 것을 키 자리로 읽는다');
+  console.assert(tongueFor('th').key('เฟืเหำนฟ') === 'gangseoa' && tongueFor('ar').key('لاه') === 'bi', '태국·아랍 자판 자리(ำ·لا 포함)');
+  console.assert(uk.key('Ґанґсо') === uk.key('гангсо') && uk.key('Чонно-гу') === 'чонногу', '키릴 짝 접기');
+  console.assert(tr.key('ISTANBUL') === tr.key('istanbul') && tr.key('İstanbul') === 'istanbul', '터키어 I·İ·ı');
+  const was = TONGUE; TONGUE = de;
+  const tgu = [{ name: '강서구', say: 'Gangseo-gu', alts: ['Gangseo'], claimed: false },
+              { name: '중구', say: 'Jung-gu', alts: ['Jung'], claimed: false },
+              { name: '중랑구', say: 'Jungnang-gu', alts: ['Jungnang'], claimed: false }];
+  console.assert(matchTongue('gangseo-gu', tgu) === tgu[0] && !matchTongue('gangseo', tgu) && matchTongue('gangseo', tgu, true) === tgu[0],
+    '이름은 다 치면 바로, 줄인 이름은 확정 키로');
+  console.assert(!matchTongue('jung', tgu, true) && matchTongue('junggu', tgu) === tgu[1], '중구/중랑구 — 이어질 칸이 둘이면 줄인 이름은 안 된다');
+  TONGUE = was;
+  G = gWas;
   LANG = langWas;
   const spr = sp(0, .05); spr.to = 100;
   let peak = 0;

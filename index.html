@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=3.96">
+<link rel="stylesheet" href="style.css?v=4.00">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -438,20 +438,20 @@
             <div class="profile-card security-health">
               <strong id="securityState">로그인 필요</strong>
               <img class="security-shield" id="securityShield" alt="" aria-hidden="true">
-              <button type="button" class="profile-button" id="securityCheck">보안 상태 진단</button>
+              <button type="button" class="profile-button" id="securityCheck" data-i18n="secCheck">보안 상태 진단</button>
             </div>
             <div class="profile-card security-device">
-              <h3 class="profile-label">로그인된 기기</h3>
+              <h3 class="profile-label" data-i18n="secDevice">로그인된 기기</h3>
               <p class="device-current"><img id="securityDeviceIcon" alt="" aria-hidden="true"><span id="securityDevice">로그인이 필요합니다</span></p>
               <hr>
-              <h3 class="profile-label">최근 위협 차단 내역</h3>
-              <p class="security-history">조회할 수 있는 기록이 없습니다.</p><p class="profile-help">위협 차단 내역은 아직 제공하지 않습니다.</p>
+              <h3 class="profile-label" data-i18n="secThreats">최근 위협 차단 내역</h3>
+              <p class="security-history" data-i18n="secThreatsNone">조회할 수 있는 기록이 없습니다.</p><p class="profile-help" data-i18n="secThreatsSoon">위협 차단 내역은 아직 제공하지 않습니다.</p>
             </div>
           </div>
           <div id="secIn" hidden>
             <section class="profile-section">
-              <h3 class="profile-label">인증 및 패스키</h3>
-              <div class="profile-row"><div><strong>2단계 인증 (2FA)</strong><p class="profile-help">로그인할 때 기기의 패스키로 한 번 더 확인합니다.</p></div><button type="button" class="profile-button" id="acctKey">패스키 추가</button></div>
+              <h3 class="profile-label" data-i18n="secAuth">인증 및 패스키</h3>
+              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" data-i18n="sec2faHow">로그인할 때 기기의 패스키로 한 번 더 확인합니다.</p></div><button type="button" class="profile-button" id="acctKey" data-i18n="secKeyAdd">패스키 추가</button></div>
               <p class="profile-help" id="securityKeys"></p>
               <p class="si-warn" id="acctWarn" hidden data-i18n="twoStepWarn">패스키가 하나뿐입니다.</p>
             </section>
@@ -461,15 +461,15 @@
               <p class="profile-help" id="securityBrowsersNone" data-i18n="secBrowsersNone">등록된 브라우저가 없습니다</p>
             </section>
             <section class="profile-section">
-              <h3 class="profile-label">이중 인증 및 보안</h3>
-              <div class="profile-row"><div><strong>2단계 인증 (2FA)</strong><p class="profile-help" id="securityTwoText">상태 확인 중</p></div><span class="security-two-state"><span class="security-badge" id="securityTwo">확인 중</span><button type="button" id="securityTwoSwitch" class="profile-switch" aria-label="2단계 인증 상태 (패스키 추가로 켜기)" aria-pressed="false" disabled></button></span></div>
-              <div class="profile-row"><div><strong>새로운 로그인 알림</strong><p class="profile-help">이메일 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" aria-label="새로운 로그인 알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
+              <h3 class="profile-label" data-i18n="secTwoHead">이중 인증 및 보안</h3>
+              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" id="securityTwoText">상태 확인 중</p></div><span class="security-two-state"><span class="security-badge" id="securityTwo">확인 중</span><button type="button" id="securityTwoSwitch" class="profile-switch" data-i18n-aria="secTwoAria" aria-label="2단계 인증 상태 (패스키 추가로 켜기)" aria-pressed="false" disabled></button></span></div>
+              <div class="profile-row"><div><strong data-i18n="secAlert">새로운 로그인 알림</strong><p class="profile-help" data-i18n="secAlertSoon">이메일 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" data-i18n-aria="secAlertAria" aria-label="새로운 로그인 알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
               </section>
-            <div class="profile-actions security-session-actions"><button type="button" class="profile-button" disabled aria-describedby="securitySessionHelp">모든 기기에서 로그아웃</button><button type="button" class="profile-button destructive" disabled aria-describedby="securitySessionHelp">모든 세션 강제 종료</button></div>
-            <p class="profile-help" id="securitySessionHelp">전체 기기·세션 종료는 아직 지원하지 않습니다.</p>
-            <details class="security-recovery"><summary>복구 코드 및 현재 브라우저</summary>
-              <div class="profile-row"><div><strong>복구 코드</strong><p class="profile-help" id="acctCodes" hidden></p></div><button type="button" class="profile-button" id="acctCodesNew">코드 새로 만들기</button></div>
-              <p class="profile-help">새 코드를 만들면 이전 복구 코드는 모두 사용할 수 없습니다.</p>
+            <div class="profile-actions security-session-actions"><button type="button" class="profile-button" disabled aria-describedby="securitySessionHelp" data-i18n="secOutAll">모든 기기에서 로그아웃</button><button type="button" class="profile-button destructive" disabled aria-describedby="securitySessionHelp" data-i18n="secKillAll">모든 세션 강제 종료</button></div>
+            <p class="profile-help" id="securitySessionHelp" data-i18n="secSessionSoon">전체 기기·세션 종료는 아직 지원하지 않습니다.</p>
+            <details class="security-recovery"><summary data-i18n="secRecovery">복구 코드 및 현재 브라우저</summary>
+              <div class="profile-row"><div><strong data-i18n="secCodes">복구 코드</strong><p class="profile-help" id="acctCodes" hidden></p></div><button type="button" class="profile-button" id="acctCodesNew" data-i18n="secCodesNew">코드 새로 만들기</button></div>
+              <p class="profile-help" data-i18n="secCodesWarn">새 코드를 만들면 이전 복구 코드는 모두 사용할 수 없습니다.</p>
               <section class="profile-section">
                 <h3 class="profile-label" data-i18n="mailHead">복구 메일</h3>
                 <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보냅니다. 메일로 받은 코드를 적어야 확인됩니다.</p>
@@ -509,17 +509,17 @@
                 <p class="si-say" id="phoneSay" role="status" aria-live="polite"></p>
               </section>
               <details class="security-recovery"><summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary><p data-i18n="lostAllHow">미리 확인해 둔 메일로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소로는 보내지 않습니다.</p></details>
-              <div class="profile-actions"><button type="button" class="profile-button" id="acctOut">이 브라우저에서 로그아웃</button></div>
+              <div class="profile-actions"><button type="button" class="profile-button" id="acctOut" data-i18n="secOutHere">이 브라우저에서 로그아웃</button></div>
             </details>
           </div>
           <div id="secOut" hidden><p class="profile-help" data-i18n="secOutHelp">로그인하면 패스키와 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
           <section class="profile-section" aria-labelledby="privTitle">
-            <h3 class="profile-label" id="privTitle">개인정보와 이 브라우저</h3>
-            <div class="profile-row"><div><strong>접속 지역 추정</strong><p class="profile-help" id="privWhereHelp">중계기가 IP 로 추정한 나라 코드와 시간대(도시 제외)를 받아 언어 기본값에 씁니다. 끄면 이 브라우저의 언어·시간대만 씁니다. 다음에 열 때부터 적용. 꺼도 순위표·로그인 같은 다른 요청은 중계기를 거치며, IP 는 요청 제한에만 쓰고 저장하지 않습니다. 정밀 위치(GPS)는 쓰지 않고 권한도 요청하지 않습니다.</p></div><button type="button" class="profile-switch" data-opt="where" aria-label="접속 지역 추정" aria-describedby="privWhereHelp"></button></div>
-            <div class="profile-row"><div><strong>쿠키</strong><p class="profile-help">이 사이트는 쿠키를 쓰지 않습니다. 로그인 공급자·스팸 방지(Turnstile) 같은 외부 서비스는 자기 쿠키를 둘 수 있습니다. 설정·게임 기록·로그인 토큰은 이 브라우저 저장소(localStorage)에만 있습니다.</p></div></div>
-            <div class="profile-row"><div><strong>순위표에서 내리기</strong><p class="profile-help" id="privForgetHelp">로그인해야 합니다. 순위표와 경쟁전에 올린 내 기록을 서버에서 내립니다. 커뮤니티 글·댓글·공개 프로필은 남으며 '계정 삭제'로만 지워집니다.</p></div><button type="button" class="profile-button destructive" id="privForget" aria-describedby="privForgetHelp" disabled>순위표에서 내리기</button></div>
-            <div class="profile-actions"><button type="button" class="profile-button" id="privKeys">게임 기록 지우기</button><button type="button" class="profile-button" id="privOpt">설정 초기화</button><button type="button" class="profile-button destructive" id="privAll">이 브라우저 기록 모두 지우기</button></div>
-            <p class="profile-help">이 브라우저에서 지워도 서버의 순위표·경쟁전 기록, 커뮤니티 글·댓글·공개 프로필, 계정은 남습니다. 기록은 '순위표에서 내리기', 나머지는 계정 탭의 '계정 삭제'로 지웁니다. 초기화해도 지역 추정 선택은 그대로 둡니다.</p>
+            <h3 class="profile-label" id="privTitle" data-i18n="privTitle">개인정보와 이 브라우저</h3>
+            <div class="profile-row"><div><strong data-i18n="privWhere">접속 지역 추정</strong><p class="profile-help" id="privWhereHelp" data-i18n="privWhereHelp">중계기가 IP 로 추정한 나라 코드와 시간대(도시 제외)를 받아 언어 기본값에 씁니다. 끄면 이 브라우저의 언어·시간대만 씁니다. 다음에 열 때부터 적용. 꺼도 순위표·로그인 같은 다른 요청은 중계기를 거치며, IP 는 요청 제한에만 쓰고 저장하지 않습니다. 정밀 위치(GPS)는 쓰지 않고 권한도 요청하지 않습니다.</p></div><button type="button" class="profile-switch" data-opt="where" data-i18n-aria="privWhere" aria-label="접속 지역 추정" aria-describedby="privWhereHelp"></button></div>
+            <div class="profile-row"><div><strong data-i18n="privCookie">쿠키</strong><p class="profile-help" data-i18n="privCookieHelp">이 사이트는 쿠키를 쓰지 않습니다. 로그인 공급자·스팸 방지(Turnstile) 같은 외부 서비스는 자기 쿠키를 둘 수 있습니다. 설정·게임 기록·로그인 토큰은 이 브라우저 저장소(localStorage)에만 있습니다.</p></div></div>
+            <div class="profile-row"><div><strong data-i18n="privForget">순위표에서 내리기</strong><p class="profile-help" id="privForgetHelp" data-i18n="privForgetHelp">로그인해야 합니다. 순위표와 경쟁전에 올린 내 기록을 서버에서 내립니다. 커뮤니티 글·댓글·공개 프로필은 남으며 '계정 삭제'로만 지워집니다.</p></div><button type="button" class="profile-button destructive" id="privForget" aria-describedby="privForgetHelp" data-i18n="privForget" disabled>순위표에서 내리기</button></div>
+            <div class="profile-actions"><button type="button" class="profile-button" id="privKeys" data-i18n="privKeys">게임 기록 지우기</button><button type="button" class="profile-button" id="privOpt" data-i18n="privOpt">설정 초기화</button><button type="button" class="profile-button destructive" id="privAll" data-i18n="privAll">이 브라우저 기록 모두 지우기</button></div>
+            <p class="profile-help" data-i18n="privNote">이 브라우저에서 지워도 서버의 순위표·경쟁전 기록, 커뮤니티 글·댓글·공개 프로필, 계정은 남습니다. 기록은 '순위표에서 내리기', 나머지는 계정 탭의 '계정 삭제'로 지웁니다. 초기화해도 지역 추정 선택은 그대로 둡니다.</p>
           </section>
         </div>
         <p class="si-say" id="optSay" role="status" aria-live="polite"></p>
@@ -533,7 +533,7 @@
         </div>
       </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
-        <p class="ver">regiontype v0.9.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+        <p class="ver">regiontype v0.10.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
       </div>
     </div>
   </div>
@@ -602,37 +602,37 @@
 <section id="account" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="accountHead" hidden>
   <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-  <header class="account-heading"><button type="button" class="back" data-pg-close aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></button><h1 id="accountHead">내 계정</h1></header>
+  <header class="account-heading"><button type="button" class="back" data-pg-close data-i18n-aria="backHome" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></button><h1 id="accountHead" data-i18n="accountHead">내 계정</h1></header>
   <div class="account-shell">
   <div class="account-layout">
-    <section class="account-character" aria-label="내 캐릭터">
+    <section class="account-character" data-i18n-aria="acctCharacter" aria-label="내 캐릭터">
       <div class="profile-card character-preview">
-        <h2 class="character-title">내 펫</h2>
+        <h2 class="character-title" data-i18n="acctPet">내 펫</h2>
         <div class="pet-compare">
-          <figure class="pet-fig"><div id="characterReal" class="character-real" aria-hidden="true"></div><figcaption>실제 크기</figcaption></figure>
+          <figure class="pet-fig"><div id="characterReal" class="character-real" aria-hidden="true"></div><figcaption data-i18n="acctReal">실제 크기</figcaption></figure>
           <i class="i i-chevron-left pet-lt" aria-hidden="true"></i>
-          <figure class="pet-fig"><div id="character" class="character" role="img" aria-label="내 캐릭터"></div><figcaption>확대 크기</figcaption></figure>
+          <figure class="pet-fig"><div id="character" class="character" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div><figcaption data-i18n="acctZoom">확대 크기</figcaption></figure>
         </div>
-        <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
+        <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" data-i18n-aria="acctBotSize" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
       </div>
       <div class="profile-card character-controls">
-        <fieldset><legend class="profile-label">Shape <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
-        <fieldset><legend class="profile-label">Expression <span id="expressionLabel"></span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
-        <fieldset><legend class="profile-label">Colour <span id="colourLabel"></span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
+        <fieldset><legend class="profile-label"><span data-i18n="acctShape">모양</span> <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
+        <fieldset><legend class="profile-label"><span data-i18n="acctExpression">표정</span> <span id="expressionLabel"></span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
+        <fieldset><legend class="profile-label"><span data-i18n="acctColour">색</span> <span id="colourLabel"></span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
       </div>
     </section>
     <div class="account-details">
-      <section class="profile-section account-bio"><label for="accountBio" class="profile-label">소개</label><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><p class="profile-help"><span id="bioCount">0/60</span></p></section>
-      <section class="profile-section"><h2 class="profile-label">계정</h2>
-        <label class="profile-row" for="accountName"><span>닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" placeholder="닉네임 (최대 12자)"></label>
-        <label class="profile-row" for="accountId"><span>아이디</span><input id="accountId" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="none" placeholder="영문 소문자·숫자·밑줄 3~16자"></label>
-        <label class="profile-row" for="accountLanguage"><span>언어</span><select id="accountLanguage" aria-label="언어"><option value="auto">자동</option><option value="ko">한국어</option></select></label>
+      <section class="profile-section account-bio"><label for="accountBio" class="profile-label" data-i18n="acctBio">소개</label><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><p class="profile-help"><span id="bioCount">0/60</span></p></section>
+      <section class="profile-section"><h2 class="profile-label" data-i18n="acctSection">계정</h2>
+        <label class="profile-row" for="accountName"><span data-i18n="acctNick">닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" data-i18n-ph="acctNickPh" placeholder="닉네임 (최대 12자)"></label>
+        <label class="profile-row" for="accountId"><span data-i18n="acctId">아이디</span><input id="accountId" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="none" data-i18n-ph="acctIdPh" placeholder="영문 소문자·숫자·밑줄 3~16자"></label>
+        <label class="profile-row" for="accountLanguage"><span data-i18n="language">언어</span><select id="accountLanguage" data-i18n-aria="language" aria-label="언어"><option value="auto" data-i18n="langAuto">자동</option><option value="ko">한국어</option></select></label>
       </section>
-      <section class="profile-section"><h2 class="profile-label">설정</h2>
-        <div class="profile-row"><div><strong>새소식 알림</strong><p class="profile-help">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><button type="button" class="profile-switch" id="accountPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
-        <div class="profile-row"><div><strong>계정 비공개</strong><p class="profile-help">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><button type="button" class="profile-switch" id="accountShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
+      <section class="profile-section"><h2 class="profile-label" data-i18n="options">설정</h2>
+        <div class="profile-row"><div><strong data-i18n="acctPush">새소식 알림</strong><p class="profile-help" data-i18n="acctPushHow">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><button type="button" class="profile-switch" id="accountPush" data-i18n-aria="acctPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
+        <div class="profile-row"><div><strong data-i18n="acctShut">계정 비공개</strong><p class="profile-help" data-i18n="acctShutHow">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><button type="button" class="profile-switch" id="accountShut" data-i18n-aria="acctShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
       </section>
-      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase">계정 삭제</button><a class="profile-button" href="settings/#security">보안 설정</a></div>
+      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout" data-i18n="signOut">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase" data-i18n="acctErase">계정 삭제</button><a class="profile-button" href="settings/#security" data-i18n="acctSecurity">보안 설정</a></div>
       <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
       <p id="accountSession" class="profile-help" role="status"></p>
       <a id="accountSignin" class="profile-button" href="signin/" data-i18n="signinBtn" hidden>로그인</a>
@@ -681,9 +681,9 @@
 </dialog>
 
 <script src="relay.js?v=3.85"></script>
-<script src="app.js?v=3.96"></script>
-<script src="auth.js?v=3.95"></script>
-<script src="settings/settings.js?v=3.90"></script>
+<script src="app.js?v=4.00"></script>
+<script src="auth.js?v=3.98"></script>
+<script src="settings/settings.js?v=3.98"></script>
 <script src="ranked.js?v=3.95"></script>
 </body>
 </html>
