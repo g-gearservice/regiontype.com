@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.9.398",
+    "date": "2026-10-14",
+    "ko": "한국어가 아닌 화면에서는 지명을 그 말로 칩니다. 일본어는 로마자나 가나(밑에 읽기 길잡이), 중국어는 성조 없는 병음, 그 밖은 로마자·키릴 이름을 악센트·붙임표 없이 쳐도 맞습니다. 지명 한 줄 소개가 26개 언어로 보이고, 내 계정·보안·개인정보 화면도 화면 말을 따릅니다. 로그인 화면은 처음 열 때부터 화면 말로 뜨고, 고른 구의 테두리가 글자 위로 비치지 않습니다.",
+    "en": "Outside Korean, you now type each place in your interface language: Japanese by romaji or kana (with a reading guide underneath), Chinese by toneless pinyin, and everything else by its romanized or Cyrillic name — accents and hyphens optional. One-line place intros read in all 26 languages, and the account, security and privacy screens follow the interface language too. The sign-in screen opens in your language from the first frame, and a selected district's outline no longer shows through its text."
+  },
+  {
     "v": "0.9.397",
     "date": "2026-10-13",
     "ko": "게임 안 지도의 지명과 앞뒤 대기 이름이 화면 말을 따릅니다. 홈 칸과 같은 표라서 일본어는 江南区·シンチョン洞, 중국어는 江南区·新村洞, 그 밖은 로마자로 보입니다. 치는 글자는 그대로 한국어입니다.",

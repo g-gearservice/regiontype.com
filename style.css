@@ -366,7 +366,8 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 @media (prefers-reduced-motion:reduce){ #courseBtns .course-map,#courseBtns .course-map > svg{transition:none} }
 :root[data-motion="off"] #courseBtns .course-map,:root[data-motion="off"] #courseBtns .course-map > svg{transition:none}
 /* 로그인·설정 덮개 아래에서는 다른 칸처럼 바탕 비트맵이 된다 — 눌리지 않고 이름도 빠진다 */
-body:is(.signing,.setting,.paging) #courseBtns .course-map circle{fill:var(--land)}
+/* 고른 칸의 테두리(g.on)도 같이 가라앉힌다 — 남으면 덮개 글자 위로 링이 비친다 */
+body:is(.signing,.setting,.paging) #courseBtns .course-map circle{fill:var(--land);stroke:none}
 body:is(.signing,.setting,.paging) #courseBtns .course-map .hit{pointer-events:none}
 body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 
@@ -615,6 +616,9 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .fact.on{opacity:1}
 .fact b{display:block;font-size:26px;font-weight:800}
 .fact span{color:var(--ink-soft);font-size:17px}
+/* 치는 한국어 이름을 화면 말로 읽어 주는 줄. 비면 자리도 안 먹는다 */
+.fact .tip{display:block;font-style:normal;font-weight:700;font-size:15px;color:var(--ink)}
+.fact .tip:empty{display:none}
 
 .typebar{display:flex;justify-content:center;margin-top:18px}
 #typein{

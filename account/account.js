@@ -11,25 +11,15 @@ const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const read = (key, fallback = '') => { try { return localStorage.getItem(key) || fallback; } catch { return fallback; } };
 const parse = (key, fallback) => { try { return JSON.parse(read(key)) || fallback; } catch { return fallback; } };
 const say = text => { $('#accountSay').textContent = text; };
-const write = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { say('브라우저에 저장하지 못했습니다. 저장 공간 설정을 확인해 주세요.'); return false; } };
+const write = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { say(t('acctStoreFail')); return false; } };
 const opt = parse('rt.opt', {});
 /* ── 캐릭터 ────────────────────────────────────────────────
    그림과 움직임은 로그인 화면·경쟁전 봇과 같은 엔진(assets/bloub)이 낸다. 예전엔
    여기만 CSS 로 흉내 낸 동그라미였는데, 눈만 까딱해 같은 놈으로 보이지 않았다.
    이제 셋이 한 몸이라 여기서 고른 모습이 경쟁전 봇에 그대로 나간다.
 
-   모양·표정·색의 id 는 엔진이 쥐고 있고(프랑스어다), 화면에 걸 이름만 여기서 짓는다. */
-const KO = {
-  cercle: '동그라미', galet: '조약돌', squircle: '둥근네모', capsule: '캡슐',
-  triangle: '세모', hexagone: '육각', nuage: '구름', goutte: '물방울',
-  neutre: '무표정', attentif: '집중', surpris: '놀람', excite: '신남',
-  heureux: '기쁨', hilare: '함박웃음', colere: '골남', triste: '시무룩',
-  effraye: '겁먹음', mefiant: '갸웃', confus: '어리둥절', curieux: '호기심',
-  fier: '뿌듯', timide: '수줍음', blase: '심드렁', somnolent: '졸림',
-  encre: '먹색', brun: '밤색', rouge: '빨강', orange: '주황', ambre: '호박',
-  vert: '초록', turquoise: '청록', bleu: '파랑', violet: '보라', rose: '분홍',
-  gris: '잿빛', creme: '크림',
-};
+   모양·표정·색의 id 는 엔진이 쥐고 있고(프랑스어다), 화면에 걸 이름은 화면 말 표에서 꺼낸다. */
+const KO = id => (id && t('ch_' + id) !== 'ch_' + id) ? t('ch_' + id) : '';   // 이름은 data/i18n.json 의 ch_<id>
 const FALLBACK = { shape: 'cercle', expression: 'curieux', colour: 'turquoise' };
 const saved = parse('rt.character', {});
 const character = { ...FALLBACK };
@@ -60,12 +50,12 @@ function wear(face) {
 
 function paint() {
   for (const key of ['shape', 'expression', 'colour']) {
-    $('#' + key + 'Label').textContent = KO[character[key]] || '';
+    $('#' + key + 'Label').textContent = KO(character[key]) || '';
     document.querySelectorAll('[data-' + key + ']')
       .forEach(b => b.setAttribute('aria-pressed', String(b.dataset[key] === character[key])));
   }
   $('#character').setAttribute('aria-label',
-    `${KO[character.colour]} ${KO[character.shape]} · ${KO[character.expression]}`);
+    `${KO(character.colour)} ${KO(character.shape)} · ${KO(character.expression)}`);
   if (!me) return;
   for (const api of [me, real]) {
     api.setShape(character.shape);
@@ -116,7 +106,7 @@ buddyKit.then(({ mountBuddy, TABLES }) => {
 
   for (const key of ['shape', 'expression', 'colour']) {
     for (const id of lists[key]) {
-      const label = KO[id] || id;
+      const label = KO(id) || id;
       const button = document.createElement('button');
       button.type = 'button'; button.dataset[key] = id;
       button.className = 'character-choice';
@@ -145,7 +135,7 @@ buddyKit.then(({ mountBuddy, TABLES }) => {
 }).catch(err => {
   /* 조용히 삼키면 왜 안 되는지 알 길이 없다 — 화면엔 한 줄, 콘솔엔 진짜 까닭 */
   console.error('[account] 캐릭터 엔진', err);
-  $('#character').textContent = '캐릭터를 불러오지 못했습니다.';
+  $('#character').textContent = t('acctCharFail');
 });
 
 /* 홈 봇 크기(70~130%). 이 기기에만 둔다 — '실제 크기' 봇이 --bot-scale 로 곧장 커지고 줄며,
@@ -206,14 +196,14 @@ const mine = () => ({
    캐릭터는 늘 고른 모습이 있어 빌 수가 없다. */
 function blank() {
   const p = mine();
-  if (!p.name) return '닉네임을 비워 둘 수 없습니다.';
+  if (!p.name) return t('acctNickEmpty');
   /* 아이디는 아직 안 정한 사람이 있다 — 그 경우 서버가 덮지 않으므로 빈 값이
      올라가도 지워지지 않는다. 칸에 적다 만 것만 막는다 */
-  if ($('#accountId').value.trim() && !p.handle) return '아이디는 영문 소문자·숫자·밑줄 3~16자입니다.';
+  if ($('#accountId').value.trim() && !p.handle) return t('acctIdRule');
   return '';
 }
 function push(done) {
-  if (!loggedIn()) { say(done + ' 로그인하면 다른 기기에서도 따라옵니다.'); return; }
+  if (!loggedIn()) { say(done + ' ' + t('acctSyncHint')); return; }
   const gap = blank();
   if (gap) { say(gap); return; }
   fetch(API + '/auth/profile', {
@@ -224,8 +214,8 @@ function push(done) {
     .then(() => say(done))
     /* 아이디가 겹친 것은 '잠시 후 다시' 가 아니다 — 다시 눌러도 같은 답이 온다 */
     .catch(r => say(r && r.status === 409
-      ? '이미 쓰이고 있는 아이디입니다. 다른 아이디를 지어 주세요.'
-      : '계정에 저장하지 못했습니다. 이 브라우저에는 남아 있습니다 — 잠시 후 다시 시도해 주세요.'));
+      ? t('acctIdTaken')
+      : t('acctSaveFail')));
 }
 /* 서버가 준 값을 화면과 거울에 얹는다. 모르는 캐릭터 값은 지금 고른 것을 둔다 —
    서버는 캐릭터 목록을 모르고 모양만 보므로, 아는 쪽이 떨어뜨린다. */
@@ -249,9 +239,9 @@ function apply(p) {
 let keeping = 0;
 function keep() {
   if (!write('rt.character', JSON.stringify(character))) return;
-  say('캐릭터를 저장했습니다.');
+  say(t('acctCharSaved'));
   clearTimeout(keeping);
-  keeping = setTimeout(() => push('캐릭터를 저장했습니다.'), 700);
+  keeping = setTimeout(() => push(t('acctCharSaved')), 700);
 }
 
 function session() {
@@ -263,20 +253,20 @@ function session() {
   $('#accountName').value = inn ? read('rt.name') : '';
   $('#accountBio').disabled = !inn;
   $('#accountBio').value = inn ? read('rt.bio') : '';
-  $('#accountBio').placeholder = inn ? '한 줄로 나를 소개해 주세요 (최대 60자)' : '로그인하면 소개를 적을 수 있습니다.';
+  $('#accountBio').placeholder = t(inn ? 'acctBioPh' : 'acctBioOut');
   countBio();
   $('#accountId').disabled = !inn;
   if (!inn) $('#accountId').value = '';
   paintSwitches();
-  $('#accountSession').textContent = inn ? '' : '로그인하면 닉네임과 보안 설정을 관리할 수 있습니다.';
+  $('#accountSession').textContent = inn ? '' : t('acctSessionOut');
 }
 $('#accountName').value = read('rt.name');
 $('#accountName').addEventListener('change', e => {
   if (!loggedIn()) { session(); return; }
   const value = e.target.value.replace(/[<>\x00-\x1f\x7f]/g, '').trim().slice(0, 12);
-  if (!value) { e.target.value = read('rt.name'); say('닉네임을 비워 둘 수 없습니다.'); return; }
+  if (!value) { e.target.value = read('rt.name'); say(t('acctNickEmpty')); return; }
   e.target.value = value;
-  if (write('rt.name', value)) push('닉네임을 저장했습니다. 이미 올라간 기록의 이름도 바뀝니다.');
+  if (write('rt.name', value)) push(t('acctNickSaved'));
 });
 
 /* 소개. 서버가 60자에서 자르므로 화면도 60자다 — 자르는 자리가 서로 다르면
@@ -288,7 +278,7 @@ $('#accountBio').addEventListener('change', e => {
   const value = e.target.value.replace(/\p{C}/gu, ' ').replace(/ +/g, ' ').trim().slice(0, 60);
   e.target.value = value;
   countBio();
-  if (write('rt.bio', value)) push(value ? '소개를 저장했습니다.' : '소개를 비웠습니다.');
+  if (write('rt.bio', value)) push(t(value ? 'acctBioSaved' : 'acctBioCleared'));
 });
 /* 아이디는 한 번 정하면 여기서 비울 수 없다 — 빈 칸으로 두고 나가도 서버가
    덮지 않으므로, 화면도 서버가 쥔 값으로 되돌려 둔다. 모양이 틀리면 올리지
@@ -297,12 +287,12 @@ $('#accountId').addEventListener('change', e => {
   if (!loggedIn()) { session(); return; }
   const value = e.target.value.trim().replace(/^@/, '').toLowerCase();
   e.target.value = value;
-  if (!value) { say('아이디를 지우려면 문의해 주세요. 지금 아이디는 그대로 둡니다.'); return; }
+  if (!value) { say(t('acctIdKeep')); return; }
   if (!/^[a-z0-9_]{3,16}$/.test(value)) {
-    say('아이디는 영문 소문자·숫자·밑줄 3~16자입니다.');
+    say(t('acctIdRule'));
     return;
   }
-  push('아이디를 저장했습니다.');
+  push(t('acctIdSaved'));
 });
 
 /* 스위치 둘. 색만으로 나누지 않는다 — aria-pressed 와 켬/끔 글자가 같이 선다 */
@@ -317,19 +307,19 @@ function paintSwitches() {
    "켰는데 안 온다" 가 된다. 거절하면 스위치도 도로 내린다. */
 $('#accountPush').onclick = async () => {
   if (!switches.push) {
-    if (!('Notification' in window)) { say('이 브라우저는 알림을 지원하지 않습니다.'); return; }
+    if (!('Notification' in window)) { say(t('acctNoNotif')); return; }
     let ok = 'denied';
     try { ok = await Notification.requestPermission(); } catch {}
-    if (ok !== 'granted') { say('브라우저가 알림을 허용하지 않았습니다.'); return; }
+    if (ok !== 'granted') { say(t('acctNotifDenied')); return; }
   }
   switches.push = !switches.push;
   paintSwitches();
-  push(switches.push ? '새소식 알림을 켰습니다.' : '새소식 알림을 껐습니다.');
+  push(t(switches.push ? 'acctPushOn' : 'acctPushOff'));
 };
 $('#accountShut').onclick = () => {
   switches.shut = !switches.shut;
   paintSwitches();
-  push(switches.shut ? '계정을 비공개로 두었습니다.' : '계정을 공개로 두었습니다.');
+  push(t(switches.shut ? 'acctShutOn' : 'acctShutOff'));
 };
 
 /* quiet 는 서버가 준 값을 되받아 적는 길이다 — 방금 내려받은 것을 도로 올리지 않는다 */
@@ -339,7 +329,7 @@ function saveOption(key, value, quiet) {
   if (!write('rt.opt', JSON.stringify(latest))) return;
   opt[key] = value;
   $('#accountLanguage').value = opt.lang || 'auto';
-  if (!quiet) push('설정을 저장했습니다.');
+  if (!quiet) push(t('acctOptSaved'));
 }
 $('#accountLanguage').value = ['ko', 'auto'].includes(opt.lang) ? opt.lang : 'auto';
 $('#accountLanguage').onchange = e => saveOption('lang', e.target.value);
@@ -357,14 +347,12 @@ if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
    먼저 또렷이 말하고, 되돌릴 수 없다는 것도 말한다. 지우고 나면 이 브라우저에 남은
    흔적(토큰·이름·소개·캐릭터)도 같이 버리고 홈으로 보낸다. */
 $('#accountErase').onclick = async () => {
-  if (!loggedIn()) { say('로그인한 계정만 지울 수 있습니다.'); return; }
-  const ok = confirm(
-    '계정을 지우면 순위표 기록과 경쟁전 점수, 닉네임과 소개, 캐릭터, 패스키와 복구 코드가 모두 사라집니다.\n\n' +
-    '되돌릴 수 없습니다. 지울까요?');
+  if (!loggedIn()) { say(t('acctEraseOut')); return; }
+  const ok = confirm(t('acctEraseAsk'));
   if (!ok) return;
   const btn = $('#accountErase');
   btn.disabled = true;
-  say('계정을 지우는 중입니다…');
+  say(t('acctErasing'));
   try {
     const r = await fetch(API + '/auth/erase', {
       method: 'POST',
@@ -381,21 +369,21 @@ $('#accountErase').onclick = async () => {
     try { forget(); }
     catch {
       btn.disabled = false;
-      say('계정은 지워졌지만 이 브라우저의 로그인 흔적을 지우지 못했습니다. 브라우저 설정을 확인해 주세요.');
+      say(t('acctErasedTrace'));
       return;
     }
     session();
     if (typeof paintUI === 'function') paintUI();
-    say('계정을 지웠습니다.');
+    say(t('acctErased'));
   } catch {
     btn.disabled = false;
-    say('계정을 지우지 못했습니다. 잠시 후 다시 시도해 주세요 — 계정은 그대로 있습니다.');
+    say(t('acctEraseFail'));
   }
 };
 
 $('#accountLogout').onclick = () => {
   try { forget(); }
-  catch { say('로그아웃하지 못했습니다. 브라우저 설정을 확인해 주세요.'); return; }
+  catch { say(t('acctLogoutFail')); return; }
   $('#accountName').value = '';
   $('#accountBio').value = '';
   session();
@@ -427,9 +415,9 @@ if (checkedToken) fetch(API + '/auth/me', {headers: {authorization: 'Bearer ' + 
     if (r.status === 401) {
       forget(); session();
       if (typeof paintUI === 'function') paintUI();
-    } else if (!r.ok) $('#accountSession').textContent = '계정 상태를 확인할 수 없습니다. 잠시 후 다시 접속해 주세요.';
+    } else if (!r.ok) $('#accountSession').textContent = t('acctCheckFail');
     /* 서버에 남은 프로필이 원본이다 — 이 브라우저에 있던 값은 여기서 덮는다 */
     else return r.json().then(data => apply(data.profile));
   })
-  .catch(() => { if (checkedToken === read('rt.token')) $('#accountSession').textContent = '계정 상태를 확인할 수 없습니다. 인터넷 연결을 확인해 주세요.'; });
+  .catch(() => { if (checkedToken === read('rt.token')) $('#accountSession').textContent = t('acctCheckNet'); });
 })();

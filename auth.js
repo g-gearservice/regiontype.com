@@ -34,10 +34,12 @@ const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catc
 const opt = read(OPT_KEY, '{}');
 
 /* ── 화면 말 ─────────────────────────────────────────── */
-let I18N = { ko: {} }, LANG = 'ko';
-/* 없는 키는 빈 값을 낸다 — 부르는 쪽이 HTML 에 적힌 말을 덮지 않게 */
+/* 부트 스크립트가 읽어 둔 마지막 말 팩(app.js cacheUI)이 있으면 그것부터 쓴다 — 전체 팩을
+   받기 전에 덮개를 열어도 HTML 에 적힌 한국어가 비치지 않게. 전체 팩은 아래에서 받는다 */
+let I18N = window.RT_UI ? { [RT_UI.lang]: RT_UI.pack } : { ko: {} }, LANG = window.RT_UI ? RT_UI.lang : 'ko';
+/* 그 말에 없는 키는 영어로, 아무 데도 없으면 빈 값 — 부르는 쪽이 HTML 에 적힌 말을 덮지 않게 */
 const t = (key, vars) => {
-  let s = (I18N[LANG] || {})[key] || (I18N.ko || {})[key] || '';
+  let s = (I18N[LANG] || {})[key] || (I18N.en || {})[key] || (I18N.ko || {})[key] || '';
   if (s && vars) s = String(s).replace(/\{(\w+)\}/g, (_, k) => vars[k]);
   return s;
 };
@@ -687,6 +689,7 @@ function wire() {
 }
 
 (async () => {
+  applyI18n(over());   // 마지막 말 팩으로 먼저
   try { I18N = await grab('data/i18n.json'); } catch {}
   LANG = uiLang();
   applyI18n(over());
