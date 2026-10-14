@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '3.99';
+const VER = '4.02';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -455,6 +455,9 @@ function splitBy(s, key) {
   }
   return out;
 }
+/* 라틴 문자 이름은 치는 꼴로 보인다 — 소문자, 붙임표·띄어쓰기 없이(Gangseo-gu → gangseogu).
+   판정은 원래 둘 다 접으니 보이는 것만 손가락이 칠 그대로다. 지도 이름표는 지명 그대로 둔다 */
+const typeForm = s => /^[\p{Script=Latin}\d\s'’.,·\-\u2010-\u2015]+$/u.test(s) ? s.toLowerCase().replace(/[\s\-\u2010-\u2015]/g, '') : s;
 let TONGUE = null;   // 한국어 화면이면 null — 치는 것이 it.name 이다
 const sayOf = it => it.say || it.name;     // 칠 이름
 const altsOf = it => it.alts || it.aliases;
@@ -2160,8 +2163,8 @@ async function start(slug, only, rk) {
   TONGUE = LANG === 'ko' ? null : tongueFor(LANG, read);
   if (TONGUE) items.forEach(it => {
     if (!names || !names[`${slug}/${it.name}`]) return;
-    it.say = placeName(names, slug, it.name);
-    const short = placeName(names, slug, it.name, true);
+    it.say = typeForm(placeName(names, slug, it.name));
+    const short = typeForm(placeName(names, slug, it.name, true));
     it.alts = short !== it.say ? [short] : [];
   });
   G = { slug, names, intro, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
@@ -2347,7 +2350,10 @@ function say(head, body, tip = '') {
 function fillSide(el, it, hideName) {
   if (!el) return;
   if (!it || hideName) { el.replaceChildren(); return; }
-  el.innerHTML = `<span class="q-name">${shownName(it.name)}</span>`;
+  const span = document.createElement('span');
+  span.className = 'q-name';
+  span.textContent = TONGUE ? sayOf(it) : shownName(it.name);   // 치는 줄은 치는 꼴 그대로(gangseogu)
+  el.replaceChildren(span);
 }
 
 function paintQueue() {
@@ -2431,7 +2437,29 @@ function paintTyped(raw, composing = false) {
     el.classList.toggle('cur-r', (!!typed && last) || (!rest.length && n >= need && i === need - 1));
   });
   $('#typing').classList.toggle('bad', bad);
+  placeCaret();
 }
+
+/* 커서 한 개를 cur-l(그 글자 앞) 또는 cur-r(그 글자 뒤) 자리로 미끄러뜨린다. 칠 때마다 깜빡임을 끊고,
+   0.5초 손을 놓으면 다시 깜빡인다 — Monkeytype 의 smooth caret 과 같은 결 */
+let caretIdle = 0;
+function placeCaret() {
+  const host = $('#typing'), box = $('#qLetters');
+  if (!host || !box) return;
+  let c = host.querySelector(':scope > .caret');
+  if (!c) { c = document.createElement('i'); c.className = 'caret'; c.setAttribute('aria-hidden', 'true'); host.append(c); }
+  const at = box.querySelector('.cur-l') || box.querySelector('.cur-r');
+  c.hidden = !at;
+  if (!at) return;
+  const h = host.getBoundingClientRect(), r = at.getBoundingClientRect(), gap = 1;
+  const x = (at.classList.contains('cur-l') ? r.left - gap : r.right + gap) - h.left - 1.5;
+  c.style.height = r.height * .78 + 'px';
+  c.style.transform = `translate(${x.toFixed(1)}px, ${(r.top - h.top + r.height * .12).toFixed(1)}px)`;
+  c.classList.remove('idle');
+  clearTimeout(caretIdle);
+  caretIdle = setTimeout(() => c.classList.add('idle'), 500);
+}
+addEventListener('resize', () => { if (G && G.want) placeCaret(); });
 
 
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
@@ -2449,16 +2477,22 @@ function paintTongue(box, raw) {
     if (r.p > at || r.part) ing = done;
     break;
   }
-  while (box.children.length > want.length) box.lastChild.remove();
+  /* 틀리면 Monkeytype 처럼 그 자리 글자가 빨개진다. 이름을 다 친 뒤 더 친 것은 짙은 빨강으로 뒤에 붙는다 */
+  const bad = !!raw.trim() && r.bad, extra = bad && done >= want.length ? TONGUE.key(raw).slice(T.length) || ' ' : '';
+  const n = want.length + (extra ? 1 : 0);
+  while (box.children.length < n) box.append(document.createElement('b'));
+  while (box.children.length > n) box.lastChild.remove();
   [...box.children].forEach((el, i) => {
-    el.textContent = want[i];
+    el.textContent = i < want.length ? want[i] : extra;
     el.classList.toggle('on', i < done);
-    el.classList.toggle('ing', i === ing);
-    el.classList.remove('over');
-    el.classList.toggle('cur-l', i === done && ing < 0 && done < want.length);
-    el.classList.toggle('cur-r', done >= want.length && i === want.length - 1);
+    el.classList.toggle('ing', i === ing && !bad);
+    el.classList.toggle('err', bad && i === done && i < want.length);
+    el.classList.toggle('over', i >= want.length);
+    el.classList.toggle('cur-l', i === done + (bad ? 1 : 0));
+    el.classList.toggle('cur-r', i === n - 1 && done + (bad ? 1 : 0) >= n);
   });
-  $('#typing').classList.toggle('bad', !!raw.trim() && r.bad);
+  $('#typing').classList.toggle('bad', bad);
+  placeCaret();
   return r;
 }
 
@@ -3097,7 +3131,7 @@ function drawCard() {
   const cv = $('#card'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height, pad = 90;
   const css = getComputedStyle(document.body);
-  const bg = css.backgroundColor, ink = css.color;
+  const bg = css.getPropertyValue('--bg').trim() || getComputedStyle(document.documentElement).backgroundColor, ink = css.color;   // 배경은 html 에 있다 — body 는 투명
 
   const svg = $('#map').cloneNode(true);
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
@@ -3140,7 +3174,7 @@ function drawCard() {
   const img = new Image();
   img.onload = () => {
     if (seq !== cardSeq) return done();                       // 더 새 판이 이미 그리는 중 — 옛 그림을 덧칠하지 않는다
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);             // 바탕은 그릴 때마다 여기서 새로 깐다
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);             // 바탕은 그릴 때마다 여기서 새로 깐다
     const vb = $('#map').getAttribute('viewBox').split(' ').map(Number);
     const top = 480, bottom = 1150;                           // 지도 칸 — 위는 머릿글, 아래는 점수·CTA 몫
     let w = W - pad * 2, h = w * vb[3] / vb[2];
@@ -3588,6 +3622,8 @@ if (location.search.includes('rt=1')) {
     '병음은 성조·띄어쓰기·구분표를 접고 한자와 섞어도 같다');
   console.assert(zh.split('江西区').map(p => p.join(':')).join() === '江:jiang,西:xi,区:qu', '중국어는 글자마다 채운다');
   const de = tongueFor('de'), el = tongueFor('el'), uk = tongueFor('uk'), tr = tongueFor('tr');
+  console.assert(typeForm('Gangseo-gu') === 'gangseogu' && typeForm('Hongeun 1-dong') === 'hongeun1dong'
+    && typeForm('江西区') === '江西区' && typeForm('Каннам-гу') === 'Каннам-гу', '라틴 이름만 치는 꼴(소문자·붙임)로');
   console.assert(de.key('Hongeun 1-dong') === 'hongeun1dong' && de.key('hongeun1dong') === de.key('Hongeun 1 dong'), '붙임표·띄어쓰기는 없어도 된다');
   console.assert(de.key('Straße') === 'strasse' && de.key('Øl') === 'ol', 'NFD 로 안 풀리는 글자도 접는다');
   console.assert(el.key('γανγσεο') === 'gangseo', '그리스 자판 그대로 친 것을 키 자리로 읽는다');

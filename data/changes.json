@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.402",
+    "date": "2026-10-14",
+    "ko": "치는 화면을 Monkeytype 처럼 바꿨습니다. 안 친 글자는 흐리게, 맞게 친 글자는 밝게, 틀린 글자는 그 자리에서 빨갛게, 넘쳐 친 글자는 뒤에 붙습니다. 커서는 글자 사이를 미끄러지고 손을 멈추면 깜빡입니다. 영어 이름처럼 폭이 좁은 글자가 치는 동안 자리에서 밀리던 것도 고쳤습니다. 라틴 문자 이름은 칠 그대로 소문자로 붙여 보입니다(Gangseo-gu → gangseogu). 홈봇 말풍선의 '경쟁전 시작' 칩이 다른 칩과 같은 모양으로 보입니다. 결과 카드 이미지에 지난 판의 글자가 겹쳐 찍히던 것을 고쳤습니다.",
+    "en": "The typing line now looks like Monkeytype: untyped letters are dim, correct ones brighten, a wrong letter turns red in place and extra letters trail in dark red. The caret glides between letters and blinks when you pause. Narrow Latin letters no longer shift while you type, and Latin names show exactly as you type them — lowercase and joined (Gangseo-gu → gangseogu). The bot's 'Start ranked' chip now looks the same as the other chips. Fixed the result card image showing the previous run's text overlapped on top."
+  },
+  {
     "v": "0.9.399",
     "date": "2026-10-14",
     "ko": "로그인 화면을 열 때 고른 구의 테두리가 남지 않고 투명하게 가라앉습니다. 홈 아래 코스 줄의 '서울'도 화면 말로 보입니다(Seúl, Séoul, 首尔…).",
