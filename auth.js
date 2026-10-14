@@ -245,15 +245,58 @@ async function take(bind, tag, generation) {
   show('vSignin');
 }
 
+const MIRROR_KEYS = [NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue', 'rt.greet'];
+function clearMirror() {
+  for (const k of MIRROR_KEYS) { try { localStorage.removeItem(k); } catch {} }
+}
+function clearAcct() {
+  try { localStorage.removeItem(TOKEN_KEY); } catch {}
+  clearMirror();
+  try { sessionStorage.removeItem(BIND_KEY); } catch {}
+}
+function mirrorProfile(p, introTok) {
+  try {
+    if (introTok) localStorage.setItem('rt.intro', introTok);
+    if (!p) return;
+    if (p.name) localStorage.setItem(NAME_KEY, p.name);
+    localStorage.setItem('rt.bio', p.bio || '');
+    localStorage.setItem('rt.botname', p.botname || '');
+    const [shape, expression, colour] = String(p.face || '').split(',');
+    if (shape && expression && colour) {
+      localStorage.setItem('rt.character', JSON.stringify({ shape, expression, colour }));
+    }
+    if (p.lang) {
+      const cur = read(OPT_KEY, '{}');
+      if (cur.lang !== p.lang) {
+        cur.lang = p.lang;
+        localStorage.setItem(OPT_KEY, JSON.stringify(cur));
+      }
+    }
+  } catch {}
+}
+
 /* 토큰을 쥐었으면 여기 볼 것은 없다 — 계정 화면은 독립 페이지다.
    처음 만든 계정은 가입 안내(welcome/)로 보낸다: 캐릭터와 프로필을 한 장씩
    맞추고 나면 스스로 홈으로 돌아온다. 이미 마친 사람이 그 주소로 와도
    welcome.js 가 /auth/me 의 intro 를 보고 비켜 준다 */
-function done(tok, generation, isNewAccount = false) {
+async function done(tok, generation, isNewAccount = false) {
   if (!current(generation)) return;
+  clearMirror();
   localStorage.setItem(TOKEN_KEY, tok);
   sessionStorage.removeItem(BIND_KEY);   // 쓰고 나면 지운다
   TWO = null;
+  if (!isNewAccount) {
+    try {
+      const r = await fetch(RELAY + '/auth/me', { headers: { authorization: 'Bearer ' + tok } });
+      if (!current(generation)) return;
+      if (r.ok) {
+        const d = await r.json().catch(() => null);
+        if (!current(generation)) return;
+        if (d && !d.intro && !d.profile?.name) isNewAccount = true;
+        else if (d) mirrorProfile(d.profile, d.intro ? tok : '');
+      }
+    } catch {}
+  }
   say('');
   close();
   /* 새 계정이면 가입 안내를 마치고 돌아온 첫 홈에서 봇이 꺼내 달라고 조른다(ranked.js) */
@@ -281,7 +324,7 @@ const bots = [];
 let mountBuddy = null;
 
 async function botMaker() {
-  if (!mountBuddy) ({ mountBuddy } = await import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href));
+  if (!mountBuddy) ({ mountBuddy } = await (window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href)));
   return mountBuddy;
 }
 /* 로고의 점 자리 — 오른쪽 위. 진짜 점은 숨기고 봇이 그 자리를 맡는다 */
@@ -462,7 +505,7 @@ let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
     backgroundState = [...document.body.children]
-      .filter(el => el !== over() && el.id !== 'options' && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
+      .filter(el => el !== over() && el.id !== 'boot' && el.id !== 'options' && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
       .map(el => [el, el.hasAttribute('inert')]);
     backgroundState.forEach(([el]) => { el.inert = true; });
     return;
@@ -661,7 +704,6 @@ function wire() {
     if (!a) return;
     const href = a.getAttribute('href') || '';
     if (href !== 'signin/' && !href.startsWith('signin/') && href !== '#signin') return;
-    if (token()) return;
     e.preventDefault();
     open();
   });
@@ -688,17 +730,56 @@ function wire() {
   addEventListener('popstate', () => { if (location.hash !== '#signin') close(); });
 }
 
+/* 공급자에게 다녀온 길이 아니면 첫 진입 로딩(app.js boot)의 사용자 신호 단계가 기다릴 수 있게
+   /auth/me 확인을 먼저 띄워 둔다 — 봇 스타일과 언어가 서버 프로필과 어긋나지 않게 */
+const ssoBack = backFromSso();
+if (!ssoBack) {
+  const checkedTok = token();
+  if (checkedTok) {
+    window.RT_ME_P = fetch(RELAY + '/auth/me', {
+      headers: { authorization: 'Bearer ' + checkedTok },
+      signal: AbortSignal.timeout(2400),
+    })
+      .then(async r => {
+        if (checkedTok !== token()) return;
+        if (r.status === 401) {
+          clearAcct();
+          dispatchEvent(new Event('rt-tab-swap'));
+          dispatchEvent(new Event('rt-auth-out'));
+          if (typeof paintUI === 'function') paintUI();
+          return;
+        }
+        if (!r.ok) return;
+        const d = await r.json().catch(() => null);
+        if (!d || checkedTok !== token()) return;
+        if (!d.intro && !d.profile?.name) {
+          try {
+            localStorage.removeItem('rt.intro');
+            localStorage.setItem('rt.rescue', '1');
+          } catch {}
+          if (!$('#play')?.classList.contains('on')) location.assign('welcome/');
+          return;
+        }
+        mirrorProfile(d.profile, d.intro ? checkedTok : '');
+      })
+      .catch(() => {});
+  }
+}
+
 (async () => {
   applyI18n(over());   // 마지막 말 팩으로 먼저
-  try { I18N = await grab('data/i18n.json'); } catch {}
+  try { I18N = await (window.RT_I18N_P || grab('data/i18n.json')); } catch {}
   LANG = uiLang();
   applyI18n(over());
   wire();
 
   /* 공급자에게 다녀온 길이 아니면 덮개는 닫힌 채로 둔다 — 홈이 먼저다 */
-  const back = backFromSso();
+  const back = ssoBack;
   /* 다른 페이지(community/)가 /#signin 으로 보내면 덮개를 연 채로 맞는다 */
-  if (!back) { if (location.hash === '#signin') open(); return; }
+  if (!back) {
+    if (location.hash === '#signin') open();
+    return;
+  }
   open();
   if (back.s === 'ok') {
     const bind = sessionStorage.getItem(BIND_KEY);

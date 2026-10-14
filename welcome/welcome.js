@@ -16,10 +16,15 @@ const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const API = self.RT_RELAY;   // relay.js
 
 const DONE_KEY = 'rt.intro';
+const ACCT_KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', DONE_KEY, 'rt.rescue', 'rt.greet'];
 const read = (k, d = '') => { try { return localStorage.getItem(k) || d; } catch { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 const parse = (k, d) => { try { return JSON.parse(read(k)) || d; } catch { return d; } };
 const token = () => read('rt.token');
+function forget() {
+  for (const k of ACCT_KEYS) { try { localStorage.removeItem(k); } catch {} }
+  try { sessionStorage.removeItem('rt.bind'); } catch {}
+}
 const still = () => document.documentElement.dataset.motion === 'off'
   || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -34,6 +39,7 @@ async function post(path, body) {
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token() },
     body: JSON.stringify(body),
   });
+  if (r.status === 401) { forget(); location.replace('../'); }
   const d = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error(d.msg || String(r.status)); e.status = r.status; e.data = d; throw e; }
   return d;
@@ -579,7 +585,7 @@ async function finish() {
   }
   /* 마쳤다는 표를 이 브라우저에도 남긴다 — 뒤로 가기로 돌아오면 중계기에
      묻기 전에 바로 비키려는 것이다(아래 들어오는 문). 원본은 서버의 intro 다 */
-  write(DONE_KEY, '1');
+  write(DONE_KEY, token());
   /* replace 가 아니라 assign 이다. 바꿔치기(replace) navigation 에는 브라우저가
      교차 문서 View Transition 을 걸지 않는다 — 카드가 내려가며 홈이 드러나는
      그 전환이 통째로 사라진다(Navigation API 의 history:'replace' 도 같다).
@@ -620,18 +626,18 @@ addEventListener('keydown', e => {
 /* ── 들어오는 문 ───────────────────────────────────────── */
 (async () => {
   if (!token()) { location.replace('../'); return; }
-  /* 이미 마친 사람은 여기 머물 이유가 없다. 이 브라우저에 표가 있으면 중계기에
-     묻기도 전에 비킨다 — 뒤로 가기로 돌아왔을 때 설문이 한 번 번쩍이지 않는다.
-     여기서는 replace 다: 뒤로 가기가 이 자리를 다시 밟게 두지 않는다 */
-  if (read(DONE_KEY)) { location.replace('../'); return; }
+  /* 이미 마친 사람은 여기 머물 이유가 없다. 이 브라우저에 지금 토큰과 같은 표가 있으면
+     중계기에 묻기도 전에 비킨다 — 뒤로 가기로 돌아왔을 때 설문이 한 번 번쩍이지 않는다.
+     옛 계정이 남긴 표('1' 이나 다른 토큰)는 새로 가입한 계정을 내쫓지 못한다. */
+  if (read(DONE_KEY) === token()) { location.replace('../'); return; }
   draw();
   /* 표가 없으면(기기를 바꿨거나 저장소를 지웠거나) 서버에 묻는다. 그 사이에도
      첫 장은 이미 떠 있다 — 중계기가 느려도 빈 화면을 보이지 않는다 */
   try {
     const r = await fetch(API + '/auth/me', { headers: { authorization: 'Bearer ' + token() } });
-    if (r.status === 401) { location.replace('../'); return; }
+    if (r.status === 401) { forget(); location.replace('../'); return; }
     const d = await r.json();
-    if (d.intro) { write(DONE_KEY, '1'); location.replace('../'); return; }
+    if (d.intro) { write(DONE_KEY, token()); location.replace('../'); return; }
     /* 다시 들어온 사람은 하다 만 자리에서 잇는다 */
     const p = d.profile;
     if (p) {

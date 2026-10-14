@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.00">
+<link rel="stylesheet" href="style.css?v=4.03">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -89,6 +89,9 @@
         vt.finished.catch(() => {}).finally(done);
       });
       setTimeout(() => { done(); d.removeAttribute('data-still'); }, 3000);   // 부팅이 어긋나도 눌러 둔 채 남지 않게
+    } else if (!/^#signin=/.test(location.hash)) {
+      d.dataset.boot = '';
+      setTimeout(() => d.removeAttribute('data-boot'), 8000);   // 부팅이 어긋나도 화면이 가려진 채 남지 않게
     }
   } catch {}
 })();
@@ -104,6 +107,21 @@
   </defs>
   <rect width="100%" height="100%" fill="url(#bitgrid)"/>
 </svg>
+
+<!-- 첫 진입 로딩 — 사용자 신호·언어 팩·봇 스타일·경쟁전 입력 신호와 기초 에셋을 실제로 다 받아
+     뒤의 홈을 먼저 완성해 둔 뒤 걷힌다. 부드러운 새로고침(data-soft)은 이미 차려진 화면이라 건너뛴다 -->
+<div id="boot" class="boot-over" role="status" aria-live="polite" aria-busy="true">
+  <div class="boot-card">
+    <p class="logo boot-logo" aria-hidden="true">region<span>type</span><i class="dot"></i></p>
+    <div class="boot-bar" role="progressbar" id="bootBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="bootStep">
+      <i id="bootFill"></i>
+    </div>
+    <p class="boot-meta">
+      <span class="boot-step" id="bootStep" data-i18n="bootSignal">사용자 신호 최적화 중…</span>
+      <b class="boot-pct" id="bootPct">0%</b>
+    </p>
+  </div>
+</div>
 
 <!-- 지역 목록 -->
 <section id="regions" class="screen on">
@@ -680,10 +698,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=3.85"></script>
-<script src="app.js?v=4.00"></script>
-<script src="auth.js?v=3.98"></script>
-<script src="settings/settings.js?v=3.98"></script>
-<script src="ranked.js?v=3.95"></script>
+<script src="relay.js?v=4.03"></script>
+<script src="app.js?v=4.03"></script>
+<script src="auth.js?v=4.03"></script>
+<script src="settings/settings.js?v=4.03"></script>
+<script src="ranked.js?v=4.03"></script>
 </body>
 </html>

@@ -126,6 +126,63 @@ body{
 /* 그리드를 끄면 격자 무늬만 지운다 — 대각 광원·비네트는 그대로 둔다 */
 :root[data-no-grid] .grid-bg rect{display:none}
 
+/* ── 첫 진입 로딩 ─────────────────────────
+   사용자 신호·언어 팩·봇 스타일·경쟁전 입력 신호와 기초 에셋을 실제로 다 받아
+   뒤의 홈을 먼저 완성해 둔 뒤 걷힌다. 뒤의 #regions 는 display 를 끄지 않고
+   투명하게만 두어, 로딩하는 동안 도트 지도(getBBox)·칸 글자(scrollWidth)·넵바 알약
+   자리가 실제 치수로 다 잡힌다 */
+.boot-over{
+  position:fixed; inset:0; z-index:20;
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  padding:24px; pointer-events:all;
+}
+.boot-over[hidden]{display:none!important}
+:root[data-boot] .boot-over,
+.boot-over.is-leaving{display:flex}
+.boot-over.is-leaving{
+  opacity:0; pointer-events:none;
+  transition:opacity var(--slow) var(--ease-out);
+}
+:root[data-boot] body > :not(.grid-bg,#boot,script){
+  opacity:0!important; pointer-events:none!important;
+}
+body > #regions{transition:opacity var(--slow) var(--ease-out)}
+.boot-card{
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  width:min(320px,82vw);
+}
+.boot-logo{
+  font-size:clamp(36px,5vw,52px);
+  translate:0 -.08em;
+}
+.boot-logo .dot{
+  background:var(--rk-on,var(--accent));
+  transition:background var(--slow) var(--ease-out),transform var(--slow) var(--ease-out);
+}
+.boot-bar{
+  width:100%; height:8px; border-radius:999px;
+  background:var(--land);
+  border:1.5px solid color-mix(in srgb,var(--ink) 18%,transparent);
+  overflow:hidden;
+}
+.boot-bar i{
+  display:block; height:100%; width:0%; border-radius:inherit;
+  background:var(--rk-on,var(--block));
+  transition:width .18s var(--ease-out),background var(--slow) var(--ease-out);
+}
+.boot-meta{
+  width:100%; display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  font-size:14px; line-height:1.4; color:var(--ink-soft); font-weight:600;
+}
+.boot-step{
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.boot-pct{
+  flex:none; font-variant-numeric:tabular-nums; font-weight:800; color:var(--ink);
+}
+@media (prefers-reduced-motion:reduce){ .boot-bar i{transition:none} }
+:root[data-motion="off"] .boot-bar i{transition:none}
+
 /* ── 화면 전환 ─────────────────────────── */
 .screen{
   position:fixed; inset:0; display:none; flex-direction:column;
@@ -193,6 +250,8 @@ body{
   :root body:is(.set,.setting) #options .opts-shell:has(#optsSecurity:not([hidden])){
     padding-bottom:calc(var(--bleed) + 200px + env(safe-area-inset-bottom) + 24px);
     scroll-padding:calc(var(--bleed) + var(--oh)) 0 calc(var(--bleed) + 200px + env(safe-area-inset-bottom))}
+  body > .boot-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
+    padding:calc(24px + var(--bleed)) 24px}
   /* @@signin */
   /* 로그인 덮개도 문서 안으로 — 위아래 여백까지 늘리고 안쪽 여백에 --bleed 를 더해 카드 자리는 그대로(아래는 독 높이 포함) */
   body > .si-over{position:absolute;top:0;bottom:auto;height:calc(100dvh + 2 * var(--bleed));
@@ -341,13 +400,9 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 }
 #courseBtns .course-map > svg{display:block; width:100%; height:100%; overflow:visible;
   transition:filter var(--cam-dur) var(--cam-ease),opacity var(--cam-dur) var(--cam-ease)}
-/* 구를 펼치면 서울 지도는 흐려지며 사라지고 동 지도는 흐림에서 또렷해진다. 그 구의 도트(.lift)는
-   그동안 덧그림(.course-morph)이 동 도트 자리로 날라 간다 — 접으면 거꾸로 (app.js flyDots) */
+/* 구를 펼치면 서울 지도는 흐려지며 사라지고 동 지도는 흐림에서 또렷해진다.
+   도트를 한 알씩 옮기지 않는다 — 지도 한 장의 filter·opacity 만 움직인다 */
 #courseBtns .course-map.haze > svg{filter:blur(6px); opacity:0}
-#courseBtns .course-map g.lift circle{visibility:hidden}
-#courseBtns .course-morph{position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible; pointer-events:none; z-index:2}
-#courseBtns .course-morph circle{fill:var(--block); transition:transform var(--cam-dur) var(--cam-ease),fill var(--cam-dur) var(--cam-ease)}
-#courseBtns .course-morph circle.on{fill:var(--accent)}
 #courseBtns .course-map circle{fill:var(--block); pointer-events:none; transition:fill var(--fast)}
 #courseBtns .course-map circle.under{opacity:0}
 /* 누르고 머무는 건 구역 판(.hit)이다 — 도트 사이 틈까지 그 구역이다 */
