@@ -223,10 +223,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   Object.assign($('#signinLink'), { href: '/#account', textContent: '내 계정' });   // 폰 아래 막대의 계정 동그라미
   try {
     const d = await call('/auth/me');
+    if (!d.intro && !d.profile?.name) {
+      try {
+        localStorage.removeItem('rt.intro');
+        localStorage.setItem('rt.rescue', '1');
+      } catch {}
+      location.replace('/welcome/');
+      return;
+    }
     const p = d.profile || {};
     me = p.name ? { name: p.name, handle: p.handle || '' } : null;
     $('#me').textContent = me ? who(me) : '닉네임 정하기';
     $('#me').href = '/#account';
-  } catch (e) { if (e.status === 401) $('#me').textContent = '다시 로그인'; }
+  } catch (e) {
+    if (e.status === 401) {
+      for (const k of ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue', 'rt.greet']) {
+        try { localStorage.removeItem(k); } catch {}
+      }
+      Object.assign($('#signinLink'), { href: '/#signin', textContent: '로그인' });
+      $('#me').textContent = '로그인';
+      $('#me').href = '/#signin';
+    }
+  }
 });
 })();

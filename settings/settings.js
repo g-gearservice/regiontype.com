@@ -330,6 +330,14 @@ async function ask(path, body) {
   return d;
 }
 
+const ACCT_KEYS = [TOKEN_KEY, NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue', 'rt.greet'];
+function forgetAcct() {
+  for (const k of ACCT_KEYS) { try { localStorage.removeItem(k); } catch {} }
+  try { sessionStorage.removeItem(BIND_KEY); } catch {}
+  dispatchEvent(new Event('rt-auth-out'));
+  if (typeof paintUI === 'function') paintUI();
+}
+
 /* 계정 상태는 중계기에게 묻는다 — 개수 둘뿐이다. 이 브라우저가 겪은 것만 세면
    다른 기기에서 만든 패스키도, 거기서 쓴 복구 코드도 안 보여 남은 개수가 틀리게
    뜬다. 비상구가 몇 개 남았는지는 틀리면 안 되는 숫자다.
@@ -343,7 +351,7 @@ async function me() {
      소개·캐릭터를 남기면, 다음 사람이 이 기기로 가입할 때 그 값이 그 사람의
      공개 프로필로 올라간다(welcome/welcome.js 의 save 참고) */
   if (r.status === 401) {
-    try { for (const k of [TOKEN_KEY, NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname', 'rt.intro']) localStorage.removeItem(k); } catch {}
+    forgetAcct();
     return null;
   }
   return r.ok ? r.json().catch(() => null) : null;
@@ -498,7 +506,7 @@ let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
     backgroundState = [...document.body.children]
-      .filter(el => el !== over() && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
+      .filter(el => el !== over() && el.id !== 'boot' && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
       .map(el => [el, el.hasAttribute('inert')]);
     backgroundState.forEach(([el]) => { el.inert = true; });
     return;
@@ -622,8 +630,7 @@ function wire() {
   /* 이름도 함께 지운다 — 남겨 두면 같은 브라우저의 다음 사람이 올린 점수가
      앞사람 이름으로 순위표에 걸린다(app.js 의 board 가 이 칸을 읽는다) */
   $('#acctOut').onclick = () => {
-    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY); localStorage.removeItem('rt.character'); } catch {}
-    try { sessionStorage.removeItem(BIND_KEY); } catch {}
+    forgetAcct();
     wipeCodes();
     say('');
     account();
@@ -656,6 +663,8 @@ function wire() {
     const where = opt.where;
     Object.assign(opt, DEF, { where }); saveOpt();
     wipeCodes();
+    dispatchEvent(new Event('rt-auth-out'));
+    if (typeof paintUI === 'function') paintUI();
     account();
     wiped(n);
   };
@@ -745,7 +754,7 @@ function softApply() {
   const ui = window.RT_UI;
   if (ui) { I18N = { [ui.lang]: ui.pack }; UI_LANGS = ui.langs; }
   else {
-    try { I18N = await grab('data/i18n.json'); } catch {}
+    try { I18N = await (window.RT_I18N_P || grab('data/i18n.json')); } catch {}
     UI_LANGS = Object.keys(I18N);
   }
   /* 'auto' 는 홈이 정한 말을 빌린다(pickLang). 홈이 늦게 정하면 덮개를 열 때 다시 맞춘다 */
@@ -755,7 +764,7 @@ function softApply() {
   $('#verBuild').textContent = VER;
   $('#verPatch').textContent = VER.replace('.', '');   // 릴리스 C 자리는 VER 에서 점을 뺀 숫자
   /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */
-  if (isDev() && !ui) { try { WORLD = await grab('data/world.json'); } catch {} }
+  if (isDev() && !ui) { try { WORLD = await (window.RT_WORLD_P || grab('data/world.json')); } catch {} }
   wire();
   wireOptsTabs();
   if (isSetHash()) open(location.hash.slice(1));
@@ -763,12 +772,12 @@ function softApply() {
     softApply();
     /* 지난번에 적어 둔 말 팩은 새로 생긴 키가 없을 수 있다 — 전체 팩이 오면 다시 입힌다.
        보안 탭의 상태 줄은 account() 가 t() 로 채우므로 그것도 다시 돈다 */
-    grab('data/i18n.json').then(all => {
+    (window.RT_I18N_P || grab('data/i18n.json')).then(all => {
       I18N = all; UI_LANGS = Object.keys(all);
       applyI18n(over());
       if (!$('#optsSecurity').hidden) account();
     }).catch(() => {});
-    if (isDev()) grab('data/world.json').then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
+    if (isDev()) (window.RT_WORLD_P || grab('data/world.json')).then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
   }
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });
 

@@ -70,7 +70,7 @@ function siDurMs() {
 function lockBack(on, el) {
   if (on) {
     inertWas = [...document.body.children]
-      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['signin', 'options', 'codes', 'feedback', 'tabDock'].includes(n.id))
+      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'tabDock'].includes(n.id))
       .map(n => [n, n.inert]);
     inertWas.forEach(([n]) => { n.inert = true; });
   } else {
@@ -351,7 +351,7 @@ function paintTint(host) {
 }
 
 function makeBot() {
-  making = making || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href).then(({ mountBuddy }) => {
+  making = making || (window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href)).then(({ mountBuddy }) => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'rk-bot';
@@ -1397,10 +1397,24 @@ wirePlayHold();
 wireStart();
 wireMatch();
 wireChat();
-/* 가입하고 처음 온 홈이면 조르고, 로그인하고 돌아온 홈이면 나와 인사한다. 아니면 로고
-   안에 있다 — 끌어낼 때 바로 나오게 몸만 미리 지어 둔다. 화면 말(i18n)을 다 읽은 뒤에 연다 */
-BOOTED.then(() => {
-  ping();
+/* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
+   로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
+   지도 자리가 잡힌 뒤(RT_BOOT_PLACE) 귀퉁이 잠자리는 로딩 막 뒤에서 미리 세운다.
+   인사(greetIn)와 첫 안내(beginIntro)는 막이 걷힌 직후(BOOTED.then) 시작한다 */
+let bootAct = '', pingedAtBoot = false;
+window.RT_PING = () => { pingedAtBoot = true; return ping(); };
+window.RT_BOOT_BOT = async () => {
+  sizeBot();
+  await makeBot();
+  if (!bot) return;
+  const face = readFace();
+  if (face.shape) bot.api.setShape(face.shape);
+  if (face.expression) bot.api.setExpression(face.expression);
+  bot.api.setColour(face.colour);
+  paintTint(bot.el.querySelector('.rk-bot-motion'));
+  bot.el.setAttribute('aria-label', botName());
+};
+window.RT_BOOT_PLACE = async () => {
   if (!regionsOn()) return;
   let rescue = false;
   try { rescue = !!localStorage.getItem(RESCUE_KEY); } catch {}
@@ -1410,10 +1424,15 @@ BOOTED.then(() => {
   if (!phone()) {
     try { greet = greet || !sessionStorage.getItem(GREETED_KEY); sessionStorage.setItem(GREETED_KEY, '1'); } catch {}
   }
-  if (rescue && token()) beginIntro();
-  else if (greet) greetIn();
-  else if (!phone()) summon().then(sleep);
-  else makeBot();
+  if (rescue && token()) bootAct = 'rescue';
+  else if (greet) bootAct = 'greet';
+  else if (!phone()) await summon().then(sleep);
+};
+BOOTED.then(() => {
+  if (!pingedAtBoot) ping();
+  if (PAGES.includes(location.hash.slice(1))) openPage(location.hash.slice(1));
+  if (!regionsOn()) return;
+  if (bootAct === 'rescue') beginIntro();
+  else if (bootAct === 'greet') greetIn();
 }).catch(() => {});
-if (PAGES.includes(location.hash.slice(1))) openPage(location.hash.slice(1));
 })();

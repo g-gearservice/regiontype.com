@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.403",
+    "date": "2026-10-14",
+    "ko": "사이트에 처음 들어올 때 로고와 진행 막대로 사용자 신호, 언어 팩, 봇 스타일, 경쟁전 입력 신호와 서울 자치구 코스·지도를 실제로 먼저 받아 둔 뒤 화면이 열립니다. 들어온 뒤에는 지명 표·봇 모양·코스 설명이 늦게 깜빡이며 바뀌지 않고, 자치구를 펼치거나 경쟁전을 시작할 때 바로 이어집니다. 구를 펼치면 도트가 한 알씩 날아가지 않고, 동 지도가 흐림에서 또렷해지며 서울 지도는 흐려지며 사라집니다. 뒤로 가면 반대로 돌아옵니다.",
+    "en": "Entering the site now preloads user signals, the language pack, your bot style, competitive input signals, and the Seoul district courses and maps behind a logo progress bar before unveiling the home screen. Once open, place names, bot colours, and course lines are already in place without late pop-in, and expanding a district or starting a match responds immediately. Opening a district no longer flies each dot into place: the neighborhood map sharpens out of a blur while the Seoul map blurs away, and Back plays that in reverse."
+  },
+  {
     "v": "0.10.402",
     "date": "2026-10-14",
     "ko": "치는 화면을 Monkeytype 처럼 바꿨습니다. 안 친 글자는 흐리게, 맞게 친 글자는 밝게, 틀린 글자는 그 자리에서 빨갛게, 넘쳐 친 글자는 뒤에 붙습니다. 커서는 글자 사이를 미끄러지고 손을 멈추면 깜빡입니다. 영어 이름처럼 폭이 좁은 글자가 치는 동안 자리에서 밀리던 것도 고쳤습니다. 라틴 문자 이름은 칠 그대로 소문자로 붙여 보입니다(Gangseo-gu → gangseogu). 홈봇 말풍선의 '경쟁전 시작' 칩이 다른 칩과 같은 모양으로 보입니다. 결과 카드 이미지에 지난 판의 글자가 겹쳐 찍히던 것을 고쳤습니다.",

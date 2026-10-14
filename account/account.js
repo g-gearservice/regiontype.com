@@ -89,7 +89,7 @@ document.documentElement.addEventListener('pointerleave', () => lookTo(null));
 
 /* 엔진은 미리 부르지 않는다 — 계정 화면에 들어온 사람만 받는다.
    목록도 buddy.js 가 건네는 것만 쓴다: engine.js 를 여기서 또 부르면 판이 둘이 된다 */
-const buddyKit = import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
+const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
 buddyKit.then(({ mountBuddy, TABLES }) => {
   lists.shape = TABLES.shapes.map(x => x.id);
   lists.expression = TABLES.expressions.map(x => x.id);
@@ -168,7 +168,32 @@ const loggedIn = () => !!read('rt.token');
    자리도 같은 손을 쓴다 — 한쪽만 지우면 다음 사람이 이 기기로 가입할 때 남은
    값이 그 사람의 공개 프로필로 올라간다(welcome/welcome.js 의 save 참고). */
 const KEYS = ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue', 'rt.greet'];
-const forget = () => { for (const k of KEYS) localStorage.removeItem(k); sessionStorage.removeItem('rt.bind'); };
+const forget = () => {
+  clearTimeout(keeping);
+  for (const k of KEYS) localStorage.removeItem(k);
+  sessionStorage.removeItem('rt.bind');
+  switches.push = switches.shut = false;
+  waiting = null;
+  Object.assign(character, FALLBACK);
+  paint();
+  const size = $('#botSize');
+  if (size) {
+    size.value = 100;
+    size.setAttribute('aria-valuetext', '100%');
+    document.documentElement.style.setProperty('--bot-scale', 1);
+  }
+};
+function leaveOut() {
+  $('#accountName').value = '';
+  $('#accountBio').value = '';
+  $('#accountId').value = '';
+  session();
+  if (typeof paintUI === 'function') paintUI();
+  dispatchEvent(new Event('rt-tab-swap'));
+  dispatchEvent(new Event('rt-auth-out'));
+  if (location.hash === '#account') history.replaceState(null, '', location.pathname + location.search);
+  if (!(window.softReload && softReload('auth'))) location.replace(location.pathname + location.search);
+}
 
 /* ── 서버에 남는 프로필 ────────────────────────────────────
    로그인해 있으면 원본은 서버다. localStorage 는 그 거울일 뿐이다 — 경기 화면은
@@ -213,9 +238,14 @@ function push(done) {
   }).then(r => r.ok ? r.json() : Promise.reject(r))
     .then(() => say(done))
     /* 아이디가 겹친 것은 '잠시 후 다시' 가 아니다 — 다시 눌러도 같은 답이 온다 */
-    .catch(r => say(r && r.status === 409
-      ? t('acctIdTaken')
-      : t('acctSaveFail')));
+    .catch(r => {
+      if (r && r.status === 401) {
+        try { forget(); } catch { return; }
+        leaveOut();
+        return;
+      }
+      say(r && r.status === 409 ? t('acctIdTaken') : t('acctSaveFail'));
+    });
 }
 /* 서버가 준 값을 화면과 거울에 얹는다. 모르는 캐릭터 값은 지금 고른 것을 둔다 —
    서버는 캐릭터 목록을 모르고 모양만 보므로, 아는 쪽이 떨어뜨린다. */
@@ -334,7 +364,7 @@ function saveOption(key, value, quiet) {
 $('#accountLanguage').value = ['ko', 'auto'].includes(opt.lang) ? opt.lang : 'auto';
 $('#accountLanguage').onchange = e => saveOption('lang', e.target.value);
 if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-  fetch(asset('data/i18n.json')).then(r => r.json()).then(data => {
+  (window.RT_I18N_P || fetch(asset('data/i18n.json')).then(r => r.json())).then(data => {
     for (const code of Object.keys(data).filter(code => code !== 'ko')) {
       const option = document.createElement('option'); option.value = code;
       try { option.textContent = new Intl.DisplayNames([code], {type: 'language'}).of(code); } catch { option.textContent = code; }
@@ -359,22 +389,21 @@ $('#accountErase').onclick = async () => {
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + read('rt.token') },
       body: JSON.stringify({ sure: true }),
     });
-    /* 200 이어도 본문이 성공이 아니면 지운 것이 아니다. 실패로 보이면 세션을 둔다 */
-    const data = await r.json().catch(() => null);
-    if (!r.ok || !data || data.ok !== true) throw r;
+    if (r.status !== 401) {
+      /* 200 이어도 본문이 성공이 아니면 지운 것이 아니다. 실패로 보이면 세션을 둔다 */
+      const data = await r.json().catch(() => null);
+      if (!r.ok || !data || (data.ok !== true && typeof data.gone !== 'number')) throw r;
+    }
     /* 서버에서 지워진 뒤에야 이 브라우저를 비운다 — 먼저 비우면 실패했을 때
-       토큰을 잃어 제 계정을 지울 길조차 없어진다.
-       location.replace('./') 는 #account 에서 해시만 바뀌고 문서는 그대로라
-       지운 뒤에도 로그인 상태가 남는다. 키를 전부 지우고 화면을 내린다. */
+       토큰을 잃어 제 계정을 지울 길조차 없어진다. */
     try { forget(); }
     catch {
       btn.disabled = false;
       say(t('acctErasedTrace'));
       return;
     }
-    session();
-    if (typeof paintUI === 'function') paintUI();
     say(t('acctErased'));
+    leaveOut();
   } catch {
     btn.disabled = false;
     say(t('acctEraseFail'));
@@ -384,10 +413,7 @@ $('#accountErase').onclick = async () => {
 $('#accountLogout').onclick = () => {
   try { forget(); }
   catch { say(t('acctLogoutFail')); return; }
-  $('#accountName').value = '';
-  $('#accountBio').value = '';
-  session();
-  location.replace('./');
+  leaveOut();
 };
 session();
 function syncOptions() {
@@ -396,28 +422,47 @@ function syncOptions() {
   document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
   $('#accountLanguage').value = opt.lang || 'auto';
 }
-addEventListener('rt-account', () => { session(); syncOptions(); });
+function checkSession() {
+  const checkedToken = read('rt.token');
+  if (!checkedToken) return;
+  fetch(API + '/auth/me', { headers: { authorization: 'Bearer ' + checkedToken } })
+    .then(r => {
+      if (checkedToken !== read('rt.token')) return;
+      if (r.status === 401) {
+        try { forget(); } catch { return; }
+        leaveOut();
+      } else if (!r.ok) $('#accountSession').textContent = t('acctCheckFail');
+      /* 서버에 남은 프로필이 원본이다 — 이 브라우저에 있던 값은 여기서 덮는다 */
+      else return r.json().then(data => {
+        if (!data.intro && !data.profile?.name) {
+          try {
+            localStorage.removeItem('rt.intro');
+            localStorage.setItem('rt.rescue', '1');
+          } catch {}
+          location.replace('welcome/');
+          return;
+        }
+        if (data.intro) write('rt.intro', checkedToken);
+        apply(data.profile);
+      });
+    })
+    .catch(() => { if (checkedToken === read('rt.token')) $('#accountSession').textContent = t('acctCheckNet'); });
+}
+addEventListener('rt-account', () => { session(); syncOptions(); checkSession(); });
 addEventListener('storage', e => {
   /* 다른 탭이 토큰을 지우면(계정 삭제·로그아웃) 이 탭도 로그인 화면을 내린다.
      같은 탭의 removeItem 은 storage 가 안 오므로, 지운 자리는 session() 을 직접 부른다 */
   if (e.key === null || e.key === 'rt.token') {
     session();
     if (typeof paintUI === 'function') paintUI();
+    if (!loggedIn()) {
+      dispatchEvent(new Event('rt-tab-swap'));
+      dispatchEvent(new Event('rt-auth-out'));
+    }
   } else if (e.key === 'rt.name' || e.key === 'rt.bio') session();
   if (e.key === null || e.key === 'rt.opt') {
     syncOptions();
   }
 });
-const checkedToken = read('rt.token');
-if (checkedToken) fetch(API + '/auth/me', {headers: {authorization: 'Bearer ' + checkedToken}})
-  .then(r => {
-    if (checkedToken !== read('rt.token')) return;
-    if (r.status === 401) {
-      forget(); session();
-      if (typeof paintUI === 'function') paintUI();
-    } else if (!r.ok) $('#accountSession').textContent = t('acctCheckFail');
-    /* 서버에 남은 프로필이 원본이다 — 이 브라우저에 있던 값은 여기서 덮는다 */
-    else return r.json().then(data => apply(data.profile));
-  })
-  .catch(() => { if (checkedToken === read('rt.token')) $('#accountSession').textContent = t('acctCheckNet'); });
+checkSession();
 })();
