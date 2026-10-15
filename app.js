@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.16';
+const VER = '4.17';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2404,11 +2404,13 @@ function link(svg, geom, items, cells) {
 function say(head, body, tip = '') {
   const f = $('#fact');
   /* 문서는 ltr 이라 아랍어 소개의 마침표가 앞으로 튄다 — 글마다 방향을 스스로 잡게 한다 */
-  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span><small class="type-hint" dir="auto" aria-hidden="true"></small>';
+  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span><small class="type-hint" id="typeHint" dir="auto" aria-hidden="true"></small>';
   f.querySelector('.tip').textContent = tip;
-  /* 화면 말이 한국어가 아니면 칠 글자(로마자·병음·가나·키릴)를 한 줄로 늘 보인다. 입력칸 이름(typeName)과
-     같은 말이라 화면 읽기 프로그램에는 두 번 읽히지 않게 숨긴다. 한국어는 칸에 보이는 그대로 치니 비운다 */
-  f.querySelector('.type-hint').textContent = TONGUE ? t('typeName') + (TONGUE.ime ? '' : ' · ␣ ' + t('kbSpace')) : '';
+  /* 화면 말이 한국어가 아니면 칠 글자(로마자·병음·가나·키릴)를 한 줄로 늘 보인다. 흐름 안에서는 숨기고
+     입력칸의 설명(aria-describedby)으로만 읽힌다. 한국어는 칸에 보이는 그대로 치니 비운다.
+     넘어가는 키(스페이스)는 앞에 둔다 — 폰 폭에서 줄 끝이 말줄임으로 잘린다 */
+  f.querySelector('.type-hint').textContent = TONGUE ? (TONGUE.ime ? '' : '␣ ' + t('kbSpace') + ' · ') + t('typeName') : '';
+  $('#typein').setAttribute('aria-describedby', 'typeHint');
   if (body !== undefined) f.querySelector('span').textContent = body;
   if (head !== undefined) setTarget(head);
   f.classList.add('on');
@@ -2552,6 +2554,7 @@ function paintKeys(box, raw) {
   for (const c of t.slice(T.length)) cells.push([c, 'over']);
   while (box.children.length < cells.length) box.append(document.createElement('b'));
   while (box.children.length > cells.length) box.lastChild.remove();
+  box.style.setProperty('--n', cells.length);   // 넘겨 친 글자까지 세어 줄인다 — 좁은 폭에서 줄이 화면 밖으로 나가지 않게
   const end = cells.length > want || cur >= want;
   [...box.children].forEach((el, i) => {
     const [c, st] = cells[i];
@@ -3759,6 +3762,7 @@ if (location.search.includes('rt=1')) {
   paintKeys(kb, 'gangseoguzz');
   console.assert(kb.children.length === 11 && [...kb.children].slice(9).map(b => b.textContent).join('') === 'zz'
     && kb.lastChild.classList.contains('over') && kb.lastChild.classList.contains('cur-r'), '넘겨 친 글자는 친 그대로 뒤에 붙고 커서가 그 끝에 선다');
+  console.assert(kb.style.getPropertyValue('--n') === '11', '글자 크기(--n)는 넘겨 친 칸까지 세어 좁은 폭에서도 줄이 화면 안에 든다');
   console.assert(capKeys('gangseogu' + 'z'.repeat(15)) === 'gangseogu' + 'z'.repeat(OVER_MAX) && capKeys('gangseogu ') === 'gangseogu ',
     '넘겨 치기는 OVER_MAX 자까지, 스페이스는 자르지 않는다');
   paintKeys(kb, '');

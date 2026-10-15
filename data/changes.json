@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.417",
+    "date": "2026-10-15",
+    "ko": "한국어가 아닌 화면에서 좁은 폭(폰)으로 이름을 넘겨 쳐도 글자가 줄어 이름 줄이 화면 밖으로 나가지 않습니다. 칠 글자 안내 줄은 Space 안내를 맨 앞에 두어 폰 폭에서도 보이고, 화면 읽기 프로그램은 입력칸의 설명으로 이 안내를 읽습니다.",
+    "en": "In interfaces other than Korean, over-typed letters on a narrow (phone) screen now shrink the name row so it stays on screen. The typing hint puts the Space note first so it stays visible at phone width, and screen readers read the hint as the typing field's description."
+  },
+  {
     "v": "0.10.416",
     "date": "2026-10-15",
     "ko": "한국어가 아닌 화면(일본어·중국어 제외)에서 Monkeytype 처럼 칩니다 — 틀린 글자도 그 자리에서 빨간 밑줄로 서고 커서가 한 자씩 이름 끝까지 나아가며, 이름 뒤로 넘겨 친 글자는 10자까지 짙은 빨강으로 붙고 그 뒤로는 쳐지지 않습니다. 백스페이스를 누르면 한 자씩 지워지고 커서도 돌아옵니다. 이름을 다 맞게 쳐도 Space(또는 Enter)를 눌러야 다음으로 넘어가고, 게임 중 칠 글자 안내 줄과 플레이 방법 설명도 그렇게 고쳤습니다.",
