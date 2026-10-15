@@ -1,0 +1,14 @@
+# 봇 전용 제안 글 워커. 커뮤니티(rt-community)와 같은 D1 rt-board 의 post 표에 쓴다.
+# 키는 코드에 없다: wrangler secret put AGENT_FEEDBACK_KEY --config agent-feedback/wrangler.toml
+# 배포 전에 migrate.sql 을 승인받아 먼저 적용해야 한다.
+name = "agent-feedback"
+main = "worker.mjs"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rt-board"
+database_id = "593224a1-2f33-4ec4-b43a-d9cd246e2d40"
+
+# 라우트는 아직 없다. 붙일 곳은 승인 때 정한다.
