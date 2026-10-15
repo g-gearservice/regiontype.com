@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.416",
+    "date": "2026-10-15",
+    "ko": "한국어가 아닌 화면(일본어·중국어 제외)에서 Monkeytype 처럼 칩니다 — 틀린 글자도 그 자리에서 빨간 밑줄로 서고 커서가 한 자씩 이름 끝까지 나아가며, 이름 뒤로 넘겨 친 글자는 10자까지 짙은 빨강으로 붙고 그 뒤로는 쳐지지 않습니다. 백스페이스를 누르면 한 자씩 지워지고 커서도 돌아옵니다. 이름을 다 맞게 쳐도 Space(또는 Enter)를 눌러야 다음으로 넘어가고, 게임 중 칠 글자 안내 줄과 플레이 방법 설명도 그렇게 고쳤습니다.",
+    "en": "In interfaces other than Korean (except Japanese and Chinese), typing now works like Monkeytype: a wrong letter turns red and underlined in place and the caret keeps moving letter by letter to the end of the name, letters past the end are added after it in dark red up to 10, and nothing more can be typed after that. Backspace removes them one at a time and moves the caret back. A fully correct name no longer advances on its own — press Space (or Enter) to move on; the in-game typing hint and the how-to-play guide now say so."
+  },
+  {
     "v": "0.10.415",
     "date": "2026-10-15",
     "ko": "한국어가 아닌 화면에서 게임 중 지명 설명 아래에 칠 글자(라틴 문자, 일본어는 히라가나·로마자, 중국어는 병음, 우크라이나어·불가리아어는 키릴 문자)가 한 줄로 보입니다.",
