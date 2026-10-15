@@ -11,8 +11,10 @@
 /welcome   /welcome/           301
 /policy/   /policy/index.html  200
 /policy    /policy/            301
+/policy.html /policy/          301
 /terms/    /terms/index.html   200
 /terms     /terms/             301
+/terms.html /terms/            301
 /community/ /community/index.html 200
 /community  /community/          301
 /mimi/   /mimi/index.html   200

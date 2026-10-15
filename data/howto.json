@@ -3,39 +3,39 @@
     "ko": {
       "h": "준비",
       "p": [
-        "물리 키보드가 필요합니다. 지명을 직접 쳐서 맞히는 방식이라 화면 키보드로는 제대로 돌아가지 않습니다. PC나 노트북에서 열어 주세요.",
+        "PC·노트북 키보드로 치는 것이 가장 편합니다. 폰에서는 화면 아래에 뜨는 게임 자판으로 칩니다(한글·영문 이름 코스, 설정의 '게임 자판'으로 끄고 켭니다). 게임 자판으로 다 칠 수 없는 코스이거나 자판을 끄면 폰 키보드로 칩니다.",
         "홈 화면은 마우스로 끌어 옮기고, 휠이나 + · − 키로 확대·축소합니다."
       ]
     },
     "en": {
       "h": "Before you start",
       "p": [
-        "You need a physical keyboard. You answer by typing each place name yourself, so an on-screen keyboard won't really work. Open it on a PC or laptop.",
+        "A keyboard on a PC or laptop is the most comfortable. On a phone you type on the game keyboard that appears at the bottom of the screen (for courses whose names use Korean or English letters; switch it off or on with 'Game keyboard' in Settings). If a course can't be typed on it, or you switch it off, your phone's own keyboard is used.",
         "On the home screen, drag with the mouse to move around and use the wheel or the + and − keys to zoom."
       ]
     }
   },
   {
-    "img": "pick.svg",
+    "img": "pick.png",
     "alt": {
-      "ko": "홈의 동그란 칸 중 마포구를 누르면 주황 테두리가 생기고, 한 번 더 누르면 마포구 안의 행정동 칸들이 펼쳐진다",
-      "en": "Pressing the Mapo-gu tile on the home screen outlines it in orange; pressing it again spreads out the neighbourhood tiles inside Mapo-gu"
+      "ko": "홈의 서울 도트 지도에서 마포구 도트 묶음이 주황으로 칠해져 있고, 아래 막대 밑에 '마포구 16개 행정동'이 떠 있다",
+      "en": "The Seoul dot map on the home screen with Mapo-gu's cluster of dots filled in orange; under the bottom bar it reads '마포구 16개 행정동' (Mapo-gu, 16 neighbourhoods)"
     },
     "ko": {
       "h": "1. 코스 고르기",
       "p": [
-        "홈의 동그란 칸 하나하나가 코스입니다. 칸을 누르면 골라지고, 고른 곳의 이름이 아래 막대 밑에 뜹니다.",
-        "같은 칸을 한 번 더 누르면 그 안의 행정동으로 들어갑니다. 서울 25개 자치구 안에 행정동이 423개 있습니다.",
-        "Shift 를 누른 채 이웃한 칸을 여러 개 누르면 그 곳들만 모아 칠 수 있습니다. Esc 를 누르면 고른 것이 풀립니다.",
+        "홈의 서울 지도는 도트로 그려져 있고, 구 하나하나가 제 도트 묶음이자 코스입니다. 구를 누르면 그 도트가 주황으로 칠해지며 골라지고, 고른 곳의 이름이 아래 막대에 뜹니다.",
+        "같은 구를 한 번 더 누르면 그 구의 행정동 도트 지도가 펼쳐집니다. 서울 25개 자치구 안에 행정동이 423개 있습니다. 아래 막대의 '뒤로'를 누르면 서울 지도로 돌아갑니다.",
+        "Shift 를 누른 채 맞닿은 구(펼친 동 지도에서는 맞닿은 동)를 여러 개 누르면 그 곳들만 모아 칠 수 있습니다. Esc 를 누르면 고른 것이 풀립니다.",
         "아무 칸도 고르지 않고 시작하면 전체 코스(서울 25개 자치구)를 칩니다."
       ]
     },
     "en": {
       "h": "1. Pick a course",
       "p": [
-        "Every round tile on the home screen is a course. Press one to pick it; its name appears under the bottom bar.",
-        "Press the same tile again to step into the neighbourhoods (administrative dongs) inside it — Seoul's 25 districts hold 423 of them.",
-        "Hold Shift and press several neighbouring tiles to play just those places together. Press Esc to clear your pick.",
+        "The Seoul map on the home screen is drawn in dots, and each district is its own cluster of dots — and its own course. Press a district to pick it: its dots fill in orange and its name appears in the bottom bar.",
+        "Press the same district again to open its dot map of neighbourhoods (administrative dongs) — Seoul's 25 districts hold 423 of them. Press Back in the bottom bar to return to the Seoul map.",
+        "Hold Shift and press several districts that touch each other (or touching neighbourhoods on an opened map) to play just those places together. Press Esc to clear your pick.",
         "Start without picking anything and you play the whole course (all 25 districts of Seoul)."
       ]
     }
@@ -51,8 +51,8 @@
       "p": [
         "아래 막대의 시작하기를 누르면 카운트다운 뒤 판이 시작됩니다. 따로 누를 곳 없이 바로 치면 됩니다.",
         "코스는 이웃한 곳을 따라 차례로 이어집니다. 지도에서 주황으로 빛나는 곳이 지금 칠 곳이고, 아래 이름 줄 가운데에 그 이름이, 양옆에 방금 친 곳과 다음 곳이 흐리게 보입니다.",
-        "이름을 치고 Space 를 누르면 확정됩니다. 이름에 띄어쓰기가 들어 있는 코스에서는 Enter 로 확정합니다.",
-        "이름보다 길게는 쳐지지 않습니다. 틀리면 입력줄이 흔들리며 비워지니 다시 치면 됩니다."
+        "이름을 치고 Space 나 Enter 를 누르면 확정됩니다. 이름에 띄어쓰기가 들어 있는 코스에서는 Space 가 띄어쓰기로 들어가니 Enter 로 확정합니다. 한국어가 아닌 화면에서는 이름을 끝까지 치면 키를 누르지 않아도 맞습니다.",
+        "치는 동안 맞게 친 글자는 밝아지고, 틀린 글자는 그 자리에서 빨갛게 보입니다. 이름을 다 친 뒤 더 친 글자는 짙은 빨강으로 뒤에 붙습니다(한국어 화면은 가장 긴 이름 — 서울특별시처럼 정식 명칭까지 — 보다 길게는 쳐지지 않습니다). 틀린 채로 확정하면 친 것이 비워지고 콤보가 끊기니 다시 치면 됩니다."
       ]
     },
     "en": {
@@ -60,8 +60,8 @@
       "p": [
         "Press Play in the bottom bar; after a countdown the round begins. Just start typing — there's nothing else to click.",
         "A course runs from one neighbouring place to the next. The place glowing orange on the map is the one to type now; its name sits in the middle of the name row, with the place you just typed and the next one faded on either side.",
-        "Type the name and press Space to confirm. In courses whose names contain spaces, confirm with Enter instead.",
-        "You can't type past the length of the name. A wrong answer shakes the input line and clears it — just type it again."
+        "Type the name and press Space or Enter to confirm. In courses whose names contain spaces, Space types a space, so confirm with Enter. In interfaces other than Korean, finishing the name counts as correct without pressing a key.",
+        "As you type, correct letters light up and a wrong letter turns red right where it is. Letters typed past the end of the name are added after it in dark red (in the Korean interface you can't type past the longest form of the name, such as the full official name). Confirm a wrong answer and what you typed is cleared and your combo breaks — just type it again."
       ]
     }
   },
