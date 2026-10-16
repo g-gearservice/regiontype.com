@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.03';
+const VER = '4.15';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -729,12 +729,19 @@ const NUDGE = -10;
    하한까지 줄이고, 가운데에 작게 뜨면 상한까지 키운다 */
 const fingers = () => matchMedia('(pointer:coarse)').matches;
 /* 손가락 화면은 서울 덩이(8칸)가 폭에 다 들어야 해서 하한이 더 낮다 */
-const HOME_Z = [fingers() ? .2 : .42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
+/* 홈 배율 하한. 좁은 데스크톱 창(폰 폭)도 서울을 좌우 16px 안에 넣으려면 손가락 화면만큼 물러나야 한다 */
+const homeZ = () => [fingers() || innerWidth < 760 ? .2 : .42, 3], PLAY_Z = [1, 8], HOME_FILL = .8;
 /* 펼친 구 지도의 도트 한 알이 1배에서 차지하는 px. 이름(.86칸)이 12px 쯤 된다 */
 const HOME_DOT = 14;
 function clampZoom(z, lo, hi) { return Math.max(lo, Math.min(hi, z)); }
 /* 홈의 기본 배율. 데스크톱은 1배, 손가락 화면은 서울 덩이가 좌우 16px 여백 안에 든다 */
-const homeFit = box => Math.min(1, fingers() ? (innerWidth - 32) / box.w : 1, homeStage().h / box.h);
+/* 좁은 창의 위 메뉴는 가로로 민다(style.css) — Tab 으로 옮긴 칸이 줄 밖에 있으면 그만큼 민다 */
+document.querySelector('#regions .navbar')?.addEventListener('focusin', e => {
+  const nav = e.currentTarget;
+  if (nav.scrollWidth > nav.clientWidth) e.target.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+});
+/* 좌우 16px 안에 서울이 다 들어오게 — 좁은 데스크톱 창(폰 폭)도 손가락 화면과 같다 */
+const homeFit = box => Math.min(1, (innerWidth - 32) / box.w, homeStage().h / box.h);
 
 function makeTile(label, slug, kid) {
   const el = document.createElement('button');
@@ -1244,7 +1251,7 @@ function shiftHome(px, py, tiles, useTo = false) {
   applyGrid(...courseGridArgs(cw, ch));
 }
 function aimHomeCam(px, py, z, tiles, snap = false) {
-  z = clampZoom(z, HOME_Z[0], HOME_Z[1]);
+  z = clampZoom(z, ...homeZ());
   [px, py] = clampHomePan(px, py, tiles, true, z);
   GZ.cz.x = GZ.cz.to = z; GZ.cz.v = 0;
   GZ.px.x = GZ.px.to = px; GZ.px.v = 0;
@@ -1262,7 +1269,9 @@ function homeStage() {
   const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot');
   const pad = 28;
   const top = (nav ? nav.getBoundingClientRect().bottom : 160) + pad;
-  const bot = (dock ? dock.getBoundingClientRect().top : innerHeight) - pad;
+  /* 좁은 데스크톱 창에서는 봇이 아래 막대 위 귀퉁이에서 잔다(ranked.js cornerAt) — 그만큼 지도 밑을 비운다 */
+  const room = !fingers() && innerWidth < 760 ? 116 : 0;
+  const bot = (dock ? dock.getBoundingClientRect().top : innerHeight) - pad - room;
   const left = pad, right = innerWidth - pad;
   return { cx: (left + right) / 2, cy: (top + bot) / 2,
            w: Math.max(1, right - left), h: Math.max(1, bot - top) };
@@ -1295,7 +1304,7 @@ function focusHome(snap = false) {
     const reachX = Math.max(cx - box.x0, box.x1 - cx, 1);
     const reachY = Math.max(cy - box.y0, box.y1 - cy, 1);
     /* 지도보다 작게는 물러나지 않는다 — 도트가 줄면 이름을 못 읽는다. 넘치는 쪽은 끌어서 본다 */
-    const z = clampZoom(HOME_FILL * Math.min(stage.w / (2 * reachX), stage.h / (2 * reachY)), fingers() ? HOME_Z[0] : 1, HOME_Z[1]);
+    const z = clampZoom(HOME_FILL * Math.min(stage.w / (2 * reachX), stage.h / (2 * reachY)), fingers() ? homeZ()[0] : 1, homeZ()[1]);
     /* 무대보다 큰 지도는 위쪽(구 칸과 지도 머리)부터 보인다 — 가운데에 맞추면 머리가 메뉴 밑에 숨는다 */
     const top = Math.min(self.y0, worldBox([OPEN.tile]).y0);
     const py = self.h * z > stage.h ? stage.cy - stage.h / 2 - top * z : stage.cy - cy * z;
@@ -1475,7 +1484,7 @@ function wheelZoomFactor(e) {
 function zoomHomeAt(mx, my, factor) {
   if (!$('#regions').classList.contains('on') || !COURSE.tiles.length) return;
   const old = COURSE.z || 1;
-  const z = clampZoom(old * factor, HOME_Z[0], HOME_Z[1]);
+  const z = clampZoom(old * factor, ...homeZ());
   if (z === old) return;
   COURSE.z = z;
   GZ.cz.x = GZ.cz.to = z; GZ.cz.v = 0;
@@ -2395,8 +2404,11 @@ function link(svg, geom, items, cells) {
 function say(head, body, tip = '') {
   const f = $('#fact');
   /* 문서는 ltr 이라 아랍어 소개의 마침표가 앞으로 튄다 — 글마다 방향을 스스로 잡게 한다 */
-  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span>';
+  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span><small class="type-hint" dir="auto" aria-hidden="true"></small>';
   f.querySelector('.tip').textContent = tip;
+  /* 화면 말이 한국어가 아니면 칠 글자(로마자·병음·가나·키릴)를 한 줄로 늘 보인다. 입력칸 이름(typeName)과
+     같은 말이라 화면 읽기 프로그램에는 두 번 읽히지 않게 숨긴다. 한국어는 칸에 보이는 그대로 치니 비운다 */
+  f.querySelector('.type-hint').textContent = TONGUE ? t('typeName') : '';
   if (body !== undefined) f.querySelector('span').textContent = body;
   if (head !== undefined) setTarget(head);
   f.classList.add('on');

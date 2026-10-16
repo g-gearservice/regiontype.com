@@ -468,7 +468,7 @@ function place(x, y) {
   const a = dock && aim && aim.getBoundingClientRect(), inSheet = a && aim.closest('#regions .nav-bot, #tabDock');
   const low = a && !inSheet && a.top + a.height / 2 < innerHeight / 2;
   const cx = a ? a.left + a.width / 2 : x + size / 2, cy = y + size / 2;
-  let side = dock ? (low ? 'down' : 'up') : sideOf(cx, cy);
+  let side = dock ? (low ? 'down' : 'up') : greetSide || sideOf(cx, cy);
   const was = bubble.dataset.side;
   bubble.dataset.side = side;
   const w = bubble.offsetWidth, [rTop, rBot] = room();
@@ -528,6 +528,7 @@ function unfold() {
 let closing = 0;
 function hide() {
   chatting = false;
+  greetSide = null;
   setTalkUI(null);
   const chips = $('#rkChips');
   if (chips) chips.hidden = true;
@@ -541,14 +542,42 @@ function hide() {
 /* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳. 경쟁전을 켜면 왼쪽
    아래는 지금 접속 부채(#rkLive)가 차지하므로 오른쪽 아래로 비킨다 */
 function cornerAt(i) {
+  /* 좁은 창(폰 폭)에서는 위 귀퉁이가 지도 머리(도봉·노원)를 덮는다 — 아래 막대 위 두 곳에만 앉는다 */
+  if (narrow() && i < 2) i += 2;
   if (ranked && i === 2) i = 3;
   const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
   const x = i % 2 ? innerWidth - BOT - 20 : 20;
   /* 아래 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
   const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot').getBoundingClientRect();
-  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
+  /* 봇 밑에는 '눌러서 채팅'(.rk-sleep-hint, 봇 아래 6px)이 붙는다 — 그 줄까지 막대 위 8px 에 띄운다 */
+  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 - HINT_H : innerHeight - BOT - 24 - HINT_H;
   return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
 }
+const HINT_H = 26;
+const narrow = () => !phone() && innerWidth < 760;
+/* 인사하는 자리. 폰이 아니면 말풍선이 도트를 덮지 않는 곳 — 로고 밑 가운데는 지도 머리(도봉)를
+   덮는다. 위 두 귀퉁이에서 말풍선을 아래·안쪽으로 펴 보고, 봇과 말풍선이 도트 하나라도 덮으면
+   다음 자리를 본다. 다 덮으면 null(로고 밑 그대로) */
+const GREET_W = 300, GREET_H = 72;
+function greetSpot() {
+  if (phone()) return null;
+  const dots = [...document.querySelectorAll('#courseBtns .course-map')]
+    .filter(el => parseFloat(getComputedStyle(el).opacity) >= .5)
+    .flatMap(el => [...el.querySelectorAll('circle')].map(c => c.getBoundingClientRect()));
+  if (!dots.length) return null;
+  const hits = (l, t, r, b) => dots.some(d => d.left < r && d.right > l && d.top < b && d.bottom > t);
+  const clampX = x => Math.max(16, Math.min(innerWidth - GREET_W - 16, x));
+  for (const [x, y] of [cornerAt(1), cornerAt(0)]) {
+    const cx = x + BOT / 2, cy = y + BOT / 2;
+    for (const [side, bx, by] of [['down', clampX(cx - GREET_W / 2), cy], ['left', cx - GREET_W, cy - GREET_H / 2],
+                                  ['right', cx, cy - GREET_H / 2]]) {
+      if (bx < 16 || bx + GREET_W > innerWidth - 16) continue;
+      if (!hits(x, y, x + BOT, y + BOT) && !hits(bx, by, bx + GREET_W, by + GREET_H)) return { at: [x, y], side };
+    }
+  }
+  return null;
+}
+let greetSide = null;
 /* 제 발로 나온 봇이 서는 곳 — 로고 바로 밑 가운데 */
 function underLogo() {
   const r = logo().getBoundingClientRect();
@@ -877,9 +906,17 @@ function midTile() {
   };
   return tiles.sort((a, b) => d(a) - d(b))[0] || null;
 }
+/* 뒤로는 구를 펼쳤을 때만 선다 — 숨어 있으면 그 자리(아래 막대)를 가리킨다 */
+function backBar() {
+  const b = $('#navBack');
+  if (b && !b.hidden && b.getBoundingClientRect().width) return b;
+  return $(fingers() ? '#tabDock' : '#regions .nav-bot');
+}
 const STEPS = [
   ['tourHi', () => [innerWidth * .72, innerHeight * .36], () => $('#sheetBot')],
   ['tourTiles', () => near(midTile()), midTile],
+  ['tourShift', () => near(midTile()), midTile],
+  ['tourBack', () => near(backBar()), backBar],
   ['tourPlay', () => near($('#navPlay')), () => $('#navPlay')],
   ['tourRanked', () => near($('#navPlay')), () => $('#navPlay')],
   ['tourBoard', () => near($('#tabDock a[href="#ranking"], #regions a[href="#ranking"]')), () => $('#tabDock a[href="#ranking"], #regions a[href="#ranking"]')],
@@ -937,6 +974,8 @@ async function tour() {
   if (dock) follow();
   for (const [key, at, what] of STEPS) {
     if (skipping) break;
+    /* 여러 구 고르기는 Shift 뿐이다 — 손가락 화면에는 그 길이 없어 건너뛴다 */
+    if (key === 'tourShift' && fingers()) continue;
     /* 날아가는 동안은 입을 다물고, 내려앉은 뒤 말풍선을 펼친다 */
     hide();
     if (dock) { const el = what && what(); sheetTo(!!el && !!el.closest('#sheetMore')); aimAt(el); }
@@ -980,6 +1019,9 @@ async function greetIn() {
   hide();
   spot = null;
   await emerge();
+  /* 폰이 아니면 지도 밖으로 비켜서 인사한다(greetSpot) */
+  const g = greetSpot();
+  if (g) { greetSide = g.side; place(...g.at); await new Promise(res => setTimeout(res, siDurMs())); }
   const name = token() ? readName() : '';
   tell(name ? 'botWelcomeName' : 'botWelcome', { name });
   clearTimeout(hush);
