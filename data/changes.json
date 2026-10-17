@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.10.426",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타의 입력 칸 위에 지난 동 · 지금 동 · 다음 동이 한 줄로 흐릅니다. 베타 전용 설정 페이지(beta/3dnavigation/settings)에서 보일 동 수, 카메라 기울기·거리, 달리는 빠르기를 고릅니다. 지도 바닥의 점 무늬를 걷고 실제 동 경계를 면으로 칠해, 마우스를 얹으면 짙어지고 누르면 그 동에서 출발합니다.",
+    "en": "The 3D navigation beta shows past, current and upcoming neighborhoods in one line above the typing field, and gets its own settings page (beta/3dnavigation/settings) for how many to show, camera tilt and distance, and driving speed. The dot pattern under the map is gone: each neighborhood is drawn along its real boundary, highlights on hover and starts the route when clicked."
+  },
+  {
+    "v": "0.10.425",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타를 Apple 지도처럼 새로 칠합니다. 지도는 따뜻한 바탕·하늘색 물·연둣빛 공원과 옅은 3D 건물로, 경로는 파란 선으로, 길 안내는 어두운 안내판과 빨간 그만두기 단추로 바뀝니다. 사이트 야간 모드도 따릅니다.",
+    "en": "Restyles the 3D navigation beta after Apple Maps: a warm base map with light-blue water, soft green parks and pale 3D buildings, blue route lines, and a dark turn banner with a red End button. It also follows the site's night mode."
+  },
+  {
     "v": "0.10.424",
     "date": "2026-10-17",
     "ko": "베타로 3D 내비게이션을 엽니다(regiontype.com/beta/3dnavigation). 서울 구를 고르고 핀을 출발할 동에 놓으면 실제 도로로 짠 경로 세 갈래가 뜹니다. 출발하면 실제 건물이 3D로 선 지도 위에서, 다음 동 이름을 칠 때마다 그 동까지 달립니다.",
