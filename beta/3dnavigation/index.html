@@ -270,6 +270,8 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
 @keyframes blink{50%{opacity:0}}
 .typing.off .q-letters{opacity:.55}
 .typing.off .caret{display:none}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.typing.miss{animation:shake .3s}
 /* 원래 입력창은 화면에서 뺀다. display:none 이면 포커스가 안 잡혀 IME 가 죽는다 */
 .typebar{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;padding:0}
 #typein{width:1px;height:1px;padding:0;border:0;box-shadow:none;font-size:16px}
@@ -324,7 +326,7 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
 }
 @media (prefers-reduced-motion:reduce){
   .typing b,.typing .caret,.card,button{transition:none}
-  .typing .caret.idle{animation:none}
+  .typing .caret.idle,.typing.miss{animation:none}
   button:active:not(:disabled){transform:none}
 }
 </style>
@@ -402,7 +404,7 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
     <div class="q-letters" id="qLetters"></div>
     <div class="q-side is-next" id="qNext"></div>
   </div>
-  <div class="fact" id="fact" aria-live="polite"><span>다음 동 이름을 치면 그 동까지 달립니다</span></div>
+  <div class="fact" id="fact" aria-live="polite"><span>다음 동 이름을 치고 스페이스를 누르면 그 동까지 달립니다</span></div>
 </div>
 <div class="typebar drive">
   <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" lang="ko" enterkeyhint="go" aria-label="지역 이름 입력">
@@ -769,23 +771,19 @@ function finish(){
   $('doneP').textContent=`${run.r.order.length}곳 · ${km(run.dist)} km · ${Math.floor(s/60)}분 ${s%60}초`;
   $('done').classList.add('on');$('again').focus();
 }
-function tryType(final,composing=false){
+function tryType(composing=false){
   if(!run||run.busy||run.done)return;
-  const inp=$('typein'),d=run.r.order[run.k],cap=[...d.name].length;
-  let raw=inp.value;
-  if(!/\s/.test(raw)&&raw.length>cap){
-    raw=raw.slice(0,cap);composing=false;
-    const had=document.activeElement===inp;inp.blur();inp.value=raw;if(had)inp.focus();
-  }
-  const v=norm(raw),want=norm(d.name),spaced=/\s/.test(raw)&&!composing;
-  if(v===want||((final||spaced)&&v&&v+'동'===want)){inp.value='';paintTyped('');driveLeg();return}
-  if(spaced){inp.value='';paintTyped('');$('typing').classList.add('bad');return}
-  paintTyped(raw,composing);
-  if(final&&v)$('typing').classList.add('bad');
+  const inp=$('typein'),d=run.r.order[run.k],raw=inp.value;
+  /* 스페이스가 들어와야 다음 동으로 간다. keydown 으로 가로채지 않는다 — 조합 확정이 깨진다 */
+  if(!(/\s/.test(raw)&&!composing)){paintTyped(raw,composing);return}
+  const v=norm(raw),want=norm(d.name);
+  inp.value='';
+  if(v===want||(v&&v+'동'===want)){paintTyped('');driveLeg();return}
+  paintTyped('');
+  const host=$('typing');host.classList.remove('miss');void host.offsetWidth;host.classList.add('miss');
 }
-/* 이름을 다 치면 확정 키 없이 달린다. 스페이스는 가로채지 않는다(IME) */
-$('typein').addEventListener('input',e=>tryType(false,e.isComposing));
-$('typein').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();tryType(true)}});
+/* 이름을 다 쳐도 스페이스 전에는 달리지 않는다 */
+$('typein').addEventListener('input',e=>tryType(e.isComposing));
 const markFocus=()=>$('typing').classList.toggle('off',document.activeElement!==$('typein'));
 $('typein').addEventListener('focus',markFocus);
 $('typein').addEventListener('blur',markFocus);
