@@ -1270,15 +1270,43 @@ async function go(slug) {
   if (mm) return;
   matchOpen(slug, name);
 }
+/* 상대 미니맵 — 중계기가 주는 맞힌 곳 지도(set: 코스 칸 순서대로 '0'/'1')를 지도 모양 그대로 그린다.
+   안 맞힌 칸은 옅은 고리, 맞힌 칸은 속이 찬 점, 막 늘어난 칸은 더 크고 테두리가 진하다(색만으로 가르지 않는다) */
+let miniSet = '';
+function mini(set) {
+  const c = $('#rkMini'), x = c.getContext('2d');
+  if (!x || !G || !G.view) return;
+  const cs = getComputedStyle(c), on = cs.getPropertyValue('--rk-on').trim() || cs.getPropertyValue('--ranked').trim() || '#e5484d',
+        ink = cs.getPropertyValue('--ink').trim() || '#000', W = c.width, H = c.height, pad = 10;
+  const k = Math.min((W - pad * 2) / G.view[0], (H - pad * 2) / G.view[1]), d = G.cell * k, r = d * .42,
+        ox = (W - G.view[0] * k) / 2, oy = (H - G.view[1] * k) / 2;
+  x.clearRect(0, 0, W, H);
+  x.strokeStyle = ink; x.fillStyle = on;
+  G.items.forEach((it, i) => {
+    const got = set[i] === '1', fresh = got && miniSet[i] !== '1';
+    x.globalAlpha = got ? 1 : .3;
+    x.lineWidth = fresh ? 1.5 : 1;
+    (it.cells || []).forEach(([cx, cy]) => {
+      x.beginPath(); x.arc(ox + (cx + .5) * d, oy + (cy + .5) * d, fresh ? r * 1.5 : r, 0, 7);
+      if (got) x.fill();
+      if (!got || fresh) x.stroke();
+    });
+  });
+  x.globalAlpha = 1;
+  miniSet = set;
+}
 /* 판 중에는 1.5초마다 내 맞힌 곳을 알리고 상대의 것을 받아 머리줄에 건다 */
 let oppTimer = 0;
 function oppWatch(rk) {
   clearInterval(oppTimer);
-  const put = n => {
+  const put = (n, set) => {
     const total = G && G.items ? G.items.length : 0;
+    /* 옛 중계기는 지도를 안 준다 — 개수만큼 앞에서부터 채운다 */
+    mini(typeof set === 'string' ? set : '1'.repeat(n).padEnd(total, '0'));
     mmText('#rkOppT', t('rkOppLine', { name: rk.opp.name, n }));
     $('#rkOppFill').style.width = (total ? Math.min(100, n / total * 100) : 0) + '%';
   };
+  miniSet = '';
   put(0);
   let seen = false;
   oppTimer = setInterval(async () => {
@@ -1288,8 +1316,8 @@ function oppWatch(rk) {
     if (seen && !$('#play').classList.contains('on')) { clearInterval(oppTimer); return; }
     seen = true;
     try {
-      const d = await ask('/match/tick', { duel: rk.duel, hits: G.hits });
-      if (oppTimer && d.opp && G && G.ranked === rk) put(Number(d.opp.hits) || 0);
+      const d = await ask('/match/tick', { duel: rk.duel, hits: G.hits, set: G.items.map(it => it.claimed ? 1 : 0).join('') });
+      if (oppTimer && d.opp && G && G.ranked === rk) put(Number(d.opp.hits) || 0, d.opp.set);
     } catch {}
   }, OPP_MS);
 }
