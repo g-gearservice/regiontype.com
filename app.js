@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.22';
+const VER = '4.23';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2411,7 +2411,7 @@ function say(head, body, tip = '') {
   /* 화면 말이 한국어가 아니면 칠 글자(로마자·병음·가나·키릴)를 한 줄로 늘 보인다. 흐름 안에서는 숨기고
      입력칸의 설명(aria-describedby)으로만 읽힌다. 한국어는 칸에 보이는 그대로 치니 비운다.
      넘어가는 키(스페이스)는 앞에 둔다 — 폰 폭에서 줄 끝이 말줄임으로 잘린다 */
-  f.querySelector('.type-hint').textContent = TONGUE ? (TONGUE.ime ? '' : '␣ ' + t('kbSpace') + ' · ') + t('typeName') : '';
+  f.querySelector('.type-hint').textContent = TONGUE ? '␣ ' + t('kbSpace') + ' · ' + t('typeName') : '';
   $('#typein').setAttribute('aria-describedby', 'typeHint');
   if (body !== undefined) f.querySelector('span').textContent = body;
   if (head !== undefined) setTarget(head);
@@ -2867,11 +2867,9 @@ const tintBar = () => { $('meta[name="theme-color"]').content = getComputedStyle
 new MutationObserver(tintBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-night'] });
 tintBar();
 
-/* 화면 말로 칠 때의 입력 한 번. 일본어·중국어(IME)는 이름을 다 치면 확정 키 없이 바로 맞는다 — 일본·중국 타자
-   게임처럼 읽기를 끝까지 치면 넘어간다. IME 조합 중이어도 맞으면 조합을 끊고 비운다
-   (조합 중 value 만 비우면 IME 가 제 버퍼를 도로 넣는다 — 위의 글자 수 자르기와 같은 손).
-   스페이스는 조합을 바꾸는 키(일본어 변환)일 수 있어 조합 중에는 보지 않는다. 조합 밖의
-   스페이스는 줄인 이름(江南·Gangseo)을 확정하거나, 틀린 입력을 털어 낸다 */
+/* 화면 말로 칠 때의 입력 한 번. 한국어와 같은 구조다 — 이름을 다 쳐도 스페이스(또는 Enter)를 쳐야
+   판정하고, 그때 맞으면 점령, 아니면 놓친다. 채워지는 모양(paintTongue)만 말마다 다르다.
+   스페이스는 조합을 바꾸는 키(일본어 변환)일 수 있어 조합 중에는 보지 않는다 */
 function tongueInput(inp, val, composing) {
   const r = paintTyped(val, composing);
   G.part = G.seq && r && !r.bad ? TONGUE.keys(TONGUE.key(G.want).slice(0, r.p)) : 0;
@@ -2879,15 +2877,9 @@ function tongueInput(inp, val, composing) {
   if (len > G.typed) G[G.part || !len ? 'ok' : 'bad'] += len - G.typed;
   G.typed = len;
   $('#statSpeed').textContent = speedIn(cpmNow());
-  /* 바로 치는 말은 Monkeytype 처럼 다 맞게 쳐도 스페이스를 쳐야 넘어간다(Enter 는 keydown 이 맡는다) */
-  const hit = TONGUE.ime && matchTongue(val, G.seq ? [target()] : G.items);
-  const commit = !hit && !composing && /\s/.test(TONGUE.ime ? val : val.slice(-1)) && (r && r.bad || matchTongue(val, G.items, true));
-  if (!hit && !commit) return;
-  const had = document.activeElement === inp;
-  if (composing && had) inp.blur();
+  if (composing || !/\s/.test(val)) return;   // 스페이스 전에는 판단하지 않는다
   inp.value = '';
-  if (composing && had) inp.focus();
-  judge(val, !!hit);
+  judge(val);
 }
 /* 맞힌 칸의 타수 — 다 맞게 따라간 꼴(이름 또는 줄인 이름)의 가장 짧은 정석 키 수 */
 function tongueKeys(it, raw) {
@@ -2895,14 +2887,14 @@ function tongueKeys(it, raw) {
   const k = forms.find(f => { const r = TONGUE.walk(raw, f); return !r.bad && r.p === f.length; }) || forms[0];
   return TONGUE.keys(k);
 }
-function judge(raw, auto = false) {
+function judge(raw) {
   if (TONGUE) {
     if (!raw.trim()) return;
-    const hit = auto ? matchTongue(raw, G.items) : matchTongue(raw, G.items, true);
+    const hit = matchTongue(raw, G.items, true);
     G.part = 0; G.typed = 0;
     if (!hit || (G.seq && hit !== target())) { G.bad++; return miss(); }
     G.ok++;
-    G.chars += tongueKeys(hit, raw) + (auto ? 0 : 1);   // 확정 키를 눌렀으면 그것도 한 타
+    G.chars += tongueKeys(hit, raw) + 1;   // 확정 키도 한 타
     return claim(hit);
   }
   const answer = G.spacy ? raw.trim() : raw.replace(/\s+/g, '');
