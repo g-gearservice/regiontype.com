@@ -34,12 +34,6 @@ legend{font-weight:800;font-size:18px;padding:0 6px}
 .seg label{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border:2px solid var(--glass-line);border-radius:14px;cursor:pointer}
 .seg label:has(input:checked){border-color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}
 .seg input{accent-color:var(--ink)}
-.preview{display:flex;gap:6px;flex-wrap:nowrap;overflow:hidden;margin:0;padding:10px 0 0;list-style:none;white-space:nowrap}
-.preview li{flex:none;padding:3px 10px;border-radius:999px;border:2px solid transparent}
-.preview .past{color:var(--ink-soft);opacity:.6}
-.preview .past::before{content:'✓ '}
-.preview .now{font-weight:800;border-color:var(--ink);background:#fff}
-.preview .next{color:var(--ink-soft);font-weight:600}
 .bar{display:flex;gap:8px;margin-top:20px}
 .bar a,.bar button{flex:1;min-height:52px;display:flex;align-items:center;justify-content:center;border-radius:999px;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}
 .bar a{background:var(--accent);color:var(--on-accent);border:0}
@@ -53,15 +47,6 @@ legend{font-weight:800;font-size:18px;padding:0 6px}
   <p class="sub">이 브라우저에만 저장됩니다. 바꾸면 바로 적용돼요.</p>
 
   <form id="f">
-    <fieldset>
-      <legend>지난 동 · 지금 동 · 다음 동</legend>
-      <div class="row"><label for="past">지난 동 보이기</label><output for="past" id="pastO"></output>
-        <input type="range" id="past" name="past" min="0" max="3" step="1"></div>
-      <div class="row"><label for="next">다음 동 보이기</label><output for="next" id="nextO"></output>
-        <input type="range" id="next" name="next" min="0" max="5" step="1"></div>
-      <ol class="preview" id="pv" aria-label="미리보기"></ol>
-    </fieldset>
-
     <fieldset>
       <legend>카메라</legend>
       <div class="row"><label for="pitch">기울기</label><output for="pitch" id="pitchO"></output>
@@ -91,29 +76,22 @@ legend{font-weight:800;font-size:18px;padding:0 6px}
 
 <script>
 /* 키와 기본값은 ../index.html 의 NAV 와 같다. 한쪽을 바꾸면 같이 바꾼다 */
-const KEY='rt-nav3d',DEF={past:2,next:3,pitch:62,zoom:16.8,speed:'normal'};
+const KEY='rt-nav3d',DEF={pitch:62,zoom:16.8,speed:'normal'};
 const load=()=>{try{return {...DEF,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...DEF}}};
-const f=document.getElementById('f'),pv=document.getElementById('pv'),saved=document.getElementById('saved');
-const SAMPLE=['화곡1동','화곡본동','우장산동','발산1동','공항동','방화1동','방화2동','개화동','가양1동'];
+const f=document.getElementById('f'),saved=document.getElementById('saved');
 
 function fill(o){
-  for(const k of ['past','next','pitch','zoom'])f[k].value=o[k];
+  for(const k of ['pitch','zoom'])f[k].value=o[k];
   f.querySelector(`[name=speed][value=${o.speed}]`).checked=true;
   show();
 }
 function read(){
-  return {past:+f.past.value,next:+f.next.value,pitch:+f.pitch.value,zoom:+f.zoom.value,speed:f.speed.value};
+  return {pitch:+f.pitch.value,zoom:+f.zoom.value,speed:f.speed.value};
 }
 function show(){
   const o=read();
-  document.getElementById('pastO').textContent=o.past+'곳';
-  document.getElementById('nextO').textContent=o.next+'곳';
   document.getElementById('pitchO').textContent=o.pitch+'°';
   document.getElementById('zoomO').textContent=o.zoom.toFixed(1);
-  const k=3;
-  pv.innerHTML=SAMPLE.slice(k-o.past,k+1+o.next).map((n,j)=>{
-    const c=j<o.past?'past':j===o.past?'now':'next';
-    return `<li class="${c}"${c==='now'?' aria-current="step"':''}>${n}</li>`}).join('');
 }
 f.addEventListener('input',()=>{
   show();
