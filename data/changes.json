@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.424",
+    "date": "2026-10-17",
+    "ko": "베타로 3D 내비게이션을 엽니다(regiontype.com/beta/3dnavigation). 서울 구를 고르고 핀을 출발할 동에 놓으면 실제 도로로 짠 경로 세 갈래가 뜹니다. 출발하면 실제 건물이 3D로 선 지도 위에서, 다음 동 이름을 칠 때마다 그 동까지 달립니다.",
+    "en": "Opens a 3D navigation beta at regiontype.com/beta/3dnavigation. Pick a Seoul district and drop the pin on a starting neighborhood to see three routes along real roads; once you set off, typing the next neighborhood's name drives you there through real 3D buildings."
+  },
+  {
     "v": "0.10.423",
     "date": "2026-10-17",
     "ko": "한국어가 아닌 화면(일본어·중국어 포함)에서도 한국어와 같은 구조로 칩니다 — 이름을 다 쳐도 Space(또는 Enter)를 눌러야 판정하고, 틀리거나 덜 친 채 Space 를 누르면 놓친 것으로 셉니다. 글자가 채워지는 모양은 그대로입니다.",

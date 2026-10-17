@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>3D 내비게이션 · regiontype beta</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../favicon/favicon.svg">
+<!-- 실제 지도. 바탕·3D 건물은 OpenFreeMap(OSM render_height), 길은 OSRM, 동 경계는
+     tools/build_drive.py 가 찍은 data/*-dong.drive.json 이다 -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+/* 색·간격은 style.css 의 :root 에서 옮겨 온 값이다. 저쪽을 바꾸면 여기도 바꾼다 */
+:root{
+  --bg:#e8edf0; --ink:#3c464a; --ink-soft:#5b676e;
+  --block:#6f9a9e; --block-hi:#5f8d92; --block-deep:#496a6d;
+  --accent:#f0a03c; --accent-text:#a54f22; --on-accent:#232c31; --bad:#c1362b; --card:#f4f8f9;
+  --route:#2f7fa6; --route-alt:#9cc3d6;
+  --fast:.16s; --ease-out:cubic-bezier(.23,1,.32,1);
+  --glass:color-mix(in srgb,var(--card) 80%,transparent);
+  --glass-thick:color-mix(in srgb,var(--card) 88%,transparent);
+  --glass-blur:blur(20px) saturate(180%);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.6);
+  --glass-line:color-mix(in srgb,var(--ink) 10%,transparent);
+  --glass-fill:color-mix(in srgb,var(--ink) 7%,transparent);
+  --glass-sm:0 2px 10px rgba(40,56,64,.16);
+  --glass-lg:0 8px 32px rgba(40,56,64,.2);
+  --gap:16px;
+}
+@media (prefers-reduced-transparency:reduce){:root{--glass:var(--card);--glass-thick:var(--card);--glass-blur:none}}
+@media (prefers-contrast:more){:root{--glass:var(--card);--glass-thick:var(--card);--glass-blur:none;--glass-line:var(--ink)}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font:500 16px/1.4 system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer;white-space:nowrap}
+a{white-space:nowrap}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+#map{position:fixed;inset:0}
+.glass{background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-line);box-shadow:var(--glass-lg),var(--glass-hi)}
+kbd{font:inherit;font-size:.8em;font-weight:700;border:1px solid var(--ink-soft);border-radius:5px;padding:0 5px}
+.maplibregl-ctrl-attrib{display:none}
+
+/* ── 사이트 넵바: 홈과 같은 줄, 지도 위라 유리 알약에 얹는다 ── */
+.nav-top{position:fixed;left:50%;top:var(--gap);transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px}
+.nav-top a{color:var(--ink);text-decoration:none;font-weight:700;font-size:17px;padding:8px 14px;border-radius:999px}
+.nav-top a:hover{background:var(--glass-fill)}
+.logo{font-size:24px!important;letter-spacing:-.02em;padding:4px 14px!important}
+.logo span{font-weight:500}
+.logo i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:top;margin-top:5px}
+.beta{font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;border:1.5px solid var(--ink);margin-left:2px}
+
+/* ── 홈: CarPlay 경로 고르기 구조 ── */
+.panel{position:fixed;left:var(--gap);top:84px;bottom:var(--gap);width:368px;border-radius:30px;display:flex;flex-direction:column;z-index:3;overflow:hidden}
+.panel-head{display:flex;align-items:center;gap:12px;padding:16px 16px 4px}
+.round{width:48px;height:48px;border-radius:50%;border:0;background:var(--ink);color:var(--card);display:flex;align-items:center;justify-content:center;flex:none}
+.round[hidden]{display:none}
+.panel-head h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-sub{margin:2px 16px 10px;font-size:13px;color:var(--ink-soft);min-height:18px}
+.cards{flex:1;overflow:auto;padding:4px 12px 12px;display:flex;flex-direction:column;gap:10px;scroll-snap-type:y proximity;overscroll-behavior:contain}
+.card{scroll-snap-align:start;display:flex;align-items:center;gap:12px;padding:16px;border-radius:22px;background:var(--card);border:2px solid transparent;text-align:left;width:100%;
+  transition:background var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out)}
+.card[aria-checked=true]{background:color-mix(in srgb,var(--route) 14%,var(--card));border-color:var(--ink)}
+.card .t{flex:1;min-width:0}
+.card b{display:block;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.card .eta{display:block;font-size:14px;color:var(--ink-soft)}
+.card .tag{display:inline-block;margin-top:4px;font-size:13px;font-weight:800;padding:1px 8px;border-radius:999px;border:1.5px solid var(--ink)}
+.go{width:72px;height:60px;border-radius:16px;border:0;background:var(--accent);color:var(--on-accent);font-size:19px;font-weight:800;flex:none}
+.gu{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:18px;background:var(--card);border:2px solid transparent;width:100%;text-align:left;font-size:18px;font-weight:700}
+.gu small{font-size:13px;font-weight:500;color:var(--ink-soft)}
+.gu[aria-current=true]{border-color:var(--ink)}
+.pager{display:flex;justify-content:space-around;padding:2px 0 6px}
+.pager button{width:64px;height:44px;border:0;background:none;border-radius:12px}
+.pager button:disabled{opacity:.35;cursor:default}
+.hint{margin:0 16px 14px;font-size:12px;color:var(--ink-soft)}
+
+.ctl{position:fixed;right:var(--gap);bottom:var(--gap);display:flex;flex-direction:column;gap:8px;z-index:3}
+.ctl .grp{border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
+.ctl button{width:56px;height:56px;border:0;background:none;display:flex;align-items:center;justify-content:center}
+.ctl button[aria-pressed=true]{background:var(--ink);color:var(--card)}
+.ctl .grp button+button{border-top:1px solid var(--glass-line)}
+.ctl svg{width:22px;height:22px}
+
+/* 아래 막대 — 홈의 nav-bot 과 같은 알약 */
+.nav-bot{position:fixed;left:50%;bottom:var(--gap);transform:translateX(-50%);z-index:3;display:flex;gap:6px;padding:6px;border-radius:999px}
+.nav-bot a,.nav-bot button{border:0;background:none;padding:12px 22px;border-radius:999px;color:var(--ink);text-decoration:none;font-size:20px;font-weight:700}
+.nav-bot .is-play{background:var(--accent);color:var(--on-accent);font-weight:800}
+
+/* 경로 말풍선 */
+.bubble{padding:6px 12px;border-radius:12px;font-weight:800;font-size:16px;line-height:1.15;white-space:nowrap;border:2px solid transparent;text-align:center}
+.bubble small{display:block;font-size:12px;font-weight:600}
+.bubble.on{background:var(--route);color:#fff;border-color:#fff;box-shadow:var(--glass-sm)}
+.bubble.off{background:var(--card);color:var(--ink);border-color:var(--glass-line);box-shadow:var(--glass-sm)}
+/* 플레이 핀 */
+.pin{width:46px;height:62px;cursor:grab;filter:drop-shadow(0 8px 8px rgba(40,56,64,.35))}
+.pin:active{cursor:grabbing}
+.pin-tag{padding:4px 12px;border-radius:999px;background:var(--on-accent);color:#fff;font-weight:800;font-size:14px;white-space:nowrap;margin-bottom:66px;pointer-events:none}
+
+/* ── 운전: Google 몰입형 내비 구조 ── */
+.drive{display:none!important}
+body.driving .drive{display:flex!important}
+body.driving .home{display:none!important}
+.banner{position:fixed;left:var(--gap);top:var(--gap);width:min(460px,calc(100vw - 2*var(--gap)));border-radius:24px;overflow:hidden;flex-direction:column;z-index:3;
+  background:var(--block-deep);color:#fff;box-shadow:var(--glass-lg)}
+.banner .row{display:flex;align-items:center;gap:16px;padding:16px 20px}
+.banner .arrow{width:64px;height:64px;flex:none}
+.banner .dist{font-size:38px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums}
+.banner .road{margin-top:4px;font-size:15px;color:#d5e1e3}
+.banner .street{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:24px;font-weight:800}
+.shield{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:26px;padding:0 6px;border-radius:7px;background:var(--accent);color:var(--on-accent);font-size:15px;font-weight:800}
+.banner .lanes{display:flex;gap:6px;align-items:center;padding:10px 20px;background:color-mix(in srgb,#000 22%,var(--block-deep));font-size:14px;overflow:hidden}
+.banner .lanes span{padding:3px 10px;border-radius:999px;border:1.5px solid rgba(255,255,255,.55);white-space:nowrap}
+.banner .lanes span:first-child{background:#fff;color:var(--block-deep);font-weight:800;border-color:#fff}
+.pills{position:fixed;top:var(--gap);right:var(--gap);gap:8px;z-index:3}
+.pill{height:48px;padding:0 18px;border-radius:999px;border:0;font-weight:700;display:flex;align-items:center;gap:8px}
+.trip{position:fixed;left:var(--gap);bottom:var(--gap);border-radius:24px;z-index:3;padding:10px 4px}
+.trip div{padding:0 18px;text-align:center}
+.trip div+div{border-left:1px solid var(--glass-line)}
+.trip b{display:block;font-size:26px;line-height:1.15;font-weight:800;font-variant-numeric:tabular-nums}
+.trip span{font-size:13px;color:var(--ink-soft)}
+.typer{position:fixed;left:50%;bottom:var(--gap);transform:translateX(-50%);width:min(520px,calc(100vw - 2*var(--gap)));border-radius:24px;z-index:3;padding:10px;flex-direction:column;gap:6px}
+.typer label{font-size:13px;color:var(--ink-soft);padding:0 6px}
+.typer input{height:58px;border-radius:16px;border:2px solid var(--ink);background:var(--card);padding:0 16px;font:700 26px/1 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;color:var(--ink);width:100%}
+.typer input.bad{border-color:var(--bad);animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.car{width:76px;height:76px}
+.car svg{width:100%;height:100%}
+.done{position:fixed;inset:0;z-index:6;display:none;align-items:center;justify-content:center;background:rgba(35,44,49,.35)}
+.done.on{display:flex}
+.done .box{border-radius:30px;padding:28px 32px;text-align:center;min-width:300px;background:var(--glass-thick)}
+.done h2{margin:0 0 6px;font-size:30px}
+.done .pill{margin:14px auto 0;background:var(--accent);color:var(--on-accent);font-weight:800}
+.attrib{position:fixed;right:84px;bottom:4px;margin:0;font-size:11px;color:var(--ink-soft);z-index:2}
+.attrib a{color:var(--ink-soft)}
+body.driving .attrib{right:var(--gap)}
+.toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:5;padding:10px 16px;border-radius:14px;font-size:14px;display:none}
+.toast.on{display:block}
+
+/* 폰 갈림은 pointer:coarse (CLAUDE.md). 좁은 데스크톱 창도 같은 배치로 접어 겹치지 않게만 한다 */
+@media (pointer:coarse),(max-width:760px){
+  :root{--gap:8px}
+  .nav-top .side{display:none}
+  .panel{top:auto;left:var(--gap);right:var(--gap);width:auto;height:44vh;bottom:calc(84px + env(safe-area-inset-bottom));border-radius:26px}
+  .ctl{bottom:auto;top:76px}
+  .nav-bot{bottom:calc(var(--gap) + env(safe-area-inset-bottom))}
+  .nav-bot a,.nav-bot button{font-size:17px;padding:12px 18px}
+  .hint{display:none}
+  .banner .dist{font-size:30px}.banner .arrow{width:48px;height:48px}.banner .street{font-size:20px}
+  .pills{top:auto;bottom:calc(200px + env(safe-area-inset-bottom))}
+  .trip{left:var(--gap);right:var(--gap);bottom:calc(112px + env(safe-area-inset-bottom));justify-content:space-around}
+  .typer{bottom:calc(var(--gap) + env(safe-area-inset-bottom))}
+  .attrib{display:none}
+}
+@media (prefers-reduced-motion:reduce){.typer input.bad{animation:none}.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="map" role="region" aria-label="지도"></div>
+
+<nav class="nav-top glass home" aria-label="사이트 메뉴">
+  <a class="side" href="../../about/">소개</a>
+  <a class="side" href="../../#ranking">순위</a>
+  <a class="logo" href="../../" aria-label="regiontype 홈">region<span>type</span><i aria-hidden="true"></i></a>
+  <span class="beta">BETA</span>
+  <a class="side" href="../../community/">커뮤니티</a>
+</nav>
+
+<section class="panel glass home" aria-labelledby="ttl">
+  <div class="panel-head">
+    <button class="round" type="button" id="back" aria-label="구 목록으로" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h1 id="ttl">어느 구를 달릴까요</h1>
+  </div>
+  <p class="panel-sub" id="sub" aria-live="polite"></p>
+  <div class="cards" id="cards"></div>
+  <div class="pager">
+    <button type="button" id="up" aria-label="위로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15l7-7 7 7"/></svg></button>
+    <button type="button" id="down" aria-label="아래로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg></button>
+  </div>
+  <p class="hint" id="hintKeys"><kbd>↑</kbd> <kbd>↓</kbd> 고르기 · <kbd>Enter</kbd> 출발 · 핀은 끌어서 출발할 동에 놓습니다</p>
+</section>
+
+<div class="ctl home">
+  <div class="grp glass">
+    <button type="button" id="tilt" aria-pressed="false" aria-label="3D 건물로 기울이기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12 4 7.5"/></svg></button>
+    <button type="button" id="fit" aria-label="코스 전체 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+  </div>
+  <div class="grp glass">
+    <button type="button" id="zin" aria-label="확대"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" id="zout" aria-label="축소"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+  </div>
+</div>
+
+<nav class="nav-bot glass home" aria-label="놀이 메뉴">
+  <a href="../../#settings">설정</a>
+  <button type="button" class="is-play" id="play">출발</button>
+  <a href="../../signin/">로그인</a>
+</nav>
+
+<!-- 운전 -->
+<section class="banner drive" aria-live="polite" aria-label="길 안내">
+  <div class="row">
+    <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="arrow" d="M12 21V5M6 11l6-6 6 6"/></svg>
+    <div>
+      <div class="dist" id="dist">–</div>
+      <div class="road" id="road"></div>
+      <div class="street"><span class="shield" id="shield" aria-label="순번">1</span><span id="target">–</span></div>
+    </div>
+  </div>
+  <div class="lanes" id="lanes" aria-label="다음 동들"></div>
+</section>
+<div class="pills drive">
+  <button class="pill glass" type="button" id="peek">첫 글자</button>
+  <button class="pill glass" type="button" id="quit">그만두기 <kbd>Esc</kbd></button>
+</div>
+<div class="trip glass drive" role="status">
+  <div><b id="left">0</b><span>남은 곳</span></div>
+  <div><b id="clock">0:00</b><span>달린 시간</span></div>
+  <div><b id="km">0.0</b><span>km</span></div>
+</div>
+<div class="typer glass drive">
+  <label for="in">다음 동 이름을 치면 그 동까지 달립니다</label>
+  <input id="in" autocomplete="off" autocapitalize="off" spellcheck="false" lang="ko" enterkeyhint="go">
+</div>
+<div class="done" id="done" role="dialog" aria-modal="true" aria-labelledby="doneT"><div class="box glass"><h2 id="doneT">도착</h2><p id="doneP"></p><button class="pill" type="button" id="again">다시 고르기</button></div></div>
+<p class="toast glass" id="toast" role="status"></p>
+<p class="attrib">© <a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · 길 <a href="https://project-osrm.org">OSRM</a> · 경계 KOSTAT 2013</p>
+
+<script>
+const $=id=>document.getElementById(id);
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COARSE=matchMedia('(pointer:coarse),(max-width:760px)').matches;   // 배치만 접는다
+const DATA='../../data/';
+
+const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',
+  center:[126.98,37.56],zoom:11,attributionControl:false,maxPitch:70,dragRotate:true});
+
+let index=[], slug=null, dongs=[], routes=[], sel=0, view='list', pin, pinTag, bubbles=[], run=null, planSeq=0;
+
+/* ── 바탕: OSM 이름을 한국어로, 색은 우리 바탕으로 눅인다 ── */
+function tame(){
+  for(const l of map.getStyle().layers){
+    try{
+      if(l.type==='symbol'&&map.getLayoutProperty(l.id,'text-field'))
+        map.setLayoutProperty(l.id,'text-field',['coalesce',['get','name:ko'],['get','name']]);
+      if(l.type==='symbol'&&/poi/.test(l.id)) map.setLayoutProperty(l.id,'visibility','none');
+      if(l.type==='background') map.setPaintProperty(l.id,'background-color','#e8edf0');
+      if(l.type==='fill'&&/^water/.test(l.id)) map.setPaintProperty(l.id,'fill-color','#c8d9e2');
+      if(l.type==='line'&&/^(road|highway|bridge|tunnel)/.test(l.id)&&!/rail|path|pier|area/.test(l.id))
+        map.setPaintProperty(l.id,'line-color',/casing/.test(l.id)?'#d3dbe0':/motorway|trunk/.test(l.id)?'#f3dcb4':'#ffffff');
+      if(l.type==='fill'&&/park|wood|grass|landcover|landuse/.test(l.id)) map.setPaintProperty(l.id,'fill-opacity',.3);
+      if(l.type==='fill-extrusion'){
+        map.setPaintProperty(l.id,'fill-extrusion-color',['interpolate',['linear'],['coalesce',['get','render_height'],8],0,'#eef2f4',60,'#d6dee2',150,'#c3cdd2']);
+        map.setPaintProperty(l.id,'fill-extrusion-opacity',.94);
+      }
+    }catch(e){}
+  }
+}
+/* 점 격자 — 홈 지도의 동그라미 칸을 그대로 무늬로 깐다 */
+function dotImage(fill,ring){
+  const s=2,n=16*s,c=document.createElement('canvas');c.width=c.height=n;
+  const g=c.getContext('2d');g.fillStyle=fill;g.beginPath();g.arc(n/2,n/2,5.6*s,0,7);g.fill();
+  if(ring){g.lineWidth=1.4*s;g.strokeStyle=ring;g.stroke()}
+  return {img:g.getImageData(0,0,n,n),opt:{pixelRatio:s}};
+}
+
+const norm=s=>s.replace(/[\s·,.\-]/g,'');
+const mins=s=>Math.max(1,Math.round(s/60))+'분';
+const km=m=>(m/1000).toFixed(1);
+const fc=list=>({type:'FeatureCollection',features:list.map((d,i)=>({type:'Feature',
+  properties:{name:d.name,own:d.own?1:0,tgt:d.tgt?1:0},geometry:d.geometry}))});
+const pts=list=>({type:'FeatureCollection',features:list.map((d,i)=>({type:'Feature',
+  properties:{name:(d.own?'✓ ':'')+d.name,own:d.own?1:0,tgt:d.tgt?1:0},geometry:{type:'Point',coordinates:d.c}}))});
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),3200)}
+
+/* ── 코스: 핀을 놓은 동에서 출발하는 세 갈래 ── */
+function nearest(from,list){
+  const left=[...list],out=[];let cur=from;
+  while(left.length){let bi=0,bd=1e9;
+    left.forEach((d,i)=>{const dx=(d.c[0]-cur.c[0])*88,dy=(d.c[1]-cur.c[1])*111,q=dx*dx+dy*dy;if(q<bd){bd=q;bi=i}});
+    cur=left.splice(bi,1)[0];out.push(cur)}
+  return out;
+}
+function variants(s){
+  const k=dongs.indexOf(s);
+  return [
+    {name:'코스 순서',tag:'추천',order:[...dongs.slice(k),...dongs.slice(0,k)]},
+    {name:'가까운 동부터',tag:'짧은 길',order:[s,...nearest(s,dongs.filter(d=>d!==s))]},
+    {name:'거꾸로 돌기',tag:'반대로',order:[s,...dongs.slice(0,k).reverse(),...dongs.slice(k+1).reverse()]},
+  ];
+}
+async function route(order){
+  const url='https://router.project-osrm.org/route/v1/driving/'+order.map(d=>d.c.join(',')).join(';')+'?overview=full&geometries=geojson&steps=true';
+  try{
+    const j=await (await fetch(url)).json();if(j.code!=='Ok')throw 0;
+    const r=j.routes[0];
+    return {geom:r.geometry.coordinates,dist:r.distance,dur:r.duration,
+      legs:r.legs.map(l=>({dist:l.distance,steps:l.steps,coords:l.steps.flatMap(s=>s.geometry.coordinates)}))};
+  }catch(e){ /* 길 서버가 안 되면 동 중심을 곧게 잇는다 — 놀이는 그대로 된다 */
+    return {geom:order.map(d=>d.c),dist:0,dur:0,fallback:true,legs:order.slice(1).map((d,i)=>({dist:0,steps:[],coords:[order[i].c,d.c]}))};
+  }
+}
+
+/* ── 패널: 구 목록 → 경로 카드 ── */
+function showList(){
+  view='list';$('back').hidden=true;$('ttl').textContent='어느 구를 달릴까요';
+  $('sub').textContent='서울 25개 구 · 행정동 코스';
+  const box=$('cards');box.innerHTML='';box.setAttribute('role','list');
+  index.forEach(m=>{
+    const b=document.createElement('button');b.type='button';b.className='gu';b.setAttribute('role','listitem');
+    b.setAttribute('aria-current',m.slug===slug);
+    b.innerHTML=`<span>${m.title.split(' ')[0]}</span><small>${m.n}곳</small>`;
+    b.onclick=()=>load(m.slug);box.appendChild(b);
+  });
+  clearRoutes();
+  if(pin){pin.remove();pinTag.remove();pin=null}
+  setDongs([]);
+  map.easeTo({center:[126.985,37.56],zoom:COARSE?10:10.6,pitch:0,bearing:0,padding:pad(),duration:RM?0:700});
+  (box.querySelector('[aria-current=true]')||box.firstChild)?.focus({preventScroll:false});
+}
+function pad(){return COARSE?{left:44,right:76,top:80,bottom:innerHeight*.6}:{left:400,right:96,top:96,bottom:96}}
+
+async function load(s){
+  slug=s;history.replaceState(null,'','?c='+s);
+  const gj=await (await fetch(DATA+s+'.drive.json')).json();
+  dongs=gj.features.map(f=>({name:f.properties.name,c:f.properties.c,geometry:f.geometry}));
+  view='routes';$('back').hidden=false;
+  setDongs(dongs);
+  fit();
+  placePin(dongs[0]);
+  await plan(dongs[0]);
+}
+function setDongs(list){map.getSource('dongs').setData(fc(list));map.getSource('dong-pts').setData(pts(list))}
+function fit(){
+  if(!dongs.length)return;const b=new maplibregl.LngLatBounds();dongs.forEach(d=>b.extend(d.c));
+  map.fitBounds(b,{padding:pad(),pitch:map.getPitch(),bearing:map.getBearing(),duration:RM?0:900,maxZoom:15});
+}
+function placePin(d){
+  if(!pin){
+    const el=document.createElement('div');el.className='pin';el.tabIndex=0;el.setAttribute('role','button');
+    el.setAttribute('aria-label','플레이 핀 — 방향키로 옆 동으로 옮깁니다');
+    el.innerHTML='<svg viewBox="0 0 46 62" width="46" height="62" aria-hidden="true"><path d="M23 60C23 60 4 36 4 22a19 19 0 0 1 38 0c0 14-19 38-19 38z" fill="#f0a03c" stroke="#232c31" stroke-width="3"/><path d="M18 14l12 8-12 8z" fill="#232c31"/></svg>';
+    pin=new maplibregl.Marker({element:el,anchor:'bottom',draggable:true}).setLngLat(d.c).addTo(map);
+    const t=document.createElement('div');t.className='pin-tag';
+    pinTag=new maplibregl.Marker({element:t,anchor:'bottom'}).setLngLat(d.c).addTo(map);
+    pin.on('drag',()=>{const h=dongAt(pin.getLngLat());t.textContent=h?h.name:'코스 밖';pinTag.setLngLat(pin.getLngLat())});
+    pin.on('dragend',()=>{const h=dongAt(pin.getLngLat());if(!h){toast('코스 안의 동에 놓아 주세요');return placePin(pin._d)}placePin(h);plan(h)});
+    el.addEventListener('keydown',e=>{
+      const dir={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(!dir)return;
+      e.preventDefault();e.stopPropagation();
+      const cur=pin._d;let best=null,bd=1e9;
+      dongs.forEach(o=>{if(o===cur)return;const dx=(o.c[0]-cur.c[0])*88,dy=(o.c[1]-cur.c[1])*111;
+        const along=dx*dir[0]+dy*dir[1];if(along<=0)return;const q=dx*dx+dy*dy+Math.abs(dx*dir[1]-dy*dir[0])*4;if(q<bd){bd=q;best=o}});
+      if(best){placePin(best);plan(best)}
+    });
+  }
+  pin._d=d;pin.setLngLat(d.c);pinTag.setLngLat(d.c);pinTag.getElement().textContent=d.name;
+}
+function dongAt(ll){
+  const f=map.queryRenderedFeatures(map.project(ll),{layers:['dong-dots','dong-tgt']})[0];
+  return f&&dongs.find(d=>d.name===f.properties.name);
+}
+
+async function plan(s){
+  const my=++planSeq;
+  $('ttl').textContent=s.name+'에서 출발';
+  $('sub').textContent='실제 도로로 길을 찾는 중…';
+  const vs=variants(s);
+  const rs=await Promise.all(vs.map(v=>route(v.order)));
+  if(my!==planSeq||view!=='routes')return;
+  routes=rs.map((r,i)=>({...r,...vs[i]}));
+  $('sub').textContent=routes[0].fallback?'길 서버에 닿지 않아 동 사이를 곧게 잇습니다':`${index.find(m=>m.slug===slug)?.title||''} · 실제 도로 경로`;
+  sel=0;drawRoutes();renderCards();
+}
+function clearRoutes(){
+  for(let i=0;i<3;i++)if(map.getLayer('r'+i)){map.removeLayer('r'+i);map.removeLayer('r'+i+'-case');map.removeSource('r'+i)}
+  bubbles.forEach(b=>b.remove());bubbles=[];routes=[];
+}
+function drawRoutes(){
+  const keep=routes;clearRoutes();routes=keep;   // clearRoutes 가 routes 를 비우니 들고 있다가 되돌린다
+  routes.forEach((r,i)=>{
+    map.addSource('r'+i,{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:r.geom}}});
+    map.addLayer({id:'r'+i+'-case',type:'line',source:'r'+i,layout:{'line-join':'round','line-cap':'round'},
+      paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],11,6,17,24]}},'dong-label');
+    map.addLayer({id:'r'+i,type:'line',source:'r'+i,layout:{'line-join':'round','line-cap':'round'},
+      paint:{'line-color':'#2f7fa6','line-width':['interpolate',['linear'],['zoom'],11,3.5,17,16]}},'dong-label');
+  });
+  bubbles=routes.map((r,i)=>{
+    const p=r.geom[Math.floor((r.geom.length-1)*(0.25+i*0.22))];
+    const el=document.createElement('button');el.type='button';el.tabIndex=-1;
+    el.innerHTML=`${r.fallback?r.order.length+'곳':mins(r.dur)}<small>${r.tag}</small>`;
+    el.onclick=()=>pick(i);
+    return new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(p).addTo(map);
+  });
+  restyle();
+}
+function restyle(){
+  routes.forEach((r,i)=>{
+    const on=i===sel;
+    map.setPaintProperty('r'+i,'line-color',on?'#2f7fa6':'#9cc3d6');
+    map.setPaintProperty('r'+i+'-case','line-opacity',on?1:.6);
+  });
+  if(routes[sel]){map.moveLayer('r'+sel+'-case','dong-label');map.moveLayer('r'+sel,'dong-label')}
+  bubbles.forEach((b,i)=>{const e=b.getElement();e.className='bubble '+(i===sel?'on':'off');e.style.zIndex=i===sel?2:1});
+  document.querySelectorAll('.card').forEach((c,i)=>{c.setAttribute('aria-checked',i===sel);c.tabIndex=i===sel?0:-1});
+}
+function renderCards(){
+  const box=$('cards');box.innerHTML='';box.setAttribute('role','radiogroup');box.setAttribute('aria-label','경로');
+  routes.forEach((r,i)=>{
+    const c=document.createElement('div');c.className='card';c.setAttribute('role','radio');
+    c.innerHTML=`<div class="t"><b>${r.fallback?r.order.length+'곳':mins(r.dur)}</b>`+
+      `<span class="eta">${r.order.length}곳 · ${r.fallback?'곧은 길':km(r.dist)+' km'} · ${r.name}</span><span class="tag">${r.tag}</span></div>`+
+      `<button class="go" type="button" aria-label="${r.name}(으)로 출발">출발</button>`;
+    c.addEventListener('click',e=>{if(e.target.closest('.go'))return start(i);pick(i)});
+    box.appendChild(c);
+  });
+  restyle();
+}
+function pick(i){
+  if(!routes.length)return;sel=(i+routes.length)%routes.length;restyle();
+  const c=document.querySelectorAll('.card')[sel];c?.focus({preventScroll:true});c?.scrollIntoView({block:'nearest',behavior:RM?'auto':'smooth'});
+}
+function step(d){
+  if(view==='routes')return pick(sel+d);
+  const b=[...document.querySelectorAll('.gu')],k=b.indexOf(document.activeElement);
+  (b[Math.max(0,Math.min(b.length-1,(k<0?0:k+d)))]).focus();
+}
+
+/* ── 운전 ── */
+const ARROWS={straight:'M12 21V5M6 11l6-6 6 6',right:'M7 21v-9a3 3 0 0 1 3-3h9M15 5l4 4-4 4','slight right':'M9 21v-8l8-8M11 5h6v6','sharp right':'M7 21V9a3 3 0 0 1 3-3h9M15 2l4 4-4 4',
+  left:'M17 21v-9a3 3 0 0 0-3-3H5M9 5 5 9l4 4','slight left':'M15 21v-8L7 5M13 5H7v6','sharp left':'M17 21V9a3 3 0 0 0-3-3H5M9 2 5 6l4 4',uturn:'M8 21V9a4 4 0 0 1 8 0v6M12 12l4 4 4-4'};
+const bearing=(a,b)=>{const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return Math.atan2(y,x)/r};
+const hav=(a,b)=>{const r=Math.PI/180,p=(b[1]-a[1])*r,q=(b[0]-a[0])*r,s=Math.sin(p/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(q/2)**2;return 12742000*Math.asin(Math.sqrt(s))};
+
+function start(i=sel){
+  if(!routes.length)return;sel=i;
+  const r=routes[sel];
+  dongs.forEach(d=>{d.own=false;d.tgt=false});r.order[0].own=true;
+  run={r,k:1,t0:performance.now(),dist:0,brg:0,busy:false};
+  document.body.classList.add('driving');
+  routes.forEach((_,j)=>{const v=j===sel?'visible':'none';map.setLayoutProperty('r'+j,'visibility',v);map.setLayoutProperty('r'+j+'-case','visibility',v)});
+  bubbles.forEach(b=>b.getElement().style.display='none');
+  pin.getElement().style.display='none';pinTag.getElement().style.display='none';
+  const ce=document.createElement('div');ce.className='car';ce.setAttribute('aria-hidden','true');
+  ce.innerHTML='<svg viewBox="0 0 58 58" width="58" height="58"><circle cx="29" cy="29" r="26" fill="#fff" stroke="rgba(35,44,49,.25)"/><path d="M29 10l13 31-13-6.5L16 41z" fill="#f0a03c" stroke="#232c31" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+  const c0=r.legs[0].coords;run.brg=bearing(c0[0],c0[Math.min(4,c0.length-1)]);
+  run.car=new maplibregl.Marker({element:ce,rotationAlignment:'map',pitchAlignment:'map'}).setLngLat(c0[0]).setRotation(run.brg).addTo(map);
+  map.setPaintProperty('dong-dots','fill-opacity',.3);
+  map.flyTo({center:c0[0],zoom:16.8,pitch:62,bearing:run.brg,padding:{top:innerHeight*.26,bottom:0,left:0,right:0},duration:RM?0:2400,essential:true});
+  setTarget();
+  $('in').value='';$('in').placeholder='';setTimeout(()=>$('in').focus(),RM?0:400);
+  tick();
+}
+function setTarget(){
+  const o=run.r.order;o.forEach(d=>d.tgt=false);
+  const d=o[run.k];if(d)d.tgt=true;
+  setDongs(o);
+  $('left').textContent=o.length-run.k;
+  if(!d)return;
+  $('target').textContent=d.name;$('shield').textContent=run.k+1;
+  $('lanes').innerHTML=o.slice(run.k,run.k+5).map(x=>`<span>${x.name}</span>`).join('');
+  const leg=run.r.legs[run.k-1];
+  $('dist').textContent=leg.dist?(leg.dist>=1000?km(leg.dist)+' km':Math.round(leg.dist/10)*10+' m'):'곧장';
+  const st=leg.steps.find(s=>s.maneuver.type!=='depart'&&s.name)||leg.steps.find(s=>s.maneuver.type!=='depart');
+  $('road').textContent=st?.name?st.name+' 방면':'';
+  $('arrow').setAttribute('d',ARROWS[st?.maneuver.modifier]||ARROWS.straight);
+  $('in').placeholder='';
+}
+function tick(){
+  if(!run||run.done)return;
+  const s=Math.floor((performance.now()-run.t0)/1000);$('clock').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  requestAnimationFrame(tick);
+}
+function driveLeg(){
+  const leg=run.r.legs[run.k-1],p=leg.coords,seg=[];let tot=0;
+  for(let i=1;i<p.length;i++){const d=hav(p[i-1],p[i]);seg.push(d);tot+=d}
+  const dur=RM?0:Math.min(7000,Math.max(1800,tot*1.4)),t0=performance.now();run.busy=true;
+  const frame=now=>{
+    if(!run)return;
+    const f=dur?Math.min(1,(now-t0)/dur):1,e=f<.5?2*f*f:1-(-2*f+2)**2/2;
+    let want=e*tot,i=0;while(i<seg.length-1&&want>seg[i]){want-=seg[i];i++}
+    const a=p[i],b=p[i+1]||a,u=seg[i]?want/seg[i]:0,q=[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];
+    if(seg[i]>1){const d=((bearing(a,b)-run.brg+540)%360)-180;run.brg+=d*(RM?1:.1)}
+    run.car.setLngLat(q).setRotation(run.brg);
+    map.jumpTo({center:q,bearing:run.brg});
+    $('km').textContent=km(run.dist+e*tot);
+    if(f<1)requestAnimationFrame(frame);else{run.dist+=tot;arrive()}
+  };
+  requestAnimationFrame(frame);
+}
+function arrive(){
+  const o=run.r.order;o[run.k].own=true;run.k++;run.busy=false;setTarget();
+  if(run.k>=o.length)finish();else $('in').focus();
+}
+function finish(){
+  run.done=true;const s=Math.floor((performance.now()-run.t0)/1000);
+  $('doneP').textContent=`${run.r.order.length}곳 · ${km(run.dist)} km · ${Math.floor(s/60)}분 ${s%60}초`;
+  $('done').classList.add('on');$('again').focus();
+}
+function tryType(final){
+  if(!run||run.busy||run.done)return;
+  const inp=$('in'),d=run.r.order[run.k],v=norm(inp.value),want=norm(d.name);
+  if(v===want||(final&&v&&v+'동'===want)){inp.value='';driveLeg();return}
+  if(final&&v){inp.classList.remove('bad');void inp.offsetWidth;inp.classList.add('bad')}
+}
+/* 이름을 다 치면 확정 키 없이 달린다. 스페이스는 가로채지 않는다(IME) */
+$('in').addEventListener('input',()=>tryType(false));
+$('in').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();tryType(true)}});
+$('peek').onclick=()=>{if(run&&!run.done){const d=run.r.order[run.k];$('in').placeholder=d.name[0]+'…';$('in').focus()}};
+function quit(){
+  if(!run)return;run.car.remove();run=null;
+  map.setPaintProperty('dong-dots','fill-opacity',.55);
+  $('done').classList.remove('on');document.body.classList.remove('driving');
+  dongs.forEach(d=>{d.own=false;d.tgt=false});setDongs(dongs);
+  routes.forEach((_,j)=>{map.setLayoutProperty('r'+j,'visibility','visible');map.setLayoutProperty('r'+j+'-case','visibility','visible')});
+  bubbles.forEach(b=>b.getElement().style.display='');
+  pin.getElement().style.display='';pinTag.getElement().style.display='';
+  map.easeTo({pitch:$('tilt').getAttribute('aria-pressed')==='true'?55:0,bearing:0,padding:{top:0,bottom:0,left:0,right:0},duration:RM?0:700});
+  setTimeout(fit,RM?0:720);
+  document.querySelector('.card[aria-checked=true]')?.focus();
+}
+
+/* ── 단추·키 ── */
+$('back').onclick=showList;
+$('fit').onclick=fit;$('zin').onclick=()=>map.zoomIn();$('zout').onclick=()=>map.zoomOut();
+$('tilt').onclick=()=>{const on=$('tilt').getAttribute('aria-pressed')!=='true';$('tilt').setAttribute('aria-pressed',on);
+  map.easeTo({pitch:on?55:0,bearing:on?-17:0,duration:RM?0:700})};
+$('up').onclick=()=>step(-1);$('down').onclick=()=>step(1);
+$('play').onclick=()=>view==='routes'?start():toast('먼저 구를 고르세요');
+$('quit').onclick=quit;$('again').onclick=quit;
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(run)return quit();if(view==='routes')return showList()}
+  if(run||e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowDown'){e.preventDefault();step(1)}
+  if(e.key==='ArrowUp'){e.preventDefault();step(-1)}
+  if(e.key==='Enter'&&view==='routes'&&!e.target.closest('button,a'))start();
+});
+
+map.on('load',async()=>{
+  tame();
+  const o=dotImage('#6f9a9e'),w=dotImage('#f0a03c','#232c31');
+  map.addImage('dot',o.img,o.opt);map.addImage('dot-own',w.img,w.opt);
+  map.addSource('dongs',{type:'geojson',data:fc([])});
+  map.addSource('dong-pts',{type:'geojson',data:pts([])});
+  const firstSym=map.getStyle().layers.find(l=>l.type==='symbol')?.id;
+  map.addLayer({id:'dong-dots',type:'fill',source:'dongs',filter:['!=',['get','tgt'],1],
+    paint:{'fill-pattern':['case',['==',['get','own'],1],'dot-own','dot'],'fill-opacity':.55}},firstSym);
+  map.addLayer({id:'dong-tgt',type:'fill',source:'dongs',filter:['==',['get','tgt'],1],paint:{'fill-color':'#ffffff','fill-opacity':.6}},firstSym);
+  map.addLayer({id:'dong-line',type:'line',source:'dongs',layout:{'line-join':'round'},paint:{
+    'line-color':['case',['any',['==',['get','own'],1],['==',['get','tgt'],1]],'#232c31','#5f8d92'],
+    'line-width':['case',['==',['get','tgt'],1],4.5,['==',['get','own'],1],2.5,1.6]}},firstSym);
+  map.addLayer({id:'dong-label',type:'symbol',source:'dong-pts',layout:{
+    'text-field':['get','name'],'text-font':['Noto Sans Bold'],
+    'text-size':['interpolate',['linear'],['zoom'],11,12,16,21],'symbol-sort-key':['case',['==',['get','tgt'],1],0,1],
+    'text-padding':4},
+    paint:{'text-color':['case',['==',['get','tgt'],1],'#ffffff','#232c31'],
+      'text-halo-color':['case',['==',['get','tgt'],1],'#232c31',['==',['get','own'],1],'#f8dcb3','#f4f8f9'],
+      'text-halo-width':['case',['==',['get','tgt'],1],7,2.5]}});
+  index=await (await fetch(DATA+'drive-index.json')).json();
+  const q=new URLSearchParams(location.search).get('c');
+  if(q&&index.some(m=>m.slug===q))load(q);else showList();
+});
+map.on('error',e=>{if(/tiles|style/.test(e?.error?.message||''))toast('지도 타일을 받지 못했습니다')});
+</script>
+</body>
+</html>
