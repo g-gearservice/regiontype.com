@@ -25,12 +25,28 @@
   --fill:rgba(120,120,128,.14); --fill-2:rgba(120,120,128,.08); --sep:rgba(60,60,67,.16);
   --elev:#fff; --on-tint:#fff;
   --tint:var(--sys-blue); --go:var(--sys-green); --stop:var(--sys-red);
-  --mat:rgba(250,250,250,.72); --mat-thick:rgba(250,250,250,.88);
-  --mat-nav:rgba(28,28,30,.9); --nav-label:#fff; --nav-label-2:rgba(235,235,245,.62);
-  --blur:blur(30px) saturate(190%);
-  --edge:0 0 0 .5px rgba(0,0,0,.1);                  /* 머리카락 테두리 — 재질 가장자리 */
-  --shadow-sm:var(--edge),0 2px 8px rgba(0,0,0,.12);
-  --shadow-lg:var(--edge),0 10px 30px rgba(0,0,0,.16);
+  /* 리퀴드 글래스 — 뿌옇게 가리는 판이 아니라 맑은 렌즈다. 지도는 흐림 없이 그대로 비치고,
+     옅게만 물들며(--ga), 판 가장자리의 볼록한 베벨이 지도를 안쪽으로 휜다(아래 스크립트의 #glassGL).
+     --rim 은 그 베벨에 걸린 안쪽 빛줄이다. WebGL 이 없거나 굴절을 끄면
+     스크립트가 --ga 를 올리고 --blur 로 서린 유리가 된다. --ga·--sk 는 설정의 투명도·반사광이 넣는다.
+     두꺼운 판(패널·시트)은 얇은 판보다 1.6 배 짙게 물든다 — Apple 의 regular/clear 갈림 */
+  --ga:.15; --sk:1;
+  --mat:rgb(255 255 255 / var(--ga)); --mat-thick:rgb(255 255 255 / min(1, var(--ga) * 1.6));
+  /* 투명도(--ga)는 판만이 아니라 판 위의 모든 것에 걸린다 — 어두운 안내판(--mat-nav), 목록 줄(--mat-row),
+     색 단추(출발·그만두기·다시, --tintmix)도 같은 값으로 맑아지고 짙어진다. 글자가 얹히는 것은 바닥값을
+     두어(안내판 .3 · 줄 40% · 색 단추 45%) 아무리 맑게 해도 읽힌다 */
+  --mat-nav:rgb(28 28 30 / min(1, .3 + var(--ga) * 1.6));
+  --mat-row:color-mix(in srgb,var(--elev) calc(40% + var(--ga) * 60%),transparent);
+  --tintmix:calc(45% + var(--ga) * 55%);
+  --nav-label:#fff; --nav-label-2:rgba(235,235,245,.62);
+  --blur:blur(28px) saturate(220%);
+  /* 빛테는 한 줄이다 — 같은 1px 자리에 왼쪽 위는 밝게, 오른쪽 아래는 옅게. 테를 여러 겹(안쪽 빛줄 둘 +
+     머리카락 테 + 셰이더 빛테) 두르면 테두리가 겹쳐 보인다. WebGL 유리가 뜨면 셰이더가 빛 방향을 따라
+     테를 그리니 CSS 테는 걷는다(:root[data-gl]) */
+  --rim:inset 1px 1px 0 rgb(255 255 255 / calc(.5 * var(--sk))),inset -1px -1px 0 rgb(255 255 255 / calc(.18 * var(--sk)));
+  --edge:0 0 0 .5px rgba(0,0,0,.1);                  /* 카드의 머리카락 테두리 */
+  --shadow-sm:var(--rim),0 4px 10px rgba(0,0,0,.15);
+  --shadow-lg:var(--rim),0 6px 6px rgba(0,0,0,.2),0 0 20px rgba(0,0,0,.1);
 
   --r-sheet:22px; --r-card:14px; --r-ctl:12px; --gap:12px;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Pretendard",system-ui,"Malgun Gothic",sans-serif;
@@ -51,8 +67,9 @@
   --sys-blue:#0a84ff; --sys-green:#30d158; --sys-red:#ff453a;
   --label:#f2f2f7; --label-2:rgba(235,235,245,.62); --label-3:rgba(235,235,245,.3);
   --fill:rgba(120,120,128,.32); --fill-2:rgba(120,120,128,.2); --sep:rgba(84,84,88,.6);
-  --elev:#2c2c2e; --mat:rgba(30,30,32,.72); --mat-thick:rgba(30,30,32,.88);
+  --elev:#2c2c2e; --mat:rgb(30 30 32 / var(--ga)); --mat-thick:rgb(30 30 32 / min(1, var(--ga) * 1.6));
   --edge:0 0 0 .5px rgba(255,255,255,.12);
+  --rim:inset 1px 1px 0 rgb(255 255 255 / calc(.28 * var(--sk))),inset -1px -1px 0 rgb(255 255 255 / calc(.1 * var(--sk)));
   --map-land:#26272a; --map-water:#172a3e; --map-park:#20382a;
   --map-road:#46474c; --map-road-case:#303135; --map-hwy:#6b5b36; --map-hwy-case:#4b4027;
   --map-bldg-lo:#333438; --map-bldg-hi:#48494e;
@@ -63,8 +80,8 @@
   --map-tgt:rgba(10,132,255,.22); --map-tgt-line:#0a84ff;
   color-scheme:dark;
 }
-@media (prefers-reduced-transparency:reduce){:root,:root[data-night]{--mat:var(--elev);--mat-thick:var(--elev);--blur:none}}
-@media (prefers-contrast:more){:root,:root[data-night]{--mat:var(--elev);--mat-thick:var(--elev);--blur:none;--edge:0 0 0 1.5px var(--label)}}
+@media (prefers-reduced-transparency:reduce){:root,:root[data-night]{--mat:var(--elev);--mat-thick:var(--elev);--mat-nav:#1c1c1e;--mat-row:var(--elev);--tintmix:100%;--blur:none}}
+@media (prefers-contrast:more){:root,:root[data-night]{--mat:var(--elev);--mat-thick:var(--elev);--mat-nav:#1c1c1e;--mat-row:var(--elev);--tintmix:100%;--blur:none;--edge:0 0 0 1.5px var(--label);--rim:inset 0 0 0 1.5px var(--label)}}
 
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--map-land);color:var(--label);
@@ -75,7 +92,10 @@ button{transition:transform 100ms ease-out,background var(--fast) var(--ease)}
 a{white-space:nowrap}
 :focus-visible{outline:3px solid var(--tint);outline-offset:2px}
 #map{position:fixed;inset:0}
-.glass{background:var(--mat);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-lg)}
+/* WebGL 유리(#glassGL)가 뜨면 판은 제 backdrop-filter 를 내려놓는다 — 굴절한 지도가 밑에 이미 깔렸다 */
+:root[data-gl]{--rim:0 0 #0000}
+:root[data-gl] :is(.glass,.banner,.typing,.play-sheet){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.glass{background-color:var(--mat);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-lg)}
 kbd{font:inherit;font-size:.78em;font-weight:600;background:var(--fill);border-radius:5px;padding:1px 5px}
 .maplibregl-ctrl-attrib{display:none}
 
@@ -90,7 +110,7 @@ kbd{font:inherit;font-size:.78em;font-weight:600;background:var(--fill);border-r
 .beta{font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:999px;background:var(--fill);color:var(--label-2)}
 
 /* ── 홈: Apple 지도 길찾기 카드(맥·아이패드는 왼쪽 떠 있는 카드, 폰은 아래 시트) ── */
-.panel{position:fixed;left:var(--gap);top:68px;bottom:var(--gap);width:360px;border-radius:var(--r-sheet);display:flex;flex-direction:column;z-index:3;overflow:hidden;background:var(--mat-thick)}
+.panel{position:fixed;left:var(--gap);top:68px;bottom:var(--gap);width:360px;border-radius:var(--r-sheet);display:flex;flex-direction:column;z-index:3;overflow:hidden;background-color:var(--mat-thick)}
 .panel-head{display:flex;align-items:center;gap:10px;padding:18px 16px 2px}
 .round{width:32px;height:32px;border-radius:50%;border:0;background:var(--fill);color:var(--label-2);display:flex;align-items:center;justify-content:center;flex:none}
 .round svg{width:16px;height:16px}
@@ -99,22 +119,22 @@ kbd{font:inherit;font-size:.78em;font-weight:600;background:var(--fill);border-r
 .panel-sub{margin:2px 16px 12px;font-size:13px;color:var(--label-2);min-height:18px}
 .cards{flex:1;overflow:auto;padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;scroll-snap-type:y proximity;overscroll-behavior:contain}
 /* 경로 줄 — 고른 줄은 파란 테두리 + 옅은 파란 바탕(색만으로 가르지 않는다) */
-.card{scroll-snap-align:start;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border-radius:var(--r-card);background:var(--elev);border:2px solid transparent;text-align:left;width:100%;
+.card{scroll-snap-align:start;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border-radius:var(--r-card);background:var(--mat-row);border:2px solid transparent;text-align:left;width:100%;
   box-shadow:var(--edge);transition:background var(--fast) var(--ease),border-color var(--fast) var(--ease)}
-.card[aria-checked=true]{background:color-mix(in srgb,var(--tint) 8%,var(--elev));border-color:var(--tint)}
+.card[aria-checked=true]{background:color-mix(in srgb,var(--tint) 8%,var(--mat-row));border-color:var(--tint)}
 .card .t{flex:1;min-width:0}
 .card b{display:block;font-size:26px;line-height:1.1;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .card .eta{display:block;margin-top:2px;font-size:13px;color:var(--label-2)}
 .card .tag{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--fill-2);color:var(--label-2)}
 .card[aria-checked=true] .tag{background:var(--tint);color:var(--on-tint)}
-.go{width:68px;height:48px;border-radius:var(--r-ctl);border:0;background:var(--go);color:#fff;font-size:17px;font-weight:700;flex:none}
+.go{width:68px;height:48px;border-radius:var(--r-ctl);border:0;background:color-mix(in srgb,var(--go) var(--tintmix),transparent);color:#fff;font-size:17px;font-weight:700;flex:none}
 /* 구 목록 — 한 덩이 묶음 목록, 줄 사이는 머리카락 선 */
 .cards:has(.gu){gap:0}
-.gu{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:13px 16px;background:var(--elev);border:0;width:100%;text-align:left;font-size:17px;font-weight:400}
+.gu{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:13px 16px;background:var(--mat-row);border:0;width:100%;text-align:left;font-size:17px;font-weight:400}
 .gu+.gu{box-shadow:inset 0 .5px 0 var(--sep)}
 .gu:first-child{border-radius:var(--r-card) var(--r-card) 0 0}
 .gu:last-child{border-radius:0 0 var(--r-card) var(--r-card)}
-.gu:hover{background:color-mix(in srgb,var(--label) 4%,var(--elev))}
+.gu:hover{background:color-mix(in srgb,var(--label) 4%,var(--mat-row))}
 .gu small{font-size:15px;color:var(--label-2)}
 .gu small::after{content:'›';margin-left:8px;color:var(--label-3);font-size:20px;line-height:0;vertical-align:-1px}
 .gu[aria-current=true]{font-weight:600;color:var(--tint)}
@@ -138,7 +158,7 @@ kbd{font:inherit;font-size:.78em;font-weight:600;background:var(--fill);border-r
 .nav-bot{position:fixed;left:50%;bottom:var(--gap);transform:translateX(-50%);z-index:3;display:flex;gap:4px;padding:5px;border-radius:999px;box-shadow:var(--shadow-sm)}
 .nav-bot a,.nav-bot button{border:0;background:none;padding:10px 18px;border-radius:999px;color:var(--label);text-decoration:none;font-size:17px;font-weight:600}
 .nav-bot a:hover{background:var(--fill-2)}
-.nav-bot .is-play{background:var(--go);color:#fff;font-weight:700;padding:10px 26px}
+.nav-bot .is-play{background:color-mix(in srgb,var(--go) var(--tintmix),transparent);color:#fff;font-weight:700;padding:10px 26px}
 
 /* 경로 말풍선 — Apple 지도 시간 꼬리표 */
 .bubble{padding:5px 10px;border-radius:10px;font-weight:700;font-size:15px;line-height:1.15;white-space:nowrap;border:0;text-align:center;box-shadow:var(--shadow-sm)}
@@ -169,10 +189,10 @@ body.driving .home{display:none!important}
 .banner .lanes span:first-child{background:var(--nav-label);color:#1c1c1e;font-weight:700}
 .pills{position:fixed;top:var(--gap);right:var(--gap);gap:8px;z-index:3}
 .pill{height:44px;padding:0 18px;border-radius:999px;border:0;font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-sm)}
-.pill.stop{background:var(--stop);color:#fff;backdrop-filter:none}
+.pill.stop{background:color-mix(in srgb,var(--stop) var(--tintmix),transparent);color:#fff}
 .pill.stop kbd{background:rgba(255,255,255,.22)}
 /* 아래 여정 카드 — 도착·시간·거리 세 칸 */
-.trip{position:fixed;left:var(--gap);bottom:var(--gap);border-radius:var(--r-sheet);z-index:3;padding:12px 4px;background:var(--mat-thick)}
+.trip{position:fixed;left:var(--gap);bottom:var(--gap);border-radius:var(--r-sheet);z-index:3;padding:12px 4px;background-color:var(--mat-thick)}
 .trip div{padding:0 18px;text-align:center}
 .trip div+div{box-shadow:inset .5px 0 0 var(--sep)}
 .trip b{display:block;font-size:24px;line-height:1.15;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
@@ -226,9 +246,9 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
   display:flex; align-items:center; justify-content:space-between; gap:24px;
   width:fit-content; min-width:min(403px, 100%); max-width:100%;
   min-height:75px; padding:8px 0; margin:0 auto 6px;
-  background:#ccc; border-radius:31px; user-select:none; -webkit-user-select:none;
+  border-radius:31px; user-select:none; -webkit-user-select:none;
+  background:var(--mat-thick);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-lg);
 }
-:root[data-night] .typing{background:#3a444a}
 .q-side{
   flex:0 0 auto; min-width:97px; display:flex; flex-direction:column; gap:0;
   padding:0 30px; pointer-events:none;
@@ -283,10 +303,10 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
 .car svg{width:100%;height:100%;filter:drop-shadow(0 3px 6px rgba(0,0,0,.3))}
 .done{position:fixed;inset:0;z-index:6;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.3)}
 .done.on{display:flex}
-.done .box{border-radius:28px;padding:28px 28px 20px;text-align:center;min-width:300px;background:var(--mat-thick)}
+.done .box{border-radius:28px;padding:28px 28px 20px;text-align:center;min-width:300px;background-color:var(--mat-thick)}
 .done h2{margin:0 0 6px;font-size:28px;font-weight:700;letter-spacing:-.02em}
 .done p{margin:0;color:var(--label-2);font-variant-numeric:tabular-nums}
-.done .pill{margin:20px auto 0;width:100%;justify-content:center;background:var(--tint);color:var(--on-tint);font-weight:700;box-shadow:none}
+.done .pill{margin:20px auto 0;width:100%;justify-content:center;background:color-mix(in srgb,var(--tint) var(--tintmix),transparent);color:var(--on-tint);font-weight:700;box-shadow:none}
 .attrib{position:fixed;right:var(--gap);bottom:4px;margin:0;font-size:10px;color:var(--label-2);z-index:2}
 .attrib a{color:inherit}
 .toast{position:fixed;left:50%;top:68px;transform:translateX(-50%);z-index:5;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;display:none}
@@ -315,8 +335,7 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
     padding:8px 22px;border-radius:999px;
     background:var(--mat-thick);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-lg);
   }
-  .typing{min-width:0;width:100%;gap:0;min-height:0;padding:4px 0;margin:0;border-radius:0;background:none}
-  :root[data-night] .typing{background:none}
+  .typing{min-width:0;width:100%;gap:0;min-height:0;padding:4px 0;margin:0;border-radius:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
   .q-side{flex:1 1 0;min-width:0;padding:0 6px}
   .q-name{max-width:100%;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .q-letters{flex:none;font-size:min(40px,calc((100vw - 112px) / var(--n, 4)))}
@@ -387,7 +406,7 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
 </section>
 <div class="pills drive">
   <button class="pill glass" type="button" id="peek">첫 글자</button>
-  <button class="pill stop" type="button" id="quit">그만두기 <kbd>Esc</kbd></button>
+  <button class="pill stop glass" type="button" id="quit">그만두기 <kbd>Esc</kbd></button>
 </div>
 <div class="trip glass drive" role="status">
   <div><b id="left">0</b><span>남은 곳</span></div>
@@ -423,7 +442,7 @@ try{document.documentElement.toggleAttribute('data-night',!!JSON.parse(localStor
 /* 지도 칠은 CSS 의 --map-* 토큰에서 읽는다 — 색을 여기 적지 않는다 */
 const T=n=>getComputedStyle(document.documentElement).getPropertyValue('--map-'+n).trim();
 /* 설정은 settings/index.html 이 쓴다. 키와 기본값을 저쪽과 맞춘다 */
-const NAV=(()=>{const d={pitch:62,zoom:16.8,speed:'normal'};
+const NAV=(()=>{const d={pitch:62,zoom:16.8,speed:'normal',glass:85,sheen:100,lens:100};
   try{return {...d,...JSON.parse(localStorage.getItem('rt-nav3d')||'{}')}}catch{return d}})();
 const PACE={slow:2,normal:1.4,fast:.8}[NAV.speed]||1.4;   // 1 m 에 몇 ms. 하한·상한으로 자르지 않는다
 /* 두벌식 키로 푼다(app.js 의 jamo). 조합 중인 '강ㅅ' 도 목표의 앞머리로 읽히게 한다 */
@@ -435,6 +454,91 @@ const jamo=s=>[...s.normalize('NFC')].map(ch=>{const c=ch.charCodeAt(0)-0xAC00;
 
 const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',
   center:[126.98,37.56],zoom:11,attributionControl:false,maxPitch:70,dragRotate:true});
+/* 리퀴드 글래스 — 유리 뒤는 늘 MapLibre 의 WebGL 캔버스다. 그래서 html2canvas 같은 화면 베끼기 없이
+   지도 캔버스를 그대로 텍스처로 받아, 지도 바로 위에 깐 캔버스 한 장(#glassGL)에 유리 판마다
+   굴절한 지도를 그린다. 사파리·파이어폭스도 똑같이 휜다 — SVG backdrop-filter 굴절은 크로미움만 그렸다.
+   한 판의 결(kube.io · ybouane/liquidglass · EMIT 글에서 모은 값):
+   - 굴절: 가장자리 베벨(최대 28px)을 볼록 스퀘어클 y=(1-(1-x)^4)^¼ 유리로 보고, 곧게 내리는 빛이
+     스넬 법칙(1 → 1.5)으로 꺾인 만큼 지도를 안쪽에서 끌어온다. 가운데는 평평해 1:1 이다
+   - 분산: R·B 를 법선 따라 반대로 조금씩(굴절의 5%) 어긋나게 집는다
+   - 채도 180% · 밝기 1.08 — 흐림이 없어도 유리 너머 색이 산다. 흐림은 없다
+   - 프레넬: 베벨이 가팔라질수록(법선이 누울수록) 흰빛으로 10% 까지 밝힌다
+   - 빛테: -60° 빛을 받는 테두리 2.5px
+   물들임(--mat)·그림자는 그 위 DOM 판이 그린다. 빛테는 여기 한 줄뿐이다(CSS --rim 은 걷힌다).
+   지도 버퍼는 그린 뒤 비워지니(preserveDrawingBuffer 없음) 'render' 이벤트 안에서 같은 박자로 받아 두고,
+   DOM 만 바뀔 때는 받아 둔 텍스처로 다시 그린다 */
+(()=>{
+  const root=document.documentElement,k=NAV.lens/100;
+  const els=[...document.querySelectorAll('.glass,.banner,.typing,.play-sheet')].filter(el=>getComputedStyle(el).backdropFilter!=='none');
+  const cv=document.createElement('canvas'),gl=k>0&&!matchMedia('(prefers-reduced-transparency:reduce),(prefers-contrast:more)').matches
+    &&cv.getContext('webgl',{premultipliedAlpha:true,antialias:false});
+  /* 굴절을 못 그리면 맑은 판 위 글자가 안 읽힌다 — 서린 유리(--blur)로 물러나고 물들임도 .55 밑으로 내리지 않는다 */
+  const tint=on=>root.style.setProperty('--ga',on?1-NAV.glass/100:Math.max(.55,1-NAV.glass/100));
+  root.style.setProperty('--sk',NAV.sheen/100);
+  tint(false);
+  if(!gl)return;
+  const sh=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s};
+  const pg=gl.createProgram();
+  gl.attachShader(pg,sh(gl.VERTEX_SHADER,'attribute vec2 a;uniform vec4 R;uniform vec2 S;void main(){gl_Position=vec4((R.xy+a*R.zw)/S*2.-1.,0.,1.);}'));
+  gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,`precision highp float;
+uniform sampler2D T;uniform vec2 S;uniform vec4 R;uniform float rad,B,K,SP,D;
+float sd(vec2 p,vec2 b,float r){vec2 q=abs(p)-b+r;return min(max(q.x,q.y),0.)+length(max(q,0.))-r;}
+void main(){
+  vec2 b=R.zw*.5,p=gl_FragCoord.xy-R.xy-b;float d=sd(p,b,rad);
+  float a=clamp(.5-d,0.,1.);if(a<=0.)discard;
+  float gr=min(max(rad,B),min(b.x,b.y));vec2 e=vec2(1.,0.);
+  vec2 g=vec2(sd(p+e,b,gr)-sd(p-e,b,gr),sd(p+e.yx,b,gr)-sd(p-e.yx,b,gr));g/=max(length(g),1e-4);
+  float t=max(-d,0.)/B,off=0.,fr=0.;
+  if(t<1.){float x=max(t,1e-3),m=1.-pow(1.-x,4.),f=pow(m,.25),s=pow(1.-x,3.)*pow(m,-.75),ai=atan(s);
+    off=B*(.3+f)*tan(ai-asin(sin(ai)/1.5))*K;fr=pow(1.-inversesqrt(1.+s*s),4.);}
+  vec2 uv=(gl_FragCoord.xy-g*off)/S,cd=g*off*.05/S;
+  vec3 c=vec3(texture2D(T,uv+cd).r,texture2D(T,uv).g,texture2D(T,uv-cd).b);
+  c=clamp(mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,1.8)*1.08,0.,1.);
+  c=mix(c,vec3(1.),fr*.1*SP);
+  c=mix(c,vec3(1.),smoothstep(2.5*D,0.,-d)*abs(dot(g,vec2(.5,.866)))*.5*SP);
+  gl_FragColor=vec4(c*a,a);
+}`));
+  gl.bindAttribLocation(pg,0,'a');gl.linkProgram(pg);
+  if(!gl.getProgramParameter(pg,gl.LINK_STATUS))return;
+  gl.useProgram(pg);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  const U={};for(const n of ['T','S','R','rad','B','K','SP','D'])U[n]=gl.getUniformLocation(pg,n);
+  const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  for(const [p,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,p,v);
+  gl.uniform1f(U.K,k);gl.uniform1f(U.SP,NAV.sheen/100);
+  cv.id='glassGL';cv.setAttribute('aria-hidden','true');
+  cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none';
+  $('map').after(cv);
+  let ready=false,raf=0,dpr=1;
+  function size(){dpr=devicePixelRatio||1;cv.width=Math.round(innerWidth*dpr);cv.height=Math.round(innerHeight*dpr)}
+  function draw(){
+    raf=0;if(!ready)return;
+    gl.viewport(0,0,cv.width,cv.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(U.S,cv.width,cv.height);gl.uniform1f(U.D,dpr);
+    for(const el of els){
+      const r=el.getBoundingClientRect();if(!r.width||!r.height)continue;
+      const w=r.width*dpr,h=r.height*dpr,rad=Math.min((parseFloat(getComputedStyle(el).borderTopLeftRadius)||0)*dpr,w/2,h/2);
+      gl.uniform4f(U.R,r.left*dpr,cv.height-r.bottom*dpr,w,h);
+      gl.uniform1f(U.rad,rad);gl.uniform1f(U.B,Math.max(2,Math.min(28*dpr,Math.min(w,h)/2-dpr)));
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    }
+  }
+  const soon=()=>{if(!raf)raf=requestAnimationFrame(draw)};
+  map.on('render',()=>{
+    try{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,map.getCanvas())}catch{return}
+    if(!ready){ready=true;root.dataset.gl='';tint(true)}
+    draw();
+  });
+  size();
+  addEventListener('resize',()=>{size();soon()});
+  const ro=new ResizeObserver(soon);els.forEach(el=>ro.observe(el));
+  new MutationObserver(soon).observe(document.body,{attributes:true,attributeFilter:['class']});
+  /* 탭을 뒤로 보내면 iOS 가 컨텍스트를 거둔다 — 서린 유리로 물러난다 */
+  cv.addEventListener('webglcontextlost',()=>{cv.remove();delete root.dataset.gl;tint(false)});
+})();
 
 let index=[], slug=null, dongs=[], routes=[], sel=0, view='list', pin, pinTag, bubbles=[], run=null, planSeq=0;
 
@@ -659,7 +763,7 @@ function start(i=sel){
   pin.getElement().style.display='none';pinTag.getElement().style.display='none';
   const ce=document.createElement('div');ce.className='car';ce.setAttribute('aria-hidden','true');
   ce.innerHTML='<svg viewBox="0 0 58 58" width="58" height="58"><circle cx="29" cy="29" r="26" fill="#fff"/><path d="M29 11l12 30-12-6-12 6z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
-  const c0=r.legs[0].coords;run.brg=bearing(c0[0],c0[Math.min(4,c0.length-1)]);
+  const c0=r.legs[0].coords;run.brg=run.carBrg=bearing(c0[0],c0[Math.min(4,c0.length-1)]);
   run.car=new maplibregl.Marker({element:ce,rotationAlignment:'map',pitchAlignment:'map'}).setLngLat(c0[0]).setRotation(run.brg).addTo(map);
   map.flyTo({center:c0[0],zoom:NAV.zoom,pitch:NAV.pitch,bearing:run.brg,padding:{top:innerHeight*.26,bottom:0,left:0,right:0},duration:RM?0:2400,essential:true});
   setTarget();
@@ -780,6 +884,25 @@ function pointAt(g,dist){
   const a=g.p[i],b=g.p[i+1]||a;
   return {a,b,u:g.seg[i]?Math.min(1,want/g.seg[i]):1};
 }
+/* 줄 서 있는 구간들을 이어 along 에서 ahead m 앞의 점. 줄 끝에서 멈춘다 */
+function routeAt(along,ahead){
+  let d=along+ahead;
+  for(let i=0;i<run.queue.length;i++){
+    const g=legGeom(run.r.legs[run.queue[i]]);
+    if(d<=g.tot||i===run.queue.length-1){const {a,b,u}=pointAt(g,Math.min(d,g.tot));return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u]}
+    d-=g.tot;
+  }
+}
+/* 바로 밑 토막이 아니라 앞쪽 점을 겨눠, 시간으로 부드럽게 돈다.
+   차는 코앞을 보고 빨리, 지도는 더 멀리 보고 먼저·천천히 돈다 — 모퉁이 전에 화면이 돌아 차가 옆으로 미끄러져 보이지 않는다 */
+const LOOK=12;   // m. 여기에 빠르기 × 시간(차 0.05초, 지도 0.25초)을 더 내다본다
+function steer(along,v,dt){
+  const q=routeAt(along,0),k=tau=>RM?1:1-Math.exp(-dt/tau);
+  const turn=(cur,p,tau)=>hav(q,p)<3?cur:cur+(((bearing(q,p)-cur+540)%360)-180)*k(tau);
+  run.carBrg=turn(run.carBrg,routeAt(along,LOOK+v*50),60);
+  run.brg=turn(run.brg,routeAt(along,LOOK*2+v*250),180);
+  return q;
+}
 /* 맞춰 둔 동까지 차를 보낸다. 앞서 친 동이 많을수록 그 배수로 빨라지고,
    이동 시간에 하한·상한을 두지 않는다. 차는 도착 전에도 다음 이름을 받는다 */
 function chase(){
@@ -812,6 +935,7 @@ function chase(){
         budget=(dt/PACE)*Math.max(1,ahead);
       }
     }
+    const moved=budget;
     while(budget>0&&run.queue.length){
       const g=legGeom(run.r.legs[run.queue[0]]);
       const left=Math.max(0,g.tot-along);
@@ -819,9 +943,8 @@ function chase(){
         budget-=left;
         const end=g.p[g.p.length-1];
         if(end){
-          if(g.p.length>1)run.brg=bearing(g.p[g.p.length-2],end);
-          run.car.setLngLat(end).setRotation(run.brg);
-          map.jumpTo({center:end,bearing:run.brg});
+          run.car.setLngLat(end);
+          map.jumpTo({center:end});
         }
         run.dist+=g.tot;
         const reached=run.queue.shift()+1;
@@ -833,10 +956,8 @@ function chase(){
         continue;
       }
       along+=budget;budget=0;
-      const {a,b,u}=pointAt(g,along);
-      const q=[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];
-      if(g.seg.length&&hav(a,b)>1){const d=((bearing(a,b)-run.brg+540)%360)-180;run.brg+=d*Math.min(1,.12*Math.max(1,run.queue.length))}
-      run.car.setLngLat(q).setRotation(run.brg);
+      const q=steer(along,moved/dt,dt);
+      run.car.setLngLat(q).setRotation(run.carBrg);
       map.jumpTo({center:q,bearing:run.brg});
       $('km').textContent=km(run.dist+along);
     }
