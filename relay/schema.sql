@@ -278,6 +278,7 @@ create table if not exists duel (
   b_lp  integer not null default 0,
   bot_cpm integer,
   a_hits integer, b_hits integer,
+  a_set text, b_set text,   -- 맞힌 곳 지도(코스 칸 순서대로 '0'/'1' 한 글자씩)
   a_cpm integer, b_cpm integer,
   a_acc integer, b_acc integer,
   a_d   integer, b_d   integer,

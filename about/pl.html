@@ -205,7 +205,7 @@
 <!-- 바뀐 것 목록은 data/changes.json 한 곳에 둔다 — 스물여섯 장을 따로 고치지 않는다.
      그 나라 말이 없으면 영어로 적는다 -->
 <script>
-fetch('../data/howto.json?v=4.15').then(r => r.json()).then(list => {
+fetch('../data/howto.json?v=4.16').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const box = document.getElementById('howto');
   if (!box) return;
@@ -217,7 +217,7 @@ fetch('../data/howto.json?v=4.15').then(r => r.json()).then(list => {
     if (s.img) {
       const f = document.createElement('figure');
       const img = document.createElement('img');
-      img.src = '../assets/howto/' + s.img + '?v=4.15';
+      img.src = '../assets/howto/' + s.img + '?v=4.16';
       img.alt = (s.alt && (s.alt[lang] || s.alt.en)) || '';
       img.loading = 'lazy';
       f.append(img);
@@ -230,7 +230,7 @@ fetch('../data/howto.json?v=4.15').then(r => r.json()).then(list => {
     }
   }
 }).catch(() => {});
-fetch('../data/changes.json?v=4.15').then(r => r.json()).then(list => {
+fetch('../data/changes.json?v=4.16').then(r => r.json()).then(list => {
   const lang = document.documentElement.lang;
   const ul = document.getElementById('changes');
   if (!ul) return;

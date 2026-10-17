@@ -3114,6 +3114,15 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 @media (pointer:coarse){ .rk-match-btns button{min-height:44px} }
 @media (prefers-reduced-motion:no-preference){ html:not([data-motion="off"]) .rk-match{animation:rise var(--slow) var(--ease-out) backwards} }
 
+/* 상대 점령 미니맵 — 판 오른쪽 아래, 경쟁전에서만. 폰은 화상 키보드가 아래를 덮으니 머리줄 아래로 올린다 */
+.rk-mini{
+  position:absolute;right:16px;bottom:16px;z-index:3;width:176px;height:112px;
+  background:var(--card);border:3px solid var(--rk-on,var(--ranked));border-radius:14px;box-shadow:var(--shadow);
+  pointer-events:none;
+}
+#play:not(.is-ranked) .rk-mini{display:none}
+@media (pointer:coarse){ .rk-mini{bottom:auto;top:96px;right:12px;width:132px;height:84px} }
+
 .hud{flex-wrap:wrap}
 .rk-opp{
   flex:1 0 100%;display:flex;align-items:center;gap:10px;margin:0;

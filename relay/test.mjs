@@ -1095,8 +1095,15 @@ console.log('security rule self-check done');
   assert.equal(db.prepare('select a_hits from duel').get().a_hits, 4, '진행은 줄어들지 않는다');
   await call('/match/tick', { duel: pA.duel, hits: 9999 }, A);
   assert.equal(db.prepare('select a_hits from duel').get().a_hits, SIZE['seoul-gu'], '코스 크기로 자른다');
+  assert.equal((await call('/match/tick', { duel: pA.duel, hits: 1, set: '012' }, A)).status, 400, '지도는 0/1 만');
+  assert.equal((await call('/match/tick', { duel: pA.duel, hits: 1, set: 7 }, A)).status, 400);
+  await call('/match/tick', { duel: pA.duel, hits: 3, set: '1101' }, A);
+  await call('/match/tick', { duel: pA.duel, hits: 3, set: '1000' }, A);
+  assert.equal(db.prepare('select a_set from duel').get().a_set, '1101', '더 적게 찍힌 옛 지도는 버린다');
+  await call('/match/tick', { duel: pA.duel, hits: 3, set: '1'.repeat(SIZE['seoul-gu'] + 50) }, A);
+  assert.equal(db.prepare('select a_set from duel').get().a_set.length, SIZE['seoul-gu'], '지도도 코스 크기로 자른다');
   const tB = await call('/match/tick', { duel: pB.duel, hits: 1 }, B);
-  assert.deepEqual(tB.opp, { hits: db.prepare('select a_hits from duel').get().a_hits, done: false });
+  assert.deepEqual(tB.opp, { hits: db.prepare('select a_hits from duel').get().a_hits, set: '1'.repeat(SIZE['seoul-gu']), done: false });
   assert.equal(t1.result, undefined);
 
   age();
