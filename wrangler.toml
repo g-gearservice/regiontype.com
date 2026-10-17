@@ -1,5 +1,9 @@
 # The site as a Worker with static assets — no script, no build step.
-# Workers Builds deploys this on push; relay/ has its own wrangler.toml.
+# Nothing deploys this on push: run `npx wrangler deploy` from main after merging, or the
+# live site stays on the last manual deploy. relay/ has its own wrangler.toml.
+#
+# html_handling = "none" means a folder URL never finds its index.html on its own —
+# every new page folder needs its pair of lines in _redirects.
 name = "regiontype-com"
 compatibility_date = "2026-09-15"
 

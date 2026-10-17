@@ -19,3 +19,7 @@
 /community  /community/          301
 /mimi/   /mimi/index.html   200
 /mimi    /mimi/             301
+/beta/3dnavigation/ /beta/3dnavigation/index.html 200
+/beta/3dnavigation  /beta/3dnavigation/           301
+/beta/3dnavigation/settings/ /beta/3dnavigation/settings/index.html 200
+/beta/3dnavigation/settings  /beta/3dnavigation/settings/           301
