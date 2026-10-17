@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.16';
+const VER = '4.18';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2404,11 +2404,13 @@ function link(svg, geom, items, cells) {
 function say(head, body, tip = '') {
   const f = $('#fact');
   /* 문서는 ltr 이라 아랍어 소개의 마침표가 앞으로 튄다 — 글마다 방향을 스스로 잡게 한다 */
-  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span><small class="type-hint" dir="auto" aria-hidden="true"></small>';
+  if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span><small class="type-hint" id="typeHint" dir="auto" aria-hidden="true"></small>';
   f.querySelector('.tip').textContent = tip;
-  /* 화면 말이 한국어가 아니면 칠 글자(로마자·병음·가나·키릴)를 한 줄로 늘 보인다. 입력칸 이름(typeName)과
-     같은 말이라 화면 읽기 프로그램에는 두 번 읽히지 않게 숨긴다. 한국어는 칸에 보이는 그대로 치니 비운다 */
-  f.querySelector('.type-hint').textContent = TONGUE ? t('typeName') : '';
+  /* 화면 말이 한국어가 아니면 칠 글자(로마자·병음·가나·키릴)를 한 줄로 늘 보인다. 흐름 안에서는 숨기고
+     입력칸의 설명(aria-describedby)으로만 읽힌다. 한국어는 칸에 보이는 그대로 치니 비운다.
+     넘어가는 키(스페이스)는 앞에 둔다 — 폰 폭에서 줄 끝이 말줄임으로 잘린다 */
+  f.querySelector('.type-hint').textContent = TONGUE ? (TONGUE.ime ? '' : '␣ ' + t('kbSpace') + ' · ') + t('typeName') : '';
+  $('#typein').setAttribute('aria-describedby', 'typeHint');
   if (body !== undefined) f.querySelector('span').textContent = body;
   if (head !== undefined) setTarget(head);
   f.classList.add('on');
@@ -2529,6 +2531,43 @@ function placeCaret() {
 addEventListener('resize', () => { if (G && G.want) placeCaret(); });
 
 
+/* IME 없이 바로 치는 말(라틴·키릴·자판 자리 읽기)은 Monkeytype 처럼 글자 자리마다 견준다 — 틀린 글자도
+   그 자리에서 빨갛게 서고 커서는 친 만큼 끝까지 나아간다. 이름을 넘겨 친 것은 친 그대로 뒤에 붙고,
+   OVER_MAX 자를 넘게는 쳐지지 않는다(capKeys). 친 글자는 textContent 로만 넣는다 */
+const OVER_MAX = 10;
+const capKeys = val => {
+  const max = TONGUE.key(G.want).length + OVER_MAX;
+  while (val && TONGUE.key(val).length > max) val = val.slice(0, -1);
+  return val;
+};
+function paintKeys(box, raw) {
+  const T = TONGUE.key(G.want), t = TONGUE.key(raw), r = TONGUE.walk(raw, T), cells = [];
+  let at = 0, cur = 0;
+  for (const [d, k] of G.parts) {
+    const got = t.slice(at, at + k.length), st = !k.length ? (t.length > at ? 'on' : '')
+      : !got ? '' : got !== k.slice(0, got.length) ? 'err' : got.length === k.length ? 'on' : r.bad ? '' : 'ing';
+    for (const c of d) cells.push([c, st]);
+    if (k.length ? at + k.length <= t.length : at < t.length) cur = cells.length;
+    at += k.length;
+  }
+  const want = cells.length;
+  for (const c of t.slice(T.length)) cells.push([c, 'over']);
+  while (box.children.length < cells.length) box.append(document.createElement('b'));
+  while (box.children.length > cells.length) box.lastChild.remove();
+  box.style.setProperty('--n', cells.length);   // 넘겨 친 글자까지 세어 줄인다 — 좁은 폭에서 줄이 화면 밖으로 나가지 않게
+  const end = cells.length > want || cur >= want;
+  [...box.children].forEach((el, i) => {
+    const [c, st] = cells[i];
+    el.textContent = c;
+    for (const s of ['on', 'ing', 'err', 'over']) el.classList.toggle(s, st === s);
+    el.classList.toggle('cur-l', !end && i === cur);
+    el.classList.toggle('cur-r', end && i === cells.length - 1);
+  });
+  $('#typing').classList.toggle('bad', !!raw.trim() && r.bad);
+  placeCaret();
+  return r;
+}
+
 /* 순서형에서 지금 쳐야 할 항목. 자유형이면 목표가 없다. */
 const target = () => G.seq ? G.items[G.idx] : null;
 
@@ -2536,6 +2575,7 @@ const target = () => G.seq ? G.items[G.idx] : null;
    마디(江西·ムアク·g) 단위로 보이는 글자를 채운다. 치다 만 로마자·병음은 다음 글자에
    'ing' 로 선다. 따라가지 못한 것이 남으면 오타다 */
 function paintTongue(box, raw) {
+  if (!TONGUE.ime) return paintKeys(box, raw);
   const want = [...G.want], T = TONGUE.key(G.want), r = TONGUE.walk(raw, T);
   let at = 0, done = 0, ing = -1;
   for (const [d, k] of G.parts) {
@@ -2825,7 +2865,7 @@ const tintBar = () => { $('meta[name="theme-color"]').content = getComputedStyle
 new MutationObserver(tintBar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-night'] });
 tintBar();
 
-/* 화면 말로 칠 때의 입력 한 번. 이름을 다 치면 확정 키 없이 바로 맞는다 — 일본·중국 타자
+/* 화면 말로 칠 때의 입력 한 번. 일본어·중국어(IME)는 이름을 다 치면 확정 키 없이 바로 맞는다 — 일본·중국 타자
    게임처럼 읽기를 끝까지 치면 넘어간다. IME 조합 중이어도 맞으면 조합을 끊고 비운다
    (조합 중 value 만 비우면 IME 가 제 버퍼를 도로 넣는다 — 위의 글자 수 자르기와 같은 손).
    스페이스는 조합을 바꾸는 키(일본어 변환)일 수 있어 조합 중에는 보지 않는다. 조합 밖의
@@ -2837,8 +2877,9 @@ function tongueInput(inp, val, composing) {
   if (len > G.typed) G[G.part || !len ? 'ok' : 'bad'] += len - G.typed;
   G.typed = len;
   $('#statSpeed').textContent = speedIn(cpmNow());
-  const hit = matchTongue(val, G.seq ? [target()] : G.items);
-  const commit = !hit && !composing && /\s/.test(val) && (r && r.bad || matchTongue(val, G.items, true));
+  /* 바로 치는 말은 Monkeytype 처럼 다 맞게 쳐도 스페이스를 쳐야 넘어간다(Enter 는 keydown 이 맡는다) */
+  const hit = TONGUE.ime && matchTongue(val, G.seq ? [target()] : G.items);
+  const commit = !hit && !composing && /\s/.test(TONGUE.ime ? val : val.slice(-1)) && (r && r.bad || matchTongue(val, G.items, true));
   if (!hit && !commit) return;
   const had = document.activeElement === inp;
   if (composing && had) inp.blur();
@@ -2892,6 +2933,14 @@ $('#typein').addEventListener('input', e => {
     inp.blur();
     inp.value = val;
     if (had) inp.focus();
+  }
+  if (TONGUE && !TONGUE.ime && G.want && capKeys(val) !== val) {
+    val = capKeys(val);
+    const had = document.activeElement === inp;
+    if (composing) inp.blur();
+    inp.value = val;
+    if (composing && had) inp.focus();
+    composing = false;
   }
   if (TONGUE) return tongueInput(inp, val, composing);
   paintTyped(val, composing);
@@ -3704,6 +3753,19 @@ if (location.search.includes('rt=1')) {
   console.assert(matchTongue('gangseo-gu', tgu) === tgu[0] && !matchTongue('gangseo', tgu) && matchTongue('gangseo', tgu, true) === tgu[0],
     '이름은 다 치면 바로, 줄인 이름은 확정 키로');
   console.assert(!matchTongue('jung', tgu, true) && matchTongue('junggu', tgu) === tgu[1], '중구/중랑구 — 이어질 칸이 둘이면 줄인 이름은 안 된다');
+  G = { want: 'gangseogu', parts: de.split('gangseogu') };
+  const kb = document.createElement('div'), cls = s => [...kb.children].map(b => [...b.classList].filter(c => c !== 'ing').sort().join('.') || '-').join(' ');
+  paintKeys(kb, 'gxnxx');
+  console.assert(cls(kb) === 'on err on err err cur-l - - -', '틀린 글자도 제자리에서 빨갛고 커서는 친 만큼 나아간다');
+  paintKeys(kb, 'gxn');
+  console.assert(cls(kb) === 'on err on cur-l - - - - -', '지우면 틀린 글자가 하나씩 빠지고 커서가 돌아온다');
+  paintKeys(kb, 'gangseoguzz');
+  console.assert(kb.children.length === 11 && [...kb.children].slice(9).map(b => b.textContent).join('') === 'zz'
+    && kb.lastChild.classList.contains('over') && kb.lastChild.classList.contains('cur-r'), '넘겨 친 글자는 친 그대로 뒤에 붙고 커서가 그 끝에 선다');
+  console.assert(kb.style.getPropertyValue('--n') === '11', '글자 크기(--n)는 넘겨 친 칸까지 세어 좁은 폭에서도 줄이 화면 안에 든다');
+  console.assert(capKeys('gangseogu' + 'z'.repeat(15)) === 'gangseogu' + 'z'.repeat(OVER_MAX) && capKeys('gangseogu ') === 'gangseogu ',
+    '넘겨 치기는 OVER_MAX 자까지, 스페이스는 자르지 않는다');
+  paintKeys(kb, '');
   TONGUE = was;
   G = gWas;
   LANG = langWas;

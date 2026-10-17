@@ -1014,7 +1014,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    순서형 큐. 가운데 이름이 입력창이고, 양옆은 이전·다음 지명만 둔다. */
 .typing{
   display:flex; align-items:center; justify-content:space-between; gap:24px;
-  width:fit-content; min-width:403px; max-width:100%;
+  width:fit-content; min-width:min(403px, 100%); max-width:100%;
   min-height:75px; padding:8px 0; margin:0 auto 6px;
   background:#ccc; border-radius:31px; user-select:none;
 }
@@ -1030,7 +1030,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 .q-letters{
   display:flex; justify-content:center; gap:2px;
-  font-weight:800; font-size:52px; letter-spacing:-.01em; line-height:1.15;
+  font-weight:800; font-size:min(52px, calc((100vw - 112px) / var(--n, 4))); letter-spacing:-.01em; line-height:1.15;
 }
 /* 글자 칸은 줄지 않는다. 커서는 칸 밖에 떠 있어 자리를 먹지 않는다 — 자리를 먹으면 커서가
    옮겨 갈 때마다 글자가 밀려, 좁은 라틴 글자는 치기 전과 친 뒤의 자리가 어긋나 보인다.
@@ -1047,6 +1047,9 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 .typing b.err,
 .typing.bad b.ing{color:var(--bad)}
 .typing b.over{color:color-mix(in srgb,var(--bad) 62%,#000)}
+/* 틀린 글자는 색만으로 가르지 않는다 — 밑줄도 긋는다 */
+.typing b.err,
+.typing b.over{text-decoration:underline;text-decoration-thickness:.06em;text-underline-offset:.1em}
 :root[data-night] .typing b.over{color:color-mix(in srgb,var(--bad) 70%,var(--bg))}
 
 /* 원래 입력창은 화면에서 뺀다. display:none 이면 포커스가 안 잡혀 IME 가 죽는다 */
