@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.420",
+    "date": "2026-10-17",
+    "ko": "검색·공유 미리보기 설명도 '서울 얼마나 아세요?' 뉘앙스로 바꿨습니다.",
+    "en": "The search and share-preview descriptions now match the new title: how well do you know Seoul."
+  },
+  {
     "v": "0.10.419",
     "date": "2026-10-17",
     "ko": "첫 화면 제목과 공유 미리보기 제목을 '서울 얼마나 아세요?'로 바꿨습니다. 영어 화면은 'How well do you know Seoul?'입니다.",
