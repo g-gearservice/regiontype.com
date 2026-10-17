@@ -488,7 +488,6 @@ function place(x, y) {
   bubble.style.setProperty('--ring-y', y - fy + 'px');
   /* 말하는 채로 반대편으로 끌려가면 새 방향으로 다시 펼친다 */
   if (turned && !bubble.hidden) unfold();
-  syncSleepHint();
 }
 /* 날지 않고 그 자리에 선다 — 처음 나타날 때 */
 function jump(x, y) {
@@ -510,7 +509,6 @@ function speak(text, form) {
   bubble.hidden = false;
   if (bot) place(bot.x, bot.y);
   unfold();
-  syncSleepHint();
 }
 /* 펼치기는 다음 프레임에. 말풍선은 미끄러져 오지 않고 그 자리(봇 뒤)에서 펼쳐진다 —
    남은 이동은 끊고 끝자리로 옮긴 뒤 펼친다 */
@@ -533,10 +531,10 @@ function hide() {
   const chips = $('#rkChips');
   if (chips) chips.hidden = true;
   clearTimeout(closing);
-  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing', 'is-busy'); bubble.hidden = true; syncSleepHint(); return; }
+  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing', 'is-busy'); bubble.hidden = true; return; }
   bubble.classList.remove('is-open');
   bubble.classList.add('is-closing');
-  closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing', 'is-busy'); syncSleepHint(); }, 240);
+  closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing', 'is-busy'); }, 240);
 }
 
 /* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳. 경쟁전을 켜면 왼쪽
@@ -549,11 +547,9 @@ function cornerAt(i) {
   const x = i % 2 ? innerWidth - BOT - 20 : 20;
   /* 아래 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
   const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot').getBoundingClientRect();
-  /* 봇 밑에는 '눌러서 채팅'(.rk-sleep-hint, 봇 아래 6px)이 붙는다 — 그 줄까지 막대 위 8px 에 띄운다 */
-  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 - HINT_H : innerHeight - BOT - 24 - HINT_H;
+  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
   return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
 }
-const HINT_H = 26;
 const narrow = () => !phone() && innerWidth < 760;
 /* 인사하는 자리. 폰이 아니면 말풍선이 도트를 덮지 않는 곳 — 로고 밑 가운데는 지도 머리(도봉)를
    덮는다. 위 두 귀퉁이에서 말풍선을 아래·안쪽으로 펴 보고, 봇과 말풍선이 도트 하나라도 덮으면
@@ -608,15 +604,6 @@ function setTalkUI(mode) {
   inp.placeholder = t(mode === 'thinking' ? 'botThink' : 'botChatPh');
   if (chips) chips.hidden = !(chatting && !busy);
 }
-function syncSleepHint() {
-  const h = $('#rkSleepHint');
-  if (!h || !bot) return;
-  const show = !phone() && out && bot.el.classList.contains('is-asleep') && !chatting && bubble.hidden;
-  h.hidden = !show;
-  if (!show) return;
-  h.textContent = t('botSleep');
-  h.style.transform = `translate3d(${bot.x}px,${bot.y + BOT + 6}px,0)`;
-}
 
 function sleep() {
   /* 폰은 로고로 도로 들어간다. 그 밖에는 끌어다 놓은 자리나 귀퉁이에서 잔다 */
@@ -631,7 +618,6 @@ function sleep() {
      시선을 떨구며 감고(buddy.js 의 doze), 다 감기면 ‿ 가 얹힌다(style.css) */
   bot.api.setState('idle');
   bot.api.doze(true);
-  syncSleepHint();
 }
 function wake() {
   if (!bot || intro || touring) return;
@@ -639,7 +625,6 @@ function wake() {
   bot.el.classList.remove('is-asleep');
   bot.api.setState('idle');
   bot.api.doze(false);
-  syncSleepHint();
 }
 function doze() {
   if (!bot || intro || touring) return;
