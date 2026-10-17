@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.419",
+    "date": "2026-10-17",
+    "ko": "판 중에 화면 말을 바꿔도 홈 지도의 칸 이름이 새 말로 다시 그려집니다.",
+    "en": "Changing the interface language mid-game now redraws the home map's place names in the new language."
+  },
+  {
     "v": "0.10.418",
     "date": "2026-10-15",
     "ko": "한국어가 아닌 화면에서 좁은 폭(폰)으로 이름을 넘겨 쳐도 글자가 줄어 이름 줄이 화면 밖으로 나가지 않습니다. 칠 글자 안내 줄은 Space 안내를 맨 앞에 두어 폰 폭에서도 보이고, 화면 읽기 프로그램은 입력칸의 설명으로 이 안내를 읽습니다.",

@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.18';
+const VER = '4.19';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2154,7 +2154,7 @@ async function boot() {
     addEventListener('rt-opt', () => {
       const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
       for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
-      const dong = opt.dong, country = opt.country;
+      const dong = opt.dong, country = opt.country, lang = LANG;
       Object.assign(opt, next);
       /* 나라 고르기는 개발에서만 열린다 — 배포는 showCountry 가 KR 로 되돌린다 */
       if (opt.country !== country && isDev()) showCountry(resolveCountry());
@@ -2167,6 +2167,8 @@ async function boot() {
       paintUI();
       cacheUI();
       if (G) syncKb();
+      /* 말이 바뀌면 칸 이름·소개·읽기를 새 말로 받아 지도를 다시 그린다 */
+      if (LANG !== lang) Promise.all([krNames(), intros(), reads()]).then(renderCourses);
     });
     fbPlaceholder();
     paintRegion();
