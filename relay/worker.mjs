@@ -16,7 +16,7 @@
      POST /ranked/end   {id,score,hits,tries}  표를 태우고 lp 를 오르내린다
      POST /match/find {c,name,dev,bot?}  1대1 매칭 줄에 서거나(폴링) 짝을 받는다 → {wait,n} | 짝 응답
      POST /match/leave  매칭 줄에서 나간다
-     POST /match/tick {duel,hits}  내 진행을 적고 상대 진행·정산 결과를 받는다
+     POST /match/tick {duel,hits,set}  내 진행을 적고 상대 진행·정산 결과를 받는다
      POST /played   일반전 한 판을 전적에 남기고 순위표(코스별 최고 기록)를 갈아 끼운다
      GET  /games    내 사다리 줄과 최근 판들 (로그인 필요)
      GET  /ladder   경쟁전 상위 50
@@ -553,6 +553,12 @@ export function duelWinner(a, b) {
 export const botHits = (slug, botCpm, elapsedMs) =>
   Math.min(SIZE[slug] || 0, Math.floor(Math.min(Math.max(0, elapsedMs), RANKED_SECS * 1000) * botCpm / 6e4 / DUEL_KEYS));
 
+/* 봇의 진행과 맞힌 곳 지도. ponytail: 봇은 코스 칸 순서대로 앞에서부터 채운다 — 진짜 노리는 곳이 아니다 */
+const botView = (d, now) => {
+  const hits = botHits(d.slug, d.bot_cpm, now - d.at);
+  return { hits, set: '1'.repeat(hits).padEnd(SIZE[d.slug] || 0, '0'), done: now - d.at >= RANKED_SECS * 1000 };
+};
+
 /* 짝 응답. 상대에게서는 이름·lp·봇 여부만 싣는다 — who 는 안 나간다 */
 async function pair(env, me, id, duel, now, o) {
   const d = await env.DB.prepare('select * from duel where id = ?').bind(duel).first();
@@ -727,6 +733,9 @@ async function matchTick(req, env, o) {
   if (!c || typeof c !== 'object') return reply(400, '읽을 수 없는 내용입니다.', o);
   const id = cut(c.duel, 40), hits = c.hits;
   if (!id || !Number.isInteger(hits) || hits < 0) return reply(400, '읽을 수 없는 내용입니다.', o);
+  /* set 은 맞힌 곳 지도다 — 코스 칸 순서대로 '0'/'1'. 없어도 되지만 있으면 모양과 길이를 본다 */
+  const set = c.set === undefined ? null : c.set;
+  if (set !== null && (typeof set !== 'string' || !/^[01]*$/.test(set))) return reply(400, '읽을 수 없는 내용입니다.', o);
   const ok = await pass(env.RL_MT, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
@@ -738,14 +747,18 @@ async function matchTick(req, env, o) {
     if (!d.done) {
       await env.DB.prepare(`update duel set ${s}_hits = max(coalesce(${s}_hits, 0), ?)
                              where id = ? and ${s}_cpm is null and done = 0`).bind(Math.min(hits, SIZE[d.slug] || 0), id).run();
+      /* 지도는 코스 크기로 자르고, 점령은 되돌지 않으니 더 적게 찍힌 지도(늦게 온 옛 틱)는 버린다 */
+      const mine = set === null ? null : set.slice(0, SIZE[d.slug] || 0), ones = x => (x || '').split('1').length;
+      if (mine !== null && ones(mine) >= ones(d[s + '_set']))
+        await env.DB.prepare(`update duel set ${s}_set = ? where id = ? and ${s}_cpm is null and done = 0`).bind(mine, id).run();
       /* 나는 끝냈는데 사람 상대가 제한 시간 + 30초가 지나도록 안 나타났다 → 그쪽을 탈주로 셈한다 */
       if (d[s + '_cpm'] !== null && d[p + '_cpm'] === null && d[p] !== 'bot' && now > d.at + RANKED_SECS * 1000 + DUEL_GRACE)
         await settle(env, id, now, true);
       d = await env.DB.prepare('select * from duel where id = ?').bind(id).first();
     }
     const res = { opp: d[p] === 'bot'
-      ? { hits: botHits(d.slug, d.bot_cpm, now - d.at), done: now - d.at >= RANKED_SECS * 1000 }
-      : { hits: d[p + '_hits'] ?? 0, done: d[p + '_cpm'] !== null } };
+      ? botView(d, now)
+      : { hits: d[p + '_hits'] ?? 0, set: d[p + '_set'] ?? '', done: d[p + '_cpm'] !== null } };
     if (d.done) {
       const lad = await env.DB.prepare('select lp, games from ladder where who = ? and dev = ?').bind(me, d.dev).first();
       const my = d[s + '_cpm'], their = d[p + '_cpm'];

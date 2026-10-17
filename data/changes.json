@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.416",
+    "date": "2026-10-17",
+    "ko": "봇과 겨루기에서 상대 점령 지도가 뜨지 않던 것을 고쳤습니다. 경쟁전 판 오른쪽 아래에 상대(봇)가 점령한 곳이 지도 모양 그대로 차오릅니다.",
+    "en": "Fixed the opponent's claimed-places map not appearing in bot matches. Ranked matches now show, at the bottom right, the places your opponent (or the bot) has claimed, filled in on the map's own shape."
+  },
+  {
     "v": "0.10.415",
     "date": "2026-10-15",
     "ko": "한국어가 아닌 화면에서 게임 중 지명 설명 아래에 칠 글자(라틴 문자, 일본어는 히라가나·로마자, 중국어는 병음, 우크라이나어·불가리아어는 키릴 문자)가 한 줄로 보입니다.",
