@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.429",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타 주소(beta/3dnavigation/)와 그 설정 페이지가 404 로 뜨던 것을 고쳤습니다.",
+    "en": "The 3D navigation beta (beta/3dnavigation/) and its settings page open again instead of showing 404."
+  },
+  {
     "v": "0.10.427",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타에서 경로 세 갈래를 곧은 선으로 바로 띄우고 실제 도로가 오는 대로 바꿔 끼웁니다. 길 서버가 6초 넘게 답이 없으면 곧은 길로 놀고, 한 번 찾은 길은 다시 묻지 않습니다.",
