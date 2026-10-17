@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.419",
+    "date": "2026-10-17",
+    "ko": "한국어가 아닌 화면(일본어·중국어 포함)에서도 한국어와 같은 구조로 칩니다 — 이름을 다 쳐도 Space(또는 Enter)를 눌러야 판정하고, 틀리거나 덜 친 채 Space 를 누르면 놓친 것으로 셉니다. 글자가 채워지는 모양은 그대로입니다.",
+    "en": "Typing in non-Korean languages (Japanese and Chinese included) now works like Korean: a name is judged only when you press Space (or Enter), and pressing Space on a wrong or unfinished name counts as a miss. How the letters fill in is unchanged."
+  },
+  {
     "v": "0.10.418",
     "date": "2026-10-15",
     "ko": "한국어가 아닌 화면에서 좁은 폭(폰)으로 이름을 넘겨 쳐도 글자가 줄어 이름 줄이 화면 밖으로 나가지 않습니다. 칠 글자 안내 줄은 Space 안내를 맨 앞에 두어 폰 폭에서도 보이고, 화면 읽기 프로그램은 입력칸의 설명으로 이 안내를 읽습니다.",

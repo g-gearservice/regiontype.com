@@ -17,7 +17,7 @@
   확정한다.
 - 화면 말이 한국어가 아니면 `matchTongue()` 가 판다 — 칸에 보이는 그 말의 이름을 말마다
   '열쇠'(ja 히라가나, zh 병음, 그 밖은 접은 로마자·키릴)로 접어 견준다. 읽기는
-  `data/kr-read.<말>.json`(`tools/build_kr_read.py`). 이름을 다 치면 확정 키 없이 맞는다.
+  `data/kr-read.<말>.json`(`tools/build_kr_read.py`). 한국어처럼 스페이스(또는 Enter)로 확정한다.
 - `style.css` 단일 파일. 색·간격은 위쪽 커스텀 프로퍼티에서 딴다.
 - `data/*.json` 은 대부분 `tools/*.py` 가 찍은 생성물이다. 손으로 고치지 말고 도구를 고친다.
   예외: `data/i18n.json` 화면 말, `data/changes.json` 바뀐 것 목록,
