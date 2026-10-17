@@ -177,20 +177,107 @@ body.driving .home{display:none!important}
 .trip div+div{box-shadow:inset .5px 0 0 var(--sep)}
 .trip b{display:block;font-size:24px;line-height:1.15;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .trip span{font-size:12px;color:var(--label-2)}
-.typer{position:fixed;left:50%;bottom:var(--gap);transform:translateX(-50%);width:min(500px,calc(100vw - 2*var(--gap)));border-radius:var(--r-sheet);z-index:3;padding:10px;flex-direction:column;gap:6px;background:var(--mat-thick)}
-.typer label{font-size:13px;color:var(--label-2);padding:0 6px}
-.typer input{height:54px;border-radius:var(--r-card);border:2px solid transparent;background:var(--fill-2);padding:0 16px;font:600 24px/1 var(--font);letter-spacing:-.01em;color:var(--label);width:100%;outline:0;
-  transition:border-color var(--fast) var(--ease),background var(--fast) var(--ease)}
-.typer input:focus{border-color:var(--tint);background:var(--elev)}
-.typer input.bad{border-color:var(--stop);animation:shake .3s}
-/* 지난 동 · 지금 동 · 다음 동 — 몽키타입 줄처럼 한 줄에 흐른다. 색만으로 가르지 않는다(✓·테두리·굵기) */
-.words{display:flex;align-items:center;gap:6px;margin:0;padding:2px 6px;list-style:none;overflow:hidden;white-space:nowrap;font-size:17px}
-.words li{flex:none;padding:3px 10px;border-radius:999px;border:2px solid transparent}
-.words .past{color:var(--label-3)}
-.words .past::before{content:'✓ '}
-.words .now{font-size:22px;font-weight:700;color:var(--label);border-color:var(--tint);background:var(--elev)}
-.words .next{color:var(--label-2);font-weight:600}
+/* ── 타이핑 섹션 — 원래 맵(#play)의 하단 냅바 구조를 그대로 가져온다:
+   순서형 큐(지난 동·지금 동·다음 동 하나씩). 가운데 이름이 입력창이고, 양옆은 이전·다음 지명만 둔다.
+   뒤 흐림은 플레이 타이핑 줄과 같은 .backdrop-blur.bot 이다. */
+.backdrop-blur{
+  position:fixed; left:0; right:0; z-index:2;
+  display:grid; pointer-events:none;
+}
+.backdrop-blur > span{grid-area:1/1}
+.backdrop-blur > :nth-child(1){backdrop-filter:blur(calc(1px * var(--blur-k,.55)));-webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55)))}
+.backdrop-blur > :nth-child(2){backdrop-filter:blur(calc(4px * var(--blur-k,.55)));-webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55)))}
+.backdrop-blur > :nth-child(3){backdrop-filter:blur(calc(8px * var(--blur-k,.55)));-webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55)))}
+.backdrop-blur > :nth-child(4){backdrop-filter:blur(calc(16px * var(--blur-k,.55)));-webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55)))}
+.backdrop-blur > :nth-child(5){backdrop-filter:blur(calc(24px * var(--blur-k,.55)));-webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55)))}
+.backdrop-blur > :nth-child(6){backdrop-filter:blur(calc(32px * var(--blur-k,.55)));-webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55)))}
+.backdrop-blur.bot{
+  top:auto; bottom:0;
+  height:var(--blur-bot,160px);
+  --fade-x:linear-gradient(90deg,
+    transparent calc(50% - 400px),
+    #000 calc(50% - 230px),
+    #000 calc(50% + 230px),
+    transparent calc(50% + 400px));
+}
+body.driving .backdrop-blur.bot.drive{display:grid!important}
+.backdrop-blur.bot > span{
+  -webkit-mask-composite:source-in;
+  mask-composite:intersect;
+}
+.backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 15%),var(--fade-x);mask-image:linear-gradient(180deg,transparent 0%,#000 15%),var(--fade-x)}
+.backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent 5%,#000 30%),var(--fade-x);mask-image:linear-gradient(180deg,transparent 5%,#000 30%),var(--fade-x)}
+.backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent 15%,#000 45%),var(--fade-x);mask-image:linear-gradient(180deg,transparent 15%,#000 45%),var(--fade-x)}
+.backdrop-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent 30%,#000 60%),var(--fade-x);mask-image:linear-gradient(180deg,transparent 30%,#000 60%),var(--fade-x)}
+.backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent 45%,#000 75%),var(--fade-x);mask-image:linear-gradient(180deg,transparent 45%,#000 75%),var(--fade-x)}
+.backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent 60%,#000 90%),var(--fade-x);mask-image:linear-gradient(180deg,transparent 60%,#000 90%),var(--fade-x)}
+.backdrop-blur.bot::after{
+  content:""; grid-area:1/1;
+  background:linear-gradient(0deg,color-mix(in srgb,var(--map-land) 34%,transparent) 60%,transparent);
+  -webkit-mask-image:var(--fade-x);
+  mask-image:var(--fade-x);
+}
+.play-sheet{
+  position:fixed; left:50%; bottom:var(--gap); transform:translateX(-50%); z-index:3;
+  flex-direction:column; align-items:center; width:max-content; max-width:calc(100vw - 2*var(--gap));
+}
+.typing{
+  position:relative; cursor:text;
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+  width:fit-content; min-width:min(403px, 100%); max-width:100%;
+  min-height:75px; padding:8px 0; margin:0 auto 6px;
+  background:#ccc; border-radius:31px; user-select:none; -webkit-user-select:none;
+}
+:root[data-night] .typing{background:#3a444a}
+.q-side{
+  flex:0 0 auto; min-width:97px; display:flex; flex-direction:column; gap:0;
+  padding:0 30px; pointer-events:none;
+}
+.q-side.is-prev{align-items:flex-start}
+.q-side.is-next{align-items:flex-end}
+.q-name{
+  font-weight:700; font-size:24px; line-height:1.2; color:var(--label-2);
+}
+.q-letters{
+  display:flex; justify-content:center; gap:2px;
+  font-weight:800; font-size:min(52px, calc((100vw - 112px) / var(--n, 4))); letter-spacing:-.01em; line-height:1.15;
+}
+.q-letters b{flex:none; position:relative; white-space:pre}
+/* 안 친 글자는 흐리게, 맞게 친 글자는 본문색으로 밝아지고, 틀린 글자는 빨강 + 밑줄, 넘쳐 친 글자는 짙은 빨강 */
+.typing b{
+  color:color-mix(in srgb,var(--label) 40%,transparent);
+  transition:color .1s var(--ease);
+}
+.typing b.on,
+.typing b.ing{color:var(--label)}
+.typing b.err,
+.typing.bad b.ing{color:var(--stop)}
+.typing b.over{color:color-mix(in srgb,var(--stop) 62%,#000)}
+.typing b.err,
+.typing b.over{text-decoration:underline;text-decoration-thickness:.06em;text-underline-offset:.1em}
+:root[data-night] .typing b.over{color:color-mix(in srgb,var(--stop) 70%,var(--map-land))}
+.typing.hide b:not(.on):not(.ing){
+  color:transparent;
+  background:color-mix(in srgb,var(--label-2) 22%,transparent);
+  border-radius:4px;
+}
+/* 타이핑 커서 — 글자 사이를 미끄러지는 막대 하나 */
+.typing .caret{
+  position:absolute; left:0; top:0; width:3px; border-radius:2px; pointer-events:none;
+  background:var(--brand); transition:transform .1s linear;
+}
+.typing .caret.idle{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.typing.off .q-letters{opacity:.55}
+.typing.off .caret{display:none}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.typing.miss{animation:shake .3s}
+/* 원래 입력창은 화면에서 뺀다. display:none 이면 포커스가 안 잡혀 IME 가 죽는다 */
+.typebar{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;padding:0}
+#typein{width:1px;height:1px;padding:0;border:0;box-shadow:none;font-size:16px}
+.fact{text-align:center;min-height:1.4em;background:none;padding:0}
+.fact span{color:var(--label-2);font-size:17px;font-weight:500}
+.fact:is(:empty,:has(> span:empty)){display:none}
 /* 내 차 — 흰 원판 위 파란 화살(내비 퍽) */
 .car{width:64px;height:64px;color:var(--map-route)}
 .car svg{width:100%;height:100%;filter:drop-shadow(0 3px 6px rgba(0,0,0,.3))}
@@ -220,12 +307,26 @@ body.driving .home{display:none!important}
   .banner .dist{font-size:30px}.banner .arrow{width:44px;height:44px}.banner .street{font-size:20px}
   .pills{top:auto;bottom:calc(190px + env(safe-area-inset-bottom))}
   .trip{left:var(--gap);right:var(--gap);bottom:calc(104px + env(safe-area-inset-bottom));justify-content:space-around}
-  .typer{bottom:calc(var(--gap) + env(safe-area-inset-bottom))}
+  .backdrop-blur{display:none}
+  body.driving .backdrop-blur.bot.drive{display:none!important}
+  .play-sheet{
+    left:12px;right:12px;transform:none;width:auto;max-width:none;gap:2px;
+    bottom:calc(8px + env(safe-area-inset-bottom,0px));
+    padding:8px 22px;border-radius:999px;
+    background:var(--mat-thick);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-lg);
+  }
+  .typing{min-width:0;width:100%;gap:0;min-height:0;padding:4px 0;margin:0;border-radius:0;background:none}
+  :root[data-night] .typing{background:none}
+  .q-side{flex:1 1 0;min-width:0;padding:0 6px}
+  .q-name{max-width:100%;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .q-letters{flex:none;font-size:min(40px,calc((100vw - 112px) / var(--n, 4)))}
+  .fact{min-height:1.4em;padding:0 8px;line-height:1.4}
+  .fact span{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .attrib{display:none}
 }
 @media (prefers-reduced-motion:reduce){
-  .typer input.bad{animation:none}
-  .card,button,.typer input{transition:none}
+  .typing b,.typing .caret,.card,button{transition:none}
+  .typing .caret.idle,.typing.miss{animation:none}
   button:active:not(:disabled){transform:none}
 }
 </style>
@@ -293,10 +394,20 @@ body.driving .home{display:none!important}
   <div><b id="clock">0:00</b><span>달린 시간</span></div>
   <div><b id="km">0.0</b><span>km</span></div>
 </div>
-<div class="typer glass drive">
-  <ol class="words" id="words" aria-label="코스 — 지난 동, 지금 동, 다음 동"></ol>
-  <label for="in">다음 동 이름을 치면 그 동까지 달립니다</label>
-  <input id="in" autocomplete="off" autocapitalize="off" spellcheck="false" lang="ko" enterkeyhint="go">
+<span class="backdrop-blur bot drive" aria-hidden="true">
+  <span></span><span></span><span></span><span></span><span></span><span></span>
+</span>
+<!-- 폰에서는 화상 키보드 바로 위에 붙는 유리 시트. 데스크톱은 알약 타이핑 섹션 + 정보 줄 -->
+<div class="play-sheet drive">
+  <div class="typing" id="typing" aria-hidden="true">
+    <div class="q-side is-prev" id="qPrev"></div>
+    <div class="q-letters" id="qLetters"></div>
+    <div class="q-side is-next" id="qNext"></div>
+  </div>
+  <div class="fact" id="fact" aria-live="polite"><span>다음 동 이름을 치고 스페이스를 누르면 그 동까지 달립니다</span></div>
+</div>
+<div class="typebar drive">
+  <input id="typein" autocomplete="off" autocapitalize="off" spellcheck="false" lang="ko" enterkeyhint="go" aria-label="지역 이름 입력">
 </div>
 <div class="done" id="done" role="dialog" aria-modal="true" aria-labelledby="doneT"><div class="box glass"><h2 id="doneT">도착</h2><p id="doneP"></p><button class="pill" type="button" id="again">다시 고르기</button></div></div>
 <p class="toast glass" id="toast" role="status"></p>
@@ -312,9 +423,15 @@ try{document.documentElement.toggleAttribute('data-night',!!JSON.parse(localStor
 /* 지도 칠은 CSS 의 --map-* 토큰에서 읽는다 — 색을 여기 적지 않는다 */
 const T=n=>getComputedStyle(document.documentElement).getPropertyValue('--map-'+n).trim();
 /* 설정은 settings/index.html 이 쓴다. 키와 기본값을 저쪽과 맞춘다 */
-const NAV=(()=>{const d={past:2,next:3,pitch:62,zoom:16.8,speed:'normal'};
+const NAV=(()=>{const d={pitch:62,zoom:16.8,speed:'normal'};
   try{return {...d,...JSON.parse(localStorage.getItem('rt-nav3d')||'{}')}}catch{return d}})();
 const PACE={slow:2,normal:1.4,fast:.8}[NAV.speed]||1.4;   // 1 m 에 몇 ms
+/* 두벌식 키로 푼다(app.js 의 jamo). 조합 중인 '강ㅅ' 도 목표의 앞머리로 읽히게 한다 */
+const JUNG='ㅏ ㅐ ㅑ ㅒ ㅓ ㅔ ㅕ ㅖ ㅗ ㅗㅏ ㅗㅐ ㅗㅣ ㅛ ㅜ ㅜㅓ ㅜㅔ ㅜㅣ ㅠ ㅡ ㅡㅣ ㅣ'.split(' ');
+const JONG=[''].concat('ㄱ ㄲ ㄱㅅ ㄴ ㄴㅈ ㄴㅎ ㄷ ㄹ ㄹㄱ ㄹㅁ ㄹㅂ ㄹㅅ ㄹㅌ ㄹㅍ ㄹㅎ ㅁ ㅂ ㅂㅅ ㅅ ㅆ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ'.split(' '));
+const PAIR={ㅘ:'ㅗㅏ',ㅙ:'ㅗㅐ',ㅚ:'ㅗㅣ',ㅝ:'ㅜㅓ',ㅞ:'ㅜㅔ',ㅟ:'ㅜㅣ',ㅢ:'ㅡㅣ',ㄳ:'ㄱㅅ',ㄵ:'ㄴㅈ',ㄶ:'ㄶ',ㄺ:'ㄹㄱ',ㄻ:'ㄹㅁ',ㄼ:'ㄹㅂ',ㄽ:'ㄹㅅ',ㄾ:'ㄹㅌ',ㄿ:'ㄹㅍ',ㅀ:'ㄹㅎ',ㅄ:'ㅂㅅ'};
+const jamo=s=>[...s.normalize('NFC')].map(ch=>{const c=ch.charCodeAt(0)-0xAC00;
+  return c<0||c>=11172?PAIR[ch]||ch:'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'[Math.floor(c/588)]+JUNG[Math.floor(c%588/28)]+JONG[c%28]}).join('');
 
 const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',
   center:[126.98,37.56],zoom:11,attributionControl:false,maxPitch:70,dragRotate:true});
@@ -546,28 +663,83 @@ function start(i=sel){
   run.car=new maplibregl.Marker({element:ce,rotationAlignment:'map',pitchAlignment:'map'}).setLngLat(c0[0]).setRotation(run.brg).addTo(map);
   map.flyTo({center:c0[0],zoom:NAV.zoom,pitch:NAV.pitch,bearing:run.brg,padding:{top:innerHeight*.26,bottom:0,left:0,right:0},duration:RM?0:2400,essential:true});
   setTarget();
-  $('in').value='';$('in').placeholder='';setTimeout(()=>$('in').focus(),RM?0:400);
+  $('typein').value='';setTimeout(()=>$('typein').focus(),RM?0:400);
   tick();
 }
+function fillSide(el,d){
+  if(!el)return;
+  if(!d){el.replaceChildren();return}
+  const s=document.createElement('span');s.className='q-name';s.textContent=d.name;
+  el.replaceChildren(s);
+}
+/* 칠 이름을 글자 하나씩 늘어놓는다. 이 자체가 입력창이다 — 양옆은 이전·다음 지명 하나씩만 둔다 */
 function setTarget(){
   const o=run.r.order;o.forEach(d=>d.tgt=false);
   const d=o[run.k];if(d)d.tgt=true;
   setDongs(o);
   $('left').textContent=o.length-run.k;
+  fillSide($('qPrev'),run.k>0?o[run.k-1]:null);
+  fillSide($('qNext'),o[run.k+1]||null);
   if(!d)return;
   $('target').textContent=d.name;$('shield').textContent=run.k+1;
   $('lanes').innerHTML=o.slice(run.k,run.k+5).map(x=>`<span>${x.name}</span>`).join('');
-  const p0=Math.max(0,run.k-NAV.past);
-  $('words').innerHTML=o.slice(p0,run.k+1+NAV.next).map((x,j)=>{
-    const i=p0+j,c=i<run.k?'past':i===run.k?'now':'next';
-    return `<li class="${c}"${c==='now'?' aria-current="step"':''}>${x.name}</li>`}).join('');
+  const box=$('qLetters');box.replaceChildren();
+  box.style.setProperty('--n',[...d.name].length);
+  run.want=d.name;
+  for(const ch of d.name){const b=document.createElement('b');b.textContent=ch;box.append(b)}
+  $('typing').classList.remove('bad');
+  paintTyped('');
   const leg=run.r.legs[run.k-1];
   $('dist').textContent=leg.dist?(leg.dist>=1000?km(leg.dist)+' km':Math.round(leg.dist/10)*10+' m'):'곧장';
   const st=leg.steps.find(s=>s.maneuver.type!=='depart'&&s.name)||leg.steps.find(s=>s.maneuver.type!=='depart');
   $('road').textContent=st?.name?st.name+' 방면':'';
   $('arrow').setAttribute('d',ARROWS[st?.maneuver.modifier]||ARROWS.straight);
-  $('in').placeholder='';
 }
+/* 지금까지 친 것을 그대로 보여준다(app.js 의 paintTyped). 맞은 글자는 색이 차고, 조합 중인 자모도 그대로 뜬다 */
+function paintTyped(raw,composing=false){
+  const box=$('qLetters');if(!run||!run.want)return;
+  const want=run.want,buf=raw.replace(/\s/g,'');
+  let n=0,rest=buf;
+  for(let i=0;i<buf.length;i++){
+    const sub=buf.slice(i);let k=0;
+    while(k<sub.length&&k<want.length&&sub[k]===want[k])k++;
+    if(k>n||i===0){n=k;rest=sub.slice(k)}
+    if(n===want.length)break;
+  }
+  if(n>=want.length)rest='';
+  const soft=!!rest&&jamo(want.slice(n)).startsWith(jamo(rest));
+  const ing=soft||(composing&&rest.length>0);
+  const bad=!soft&&rest.length-(ing?1:0)>0;
+  const need=Math.max(want.length,n+rest.length);
+  while(box.children.length<need)box.append(document.createElement('b'));
+  while(box.children.length>need)box.lastChild.remove();
+  [...box.children].forEach((el,i)=>{
+    const typed=i>=n?rest[i-n]:null,last=i===n+rest.length-1;
+    el.classList.toggle('on',i<n);
+    el.classList.toggle('ing',!!typed);
+    el.classList.toggle('over',i>=want.length);
+    el.textContent=typed||want[i]||'';
+    el.classList.toggle('cur-l',i===n&&!typed);
+    el.classList.toggle('cur-r',(!!typed&&last)||(!rest.length&&n>=need&&i===need-1));
+  });
+  $('typing').classList.toggle('bad',bad);
+  placeCaret();
+}
+let caretIdle=0;
+function placeCaret(){
+  const host=$('typing'),box=$('qLetters');if(!host||!box)return;
+  let c=host.querySelector(':scope > .caret');
+  if(!c){c=document.createElement('i');c.className='caret';c.setAttribute('aria-hidden','true');host.append(c)}
+  const at=box.querySelector('.cur-l')||box.querySelector('.cur-r');
+  c.hidden=!at;if(!at)return;
+  const h=host.getBoundingClientRect(),r=at.getBoundingClientRect(),gap=1;
+  const x=(at.classList.contains('cur-l')?r.left-gap:r.right+gap)-h.left-1.5;
+  c.style.height=r.height*.78+'px';
+  c.style.transform=`translate(${x.toFixed(1)}px, ${(r.top-h.top+r.height*.12).toFixed(1)}px)`;
+  c.classList.remove('idle');clearTimeout(caretIdle);
+  caretIdle=setTimeout(()=>c.classList.add('idle'),500);
+}
+addEventListener('resize',()=>{if(run&&run.want)placeCaret()});
 function tick(){
   if(!run||run.done)return;
   const s=Math.floor((performance.now()-run.t0)/1000);$('clock').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
@@ -592,23 +764,32 @@ function driveLeg(){
 }
 function arrive(){
   const o=run.r.order;o[run.k].own=true;run.k++;run.busy=false;setTarget();
-  if(run.k>=o.length)finish();else $('in').focus();
+  if(run.k>=o.length)finish();else $('typein').focus();
 }
 function finish(){
   run.done=true;const s=Math.floor((performance.now()-run.t0)/1000);
   $('doneP').textContent=`${run.r.order.length}곳 · ${km(run.dist)} km · ${Math.floor(s/60)}분 ${s%60}초`;
   $('done').classList.add('on');$('again').focus();
 }
-function tryType(final){
+function tryType(composing=false){
   if(!run||run.busy||run.done)return;
-  const inp=$('in'),d=run.r.order[run.k],v=norm(inp.value),want=norm(d.name);
-  if(v===want||(final&&v&&v+'동'===want)){inp.value='';driveLeg();return}
-  if(final&&v){inp.classList.remove('bad');void inp.offsetWidth;inp.classList.add('bad')}
+  const inp=$('typein'),d=run.r.order[run.k],raw=inp.value;
+  /* 스페이스가 들어와야 다음 동으로 간다. keydown 으로 가로채지 않는다 — 조합 확정이 깨진다 */
+  if(!(/\s/.test(raw)&&!composing)){paintTyped(raw,composing);return}
+  const v=norm(raw),want=norm(d.name);
+  inp.value='';
+  if(v===want||(v&&v+'동'===want)){paintTyped('');driveLeg();return}
+  paintTyped('');
+  const host=$('typing');host.classList.remove('miss');void host.offsetWidth;host.classList.add('miss');
 }
-/* 이름을 다 치면 확정 키 없이 달린다. 스페이스는 가로채지 않는다(IME) */
-$('in').addEventListener('input',()=>tryType(false));
-$('in').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();tryType(true)}});
-$('peek').onclick=()=>{if(run&&!run.done){const d=run.r.order[run.k];$('in').placeholder=d.name[0]+'…';$('in').focus()}};
+/* 이름을 다 쳐도 스페이스 전에는 달리지 않는다 */
+$('typein').addEventListener('input',e=>tryType(e.isComposing));
+const markFocus=()=>$('typing').classList.toggle('off',document.activeElement!==$('typein'));
+$('typein').addEventListener('focus',markFocus);
+$('typein').addEventListener('blur',markFocus);
+$('typing').addEventListener('pointerdown',e=>{e.preventDefault();$('typein').focus()});
+$('typing').addEventListener('click',()=>$('typein').focus());
+$('peek').onclick=()=>{if(run&&!run.done){const d=run.r.order[run.k];$('typein').value=d.name[0];paintTyped(d.name[0]);$('typein').focus()}};
 function quit(){
   if(!run)return;run.car.remove();run=null;
   $('done').classList.remove('on');document.body.classList.remove('driving');

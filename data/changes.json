@@ -1,5 +1,17 @@
 [
   {
+    "v": "0.10.431",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타에서 동 이름을 다 쳐도 바로 출발하지 않습니다. 스페이스를 눌러야 다음 동으로 달립니다.",
+    "en": "In the 3D navigation beta, finishing a neighborhood name no longer starts the drive. Press space to go on to the next one."
+  },
+  {
+    "v": "0.10.430",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타의 하단 입력 영역을 원래 게임 맵의 타이핑 바와 같은 구조로 맞춥니다. 지난 동·지금 동·다음 동을 하나씩만 두고, 가운데 이름 글자가 친 만큼 차오르며 커서가 미끄러집니다.",
+    "en": "Brings the main game's bottom typing bar structure to the 3D navigation beta: one previous, current and next neighborhood, with the center name filling in letter by letter alongside the sliding caret."
+  },
+  {
     "v": "0.10.429",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타 주소(beta/3dnavigation/)와 그 설정 페이지가 404 로 뜨던 것을 고쳤습니다.",
