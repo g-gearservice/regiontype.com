@@ -695,18 +695,32 @@ function setTarget(){
   $('road').textContent=st?.name?st.name+' 방면':'';
   $('arrow').setAttribute('d',ARROWS[st?.maneuver.modifier]||ARROWS.straight);
 }
-/* 지금까지 친 것을 그대로 보여준다(app.js 의 paintTyped). 맞은 글자는 색이 차고, 조합 중인 자모도 그대로 뜬다 */
+/* 직전 동의 끝 음절이 조합이 끝나며 빈 칸에 다시 들어온다. 지금 이름의 앞머리가 아니면 떼어 낸다 */
+function peel(raw){
+  const prev=run&&run.k>0?run.r.order[run.k-1].name:'';
+  let buf=String(raw||'').replace(/\s/g,'');
+  if(!prev||!buf||!run.want)return buf;
+  const tail=[...prev].pop();
+  if(buf.startsWith(tail)&&!run.want.startsWith(tail)){
+    const rest=buf.slice(tail.length);
+    if(!rest||run.want.startsWith(rest)||jamo(run.want).startsWith(jamo(rest)))return rest;
+  }
+  return buf;
+}
+/* 조합을 끊지 않고 value 만 비우면 IME 가 마지막 글자를 도로 넣는다 */
+function wipeInput(){
+  const inp=$('typein'),had=document.activeElement===inp;
+  inp.blur();inp.value='';
+  if(had&&run&&!run.done)inp.focus();
+}
+/* 지금까지 친 것을 그대로 보여준다(app.js 의 paintTyped). 맞은 글자는 색이 차고, 조합 중인 자모도 그대로 뜬다.
+   앞쪽 찌꺼기를 건너뛰어 맞추지 않는다 — 그러면 직전 끝 글자가 지금 이름 앞에 붙은 채로 완성으로 읽힌다 */
 function paintTyped(raw,composing=false){
   const box=$('qLetters');if(!run||!run.want)return;
-  const want=run.want,buf=raw.replace(/\s/g,'');
-  let n=0,rest=buf;
-  for(let i=0;i<buf.length;i++){
-    const sub=buf.slice(i);let k=0;
-    while(k<sub.length&&k<want.length&&sub[k]===want[k])k++;
-    if(k>n||i===0){n=k;rest=sub.slice(k)}
-    if(n===want.length)break;
-  }
-  if(n>=want.length)rest='';
+  const want=run.want,buf=String(raw||'').replace(/\s/g,'');
+  let n=0;
+  while(n<buf.length&&n<want.length&&buf[n]===want[n])n++;
+  let rest=n>=want.length?'':buf.slice(n);
   const soft=!!rest&&jamo(want.slice(n)).startsWith(jamo(rest));
   const ing=soft||(composing&&rest.length>0);
   const bad=!soft&&rest.length-(ing?1:0)>0;
@@ -763,27 +777,42 @@ function driveLeg(){
   requestAnimationFrame(frame);
 }
 function arrive(){
-  const o=run.r.order;o[run.k].own=true;run.k++;run.busy=false;setTarget();
-  if(run.k>=o.length)finish();else $('typein').focus();
+  const o=run.r.order;o[run.k].own=true;run.k++;run.busy=false;
+  wipeInput();setTarget();
+  if(run.k>=o.length)finish();else{
+    $('typein').focus();
+    setTimeout(()=>{
+      if(!run||run.busy||run.done)return;
+      const inp=$('typein'),buf=peel(inp.value);
+      if(buf!==inp.value.replace(/\s/g,'')){inp.value=buf;paintTyped(buf)}
+    },0);
+  }
 }
 function finish(){
   run.done=true;const s=Math.floor((performance.now()-run.t0)/1000);
   $('doneP').textContent=`${run.r.order.length}곳 · ${km(run.dist)} km · ${Math.floor(s/60)}분 ${s%60}초`;
   $('done').classList.add('on');$('again').focus();
 }
-function tryType(composing=false){
+function tryType(composing=false,forced=false){
   if(!run||run.busy||run.done)return;
-  const inp=$('typein'),d=run.r.order[run.k],raw=inp.value;
-  /* 스페이스가 들어와야 다음 동으로 간다. keydown 으로 가로채지 않는다 — 조합 확정이 깨진다 */
-  if(!(/\s/.test(raw)&&!composing)){paintTyped(raw,composing);return}
-  const v=norm(raw),want=norm(d.name);
-  inp.value='';
-  if(v===want||(v&&v+'동'===want)){paintTyped('');driveLeg();return}
-  paintTyped('');
+  const inp=$('typein'),raw=inp.value,buf=peel(raw);
+  /* 이름을 다 쳐도 스페이스 전에는 달리지 않는다. 스페이스는 keydown 으로 막지 않는다(IME 조합) */
+  const spaced=forced||(/\s/.test(raw)&&!composing);
+  if(!spaced){
+    if(!composing&&buf!==raw.replace(/\s/g,''))inp.value=buf;
+    paintTyped(buf,composing);return;
+  }
+  const v=norm(buf),want=norm(run.want);
+  wipeInput();paintTyped('');
+  if(v&&(v===want||v+'동'===want)){driveLeg();return}
   const host=$('typing');host.classList.remove('miss');void host.offsetWidth;host.classList.add('miss');
 }
-/* 이름을 다 쳐도 스페이스 전에는 달리지 않는다 */
+/* 이름을 다 쳐도 스페이스 전에는 달리지 않는다. 조합 중 스페이스는 IME 에 맡기고, 떼는 순간에만 확정한다 */
 $('typein').addEventListener('input',e=>tryType(e.isComposing));
+$('typein').addEventListener('keyup',e=>{
+  if(e.key!==' '||e.isComposing)return;
+  if(!/\s/.test($('typein').value))tryType(false,true);
+});
 const markFocus=()=>$('typing').classList.toggle('off',document.activeElement!==$('typein'));
 $('typein').addEventListener('focus',markFocus);
 $('typein').addEventListener('blur',markFocus);
