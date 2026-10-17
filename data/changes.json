@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.427",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타에서 경로 세 갈래를 곧은 선으로 바로 띄우고 실제 도로가 오는 대로 바꿔 끼웁니다. 길 서버가 6초 넘게 답이 없으면 곧은 길로 놀고, 한 번 찾은 길은 다시 묻지 않습니다.",
+    "en": "The 3D navigation beta shows its three route options at once as straight lines and swaps in real roads as they arrive. If the route server takes over 6 seconds it plays on straight lines, and routes already found are reused."
+  },
+  {
     "v": "0.10.426",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타의 입력 칸 위에 지난 동 · 지금 동 · 다음 동이 한 줄로 흐릅니다. 베타 전용 설정 페이지(beta/3dnavigation/settings)에서 보일 동 수, 카메라 기울기·거리, 달리는 빠르기를 고릅니다. 지도 바닥의 점 무늬를 걷고 실제 동 경계를 면으로 칠해, 마우스를 얹으면 짙어지고 누르면 그 동에서 출발합니다.",

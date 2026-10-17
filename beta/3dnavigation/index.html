@@ -378,16 +378,21 @@ function variants(s){
     {name:'거꾸로 돌기',tag:'반대로',order:[s,...dongs.slice(0,k).reverse(),...dongs.slice(k+1).reverse()]},
   ];
 }
-async function route(order){
+/* 동 중심을 곧게 잇는 길. 길 서버를 기다리는 동안의 미리보기이자, 서버가 안 될 때의 대신이다 */
+const straight=order=>({geom:order.map(d=>d.c),dist:0,dur:0,fallback:true,legs:order.slice(1).map((d,i)=>({dist:0,steps:[],coords:[order[i].c,d.c]}))});
+const routeCache=new Map();   // 같은 순서는 다시 묻지 않는다
+function route(order){
   const url='https://router.project-osrm.org/route/v1/driving/'+order.map(d=>d.c.join(',')).join(';')+'?overview=full&geometries=geojson&steps=true';
-  try{
-    const j=await (await fetch(url)).json();if(j.code!=='Ok')throw 0;
-    const r=j.routes[0];
-    return {geom:r.geometry.coordinates,dist:r.distance,dur:r.duration,
-      legs:r.legs.map(l=>({dist:l.distance,steps:l.steps,coords:l.steps.flatMap(s=>s.geometry.coordinates)}))};
-  }catch(e){ /* 길 서버가 안 되면 동 중심을 곧게 잇는다 — 놀이는 그대로 된다 */
-    return {geom:order.map(d=>d.c),dist:0,dur:0,fallback:true,legs:order.slice(1).map((d,i)=>({dist:0,steps:[],coords:[order[i].c,d.c]}))};
-  }
+  if(!routeCache.has(url))routeCache.set(url,(async()=>{
+    try{
+      /* 공개 데모 서버라 가끔 한참 걸린다 — 6초 넘으면 곧은 길로 놀게 한다 */
+      const j=await (await fetch(url,{signal:AbortSignal.timeout(6000)})).json();if(j.code!=='Ok')throw 0;
+      const r=j.routes[0];
+      return {geom:r.geometry.coordinates,dist:r.distance,dur:r.duration,
+        legs:r.legs.map(l=>({dist:l.distance,steps:l.steps,coords:l.steps.flatMap(s=>s.geometry.coordinates)}))};
+    }catch(e){routeCache.delete(url);return straight(order)}
+  })());
+  return routeCache.get(url);
 }
 
 /* ── 패널: 구 목록 → 경로 카드 ── */
@@ -455,11 +460,15 @@ async function plan(s){
   $('ttl').textContent=s.name+'에서 출발';
   $('sub').textContent='실제 도로로 길을 찾는 중…';
   const vs=variants(s);
+  /* 곧은 길로 먼저 띄우고, 실제 도로가 오면 바꿔 낀다 */
+  routes=vs.map(v=>({...straight(v.order),...v,pending:true}));sel=0;drawRoutes();renderCards();
   const rs=await Promise.all(vs.map(v=>route(v.order)));
-  if(my!==planSeq||view!=='routes')return;
+  if(my!==planSeq||view!=='routes'||run)return;
+  const focused=$('cards').contains(document.activeElement);
   routes=rs.map((r,i)=>({...r,...vs[i]}));
   $('sub').textContent=routes[0].fallback?'길 서버에 닿지 않아 동 사이를 곧게 잇습니다':`${index.find(m=>m.slug===slug)?.title||''} · 실제 도로 경로`;
-  sel=0;drawRoutes();renderCards();
+  drawRoutes();renderCards();
+  if(focused)document.querySelectorAll('.card')[sel]?.focus({preventScroll:true});
 }
 function clearRoutes(){
   for(let i=0;i<3;i++)if(map.getLayer('r'+i)){map.removeLayer('r'+i);map.removeLayer('r'+i+'-case');map.removeSource('r'+i)}
@@ -498,7 +507,7 @@ function renderCards(){
   routes.forEach((r,i)=>{
     const c=document.createElement('div');c.className='card';c.setAttribute('role','radio');
     c.innerHTML=`<div class="t"><b>${r.fallback?r.order.length+'곳':mins(r.dur)}</b>`+
-      `<span class="eta">${r.order.length}곳 · ${r.fallback?'곧은 길':km(r.dist)+' km'} · ${r.name}</span><span class="tag">${r.tag}</span></div>`+
+      `<span class="eta">${r.order.length}곳 · ${r.pending?'길 찾는 중…':r.fallback?'곧은 길':km(r.dist)+' km'} · ${r.name}</span><span class="tag">${r.tag}</span></div>`+
       `<button class="go" type="button" aria-label="${r.name}(으)로 출발">출발</button>`;
     c.addEventListener('click',e=>{if(e.target.closest('.go'))return start(i);pick(i)});
     box.appendChild(c);
@@ -522,8 +531,9 @@ const bearing=(a,b)=>{const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1
 const hav=(a,b)=>{const r=Math.PI/180,p=(b[1]-a[1])*r,q=(b[0]-a[0])*r,s=Math.sin(p/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(q/2)**2;return 12742000*Math.asin(Math.sqrt(s))};
 
 function start(i=sel){
-  if(!routes.length)return;sel=i;
-  const r=routes[sel];
+  if(!routes.length)return;
+  if(routes[i].pending)return toast('실제 도로를 찾는 중이에요 — 잠깐만요');
+  sel=i;const r=routes[sel];
   dongs.forEach(d=>{d.own=false;d.tgt=false});r.order[0].own=true;
   run={r,k:1,t0:performance.now(),dist:0,brg:0,busy:false};
   document.body.classList.add('driving');
