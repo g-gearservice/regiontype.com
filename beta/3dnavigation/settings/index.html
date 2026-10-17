@@ -57,6 +57,19 @@ legend{font-weight:800;font-size:18px;padding:0 6px}
     </fieldset>
 
     <fieldset>
+      <legend>유리</legend>
+      <div class="row"><label for="glass">투명도</label><output for="glass" id="glassO"></output>
+        <input type="range" id="glass" name="glass" min="0" max="90" step="5">
+        <small>높을수록 유리가 맑아져 지도가 그대로 비칩니다. 낮추면 유리가 물들어 글자가 또렷해집니다.</small></div>
+      <div class="row"><label for="sheen">반사광</label><output for="sheen" id="sheenO"></output>
+        <input type="range" id="sheen" name="sheen" min="0" max="200" step="10">
+        <small>유리 테두리에 걸리는 빛(스페큘러)의 세기입니다. 0% 면 빛이 걸리지 않습니다.</small></div>
+      <div class="row"><label for="lens">굴절</label><output for="lens" id="lensO"></output>
+        <input type="range" id="lens" name="lens" min="0" max="200" step="10">
+        <small>볼록한 유리 테두리가 렌즈처럼 지도를 휘는 정도입니다. 0% 거나 WebGL 이 없는 기기에서는 서린 유리가 됩니다.</small></div>
+    </fieldset>
+
+    <fieldset>
       <legend>달리기</legend>
       <div class="row"><span id="speedL" style="font-weight:700">빠르기</span>
         <div class="seg" role="radiogroup" aria-labelledby="speedL">
@@ -76,22 +89,25 @@ legend{font-weight:800;font-size:18px;padding:0 6px}
 
 <script>
 /* 키와 기본값은 ../index.html 의 NAV 와 같다. 한쪽을 바꾸면 같이 바꾼다 */
-const KEY='rt-nav3d',DEF={pitch:62,zoom:16.8,speed:'normal'};
+const KEY='rt-nav3d',DEF={pitch:62,zoom:16.8,speed:'normal',glass:85,sheen:100,lens:100};
 const load=()=>{try{return {...DEF,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...DEF}}};
 const f=document.getElementById('f'),saved=document.getElementById('saved');
 
 function fill(o){
-  for(const k of ['pitch','zoom'])f[k].value=o[k];
+  for(const k of ['pitch','zoom','glass','sheen','lens'])f[k].value=o[k];
   f.querySelector(`[name=speed][value=${o.speed}]`).checked=true;
   show();
 }
 function read(){
-  return {pitch:+f.pitch.value,zoom:+f.zoom.value,speed:f.speed.value};
+  return {pitch:+f.pitch.value,zoom:+f.zoom.value,speed:f.speed.value,glass:+f.glass.value,sheen:+f.sheen.value,lens:+f.lens.value};
 }
 function show(){
   const o=read();
   document.getElementById('pitchO').textContent=o.pitch+'°';
   document.getElementById('zoomO').textContent=o.zoom.toFixed(1);
+  document.getElementById('glassO').textContent=o.glass+'%';
+  document.getElementById('sheenO').textContent=o.sheen+'%';
+  document.getElementById('lensO').textContent=o.lens+'%';
 }
 f.addEventListener('input',()=>{
   show();

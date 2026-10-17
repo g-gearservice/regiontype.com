@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.434",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타의 메뉴·카드·지도 단추·타이핑 바가 리퀴드 글래스로 바뀌었습니다. 지도가 맑게 비치고, 볼록한 유리 테두리가 렌즈처럼 지도를 휘며, WebGL 이 되는 브라우저라면 어디서나 보입니다. 투명도·반사광·굴절은 베타 설정에서 고를 수 있습니다. 또 지도가 차가 갈 길을 미리 내다보며 부드럽게 돌아, 차가 옆으로 미끄러지듯 보이지 않습니다.",
+    "en": "The 3D navigation beta's menus, cards, map buttons and typing bar are now liquid glass: the map shows through clearly and the convex glass edges bend it like a lens, in any browser with WebGL. Transparency, sheen and refraction can be set in the beta settings. The map also looks ahead along the road and turns smoothly, so the car no longer appears to slide sideways."
+  },
+  {
     "v": "0.10.433",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타에서 차가 동에 닿기 전에 다음 동을 이어서 칠 수 있습니다. 앞서 칠수록 차가 그만큼 빨라지고, 이동 시간에는 하한·상한이 없습니다.",
