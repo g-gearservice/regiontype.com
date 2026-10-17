@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>3D 내비게이션 설정 · regiontype beta</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../../favicon/favicon.svg">
+<style>
+/* 색·간격은 사이트 style.css 의 :root 에서 옮겨 온 값이다 */
+:root{
+  --bg:#e8edf0; --ink:#3c464a; --ink-soft:#5b676e;
+  --accent:#f0a03c; --on-accent:#232c31; --card:#f4f8f9;
+  --glass-line:color-mix(in srgb,var(--ink) 10%,transparent);
+  --gap:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+  font:500 16px/1.4 system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+main{max-width:560px;margin:0 auto;padding:24px var(--gap) 48px}
+h1{margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-.02em}
+.sub{margin:0 0 20px;color:var(--ink-soft)}
+.beta{font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;border:1.5px solid var(--ink);vertical-align:middle}
+fieldset{margin:0 0 14px;padding:16px;border:1px solid var(--glass-line);border-radius:22px;background:var(--card)}
+legend{font-weight:800;font-size:18px;padding:0 6px}
+.row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 12px;padding:8px 0}
+.row+.row{border-top:1px solid var(--glass-line)}
+.row label{font-weight:700}
+.row output{font-weight:800;font-variant-numeric:tabular-nums;min-width:4ch;text-align:right}
+.row input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--ink);min-height:32px}
+.row small{grid-column:1/-1;color:var(--ink-soft)}
+.seg{grid-column:1/-1;display:flex;gap:6px}
+.seg label{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border:2px solid var(--glass-line);border-radius:14px;cursor:pointer}
+.seg label:has(input:checked){border-color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.seg input{accent-color:var(--ink)}
+.preview{display:flex;gap:6px;flex-wrap:nowrap;overflow:hidden;margin:0;padding:10px 0 0;list-style:none;white-space:nowrap}
+.preview li{flex:none;padding:3px 10px;border-radius:999px;border:2px solid transparent}
+.preview .past{color:var(--ink-soft);opacity:.6}
+.preview .past::before{content:'✓ '}
+.preview .now{font-weight:800;border-color:var(--ink);background:#fff}
+.preview .next{color:var(--ink-soft);font-weight:600}
+.bar{display:flex;gap:8px;margin-top:20px}
+.bar a,.bar button{flex:1;min-height:52px;display:flex;align-items:center;justify-content:center;border-radius:999px;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}
+.bar a{background:var(--accent);color:var(--on-accent);border:0}
+.bar button{background:none;color:var(--ink);border:2px solid var(--ink)}
+.saved{min-height:1.4em;margin:10px 0 0;text-align:center;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<main>
+  <h1>3D 내비게이션 설정 <span class="beta">BETA</span></h1>
+  <p class="sub">이 브라우저에만 저장됩니다. 바꾸면 바로 적용돼요.</p>
+
+  <form id="f">
+    <fieldset>
+      <legend>지난 동 · 지금 동 · 다음 동</legend>
+      <div class="row"><label for="past">지난 동 보이기</label><output for="past" id="pastO"></output>
+        <input type="range" id="past" name="past" min="0" max="3" step="1"></div>
+      <div class="row"><label for="next">다음 동 보이기</label><output for="next" id="nextO"></output>
+        <input type="range" id="next" name="next" min="0" max="5" step="1"></div>
+      <ol class="preview" id="pv" aria-label="미리보기"></ol>
+    </fieldset>
+
+    <fieldset>
+      <legend>카메라</legend>
+      <div class="row"><label for="pitch">기울기</label><output for="pitch" id="pitchO"></output>
+        <input type="range" id="pitch" name="pitch" min="0" max="70" step="1">
+        <small>0° 는 위에서 내려다보기, 높을수록 건물 사이로 낮게 달립니다.</small></div>
+      <div class="row"><label for="zoom">가까이</label><output for="zoom" id="zoomO"></output>
+        <input type="range" id="zoom" name="zoom" min="15" max="18" step="0.1"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>달리기</legend>
+      <div class="row"><span id="speedL" style="font-weight:700">빠르기</span>
+        <div class="seg" role="radiogroup" aria-labelledby="speedL">
+          <label><input type="radio" name="speed" value="slow">느리게</label>
+          <label><input type="radio" name="speed" value="normal">보통</label>
+          <label><input type="radio" name="speed" value="fast">빠르게</label>
+        </div></div>
+    </fieldset>
+  </form>
+
+  <div class="bar">
+    <button type="button" id="reset">기본값으로</button>
+    <a href="../">내비로 돌아가기</a>
+  </div>
+  <p class="saved" id="saved" role="status"></p>
+</main>
+
+<script>
+/* 키와 기본값은 ../index.html 의 NAV 와 같다. 한쪽을 바꾸면 같이 바꾼다 */
+const KEY='rt-nav3d',DEF={past:2,next:3,pitch:62,zoom:16.8,speed:'normal'};
+const load=()=>{try{return {...DEF,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...DEF}}};
+const f=document.getElementById('f'),pv=document.getElementById('pv'),saved=document.getElementById('saved');
+const SAMPLE=['화곡1동','화곡본동','우장산동','발산1동','공항동','방화1동','방화2동','개화동','가양1동'];
+
+function fill(o){
+  for(const k of ['past','next','pitch','zoom'])f[k].value=o[k];
+  f.querySelector(`[name=speed][value=${o.speed}]`).checked=true;
+  show();
+}
+function read(){
+  return {past:+f.past.value,next:+f.next.value,pitch:+f.pitch.value,zoom:+f.zoom.value,speed:f.speed.value};
+}
+function show(){
+  const o=read();
+  document.getElementById('pastO').textContent=o.past+'곳';
+  document.getElementById('nextO').textContent=o.next+'곳';
+  document.getElementById('pitchO').textContent=o.pitch+'°';
+  document.getElementById('zoomO').textContent=o.zoom.toFixed(1);
+  const k=3;
+  pv.innerHTML=SAMPLE.slice(k-o.past,k+1+o.next).map((n,j)=>{
+    const c=j<o.past?'past':j===o.past?'now':'next';
+    return `<li class="${c}"${c==='now'?' aria-current="step"':''}>${n}</li>`}).join('');
+}
+f.addEventListener('input',()=>{
+  show();
+  try{localStorage.setItem(KEY,JSON.stringify(read()));saved.textContent='저장했습니다'}
+  catch{saved.textContent='이 브라우저는 저장을 막고 있어요'}
+});
+document.getElementById('reset').onclick=()=>{
+  try{localStorage.removeItem(KEY)}catch{}
+  fill(DEF);saved.textContent='기본값으로 돌렸습니다';
+};
+fill(load());
+</script>
+</body>
+</html>
