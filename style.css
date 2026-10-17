@@ -2632,12 +2632,7 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 :root[data-motion="off"] .rk-bot.is-asleep::before{transform:translate(11px,-13px) scale(.7)}
 :root[data-motion="off"] .rk-bot.is-asleep:not(.is-held) .rk-bot-motion{animation:none}
 
-/* 홈봇 칩·수면 안내·busy (Figma 124:90–189). 수면·잠김 속말은 쓰지 않는다 */
-.rk-sleep-hint{
-  position:absolute;left:0;top:0;margin:0;padding:0;z-index:1;pointer-events:none;
-  font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap;
-}
-.rk-sleep-hint[hidden]{display:none}
+/* 홈봇 칩·busy (Figma 124:90–189). 수면·잠김 속말은 쓰지 않는다 */
 .rk-chips{
   display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;
 }

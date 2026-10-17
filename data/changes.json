@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.422",
+    "date": "2026-10-17",
+    "ko": "홈 봇이 잘 때 아래에 뜨던 '눌러서 채팅' 안내 글을 없앴습니다. 봇을 누르면 채팅이 열리는 건 그대로입니다.",
+    "en": "Removed the 'Tap to chat' caption under the sleeping home bot. Pressing the bot still opens the chat."
+  },
+  {
     "v": "0.10.421",
     "date": "2026-10-17",
     "ko": "검색·공유 미리보기 설명도 '서울 얼마나 아세요?' 뉘앙스로 바꿨습니다.",
