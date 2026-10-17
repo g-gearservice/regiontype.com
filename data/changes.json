@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.10.432",
+    "date": "2026-10-17",
+    "ko": "3D 내비게이션 베타에서 직전 동의 마지막 글자가 다음 동 앞에 붙지 않습니다. 동 이름을 다 쳐도 스페이스를 눌러야 다음 동으로 달립니다.",
+    "en": "In the 3D navigation beta, the previous neighborhood's last character no longer sticks to the front of the next one. Finishing a name does not drive on; space does."
+  },
+  {
     "v": "0.10.431",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타에서 동 이름을 다 쳐도 바로 출발하지 않습니다. 스페이스를 눌러야 다음 동으로 달립니다.",
