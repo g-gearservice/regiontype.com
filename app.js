@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.27';
+const VER = '4.28';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1336,8 +1336,6 @@ function syncHomeCam(snap = false) {
   if (OPEN || (PICK && !PICK.gone)) focusHome(snap);
   else restoreHomeView(snap);
 }
-/* 서울 덩이가 화면보다 크면 가운데로 끌어 한강 일대가 먼저 보이게 한다 */
-function nudgeHome(snap = true) { restoreHomeView(snap); }
 
 /* 커서 반응. 손가락·펜에는 걸지 않고(헛호버), 모션을 줄였으면 아예 쉰다 */
 const fineHover = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
@@ -3867,8 +3865,8 @@ addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 addEventListener('storage', e => { if (e.key === 'rt.token' || e.key === null) paintUI(); });
 
 /* ?v= 표류. 페이지가 셋(홈·로그인·설정)이라 손으로 적는 자리가 여섯이다 — 개발에서만
-   짖는다. 파비콘(rel=icon)은 뺀다: 그림이 바뀔 때만 움직이는 별개의 캐시 열쇠다 */
-if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel~="icon"])').forEach(el => {
+   짖는다. 파비콘(rel=icon·apple-touch-icon)은 뺀다: 그림이 바뀔 때만 움직이는 별개의 캐시 열쇠다 */
+if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel*="icon"])').forEach(el => {
   const v = new URL(el.getAttribute('src') || el.getAttribute('href'), location.href).searchParams.get('v');
   if (v !== VER) console.warn('[ver] ?v=' + v + ' \u2260 ' + VER, el);
 });

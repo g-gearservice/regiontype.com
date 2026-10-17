@@ -782,8 +782,8 @@ function softApply() {
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });
 
   /* ?v= 표류. 페이지가 셋이라 손으로 적는 자리가 여섯이다 — 개발에서만 짖는다.
-     파비콘(rel=icon)은 뺀다: 그림이 바뀔 때만 움직이는 별개의 캐시 열쇠다 */
-  if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel~="icon"])').forEach(el => {
+     파비콘(rel=icon·apple-touch-icon)은 뺀다: 그림이 바뀔 때만 움직이는 별개의 캐시 열쇠다 */
+  if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel*="icon"])').forEach(el => {
     const v = new URL(el.getAttribute('src') || el.getAttribute('href'), location.href).searchParams.get('v');
     if (v !== VER) console.warn('[ver] ?v=' + v + ' ≠ ' + VER, el);
   });
