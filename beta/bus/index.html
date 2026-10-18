@@ -110,7 +110,9 @@ button{font:inherit;color:inherit}
 .over-text b{font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1}
 .over-text span{font-size:16px;font-weight:600;line-height:1.5;color:var(--muted)}
 .over-nav{position:absolute;left:500px;top:450px;z-index:10;display:flex;flex-direction:column;gap:8px;font-size:32px;animation:fade .5s var(--io) 1.3s both}
-.menu{position:absolute;inset:0;z-index:8;background:rgba(14,14,16,.72);color:#f2f2f0;animation:fade .35s var(--io) both}
+.menu{position:absolute;inset:0;z-index:8;color:#f2f2f0;animation:fade .35s var(--io) both}
+/* 어둡게 덮는 막은 판(1280×800) 밖까지 — 넓은 창에서도 끝까지 덮는다 */
+.menu::before{content:'';position:absolute;left:-3000px;top:-3000px;width:7000px;height:7000px;z-index:-1;background:rgba(14,14,16,.72)}
 .menu nav{position:absolute;left:470px;top:250px;display:flex;flex-direction:column;gap:8px;font-size:32px}
 .hud{position:absolute;right:44px;top:36px;display:flex;align-items:center;gap:14px}
 .hud .n{display:flex;align-items:center;gap:5px;font-size:22px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
@@ -317,8 +319,16 @@ const calm = () => matchMedia('(prefers-reduced-motion:reduce)').matches;
 /* ── 화면을 판에 맞춘다. 판은 1280×800 하나다 ── */
 /* 그래도 끌려 올라가면 바로 되돌린다 */
 $('stage').addEventListener('scroll', e => { e.target.scrollTop = 0; e.target.scrollLeft = 0; });
-function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / 1280, innerHeight / 800)})`; }
-addEventListener('resize', fit); fit();
+/* 판은 1280×800 을 다 보이게 줄이고 늘리되, 창이 그보다 넓거나 높으면 판도 그만큼 넓힌다 — 화면을 꽉 채운다.
+   카메라는 판의 한가운데(CX,CY)를 본다 */
+let CX = 640, CY = 400;
+function fit() {
+  const k = Math.min(innerWidth / 1280, innerHeight / 800), W = innerWidth / k, H = innerHeight / k, st = $('stage').style;
+  st.width = W + 'px'; st.height = H + 'px'; st.transform = `scale(${k})`;
+  CX = W / 2; CY = H / 2;
+  if (typeof place !== 'undefined') cam(place, 1, true);
+}
+addEventListener('resize', () => { fit(); requestAnimationFrame(() => $('world').classList.add('fly')); });
 
 /* ── 낮·밤 ── */
 let night = store.get('rt-bus-night') !== null ? store.get('rt-bus-night') === '1' : !matchMedia('(prefers-color-scheme:light)').matches;
@@ -349,10 +359,11 @@ paintWorld();
 
 /* ── 카메라 ── */
 let place = 'home';
+fit();
 function cam(k, scale = 1, instant = false) {
   const p = PLACES[k];
   $('world').classList.toggle('fly', !instant);
-  $('world').style.transform = `translate(640px,400px) scale(${scale}) rotate(${-p.r}deg) translate(${-(p.x + 640)}px,${-(p.y + 400)}px)`;
+  $('world').style.transform = `translate(${CX}px,${CY}px) scale(${scale}) rotate(${-p.r}deg) translate(${-(p.x + 640)}px,${-(p.y + 400)}px)`;
 }
 function fly(k) {
   place = k;
