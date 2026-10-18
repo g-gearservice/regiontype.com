@@ -33,7 +33,8 @@ button{font:inherit;color:inherit}
 .world{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0}
 .world.fly{transition:transform 1.5s var(--fly)}
 .place{position:absolute;width:1280px;height:800px;transition:opacity .6s var(--io)}
-.ride{position:absolute;left:0;top:0;width:40px;height:18px;offset-rotate:auto;animation:ride 16s var(--fly) infinite alternate}
+/* 노선과 같은 색이라 선 위에서 묻힌다 — 바탕색 외곽선으로 버스만 도려내 보인다 */
+.ride{position:absolute;left:0;top:0;width:40px;height:18px;box-shadow:0 0 0 3px var(--bg);offset-rotate:auto;animation:ride 16s var(--fly) infinite alternate}
 .ride i{position:absolute;right:3px;top:3px;bottom:3px;width:5px;background:rgba(0,0,0,.3)}
 @keyframes ride{0%,6%{offset-distance:0%}94%,100%{offset-distance:100%}}
 

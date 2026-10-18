@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.444",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 홈과 코스 고르기 화면을 돌아다니는 버스에 외곽선이 생겼습니다. 노선과 같은 색이라 선 위에서 묻히던 버스가 바탕색 테두리로 또렷하게 떠 보입니다.",
+    "en": "The buses circling the Neighborhood Bus beta's home and district picker screens now have an outline. They used to blend into their same-colored lines; a background-colored edge makes them stand out."
+  },
+  {
     "v": "0.11.443",
     "date": "2026-10-19",
     "ko": "동네버스 베타 첫 화면 맨 위에 짧은 블러가 깔립니다. 위 가장자리로 들어오는 노선이 아래로 갈수록 옅어지는 블러 속에서 부드럽게 가라앉습니다.",
