@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.445",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기 화면 정렬을 맞췄습니다. 띠가 가운데 카드의 제목 바로 아래를 지나고, 옆 카드의 이름은 그 띠 위에 나란히 얹히며, 옆 카드의 노선도도 가운데 카드의 노선도와 같은 높이에 섭니다.",
+    "en": "Aligned the Neighborhood Bus beta's district picker: the band now passes just under the selected card's title, neighboring names sit on that band side by side, and neighboring route maps line up with the selected card's map."
+  },
+  {
     "v": "0.11.444",
     "date": "2026-10-19",
     "ko": "동네버스 베타의 홈과 코스 고르기 화면을 돌아다니는 버스에 외곽선이 생겼습니다. 노선과 같은 색이라 선 위에서 묻히던 버스가 바탕색 테두리로 또렷하게 떠 보입니다.",
