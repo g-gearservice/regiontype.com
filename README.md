@@ -421,6 +421,7 @@ A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `st
     data/i18n.json           UI copy (26 languages). Hand-edited
     data/kr-tree.json        Korea layer tree (build_kr.py). Not served yet
     data/kr-names.json       romanized Korean place names shown outside the Korean UI (build_names.py)
+    data/bus.json            Neighborhood Bus beta stops for all 25 districts (build_bus.py)
     data/board/              board tiles on one shared projection (build_board.py). Not served yet
     tools/build_map.py       GeoJSON → geom.json
     tools/build_dong.py      all 25-district dong courses at once
@@ -429,6 +430,7 @@ A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `st
     tools/build_world.py     Natural Earth admin-1 → country courses
     tools/build_size.py      course sizes → relay/size.mjs
     tools/build_names.py     southkorea-maps name_eng → kr-names.json
+    tools/build_bus.py       dong centroids → bus stops, labels placed without overlap
 
 ## Refreshing map data
 

@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>동네버스 · regiontype beta</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../favicon/favicon.svg">
+<!-- 동네버스 — 정류장 이름을 쳐서 버스를 보내 손님을 실어 나른다. 정류장 판은 tools/build_bus.py 가
+     찍은 data/bus.json(25개 자치구, 행정동 코스 순서)이다. 한 판(1280×800)을 화면에 맞춰 늘리고 줄인다 -->
+<style>
+/* ── 토큰. 화면은 이것만 쓴다. 밤이 기본이고 :root[data-day] 가 낮이다 ── */
+:root{
+  --bg:#29292b; --ink:#f2f2f0; --muted:#9a9a98; --stop-fill:#29292b; --ring:#e4e4e2; --pax:#e4e4e2; --seat:#29292b;
+  --card:#323234; --river:#46667a; --river-edge:#3a5566; --crowd:#7d7d7b; --crowd-end:rgba(125,125,123,.3);
+  --veil:rgba(20,20,22,.58); --blk:#3f6fa8; --band:#f6c037; --line:#f6c037; --miss:#e8513a; --miss-text:#ff8a73;
+  --font:'Helvetica Neue',Helvetica,system-ui,-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;
+  --fly:cubic-bezier(.65,0,.35,1); --out:cubic-bezier(.23,1,.32,1); --io:cubic-bezier(.4,0,.2,1);
+}
+:root[data-day]{
+  --bg:#f3efe6; --ink:#2a2a2c; --muted:#6f6c66; --stop-fill:#fbf9f4; --ring:#2a2a2c; --pax:#2a2a2c; --seat:#fbf9f4;
+  --card:#fbf9f4; --river:#b6d2e1; --river-edge:#9fc0d2; --crowd:#bdb8ad; --crowd-end:rgba(150,145,135,.3);
+  --veil:rgba(243,239,230,.62); --miss-text:#b8321f;
+}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background-color .5s,color .5s}
+button{font:inherit;color:inherit}
+#fit{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+/* overflow:clip — hidden 이면 입력칸에 초점이 갈 때 브라우저가 판을 끌어올린다 */
+#stage{position:relative;width:1280px;height:800px;flex:none;overflow:hidden;overflow:clip;transform-origin:center}
+.place,#board,.map{overflow:visible}
+
+/* ── 카메라. 홈·설정·고르기·운행은 한 장의 큰 지도 위 다른 자리다. 옮겨 갈 때 카메라가 날아간다 ── */
+.world{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0}
+.world.fly{transition:transform 1.5s var(--fly)}
+.place{position:absolute;width:1280px;height:800px;transition:opacity .6s var(--io)}
+.ride{position:absolute;left:0;top:0;width:40px;height:18px;offset-rotate:auto;animation:ride 16s var(--fly) infinite alternate}
+.ride i{position:absolute;right:3px;top:3px;bottom:3px;width:5px;background:rgba(0,0,0,.3)}
+@keyframes ride{0%,6%{offset-distance:0%}94%,100%{offset-distance:100%}}
+
+/* ── 메뉴 줄. 화살표는 그 화면이 있는 쪽을 가리킨다. 손을 대면 그 줄이 커진다 ── */
+.item{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:4px 0;cursor:pointer;transform-origin:left center;transition:transform .18s var(--out)}
+.item:hover,.item:focus-visible{transform:scale(1.16)}
+.item:focus-visible{outline:none}
+.item:focus-visible .blk{box-shadow:0 0 0 3px currentColor}
+.item svg{flex:none}
+.blk{display:inline-flex;align-items:center;height:1.3em;padding:0 .18em;font-weight:700;letter-spacing:-.02em;line-height:1;background:var(--blk);color:#fff}
+.blk.line{background:var(--band);color:#2a2a2c}
+.back{position:absolute;left:44px;top:40px;display:flex;align-items:center;justify-content:center;width:52px;height:44px;border:0;background:transparent;cursor:pointer;transition:transform 100ms ease-out}
+.back:active{transform:scale(.94)}
+.back:focus-visible{outline:3px solid currentColor;outline-offset:2px}
+
+/* ── 홈 ── */
+.logo{position:absolute;left:238px;top:196px;display:flex;align-items:center;gap:20px}
+.logo b{font-size:100px;font-weight:700;letter-spacing:-.05em;line-height:1}
+.logo span{display:flex;align-items:center;gap:8px;margin-top:18px}
+.home-nav{position:absolute;left:238px;top:330px;display:flex;flex-direction:column;gap:10px;font-size:40px}
+.foot{position:absolute;right:48px;bottom:40px;font-size:14px;font-weight:700;color:var(--muted)}
+.set-nav{position:absolute;left:300px;top:230px;display:flex;flex-direction:column;gap:14px;font-size:34px}
+.set-nav h2{margin:0 0 12px;font-size:56px;font-weight:700;letter-spacing:-.04em;line-height:1}
+
+/* ── 고르기. 구 카드가 띠를 따라 서에서 동으로 늘어서고, 고른 구가 가운데로 미끄러져 온다 ── */
+.row{position:absolute;left:0;top:196px;display:flex;align-items:flex-start;gap:48px;transition:transform .55s var(--fly)}
+.slot{width:340px;flex:none;display:flex;justify-content:center}
+.card{position:relative;z-index:2;width:340px;box-sizing:border-box;padding:22px;display:flex;flex-direction:column;gap:14px;background:var(--card)}
+.card .badge{display:inline-flex;align-items:center;align-self:flex-start;height:30px;padding:0 10px;color:#2a2a2c;font-size:16px;font-weight:700}
+.card h3{margin:0;font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.card small{font-size:13px;font-weight:600;color:var(--muted)}
+.card p{margin:0;font-size:14px;line-height:1.55;font-weight:500}
+.card strong{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.card svg{display:block;background:var(--bg)}
+.dim{display:flex;flex-direction:column;align-items:flex-start;width:212px;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
+.dim b{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--muted);opacity:.75}
+.dim:focus-visible{outline:3px solid currentColor;outline-offset:4px}
+.go-run{position:absolute;right:48px;bottom:44px;font-size:40px}
+.go-run .item{transform-origin:right center}
+
+/* ── 운행 판. 들어올 때 강이 먼저 번지고, 정류장이 차례로 튀어나오고, 계기는 맨 나중 ── */
+.in-fade{animation:fade .7s var(--io) both}
+.in-late{animation:fade .5s var(--io) .9s both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.mark{position:absolute;width:38px;height:38px;overflow:visible;z-index:2;animation:pop .42s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{transform:translate(-50%,-50%) scale(0)}to{transform:translate(-50%,-50%) scale(1)}}
+.pax{animation:paxin .3s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes paxin{from{transform:scale(0)}to{transform:scale(1)}}
+.hint{position:absolute;z-index:1;animation:spin 6s linear infinite}
+@keyframes spin{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+.map{position:absolute;inset:0;transform-origin:0 0;transition:transform 1.6s var(--fly)}
+.label{position:absolute;white-space:nowrap;z-index:3;font-size:14px;font-weight:700;line-height:1.1;padding:3px 2px}
+.label.hot{color:#2a2a2c;background:var(--line);padding:3px 7px}
+.label.hint-on{box-shadow:inset 0 -3px 0 var(--line)}
+.queue{position:absolute;display:flex;align-items:center;gap:3px;z-index:3}
+.queue.left{flex-direction:row-reverse}
+/* 넘침 — 정류장 뒤에서 불투명한 회색 부채꼴이 12시부터 시계 방향으로 찬다(반지름은 정류장의 2.6배).
+   그동안 둘레에서 옅은 원이 번졌다 사라진다. 색은 끝까지 회색이다 */
+.crowd{position:absolute;width:98px;height:98px;border-radius:50%;transform:translate(-50%,-50%);z-index:1}
+.crowd.end{transition:width 1.3s var(--out) .45s,height 1.3s var(--out) .45s,background-color 1.3s ease .45s}
+.pulse{position:absolute;width:190px;height:190px;border-radius:50%;background:var(--crowd);pointer-events:none;z-index:0;animation:pulse 2s var(--out) infinite}
+@keyframes pulse{from{transform:translate(-50%,-50%) scale(.5);opacity:.16}to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+.bus{position:absolute;width:54px;height:24px;box-sizing:border-box;padding:4px 13px 4px 6px;border-radius:2px;z-index:5;display:flex;align-items:center;background:var(--line)}
+.bus i{position:absolute;right:3px;top:3px;bottom:3px;width:6px;background:rgba(0,0,0,.35)}
+.bus span{display:grid;grid-template-columns:repeat(3,9px);gap:2px}
+/* 끝날 때 — 지도 전체가 넘친 정류장을 가운데 두고 다가오고, 운행 끝 글이 뜰 때 반투명한 막이 살짝 흐리게
+   덮인다. 넘친 정류장만은 그 막 위에 남아 또렷하다(같은 지도 안에서 쌓임 순서만 올린다) */
+.veil{position:absolute;left:-3000px;top:-3000px;width:7000px;height:7000px;z-index:6;background:var(--veil);-webkit-backdrop-filter:blur(1.6px);backdrop-filter:blur(1.6px);animation:fade .6s var(--io) 1.15s both}
+.chrome{position:absolute;inset:0;pointer-events:none;transition:opacity .45s var(--io)}
+.chrome>*{pointer-events:auto}
+.chrome.gone{opacity:0}
+.chrome.gone>*{pointer-events:none}
+.over-text{position:absolute;left:0;right:0;top:150px;z-index:10;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:fade .5s var(--io) 1.3s both}
+.over-text b{font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.over-text span{font-size:16px;font-weight:600;line-height:1.5;color:var(--muted)}
+.over-nav{position:absolute;left:500px;top:450px;z-index:10;display:flex;flex-direction:column;gap:8px;font-size:32px;animation:fade .5s var(--io) 1.3s both}
+.menu{position:absolute;inset:0;z-index:8;background:rgba(14,14,16,.72);color:#f2f2f0;animation:fade .35s var(--io) both}
+.menu nav{position:absolute;left:470px;top:250px;display:flex;flex-direction:column;gap:8px;font-size:32px}
+.hud{position:absolute;right:44px;top:36px;display:flex;align-items:center;gap:14px}
+.hud .n{display:flex;align-items:center;gap:5px;font-size:22px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.hud .day{font-size:17px;font-weight:700;line-height:1}
+/* 시계 — 평소엔 꽉 찬 원판, 손을 대면 테두리만, 멈추면 붉어진다. 빠르기 단추는 손을 댈 때만 내려온다 */
+.clock{display:block;width:44px;height:44px;padding:2px;border:0;background:transparent;cursor:pointer}
+.clock .face{fill:var(--ink);stroke:var(--ink);stroke-width:3;transition:fill .15s,stroke .15s}
+.clock .tk{stroke:var(--bg);stroke-width:2;transition:stroke .15s}
+.clock .hand{stroke:var(--bg);stroke-width:3.2;transition:stroke .15s}
+.clock:hover .face,.clock:focus-visible .face{fill:var(--bg)}
+.clock:hover .tk,.clock:hover .hand,.clock:focus-visible .tk,.clock:focus-visible .hand{stroke:var(--ink)}
+.clock.paused .face{fill:#b85450;stroke:#b85450}
+.clock.paused .tk,.clock.paused .hand{stroke:#f2f2f0}
+.clock:focus-visible{outline:3px solid currentColor;outline-offset:2px}
+.ctl{position:absolute;top:50px;left:50%;display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0;pointer-events:none;transform:translate(-50%,-6px);transition:opacity .15s,transform .2s var(--out)}
+.hud:hover .ctl,.hud:focus-within .ctl{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.ctl button{display:flex;align-items:center;justify-content:center;width:44px;height:36px;border:0;background:transparent;color:var(--muted);opacity:.55;cursor:pointer}
+.ctl button[aria-pressed=true]{color:var(--ink);opacity:1}
+.aside{position:absolute;left:48px;bottom:44px;width:330px;display:flex;flex-direction:column;gap:6px}
+.aside small{font-size:13px;font-weight:700;color:var(--muted)}
+.aside b{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.aside p{margin:0;font-size:14px;line-height:1.55;font-weight:500}
+.typing{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+.typing label{display:flex;align-items:center;gap:14px;cursor:text}
+.typing label:focus-within{outline:3px solid currentColor;outline-offset:4px}
+.field{display:flex;align-items:center;width:360px;height:56px;box-sizing:border-box;padding:0 16px;color:#2a2a2c;background:var(--line)}
+.field.bad{background:var(--miss)}
+.field input{border:0;outline:0;background:transparent;font:inherit;color:inherit;width:100%;min-width:0;padding:0;font-size:30px;font-weight:700;letter-spacing:-.02em}
+.field input::placeholder{color:rgba(42,42,44,.55)}
+.note{font-size:13px;font-weight:700;color:var(--muted)}
+.note.bad{color:var(--miss-text)}
+.shake{animation:shake .32s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.tip{position:absolute;left:50%;top:44px;transform:translateX(-50%);max-width:520px;text-align:center;font-size:15px;font-weight:600;line-height:1.5;color:var(--muted)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){
+  .world.fly,.map,.crowd.end,.row{transition:none}
+  .ride,.hint,.mark,.pax,.shake,.pulse{animation:none}
+  .mark{transform:translate(-50%,-50%)}
+  .hint{transform:translate(-50%,-50%)}
+  .veil,.over-text,.over-nav,.in-late{animation-delay:0s}
+}
+</style>
+</head>
+<body>
+<div id="fit"><div id="stage">
+  <div class="world fly" id="world">
+    <svg id="lines" width="10" height="10" aria-hidden="true" style="position:absolute;left:0;top:0;overflow:visible"></svg>
+    <div id="rides"></div>
+
+    <section class="place" id="home" aria-label="홈">
+      <div class="logo"><b>regiontype</b><span aria-hidden="true">
+        <svg width="56" height="56" viewBox="0 0 40 40"><path d="M9 9H31V31H9Z" fill="none" stroke="currentColor" stroke-width="5"/></svg>
+        <svg width="22" height="22" viewBox="0 0 40 40"><path d="M20 6L33 30H7Z" fill="currentColor"/></svg>
+        <svg width="22" height="22" viewBox="0 0 40 40"><path d="M8 20a12 12 0 1 0 24 0a12 12 0 1 0 -24 0Z" fill="currentColor"/></svg>
+        <svg width="22" height="22" viewBox="0 0 40 40"><path d="M20 5L35 20L20 35L5 20Z" fill="currentColor"/></svg></span></div>
+      <nav class="home-nav" aria-label="홈 메뉴">
+        <button class="item" data-go="picker"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true"><path class="arw"/></svg><span class="blk">운행 시작</span></button>
+        <button class="item" id="resume" hidden><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(-45deg)"><path class="arw"/></svg><span class="blk">이어 하기</span></button>
+        <button class="item" data-go="settings"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(90deg)"><path class="arw"/></svg><span class="blk">설정</span></button>
+      </nav>
+      <span class="foot">동네버스 · 우리 구부터, 동까지</span>
+    </section>
+
+    <section class="place" id="settings" aria-label="설정">
+      <button class="back" data-go="home" aria-label="홈으로"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(-90deg)"><path class="arw"/></svg></button>
+      <div class="set-nav">
+        <h2>설정</h2>
+        <button class="item night-sw" role="switch" aria-checked="true"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="4"/><path class="chk" fill="none" stroke="currentColor" stroke-width="5"/></svg><span style="font-weight:700;letter-spacing:-.02em">야간 모드</span></button>
+        <button class="item" data-go="home"><svg width="40" height="34" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(-90deg)"><path class="arw"/></svg><span class="blk">돌아가기</span></button>
+      </div>
+    </section>
+
+    <section class="place" id="picker" aria-label="구 고르기">
+      <button class="back" data-go="home" aria-label="홈으로"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(180deg)"><path class="arw"/></svg></button>
+      <div class="row" id="row"></div>
+      <div class="go-run"><button class="item" id="run"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true"><path class="arw"/></svg><span class="blk line">운행</span></button></div>
+    </section>
+
+    <section class="place" id="game" aria-label="운행" style="background:var(--bg)">
+      <div id="board" hidden>
+        <div class="map" id="map">
+          <svg class="in-fade" width="1280" height="800" viewBox="0 0 1280 800" aria-hidden="true" style="position:absolute;left:0;top:0">
+            <g id="roads"></g>
+            <path id="trip" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="hint" id="hint" width="84" height="84" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36" fill="none" stroke="var(--ink)" stroke-width="4" stroke-dasharray="14 10"/></svg>
+          <div id="stops"></div>
+          <div class="veil" id="veil" hidden></div>
+          <div class="bus in-late" id="bus" aria-hidden="true"><i></i><span id="seats"></span></div>
+        </div>
+
+        <div class="chrome" id="chrome">
+          <button class="back in-late" id="pauseBack" aria-label="멈추고 메뉴 열기"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(180deg)"><path class="arw"/></svg></button>
+          <div class="hud in-late">
+            <div class="n" id="count" role="img" hidden><span id="countN">0</span><svg width="16" height="24" viewBox="0 0 16 24" aria-hidden="true"><circle cx="8" cy="4.5" r="4" fill="currentColor"/><rect x="2.5" y="10" width="11" height="13" rx="4" fill="currentColor"/></svg></div>
+            <span class="day" id="day">월</span>
+            <div style="position:relative">
+              <button class="clock" id="clock" aria-label="멈추기"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle class="face" cx="20" cy="20" r="18"/><g id="ticks"></g><line class="hand" id="hand" x1="20" y1="20" x2="20" y2="9"/></svg></button>
+              <div class="ctl" role="group" aria-label="빠르기">
+                <button data-speed="0" aria-label="멈추기" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 2H7V16H3ZM11 2H15V16H11Z" fill="currentColor"/></svg></button>
+                <button data-speed="1" aria-label="보통 빠르기" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 2L16 9L4 16Z" fill="currentColor"/></svg></button>
+                <button data-speed="2" aria-label="두 배 빠르기" aria-pressed="false"><svg width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><path d="M1 2L11 9L1 16ZM11 2L21 9L11 16Z" fill="currentColor"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="aside in-late"><small id="kick">출발 정류장</small><b id="lastName"></b><p id="lastIntro"></p></div>
+          <div class="typing in-late">
+            <label id="box"><svg width="34" height="28" viewBox="0 0 34 28" aria-hidden="true" style="flex:none"><path class="arw"/></svg>
+              <span class="field" id="field"><input id="typein" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" lang="ko" aria-label="갈 정류장 이름" placeholder="정류장 이름"></span></label>
+            <span class="note" id="note" aria-live="polite">정류장 이름을 치고 스페이스나 Enter</span>
+          </div>
+          <div class="tip in-late" id="tip"></div>
+        </div>
+
+        <div class="menu" id="menu" hidden>
+          <nav aria-label="멈춤 메뉴">
+            <button class="item" id="mContinue"><svg width="40" height="32" viewBox="0 0 34 28" aria-hidden="true"><path class="arw"/></svg><span class="blk">계속</span></button>
+            <button class="item" data-act="restart"><svg width="40" height="32" viewBox="0 0 34 28" aria-hidden="true"></svg><span class="blk">다시 운행</span></button>
+            <button class="item" data-act="exit"><svg width="40" height="32" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(180deg)"><path class="arw"/></svg><span class="blk">메뉴로 나가기</span></button>
+            <button class="item night-sw" role="switch" aria-checked="true" style="font-size:24px;margin-top:10px"><svg width="40" height="32" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="4"/><path class="chk" fill="none" stroke="currentColor" stroke-width="5"/></svg><span style="font-weight:700">야간 모드</span></button>
+          </nav>
+        </div>
+
+        <div id="over" hidden>
+          <div class="over-text"><b>운행 끝</b><span id="overSub"></span></div>
+          <nav class="over-nav" aria-label="운행 끝 메뉴">
+            <button class="item" data-act="restart"><svg width="40" height="32" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(-135deg)"><path class="arw"/></svg><span class="blk">다시 운행</span></button>
+            <button class="item" data-act="exit"><svg width="40" height="32" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(180deg)"><path class="arw"/></svg><span class="blk">메뉴로 나가기</span></button>
+          </nav>
+        </div>
+      </div>
+    </section>
+  </div>
+</div></div>
+
+<script>
+'use strict';
+const DATA = '../../data/';
+const $ = id => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const ARROW = 'M2 14h26M17 3l11 11-11 11';
+document.querySelectorAll('path.arw').forEach(p => { p.setAttribute('d', ARROW); p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor'); p.setAttribute('stroke-width', '6'); p.setAttribute('stroke-linecap', 'square'); });
+
+/* ── 판의 셈. 손으로 맞춘 값이다 — 해 보고 고친다 ── */
+const BUS_CAP = 6, STOP_CAP = 6, CROWD_SECS = 14, SPEED = 240, ACCEL = 520, DAY_SECS = 20, OPEN_EVERY = 13, BOARD_SECS = 0.16;
+const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+const SHAPES = {
+  circle: 'M8 20a12 12 0 1 0 24 0a12 12 0 1 0 -24 0Z', square: 'M9 9H31V31H9Z', triangle: 'M20 6L33 30H7Z',
+  diamond: 'M20 5L35 20L20 35L5 20Z', pentagon: 'M20 6L33.3 15.7L28.2 31.3H11.8L6.7 15.7Z'
+};
+/* 판은 760×600 이다. 운행 화면에서는 (260,60) 만큼 밀어 앉힌다 */
+const OX = 260, OY = 60;
+
+/* ── 큰 지도 위 자리. 고르기 판은 홈 오른쪽의 노란 세로선을 따라 위에 있고 -90° 돌아 누워 있다.
+   카메라가 그 선을 따라 올라가며 90° 돌면 세로선이 그대로 고르기 판의 가로 띠가 된다.
+   띠는 판 안 y=252 — 판을 -90° 돌리면 그 줄이 큰 지도의 x = 판 중심 x - (400-252) 에 놓인다 ── */
+const BAND_X = 1010, BAND_Y = 252;
+const PLACES = {
+  home: { x: 0, y: 0, r: 0 }, settings: { x: 0, y: 1150, r: 0 },
+  picker: { x: BAND_X + (400 - BAND_Y) - 640, y: -1500, r: -90 }, game: { x: 4200, y: 600, r: 0 }
+};
+const WORLD = [
+  { color: '#3a8f4b', pts: [[-300, 640], [150, 190], [150, -300]], dur: 11 },
+  { color: '#e8513a', pts: [[-300, 690], [110, 690], [330, 910], [330, 1500]], dur: 13 },
+  { color: null, pts: [[BAND_X, -3000], [BAND_X, 1300]], dur: 20 },
+  { color: '#3a6fb5', pts: [[1100, -400], [1100, 560], [1420, 880], [1420, 1700]], dur: 14 },
+  { color: '#3a9ad9', pts: [[1140, -400], [1140, 540], [1460, 860], [1460, 1700]], dur: 15 }
+];
+
+/* 꺾인 선의 모서리를 굴린다 — 노선도 선은 각지게 꺾이되 모서리는 둥글다 */
+function roundD(pts, r) {
+  let d = 'M' + pts[0][0] + ' ' + pts[0][1];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i - 1], q = pts[i], n = pts[i + 1];
+    const l1 = Math.hypot(q[0] - p[0], q[1] - p[1]), l2 = Math.hypot(n[0] - q[0], n[1] - q[1]), rr = Math.min(r, l1 / 2, l2 / 2);
+    d += ` L${(q[0] - (q[0] - p[0]) / l1 * rr).toFixed(1)} ${(q[1] - (q[1] - p[1]) / l1 * rr).toFixed(1)} Q${q[0]} ${q[1]} ${(q[0] + (n[0] - q[0]) / l2 * rr).toFixed(1)} ${(q[1] + (n[1] - q[1]) / l2 * rr).toFixed(1)}`;
+  }
+  const z = pts[pts.length - 1];
+  return d + ' L' + z[0] + ' ' + z[1];
+}
+/* 두 정류장 사이 길 — 45° 대각 먼저, 남은 만큼 곧게 */
+function legPts(a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], m = Math.min(Math.abs(dx), Math.abs(dy));
+  return [a, [a[0] + Math.sign(dx) * m, a[1] + Math.sign(dy) * m], b];
+}
+const ptsLen = p => p.slice(1).reduce((L, q, i) => L + Math.hypot(q[0] - p[i][0], q[1] - p[i][1]), 0);
+const ptsD = p => 'M' + p.map(q => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' L');
+function ptAt(p, d) {
+  for (let i = 1; i < p.length; i++) {
+    const a = p[i - 1], b = p[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (d <= L || i === p.length - 1) {
+      const t = L ? Math.min(1, Math.max(0, d / L)) : 1;
+      return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI };
+    }
+    d -= L;
+  }
+}
+const pick = xs => xs[Math.floor(Math.random() * xs.length)];
+const el = (tag, attrs, svg) => { const e = svg ? document.createElementNS(NS, tag) : document.createElement(tag); for (const k in attrs || {}) e.setAttribute(k, attrs[k]); return e; };
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+const calm = () => matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ── 화면을 판에 맞춘다. 판은 1280×800 하나다 ── */
+/* 그래도 끌려 올라가면 바로 되돌린다 */
+$('stage').addEventListener('scroll', e => { e.target.scrollTop = 0; e.target.scrollLeft = 0; });
+function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / 1280, innerHeight / 800)})`; }
+addEventListener('resize', fit); fit();
+
+/* ── 낮·밤 ── */
+let night = store.get('rt-bus-night') !== null ? store.get('rt-bus-night') === '1' : !matchMedia('(prefers-color-scheme:light)').matches;
+function paintNight() {
+  document.documentElement.toggleAttribute('data-day', !night);
+  document.querySelectorAll('.night-sw').forEach(b => b.setAttribute('aria-checked', String(night)));
+  document.querySelectorAll('path.chk').forEach(p => p.setAttribute('d', night ? 'M12 20.5l5.5 5.5 11-12' : 'M0 0'));
+}
+document.querySelectorAll('.night-sw').forEach(b => b.addEventListener('click', () => { night = !night; store.set('rt-bus-night', night ? '1' : '0'); paintNight(); }));
+paintNight();
+
+/* ── 배경 노선과 그 위를 오가는 버스 ── */
+function paintWorld() {
+  $('lines').innerHTML = ''; $('rides').innerHTML = '';
+  WORLD.forEach((w, i) => {
+    const d = roundD(w.pts, 60), color = w.color || 'var(--band)';
+    $('lines').append(el('path', { d, fill: 'none', stroke: color, 'stroke-width': 22, 'stroke-linejoin': 'round' }, true));
+    const b = el('div', { class: 'ride', 'aria-hidden': 'true' });
+    b.style.cssText = `background:${color};offset-path:path('${d}');animation-duration:${w.dur}s;animation-delay:${-i * 3.1}s`;
+    b.append(el('i')); $('rides').append(b);
+  });
+  for (const k in PLACES) {
+    const p = PLACES[k], s = $(k).style;
+    s.left = p.x + 'px'; s.top = p.y + 'px'; s.transform = `rotate(${p.r}deg)`;
+  }
+}
+paintWorld();
+
+/* ── 카메라 ── */
+let place = 'home';
+function cam(k, scale = 1, instant = false) {
+  const p = PLACES[k];
+  $('world').classList.toggle('fly', !instant);
+  $('world').style.transform = `translate(640px,400px) scale(${scale}) rotate(${-p.r}deg) translate(${-(p.x + 640)}px,${-(p.y + 400)}px)`;
+}
+function fly(k) {
+  place = k;
+  cam(k);
+  $('game').style.opacity = k === 'game' ? 1 : 0;
+  $('game').style.pointerEvents = k === 'game' ? '' : 'none';
+  $('picker').style.opacity = 1;
+  $('resume').hidden = !(G && !G.ready && G.over === null);
+  const first = { home: '.home-nav .item', settings: '.set-nav .item', picker: '#run' }[k];
+  if (first) setTimeout(() => document.querySelector(first)?.focus({ preventScroll: true }), 60);
+}
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => fly(b.dataset.go)));
+
+/* ── 고르기 판 ── */
+let DISTRICTS = [], sel = 0;
+const best = JSON.parse(store.get('rt-bus-best') || '{}');
+function miniRoad(stops) {
+  const pts = stops.map(s => [s[1], s[2]]);
+  return ptsD(pts.reduce((acc, q, j) => j ? acc.concat(legPts(pts[j - 1], q).slice(1)) : [q], []));
+}
+function paintCards() {
+  const row = $('row'); row.innerHTML = '';
+  DISTRICTS.forEach((D, i) => {
+    const slot = el('div', { class: 'slot' });
+    if (i === sel) {
+      const card = el('div', { class: 'card' });
+      card.innerHTML = `<span class="badge" style="background:${D.color}">${D.name.length > 2 ? D.name.slice(0, -1) : D.name}</span>
+        <div style="display:flex;flex-direction:column;gap:2px"><h3>${D.name}</h3><small>정류장 ${D.stops.length}곳</small></div>`;
+      const svg = el('svg', { width: 296, height: 232, viewBox: '0 0 296 232', 'aria-hidden': 'true' }, true);
+      const g = el('g', { transform: 'translate(8 8) scale(.37)' }, true);
+      g.append(el('path', { d: miniRoad(D.stops), fill: 'none', stroke: D.color, 'stroke-width': 13, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, true));
+      D.stops.forEach(s => g.append(el('path', { d: SHAPES[s[4]], transform: `translate(${s[1] - 13.5} ${s[2] - 13.5}) scale(.675)`, fill: 'var(--stop-fill)', stroke: 'var(--ring)', 'stroke-width': 12 }, true)));
+      svg.append(g); card.append(svg);
+      const p = el('p'); p.textContent = D.desc; card.append(p);
+      const rec = el('div', { style: 'display:flex;flex-direction:column;gap:2px' });
+      rec.innerHTML = `<small>최고 기록</small><strong>${best[D.slug] ? best[D.slug] + '명' : '아직 없음'}</strong>`;
+      card.append(rec); slot.append(card);
+    } else {
+      const b = el('button', { class: 'dim', 'aria-label': D.name + ' 고르기' });
+      b.innerHTML = `<b>${D.name}</b>`;
+      const svg = el('svg', { width: 212, height: 212, viewBox: '0 0 212 212', 'aria-hidden': 'true', style: 'margin-top:58px;overflow:visible' }, true);
+      const g = el('g', { transform: 'translate(6 6) scale(.263)' }, true);
+      g.append(el('path', { d: miniRoad(D.stops), fill: 'none', stroke: D.color, 'stroke-width': 19, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: .45 }, true));
+      D.stops.forEach(s => g.append(el('circle', { cx: s[1], cy: s[2], r: 19, fill: 'var(--bg)', stroke: 'var(--muted)', 'stroke-width': 9.5 }, true)));
+      svg.append(g); b.append(svg);
+      b.addEventListener('click', () => choose(i));
+      slot.append(b);
+    }
+    row.append(slot);
+  });
+  row.style.transform = `translateX(${640 - 170 - sel * 388}px)`;
+}
+function choose(i) { sel = Math.max(0, Math.min(DISTRICTS.length - 1, i)); store.set('rt-bus-pick', DISTRICTS[sel].slug); paintCards(); }
+$('run').addEventListener('click', () => enterGame());
+
+/* ── 운행 ── */
+let D = null, P = [], KIND = [], G = null, dom = null;
+function fresh() {
+  const waiting = D.stops.map(() => []), crowd = D.stops.map(() => 0);
+  return { open: D.first.slice(), born: D.first.map(() => true), waiting, crowd, at: D.first[0], trip: null, queue: null, load: [], ops: [], opT: 0,
+           roads: new Set(), delivered: 0, t: 0, nextSpawn: 1.5, nextOpen: OPEN_EVERY, over: null, ready: true, paused: false,
+           last: D.first[0], ang: 0, misses: 0, speed: 1, menu: false };
+}
+/* 판의 살 — 정류장 마다 한 번 만들어 두고, 프레임마다 값만 바꾼다(애니메이션이 끊기지 않게) */
+function buildBoard() {
+  $('roads').innerHTML = ''; $('stops').innerHTML = ''; $('seats').innerHTML = '';
+  $('ticks').innerHTML = '';
+  for (let k = 0; k < 12; k++) {
+    const a = k * Math.PI / 6, sx = Math.sin(a), cy = -Math.cos(a);
+    $('ticks').append(el('line', { class: 'tk', x1: 20 + sx * 11.5, y1: 20 + cy * 11.5, x2: 20 + sx * 15, y2: 20 + cy * 15 }, true));
+  }
+  document.documentElement.style.setProperty('--line', D.color);
+  dom = D.stops.map((s, i) => {
+    const [x, y] = P[i];
+    const wrap = el('div'); wrap.hidden = true;
+    const pulse = el('div', { class: 'pulse', 'aria-hidden': 'true' }); pulse.style.cssText = `left:${x}px;top:${y}px`; pulse.hidden = true;
+    const crowd = el('div', { class: 'crowd', 'aria-hidden': 'true' }); crowd.style.cssText = `left:${x}px;top:${y}px`; crowd.hidden = true;
+    const mark = el('svg', { class: 'mark', viewBox: '0 0 40 40', 'aria-hidden': 'true' }, true); mark.style.cssText = `left:${x}px;top:${y}px`;
+    const path = el('path', { d: SHAPES[KIND[i]], fill: 'var(--stop-fill)', stroke: 'var(--ring)', 'stroke-width': 7 }, true); mark.append(path);
+    const label = el('div', { class: 'label in-fade' }); label.textContent = s[0];
+    const side = s[3];
+    label.style.cssText = side === 'b' ? `left:${x}px;top:${y + 24}px;transform:translateX(-50%)` : side === 't' ? `left:${x}px;top:${y - 24}px;transform:translate(-50%,-100%)`
+      : side === 'r' ? `left:${x + 24}px;top:${y}px;transform:translateY(-50%)` : `left:${x - 24}px;top:${y}px;transform:translate(-100%,-50%)`;
+    const queue = el('div', { class: 'queue' + (side === 'r' ? ' left' : ''), 'aria-hidden': 'true' });
+    queue.style.cssText = side === 'r' ? `top:${y - 7}px;right:${1280 - x + 24}px` : `top:${y - 7}px;left:${x + 24}px`;
+    wrap.append(pulse, crowd, mark, label, queue);
+    $('stops').append(wrap);
+    return { wrap, pulse, crowd, mark, path, label, queue, qKey: '', open: false };
+  });
+  const [hx, hy] = P[G.at];
+  $('hint').style.left = hx + 'px'; $('hint').style.top = hy + 'px';
+  $('trip').setAttribute('d', '');
+  $('tip').textContent = `버스는 ${D.stops[G.at][0]}에 서 있어요. 손님이 기다리는 정류장 이름을 쳐서 태우고, 손님과 같은 모양의 정류장에 내려 주세요.`;
+}
+function startRun() {
+  D = DISTRICTS[sel];
+  P = D.stops.map(s => [OX + s[1], OY + s[2]]);
+  KIND = D.stops.map(s => s[4]);
+  G = fresh();
+  $('board').hidden = true;
+  buildBoard();
+  $('map').style.transform = 'translate(0px,0px) scale(1)';
+  $('chrome').classList.remove('gone');
+  $('over').hidden = true; $('menu').hidden = true; $('veil').hidden = true;
+  setNote('정류장 이름을 치고 스페이스나 Enter');
+  $('typein').value = '';
+  /* 판을 다시 붙여 들어올 때의 애니메이션(강·정류장·계기)을 처음부터 돌린다 */
+  void $('board').offsetWidth;
+  $('board').hidden = false;
+  paint(true);
+  setTimeout(focusIn, 950);
+}
+/* 고르기 → 운행: 카드 쪽으로 다가가며 흐려지고, 빈 바탕에서 운행 판이 피어난다 */
+let seq = [];
+function enterGame() {
+  seq.forEach(clearTimeout); seq = [];
+  cam('picker', 1.3); $('picker').style.opacity = 0;
+  seq.push(setTimeout(() => {
+    place = 'game';
+    cam('game', 1, true);
+    $('game').style.opacity = 1; $('game').style.pointerEvents = '';
+    $('board').hidden = true;
+    seq.push(setTimeout(() => { $('world').classList.add('fly'); startRun(); $('picker').style.opacity = 1; }, 260));
+  }, calm() ? 0 : 720));
+}
+
+function step(dt) {
+  const g = G;
+  if (!g || place !== 'game' || g.menu || g.over !== null || g.ready || g.paused || !dt) return false;
+  dt *= g.speed; g.t += dt;
+  const rate = Math.max(1.0, 3.2 - g.t * 0.018);   // 손님은 점점 자주 온다
+  g.nextSpawn -= dt;
+  if (g.nextSpawn <= 0) { spawn(); g.nextSpawn = rate * (0.6 + Math.random() * 0.8); }
+  g.nextOpen -= dt;
+  if (g.nextOpen <= 0 && g.open.length < D.stops.length) {
+    const rest = D.stops.map((_, i) => i).filter(i => !g.open.includes(i));
+    g.open.push(pick(rest)); g.nextOpen = OPEN_EVERY;
+  }
+  for (const s of g.open) {
+    if (g.waiting[s].length >= STOP_CAP) { g.crowd[s] += dt; if (g.crowd[s] >= CROWD_SECS) { gameOver(s); return true; } }
+    else g.crowd[s] = Math.max(0, g.crowd[s] - dt * 2);
+  }
+  /* 버스는 떠날 때 붙고 설 때 늦춘다 — 남은 거리로 멈출 수 있는 만큼만 빠르다 */
+  if (g.trip) {
+    const tr = g.trip, left = tr.len - tr.d;
+    tr.v = Math.min(SPEED, tr.v + ACCEL * dt, Math.sqrt(2 * ACCEL * Math.max(0, left)) + 8);
+    tr.d = Math.min(tr.len, tr.d + tr.v * dt);
+    if (tr.d >= tr.len - 0.5) arrive(tr.to);
+  } else if (g.ops.length) {
+    g.opT -= dt;   // 손님은 한 명씩 내리고 탄다
+    if (g.opT <= 0) { board(); g.opT = BOARD_SECS; }
+  } else if (g.queue !== null) {
+    const q = g.queue; g.queue = null;
+    if (q !== g.at) go(q); else arrive(q);
+  }
+  return true;
+}
+function spawn() {
+  const g = G, from = pick(g.open);
+  const kinds = [...new Set(g.open.map(i => KIND[i]))].filter(k => k !== KIND[from]);
+  if (kinds.length) g.waiting[from].push(pick(kinds));
+}
+function go(to) {
+  const g = G, pts = legPts(P[g.at], P[to]);
+  g.trip = { to, pts, len: ptsLen(pts), d: 0, v: 0, key: Math.min(g.at, to) + '-' + Math.max(g.at, to) };
+  const L = Math.round(g.trip.len);
+  $('trip').setAttribute('d', ptsD(pts)); $('trip').setAttribute('stroke-dasharray', L + ' ' + L);
+}
+function arrive(i) {
+  const g = G;
+  if (g.trip) {
+    if (!g.roads.has(g.trip.key)) {
+      g.roads.add(g.trip.key);
+      $('roads').append(el('path', { d: ptsD(g.trip.pts), fill: 'none', stroke: 'var(--line)', 'stroke-width': 14, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, true));
+    }
+    g.trip = null; $('trip').setAttribute('d', '');
+  }
+  g.at = i; g.last = i;
+  const drops = g.load.filter(k => k === KIND[i]).length, seats = BUS_CAP - (g.load.length - drops);
+  g.ops = [...Array(drops).fill('drop'), ...Array(Math.min(seats, g.waiting[i].length)).fill('pick')];
+  g.opT = BOARD_SECS;
+}
+function board() {
+  const g = G, op = g.ops.shift(), i = g.at;
+  if (op === 'drop') { const a = g.load.indexOf(KIND[i]); if (a >= 0) { g.load.splice(a, 1); g.delivered++; } }
+  else if (op === 'pick' && g.waiting[i].length && g.load.length < BUS_CAP) g.load.push(g.waiting[i].shift());
+}
+/* 끝 — 지도 전체가 넘친 정류장을 (640,360) 으로 끌어와 두 배로. 그 정류장의 회색 원이 번지고,
+   운행 끝 글이 뜰 때 반투명한 막이 덮인다. 넘친 정류장은 막 위에서 하얗게 또렷하다 */
+function gameOver(s) {
+  const g = G; g.over = s;
+  if (g.delivered > (best[D.slug] || 0)) { best[D.slug] = g.delivered; store.set('rt-bus-best', JSON.stringify(best)); }
+  $('typein').blur();
+  const [x, y] = P[s], d = dom[s];
+  $('map').style.transform = `translate(${640 - 2 * x}px,${360 - 2 * y}px) scale(2)`;
+  $('chrome').classList.add('gone');
+  d.wrap.style.cssText = 'position:absolute;inset:0;z-index:7;pointer-events:none';
+  d.label.style.visibility = 'hidden';
+  d.path.setAttribute('fill', 'var(--ring)');
+  d.pulse.hidden = true;
+  d.crowd.classList.add('end');
+  d.crowd.style.background = 'var(--crowd)';
+  setTimeout(() => { d.crowd.style.width = d.crowd.style.height = '210px'; d.crowd.style.background = 'var(--crowd-end)'; }, 60);
+  $('veil').hidden = false;
+  $('overSub').innerHTML = '';
+  $('overSub').append(`${D.stops[s][0]} 정류장에 손님이 너무 많이 쌓여 버스가 멈췄어요.`, el('br'), `${Math.floor(g.t / DAY_SECS) + 1}일 동안 손님 ${g.delivered}명을 태웠어요. 오타 ${g.misses}번.`);
+  $('over').hidden = false;
+  setTimeout(() => $('over').querySelector('.item')?.focus({ preventScroll: true }), calm() ? 50 : 1400);
+}
+
+/* ── 그리기. 열린 정류장·손님 줄·넘침·버스·계기를 값만 바꿔 맞춘다 ── */
+function paint(force) {
+  const g = G; if (!g) return;
+  const typed = $('typein').value.replace(/\s/g, '');
+  const heading = g.trip ? g.trip.to : g.queue;
+  g.open.forEach((i, n) => {
+    const d = dom[i];
+    if (!d.open) {
+      d.open = true; d.wrap.hidden = false;
+      const delay = g.t === 0 ? 0.35 + n * 0.14 : 0;   // 처음 셋은 차례로 튀어나온다
+      d.mark.style.animationDelay = delay + 's'; d.label.style.animationDelay = (delay + 0.2) + 's';
+    }
+    if (g.over === i) return;
+    const hot = i === heading, hint = !!typed && D.stops[i][0].startsWith(typed);
+    d.label.classList.toggle('hot', hot); d.label.classList.toggle('hint-on', hint && !hot);
+    d.path.setAttribute('stroke', hot ? 'var(--line)' : 'var(--ring)');
+    const qk = g.waiting[i].join(',');
+    if (qk !== d.qKey) {
+      const grew = g.waiting[i].length > (d.qKey ? d.qKey.split(',').length : 0);
+      d.queue.innerHTML = '';
+      g.waiting[i].forEach((k, j) => {
+        const svg = el('svg', { width: 14, height: 14, viewBox: '0 0 40 40' }, true);
+        if (grew && j === g.waiting[i].length - 1) svg.setAttribute('class', 'pax');
+        svg.append(el('path', { d: SHAPES[k], fill: 'var(--pax)' }, true)); d.queue.append(svg);
+      });
+      d.qKey = qk;
+    }
+    const c = g.crowd[i] / CROWD_SECS;
+    d.crowd.hidden = d.pulse.hidden = !(c > 0);
+    if (c > 0) d.crowd.style.background = `conic-gradient(var(--crowd) 0 ${(c * 100).toFixed(1)}%,transparent ${(c * 100).toFixed(1)}% 100%)`;
+  });
+  /* 버스 */
+  const bp = g.trip ? ptAt(g.trip.pts, g.trip.d) : { x: P[g.at][0], y: P[g.at][1], ang: g.ang };
+  g.ang = bp.ang;
+  $('bus').style.left = bp.x + 'px'; $('bus').style.top = bp.y + 'px';
+  $('bus').style.transform = `translate(-50%,-50%) rotate(${bp.ang}deg)`;
+  const lk = g.load.join(',');
+  if (lk !== $('seats').dataset.k || force) {
+    $('seats').dataset.k = lk; $('seats').innerHTML = '';
+    g.load.forEach(k => { const s = el('svg', { width: 9, height: 9, viewBox: '0 0 40 40' }, true); s.append(el('path', { d: SHAPES[k], fill: 'var(--seat)' }, true)); $('seats').append(s); });
+  }
+  if (g.trip) $('trip').setAttribute('stroke-dashoffset', String(Math.max(0, Math.round(g.trip.len) - g.trip.d)));
+  /* 계기 */
+  $('count').hidden = g.delivered === 0;
+  $('countN').textContent = g.delivered; $('count').setAttribute('aria-label', `태운 손님 ${g.delivered}명`);
+  $('day').textContent = DAYS[Math.floor(g.t / DAY_SECS) % 7];
+  $('hand').setAttribute('transform', `rotate(${((g.t % DAY_SECS) / DAY_SECS * 360).toFixed(1)} 20 20)`);
+  $('clock').classList.toggle('paused', g.paused);
+  $('clock').setAttribute('aria-label', g.paused ? '이어 하기' : '멈추기');
+  document.querySelectorAll('.ctl button').forEach(b => {
+    const s = +b.dataset.speed;
+    b.setAttribute('aria-pressed', String(s === 0 ? g.paused : !g.paused && g.speed === s));
+  });
+  $('hint').toggleAttribute('hidden', !g.ready); $('tip').hidden = !g.ready;   // SVG 에는 .hidden 속성이 없다
+  $('kick').textContent = g.ready ? '출발 정류장' : '방금 들른 정류장';
+  $('lastName').textContent = D.stops[g.last][0];
+  $('lastIntro').textContent = D.stops[g.last][5] || '';
+}
+
+let prev = 0;
+function loop(now) {
+  const dt = prev ? Math.min(0.05, (now - prev) / 1000) : 0;
+  prev = now;
+  if (step(dt)) paint();
+  requestAnimationFrame(loop);
+}
+
+/* ── 치기. 스페이스는 keydown 으로 가로채지 않는다 — IME 조합이 깨진다. 값 끝의 공백을 input 에서 본다 ── */
+const norm = s => s.replace(/[\s·,.]/g, '');
+function find(v) {
+  const n = norm(v);
+  for (let k = 0; k < D.stops.length; k++) {
+    const name = norm(D.stops[k][0]);
+    if (n === name || n + '동' === name || (name.endsWith('동') && n === name.slice(0, -1))) return { i: k, open: G.open.includes(k) };
+  }
+  return null;
+}
+/* 조합을 끊지 않고 value 만 비우면 IME 가 마지막 글자를 도로 넣는다 — 잠깐 놓았다 다시 잡는다 */
+function wipeInput() { const inp = $('typein'), had = document.activeElement === inp; inp.blur(); inp.value = ''; if (had) inp.focus({ preventScroll: true }); }
+function setNote(t, bad) { $('note').textContent = t; $('note').classList.toggle('bad', !!bad); $('field').classList.toggle('bad', !!bad); }
+let missT = 0;
+function confirmTyped() {
+  const g = G, v = $('typein').value.trim();
+  if (!g || !v || g.over !== null || g.menu) return;
+  const f = find(v);
+  wipeInput();
+  if (f && f.open) {
+    g.ready = false; g.queue = f.i;
+    setNote((g.trip || g.ops.length ? '다음: ' : '') + D.stops[f.i][0] + (g.trip || g.ops.length ? '' : ' 쪽으로'));
+    paint(); return;
+  }
+  g.misses++;
+  setNote(f ? '아직 없는 정류장이에요' : '그런 정류장은 없어요', true);
+  const box = $('box'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+  clearTimeout(missT); missT = setTimeout(() => setNote('정류장 이름을 치고 스페이스나 Enter'), 900);
+}
+$('typein').addEventListener('input', e => { if (/\s$/.test(e.target.value) && !e.isComposing) confirmTyped(); else paint(); });
+$('typein').addEventListener('compositionend', e => { if (/\s$/.test(e.target.value)) confirmTyped(); });
+$('typein').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { openMenu(); return; }
+  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); confirmTyped(); }
+});
+function focusIn() { if (place === 'game' && G && G.over === null && !G.menu) $('typein').focus({ preventScroll: true }); }
+
+/* ── 멈춤·빠르기·메뉴 ── */
+$('clock').addEventListener('click', () => { if (G) { G.paused = !G.paused; paint(); } });
+document.querySelectorAll('.ctl button').forEach(b => b.addEventListener('click', () => {
+  const s = +b.dataset.speed; if (!G) return;
+  if (s === 0) G.paused = true; else { G.paused = false; G.speed = s; }
+  paint();
+}));
+function openMenu() {
+  if (!G || G.over !== null) return;
+  G.menu = true; $('typein').blur();
+  $('map').style.transform = 'translate(-32px,-20px) scale(1.05)';
+  $('menu').hidden = false; setTimeout(() => $('mContinue').focus({ preventScroll: true }), 30);
+}
+function closeMenu() { if (!G) return; G.menu = false; $('menu').hidden = true; $('map').style.transform = 'translate(0px,0px) scale(1)'; setTimeout(focusIn, 50); }
+$('pauseBack').addEventListener('click', openMenu);
+$('mContinue').addEventListener('click', closeMenu);
+document.querySelectorAll('[data-act=restart]').forEach(b => b.addEventListener('click', () => { startRun(); }));
+document.querySelectorAll('[data-act=exit]').forEach(b => b.addEventListener('click', () => { if (G) G.menu = false; $('menu').hidden = true; paintCards(); fly('picker'); }));
+$('resume').addEventListener('click', () => { fly('game'); openMenu(); });
+
+/* ── 판 밖 자판: 고르기 판의 ←·→, 멈춤 판의 Esc ── */
+document.addEventListener('keydown', e => {
+  if (e.target === $('typein')) return;
+  if (place === 'picker' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); choose(sel + (e.key === 'ArrowRight' ? 1 : -1)); }
+  else if (place === 'game' && e.key === 'Escape' && G && G.menu) closeMenu();
+});
+
+/* ── 시작 ── */
+fetch(DATA + 'bus.json').then(r => r.json()).then(j => {
+  DISTRICTS = j.districts;
+  const want = store.get('rt-bus-pick') || 'gangseo';
+  sel = Math.max(0, DISTRICTS.findIndex(d => d.slug === want));
+  paintCards();
+  cam('home', 1, true);
+  requestAnimationFrame(() => $('world').classList.add('fly'));
+  requestAnimationFrame(loop);
+});
+
+/* ?rt=1 — 판의 셈 자체검사. 콘솔에 남긴다 */
+if (new URLSearchParams(location.search).has('rt')) {
+  const a = legPts([0, 0], [30, 10]);
+  console.assert(a[1][0] === 10 && a[1][1] === 10, '두 정류장 사이 길은 45° 대각 먼저');
+  console.assert(Math.abs(ptsLen(a) - (10 * Math.SQRT2 + 20)) < 1e-9, '길 길이는 대각 + 곧은 길');
+  console.assert(ptAt(a, 0).x === 0 && ptAt(a, 999).x === 30, '버스 자리는 길 끝을 넘지 않는다');
+  console.log('동네버스 자체검사 끝');
+}
+</script>
+</body>
+</html>

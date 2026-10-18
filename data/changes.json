@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.435",
+    "date": "2026-10-18",
+    "ko": "베타로 동네버스를 엽니다(regiontype.com/beta/bus). 서울 25개 자치구 가운데 하나를 고르면 그 구의 행정동이 정류장이 되고, 정류장마다 손님이 쌓입니다. 정류장 이름을 치면 버스가 그리로 달려가 손님을 태우고, 손님과 같은 모양의 정류장에 내려 줍니다. 한 정류장에 손님이 넘치면 운행이 끝납니다.",
+    "en": "Opens a Neighborhood Bus beta at regiontype.com/beta/bus. Pick one of Seoul's 25 districts and its neighborhoods become bus stops where passengers pile up. Type a stop's name to send the bus there to pick them up, then drop each passenger at a stop of the same shape. The run ends when a stop overflows."
+  },
+  {
     "v": "0.11.434",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타의 메뉴·카드·지도 단추·타이핑 바가 리퀴드 글래스로 바뀌었습니다. 지도가 맑게 비치고, 볼록한 유리 테두리가 렌즈처럼 지도를 휘며, WebGL 이 되는 브라우저라면 어디서나 보입니다. 투명도·반사광·굴절은 베타 설정에서 고를 수 있습니다. 또 지도가 차가 갈 길을 미리 내다보며 부드럽게 돌아, 차가 옆으로 미끄러지듯 보이지 않습니다.",
