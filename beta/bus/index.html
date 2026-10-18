@@ -52,8 +52,10 @@ button{font:inherit;color:inherit}
 /* ── 홈 ── */
 .logo{position:absolute;left:238px;top:196px;display:flex;align-items:center;gap:20px}
 .logo b{font-size:100px;font-weight:700;letter-spacing:-.05em;line-height:1}
+/* 로고의 o 는 정류장 고리다 — 노란 노선이 그 고리를 꿰고 지나간다(고리 속은 바탕색으로 막혀 선이 숨는다) */
+.logo .o{display:inline-block;width:.52em;height:.52em;box-sizing:border-box;border:.14em solid currentColor;border-radius:50%;background:var(--bg);margin:0 .03em;vertical-align:-.01em}
 .logo span{display:flex;align-items:center;gap:8px;margin-top:18px}
-.home-nav{position:absolute;left:238px;top:330px;display:flex;flex-direction:column;gap:10px;font-size:40px}
+.home-nav{position:absolute;left:238px;top:390px;display:flex;flex-direction:column;gap:10px;font-size:40px}
 .foot{position:absolute;right:48px;bottom:40px;font-size:14px;font-weight:700;color:var(--muted)}
 .set-nav{position:absolute;left:300px;top:230px;display:flex;flex-direction:column;gap:14px;font-size:34px}
 .set-nav h2{margin:0 0 12px;font-size:56px;font-weight:700;letter-spacing:-.04em;line-height:1}
@@ -164,13 +166,13 @@ button{font:inherit;color:inherit}
     <div id="rides"></div>
 
     <section class="place" id="home" aria-label="홈">
-      <div class="logo"><b>regiontype</b><span aria-hidden="true">
+      <div class="logo"><b role="img" aria-label="regiontype">regi<i class="o" id="logoO"></i>ntype</b><span aria-hidden="true">
         <svg width="56" height="56" viewBox="0 0 40 40"><path d="M9 9H31V31H9Z" fill="none" stroke="currentColor" stroke-width="5"/></svg>
         <svg width="22" height="22" viewBox="0 0 40 40"><path d="M20 6L33 30H7Z" fill="currentColor"/></svg>
         <svg width="22" height="22" viewBox="0 0 40 40"><path d="M8 20a12 12 0 1 0 24 0a12 12 0 1 0 -24 0Z" fill="currentColor"/></svg>
         <svg width="22" height="22" viewBox="0 0 40 40"><path d="M20 5L35 20L20 35L5 20Z" fill="currentColor"/></svg></span></div>
       <nav class="home-nav" aria-label="홈 메뉴">
-        <button class="item" data-go="picker"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true"><path class="arw"/></svg><span class="blk">운행 시작</span></button>
+        <button class="item" data-go="picker"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(45deg)"><path class="arw"/></svg><span class="blk">운행 시작</span></button>
         <button class="item" id="resume" hidden><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(-45deg)"><path class="arw"/></svg><span class="blk">이어 하기</span></button>
         <button class="item" data-go="settings"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(90deg)"><path class="arw"/></svg><span class="blk">설정</span></button>
       </nav>
@@ -269,21 +271,28 @@ const SHAPES = {
 /* 판은 760×600 이다. 운행 화면에서는 (260,60) 만큼 밀어 앉힌다 */
 const OX = 260, OY = 60;
 
-/* ── 큰 지도 위 자리. 고르기 판은 홈 오른쪽의 노란 세로선을 따라 위에 있고 -90° 돌아 누워 있다.
-   카메라가 그 선을 따라 올라가며 90° 돌면 세로선이 그대로 고르기 판의 가로 띠가 된다.
-   띠는 판 안 y=252 — 판을 -90° 돌리면 그 줄이 큰 지도의 x = 판 중심 x - (400-252) 에 놓인다 ── */
-const BAND_X = 1010, BAND_Y = 252;
+/* ── 큰 지도 위 자리. 노란 노선은 위에서 내려와 로고의 o 고리를 꿰고, 45° 로 꺾여 파란 노선들 아래로
+   오른쪽 아래를 향해 빠진 뒤, 다시 곧게 아래로 꺾인다. 고르기 판은 그 마지막 세로 구간에 +90° 돌아 누워 있다 —
+   카메라가 대각선으로 오른쪽 아래로 날며 90° 돌면 세로선이 그대로 고르기 판의 가로 띠가 된다.
+   띠는 판 안 y=252 — 판을 +90° 돌리면 그 줄이 큰 지도의 x = 판 중심 x + (400-252) 에 놓인다 ── */
+const BAND_X = 1380, BAND_Y = 252;
 const PLACES = {
   home: { x: 0, y: 0, r: 0 }, settings: { x: 0, y: 1150, r: 0 },
-  picker: { x: BAND_X + (400 - BAND_Y) - 640, y: -1500, r: -90 }, game: { x: 4200, y: 600, r: 0 }
+  picker: { x: BAND_X - (400 - BAND_Y) - 640, y: 2300, r: 90 }, game: { x: 4200, y: 600, r: 0 }
 };
+/* 노란 노선 — o 고리의 가운데 x 를 재어 그 줄로 내려오다, 대각선이 BAND_X 에 닿는 높이에서 꺾는다 */
+function yellowPts(ox, bend) {
+  const knee = bend + (BAND_X - ox);   // (ox,bend) → (BAND_X,knee) 는 45° — 고리 바로 아래에서 꺾여 메뉴 오른쪽으로 빠진다
+  return [[ox, -3000], [ox, bend], [BAND_X, knee], [BAND_X, 4400]];
+}
 const WORLD = [
   /* 끝은 화면 밖 멀리 — 세로로 긴 창에서도 선 끝이 보이지 않게 */
   { color: '#3a8f4b', pts: [[-1200, 1540], [150, 190], [150, -400]], dur: 14 },
   { color: '#e8513a', pts: [[-1600, 690], [110, 690], [330, 910], [330, 3000]], dur: 18 },
-  { color: null, pts: [[BAND_X, -3000], [BAND_X, 3000]], dur: 26 },
-  { color: '#3a6fb5', pts: [[1100, -400], [1100, 560], [1420, 880], [1420, 3000]], dur: 18 },
-  { color: '#3a9ad9', pts: [[1140, -400], [1140, 540], [1460, 860], [1460, 3000]], dur: 19 }
+  { color: null, pts: yellowPts(427, 315), dur: 26, under: true },
+  /* 파란 두 줄은 대각선으로 계속 오른쪽 아래로 — 노란 노선이 그 아래로 나란히 빠진다 */
+  { color: '#3a6fb5', pts: [[1100, -400], [1100, 560], [3200, 2660]], dur: 18 },
+  { color: '#3a9ad9', pts: [[1140, -400], [1140, 540], [3200, 2600]], dur: 19 }
 ];
 
 /* 꺾인 선의 모서리를 굴린다 — 노선도 선은 각지게 꺾이되 모서리는 둥글다 */
@@ -391,6 +400,9 @@ paintSound();
 
 /* ── 배경 노선과 그 위를 오가는 버스 ── */
 function paintWorld() {
+  /* o 고리의 자리를 잰다. 로고 상자는 홈 판 (238,196) 에 있다 */
+  const o = $('logoO');
+  if (o && o.offsetWidth) WORLD.find(w => w.under).pts = yellowPts(Math.round(238 + o.offsetLeft + o.offsetWidth / 2), Math.round(196 + o.offsetTop + o.offsetHeight + 30));
   $('lines').innerHTML = ''; $('rides').innerHTML = '';
   WORLD.forEach((w, i) => {
     const d = roundD(w.pts, 60), color = w.color || 'var(--band)';
@@ -405,6 +417,7 @@ function paintWorld() {
   }
 }
 paintWorld();
+document.fonts?.ready.then(paintWorld);
 
 /* ── 카메라 ── */
 let place = 'home';
