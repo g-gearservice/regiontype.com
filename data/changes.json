@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.442",
+    "date": "2026-10-18",
+    "ko": "스타일 페이지를 엽니다(regiontype.com/beta/style). 홈과 같은 비트맵 격자 위에 로고가 하나 떠 있어 누르면 첫 화면으로 들어가고, 그 아래 격자 칸마다 우리가 만든 스타일이 대표 기호 하나로 섭니다 — 3D 내비게이션은 정육각형, 동네버스는 정류장 도넛. 기호를 누르면 그 베타로 갑니다.",
+    "en": "Opens a style page at regiontype.com/beta/style. On the same bitmap grid as the home screen, a single logo takes you into the main page, and each grid cell below holds one symbol for one of our styles: a regular hexagon for 3D navigation and a bus-stop donut for Neighborhood Bus. Press a symbol to open that beta."
+  },
+  {
     "v": "0.11.441",
     "date": "2026-10-18",
     "ko": "동네버스 베타 첫 화면의 노란 노선이 regiontype 로고의 o 고리를 꿰고 지나 오른쪽 아래로 빠집니다. 운행 시작을 누르면 카메라가 그 선을 따라 오른쪽 아래 대각선으로 날며 90° 돌아 구 고르기 화면에 닿습니다.",
