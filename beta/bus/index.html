@@ -74,6 +74,10 @@ button{font:inherit;color:inherit}
 .card p{margin:0;font-size:14px;line-height:1.55;font-weight:500}
 .card strong{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .card svg{display:block;background:var(--bg)}
+/* 카드를 옮길 때 — 행은 .55s 로 미끄러지고(.row), 새로 선 가운데 카드는 떠오르며 나타나고 옆 카드는 서서히 비친다 */
+.card.in{animation:cardin .5s var(--out) both}
+.dim.in{animation:fade .5s var(--io) both}
+@keyframes cardin{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 .dim{display:flex;flex-direction:column;align-items:flex-start;width:212px;margin-top:69px;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
 .dim b{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--muted);opacity:.75}
 .dim:focus-visible{outline:3px solid currentColor;outline-offset:4px}
@@ -166,7 +170,7 @@ button{font:inherit;color:inherit}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){
   .world.fly,.map,.crowd.end,.row{transition:none}
-  .ride,.hint,.mark,.pax,.shake,.pulse{animation:none}
+  .ride,.hint,.mark,.pax,.shake,.pulse,.card.in,.dim.in{animation:none}
   .mark{transform:translate(-50%,-50%)}
   .hint{transform:translate(-50%,-50%)}
   .veil,.over-text,.over-nav,.in-late{animation-delay:0s}
@@ -467,14 +471,14 @@ function miniRoad(stops) {
   const pts = stops.map(s => [s[1], s[2]]);
   return ptsD(pts.reduce((acc, q, j) => j ? acc.concat(legPts(pts[j - 1], q).slice(1)) : [q], []));
 }
-function paintCards() {
+function paintCards(anim) {
   const row = $('row'); row.innerHTML = '';
   DISTRICTS.forEach((D, i) => {
     const slot = el('div', { class: 'slot' });
     /* 고른 구의 양옆 셋까지만 그린다 — 띠를 따라 멀리 뻗은 카드가 다른 판으로 비쳐 들지 않게 */
     if (Math.abs(i - sel) > 3) { row.append(slot); return; }
     if (i === sel) {
-      const card = el('div', { class: 'card' });
+      const card = el('div', { class: anim ? 'card in' : 'card' });
       card.innerHTML = `<span class="badge" style="background:${D.color}">${D.name.length > 2 ? D.name.slice(0, -1) : D.name}</span>
         <div style="display:flex;flex-direction:column;gap:2px"><h3>${D.name}</h3><small>정류장 ${D.stops.length}곳</small></div>`;
       const svg = el('svg', { width: 296, height: 232, viewBox: '0 0 296 232', 'aria-hidden': 'true' }, true);
@@ -487,7 +491,7 @@ function paintCards() {
       rec.innerHTML = `<small>최고 기록</small><strong>${best[D.slug] ? best[D.slug] + '명' : '아직 없음'}</strong>`;
       card.append(rec); slot.append(card);
     } else {
-      const b = el('button', { class: 'dim', 'aria-label': D.name + ' 고르기' });
+      const b = el('button', { class: anim ? 'dim in' : 'dim', 'aria-label': D.name + ' 고르기' });
       b.innerHTML = `<b>${D.name}</b>`;
       const svg = el('svg', { width: 212, height: 212, viewBox: '0 0 212 212', 'aria-hidden': 'true', style: 'margin-top:43px;overflow:visible' }, true);
       const g = el('g', { transform: 'translate(6 6) scale(.263)' }, true);
@@ -501,7 +505,7 @@ function paintCards() {
   });
   row.style.transform = `translateX(${640 - 170 - sel * 388}px)`;
 }
-function choose(i) { sel = Math.max(0, Math.min(DISTRICTS.length - 1, i)); store.set('rt-bus-pick', DISTRICTS[sel].slug); paintCards(); }
+function choose(i) { sel = Math.max(0, Math.min(DISTRICTS.length - 1, i)); store.set('rt-bus-pick', DISTRICTS[sel].slug); paintCards(true); }
 $('run').addEventListener('click', () => enterGame());
 
 /* ── 운행 ── */
