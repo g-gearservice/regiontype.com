@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.441",
+    "date": "2026-10-18",
+    "ko": "동네버스 베타 첫 화면의 노란 노선이 regiontype 로고의 o 고리를 꿰고 지나 오른쪽 아래로 빠집니다. 운행 시작을 누르면 카메라가 그 선을 따라 오른쪽 아래 대각선으로 날며 90° 돌아 구 고르기 화면에 닿습니다.",
+    "en": "On the Neighborhood Bus beta home screen, the yellow line now runs through the o of the regiontype logo and heads off to the lower right. Pressing start flies the camera diagonally down and right along it, turning 90° into the district picker."
+  },
+  {
     "v": "0.11.440",
     "date": "2026-10-18",
     "ko": "동네버스 베타에 소리가 납니다. 녹음한 소리 없이 브라우저가 그 자리에서 냅니다 — 정류장이 열리면 종, 버스가 떠나고 서면 낮은 울림, 손님이 오르내리면 한 음씩 오르는 퉁김, 넘치는 동안은 점점 빨라지는 똑딱, 운행이 끝나면 화음 하나. 음은 구마다 다른 조입니다. 설정과 멈춤 메뉴에서 끌 수 있습니다.",
