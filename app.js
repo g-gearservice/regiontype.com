@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.34';
+const VER = '4.35';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -504,9 +504,6 @@ function applyGrid(ox, oy, nx, ny = nx) {
   p.setAttribute('x', ox);
   p.setAttribute('y', oy);
   p.querySelector('path').setAttribute('d', `M${nx} 0 V${ny} H0`);
-  /* 폰 홈의 위 흐림(.top-blur)은 --bg 단색 겹이라 이 격자를 덮는다 — 같은 원점·칸을 CSS 에 넘겨 겹에도 그린다 */
-  const s = document.documentElement.style;
-  for (const [k, v] of [['--gx', ox], ['--gy', oy], ['--gw', nx], ['--gh', ny]]) s.setProperty(k, v + 'px');
 }
 /* SVG 유저 좌표 → 화면. 추정하지 않고 CTM 으로 격자 원점·칸을 읽는다. */
 const DECO_CELL = 152;   /* 플레이 밖 장식 격자 칸(px). about.html 과 같은 값 */
@@ -2791,45 +2788,8 @@ const pinDoc = () => {
 };
 pinDoc();
 for (const e of ['load', 'scroll', 'resize']) addEventListener(e, pinDoc, { passive: true });
-/* 위 흐림(style.css 의 .top-blur) — 지도를 세기가 다른 흐린 복사본 여섯 장으로 따라 그린다. 상태바 칸에
-   backdrop-filter 를 못 쓰니 복사본을 흐린다. 속성만 바뀌면 짝 노드에 그 속성만 옮긴다(트랜지션도 같이
-   돈다). 노드가 바뀌면 통째로 다시 뜬다. 복사본도 id 를 그대로 쓴다 — CSS 가 #courseBtns·#map 으로
-   그린다. 원본이 앞에 있어 $() 는 원본을 잡는다. wrap 은 복사본을 원본 자리에 놓는 껍데기 */
-function blurTwins(src, box, wrap = c => c) {
-  const twins = new WeakMap();
-  let queued = false;
-  const copyAll = () => {
-    queued = false;
-    const a = [src, ...src.querySelectorAll('*')];
-    a.forEach(n => twins.set(n, []));
-    box.replaceChildren(...Array.from({ length: 6 }, () => {
-      const copy = src.cloneNode(true), b = [copy, ...copy.querySelectorAll('*')], layer = document.createElement('div');
-      a.forEach((n, i) => twins.get(n).push(b[i]));
-      layer.append(wrap(copy));
-      return layer;
-    }));
-  };
-  new MutationObserver(ms => {
-    for (const m of ms) {
-      const ts = m.type === 'attributes' && twins.get(m.target);
-      if (!ts) { if (!queued) { queued = true; requestAnimationFrame(copyAll); } continue; }
-      const v = m.target.getAttribute(m.attributeName);
-      for (const t of ts) v === null ? t.removeAttribute(m.attributeName) : t.setAttribute(m.attributeName, v);
-    }
-  }).observe(src, { attributes: true, childList: true, subtree: true, characterData: true });
-  copyAll();
-}
-if (bleedOn.matches) {
-  blurTwins($('#courseBtns'), $('#topBlur'));
-  /* 게임 지도는 머리줄 밑 .stage 에 있다 — 그 자리·크기를 재어 복사본 껍데기(.tb-at)에 준다 */
-  const map = $('#map'), box = $('#playTopBlur');
-  new ResizeObserver(() => {
-    const r = map.getBoundingClientRect(), p = $('#play').getBoundingClientRect();
-    for (const [k, v] of [['--mx', r.left - p.left], ['--my', r.top - p.top], ['--mw', r.width], ['--mh', r.height]])
-      box.style.setProperty(k, v + 'px');
-  }).observe(map);
-  blurTwins(map, box, c => { const w = document.createElement('div'); w.className = 'tb-at'; w.append(c); return w; });
-}
+/* 위 흐림(style.css 의 .top-blur)은 CSS 그라디언트 한 장이다. 예전엔 지도를 흐린 복사본 여섯 장으로
+   따라 그렸는데, 폰 Safari 가 그 필터 층들에 메모리를 다 써 탭이 튕겼다 */
 
 /* 화상 키보드가 뜨면 플레이 화면을 보이는 만큼으로 줄인다(style.css 의 --vvh·--vvt,
    손가락 화면에서만 읽는다). 안드로이드는 viewport 메타의 interactive-widget 이 이미

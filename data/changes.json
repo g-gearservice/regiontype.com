@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.435",
+    "date": "2026-10-18",
+    "ko": "폰 Safari 에서 첫 화면이 계속 로딩되다 튕기던 문제를 고쳤습니다. 화면 위쪽 흐림을 지도 복사본 여러 장 대신 가벼운 그라디언트 한 장으로 그립니다.",
+    "en": "Fixed the home page loading forever and then crashing in Safari on phones. The top blur is now one light gradient instead of several blurred copies of the map."
+  },
+  {
     "v": "0.11.434",
     "date": "2026-10-17",
     "ko": "3D 내비게이션 베타의 메뉴·카드·지도 단추·타이핑 바가 리퀴드 글래스로 바뀌었습니다. 지도가 맑게 비치고, 볼록한 유리 테두리가 렌즈처럼 지도를 휘며, WebGL 이 되는 브라우저라면 어디서나 보입니다. 투명도·반사광·굴절은 베타 설정에서 고를 수 있습니다. 또 지도가 차가 갈 길을 미리 내다보며 부드럽게 돌아, 차가 옆으로 미끄러지듯 보이지 않습니다.",
