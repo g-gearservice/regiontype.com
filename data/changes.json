@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.439",
+    "date": "2026-10-18",
+    "ko": "동네버스 베타의 첫 화면에 구 고르기 카드가 세로로 비쳐 보이던 것을 고쳤습니다. 이제 지금 있는 화면만 보이고, 옮겨 갈 때 떠나는 화면은 흐려집니다.",
+    "en": "Fixed the Neighborhood Bus beta home screen showing the district picker's cards sideways at its edge. Only the screen you are on is visible now, and the one you leave fades out as the camera moves."
+  },
+  {
     "v": "0.11.438",
     "date": "2026-10-18",
     "ko": "동네버스 베타가 창을 꽉 채웁니다. 창이 판보다 넓거나 길어도 양옆·위아래에 빈 띠가 남지 않고, 운행 끝과 멈춤 화면의 어두운 막도 화면 끝까지 덮습니다.",

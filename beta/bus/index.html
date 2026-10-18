@@ -177,7 +177,7 @@ button{font:inherit;color:inherit}
       <span class="foot">동네버스 · 우리 구부터, 동까지</span>
     </section>
 
-    <section class="place" id="settings" aria-label="설정">
+    <section class="place" id="settings" aria-label="설정" style="opacity:0;pointer-events:none">
       <button class="back" data-go="home" aria-label="홈으로"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(-90deg)"><path class="arw"/></svg></button>
       <div class="set-nav">
         <h2>설정</h2>
@@ -186,13 +186,13 @@ button{font:inherit;color:inherit}
       </div>
     </section>
 
-    <section class="place" id="picker" aria-label="구 고르기">
+    <section class="place" id="picker" aria-label="구 고르기" style="opacity:0;pointer-events:none">
       <button class="back" data-go="home" aria-label="홈으로"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(180deg)"><path class="arw"/></svg></button>
       <div class="row" id="row"></div>
       <div class="go-run"><button class="item" id="run"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true"><path class="arw"/></svg><span class="blk line">운행</span></button></div>
     </section>
 
-    <section class="place" id="game" aria-label="운행" style="background:var(--bg)">
+    <section class="place" id="game" aria-label="운행" style="background:var(--bg);opacity:0;pointer-events:none">
       <div id="board" hidden>
         <div class="map" id="map">
           <svg class="in-fade" width="1280" height="800" viewBox="0 0 1280 800" aria-hidden="true" style="position:absolute;left:0;top:0">
@@ -276,11 +276,12 @@ const PLACES = {
   picker: { x: BAND_X + (400 - BAND_Y) - 640, y: -1500, r: -90 }, game: { x: 4200, y: 600, r: 0 }
 };
 const WORLD = [
-  { color: '#3a8f4b', pts: [[-300, 640], [150, 190], [150, -300]], dur: 11 },
-  { color: '#e8513a', pts: [[-300, 690], [110, 690], [330, 910], [330, 1500]], dur: 13 },
-  { color: null, pts: [[BAND_X, -3000], [BAND_X, 1300]], dur: 20 },
-  { color: '#3a6fb5', pts: [[1100, -400], [1100, 560], [1420, 880], [1420, 1700]], dur: 14 },
-  { color: '#3a9ad9', pts: [[1140, -400], [1140, 540], [1460, 860], [1460, 1700]], dur: 15 }
+  /* 끝은 화면 밖 멀리 — 세로로 긴 창에서도 선 끝이 보이지 않게 */
+  { color: '#3a8f4b', pts: [[-1200, 1540], [150, 190], [150, -400]], dur: 14 },
+  { color: '#e8513a', pts: [[-1600, 690], [110, 690], [330, 910], [330, 3000]], dur: 18 },
+  { color: null, pts: [[BAND_X, -3000], [BAND_X, 3000]], dur: 26 },
+  { color: '#3a6fb5', pts: [[1100, -400], [1100, 560], [1420, 880], [1420, 3000]], dur: 18 },
+  { color: '#3a9ad9', pts: [[1140, -400], [1140, 540], [1460, 860], [1460, 3000]], dur: 19 }
 ];
 
 /* 꺾인 선의 모서리를 굴린다 — 노선도 선은 각지게 꺾이되 모서리는 둥글다 */
@@ -365,12 +366,18 @@ function cam(k, scale = 1, instant = false) {
   $('world').classList.toggle('fly', !instant);
   $('world').style.transform = `translate(${CX}px,${CY}px) scale(${scale}) rotate(${-p.r}deg) translate(${-(p.x + 640)}px,${-(p.y + 400)}px)`;
 }
+/* 지금 있는 판만 보인다. 창이 넓으면 큰 지도의 이웃 판(위에 누운 고르기 판의 카드 따위)이
+   가장자리로 비쳐 드는데, 그게 잔상처럼 보인다. 옮겨 가는 동안 떠나는 판은 흐려지고 닿을 판이 짙어진다 */
+function showOnly(k) {
+  ['home', 'settings', 'picker', 'game'].forEach(id => {
+    const on = id === k, st = $(id).style;
+    st.opacity = on ? 1 : 0; st.pointerEvents = on ? '' : 'none'; st.visibility = '';
+  });
+}
 function fly(k) {
   place = k;
   cam(k);
-  $('game').style.opacity = k === 'game' ? 1 : 0;
-  $('game').style.pointerEvents = k === 'game' ? '' : 'none';
-  $('picker').style.opacity = 1;
+  showOnly(k);
   $('resume').hidden = !(G && !G.ready && G.over === null);
   const first = { home: '.home-nav .item', settings: '.set-nav .item', picker: '#run' }[k];
   if (first) setTimeout(() => document.querySelector(first)?.focus({ preventScroll: true }), 60);
@@ -388,6 +395,8 @@ function paintCards() {
   const row = $('row'); row.innerHTML = '';
   DISTRICTS.forEach((D, i) => {
     const slot = el('div', { class: 'slot' });
+    /* 고른 구의 양옆 셋까지만 그린다 — 띠를 따라 멀리 뻗은 카드가 다른 판으로 비쳐 들지 않게 */
+    if (Math.abs(i - sel) > 3) { row.append(slot); return; }
     if (i === sel) {
       const card = el('div', { class: 'card' });
       card.innerHTML = `<span class="badge" style="background:${D.color}">${D.name.length > 2 ? D.name.slice(0, -1) : D.name}</span>
@@ -484,9 +493,9 @@ function enterGame() {
   seq.push(setTimeout(() => {
     place = 'game';
     cam('game', 1, true);
-    $('game').style.opacity = 1; $('game').style.pointerEvents = '';
+    showOnly('game');
     $('board').hidden = true;
-    seq.push(setTimeout(() => { $('world').classList.add('fly'); startRun(); $('picker').style.opacity = 1; }, 260));
+    seq.push(setTimeout(() => { $('world').classList.add('fly'); startRun(); showOnly('game'); }, 260));
   }, calm() ? 0 : 720));
 }
 
@@ -711,7 +720,7 @@ fetch(DATA + 'bus.json').then(r => r.json()).then(j => {
   const want = store.get('rt-bus-pick') || 'gangseo';
   sel = Math.max(0, DISTRICTS.findIndex(d => d.slug === want));
   paintCards();
-  cam('home', 1, true);
+  cam('home', 1, true); showOnly('home');
   requestAnimationFrame(() => $('world').classList.add('fly'));
   requestAnimationFrame(loop);
 });
