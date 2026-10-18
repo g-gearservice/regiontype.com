@@ -66,21 +66,35 @@ button{font:inherit;color:inherit}
    (카드 윗단 = 252 - 116), 옆 카드의 이름은 띠 바로 위에 얹히고(아래 .dim 의 margin-top, 이름 아랫단이 띠 윗단보다 4px 위), 옆 노선도는 가운데 카드의
    노선도와 같은 높이에 선다 — 한 줄(이름)·한 줄(노선도)이 카드마다 같은 자리다 */
 .row{position:absolute;left:0;top:136px;display:flex;align-items:flex-start;gap:48px;transition:transform .55s var(--fly)}
-.slot{width:340px;flex:none;display:flex;justify-content:center}
-.card{position:relative;z-index:2;width:340px;box-sizing:border-box;padding:22px;display:flex;flex-direction:column;gap:14px;background:var(--card)}
+.slot{position:relative;width:340px;height:513px;flex:none}
+.card-bg{position:absolute;left:470px;top:136px;width:340px;height:513px;background:var(--card);transition:height .3s var(--out)}
+.card{position:absolute;left:470px;top:136px;width:340px;box-sizing:border-box;padding:22px;display:flex;flex-direction:column;gap:14px;pointer-events:none}
 .card .badge{display:inline-flex;align-items:center;align-self:flex-start;height:30px;padding:0 10px;color:#2a2a2c;font-size:16px;font-weight:700}
 .card h3{margin:0;font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
 .card small{font-size:13px;font-weight:600;color:var(--muted)}
 .card p{margin:0;font-size:14px;line-height:1.55;font-weight:500}
 .card strong{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
-.card svg{display:block;background:var(--bg)}
-/* 카드를 옮길 때 — 새로 선 카드의 배경 판은 옆 카드가 있던 자리에 처음부터 서 있다가 행(.row, .55s)과 함께 가운데로
-   미끄러져 온다. 판은 떠오르지도 서서히 나타나지도 않고, 안의 글자·노선도만 늦게 비친다. 옆 카드는 서서히 비친다 */
-.card.in>*{animation:fade .4s var(--io) .2s both}
-.dim.in{animation:fade .5s var(--io) both}
-.dim{display:flex;flex-direction:column;align-items:flex-start;width:212px;margin-top:69px;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
-.dim b{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--muted);opacity:.75}
-.dim:focus-visible{outline:3px solid currentColor;outline-offset:4px}
+/* 카드를 옮길 때 — Mini Metro+ 를 재서 옮긴 움직임. 배경 판(.card-bg)은 화면 가운데에 가만히 있고 높이만 새 카드에 맞춰 늘고 준다.
+   움직이는 건 그 위를 지나가는 이름·노선도 줄(.row, .55s)뿐이다. 줄 속 노선도는 카드의 노선도와 같은 그림 한 장이라
+   (mapSvg) 멈추면(#picker.big) 고른 구의 이름과 노선도가 그 자리에서 카드 크기로 자라며 색이 입혀지고, 카드의 나머지
+   (배지·정류장 수·설명·기록)가 뒤따라 비친다. 숨겼다 다시 그리는 단계는 없다 */
+.dim{position:absolute;inset:0;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
+.dim b{position:absolute;left:64px;top:69px;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--muted);opacity:.75;
+  transform-origin:0 0;transition:transform .45s var(--out),color .3s var(--io),opacity .3s var(--io)}
+.dim svg{position:absolute;left:64px;top:148px;overflow:visible;transform-origin:0 0;transform:scale(.71);transition:transform .45s var(--out)}
+.mbg{fill:var(--bg);opacity:0;transition:opacity .4s var(--io)}
+.ln{opacity:.45;transition:opacity .4s var(--io)}
+.st{fill:transparent;stroke:var(--muted);transition:fill .4s var(--io),stroke .4s var(--io)}
+#picker.big .sel b{transform:translate(-42px,-6px) scale(1.267);color:var(--ink);opacity:1}
+#picker.big .sel svg{transform:translate(-42px,-10px)}
+#picker.big .sel .mbg,#picker.big .sel .ln{opacity:1}
+#picker.big .sel .st{fill:var(--stop-fill);stroke:var(--ring)}
+.card h3{visibility:hidden}
+.card>*{opacity:0;transition:opacity .15s var(--io)}
+#picker.big .card>*{opacity:1;transition:opacity .3s var(--io) .2s}
+#picker.big .card>:nth-child(2){transition-delay:.25s}#picker.big .card>:nth-child(4){transition-delay:.3s}#picker.big .card>:nth-child(5){transition-delay:.35s}
+#picker.now *{transition:none!important}
+.dim:focus-visible{outline:3px solid currentColor;outline-offset:-8px}
 .go-run{position:absolute;right:48px;bottom:44px;font-size:40px}
 .go-run .item{transform-origin:right center}
 
@@ -169,8 +183,8 @@ button{font:inherit;color:inherit}
 .tip{position:absolute;left:50%;top:44px;transform:translateX(-50%);max-width:520px;text-align:center;font-size:15px;font-weight:600;line-height:1.5;color:var(--muted)}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){
-  .world.fly,.map,.crowd.end,.row{transition:none}
-  .ride,.hint,.mark,.pax,.shake,.pulse,.card.in>*,.dim.in{animation:none}
+  .world.fly,.map,.crowd.end,.row,.card-bg,.card>*,.dim b,.dim svg,.mbg,.ln,.st{transition:none!important}
+  .ride,.hint,.mark,.pax,.shake,.pulse{animation:none}
   .mark{transform:translate(-50%,-50%)}
   .hint{transform:translate(-50%,-50%)}
   .veil,.over-text,.over-nav,.in-late{animation-delay:0s}
@@ -210,7 +224,9 @@ button{font:inherit;color:inherit}
 
     <section class="place" id="picker" aria-label="구 고르기" style="opacity:0;pointer-events:none">
       <button class="back" data-go="home" aria-label="홈으로"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true" style="transform:rotate(180deg)"><path class="arw"/></svg></button>
+      <div class="card-bg" id="cardBg" aria-hidden="true"></div>
       <div class="row" id="row"></div>
+      <div class="card" id="card"></div>
       <div class="go-run"><button class="item" id="run"><svg width="44" height="36" viewBox="0 0 34 28" aria-hidden="true"><path class="arw"/></svg><span class="blk line">운행</span></button></div>
     </section>
 
@@ -471,39 +487,51 @@ function miniRoad(stops) {
   const pts = stops.map(s => [s[1], s[2]]);
   return ptsD(pts.reduce((acc, q, j) => j ? acc.concat(legPts(pts[j - 1], q).slice(1)) : [q], []));
 }
+let cardTimer = 0;
+/* 노선도 한 장 — 줄 속 옅은 모양과 카드의 큰 모양이 같은 그림이다. 옅은 쪽은 .dim svg 의 scale(.71) 과 .ln·.st 의 옅은 칠뿐 */
+function mapSvg(D) {
+  const svg = el('svg', { width: 296, height: 232, viewBox: '0 0 296 232', 'aria-hidden': 'true' }, true);
+  svg.append(el('rect', { class: 'mbg', width: 296, height: 232 }, true));
+  const g = el('g', { transform: 'translate(8 8) scale(.37)' }, true);
+  g.append(el('path', { class: 'ln', d: miniRoad(D.stops), fill: 'none', stroke: D.color, 'stroke-width': 13, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, true));
+  D.stops.forEach(s => g.append(el('path', { class: 'st', d: SHAPES[s[4]], transform: `translate(${s[1] - 13.5} ${s[2] - 13.5}) scale(.675)`, 'stroke-width': 12 }, true)));
+  svg.append(g);
+  return svg;
+}
 function paintCards(anim) {
   const row = $('row'); row.innerHTML = '';
   DISTRICTS.forEach((D, i) => {
     const slot = el('div', { class: 'slot' });
     /* 고른 구의 양옆 셋까지만 그린다 — 띠를 따라 멀리 뻗은 카드가 다른 판으로 비쳐 들지 않게 */
     if (Math.abs(i - sel) > 3) { row.append(slot); return; }
-    if (i === sel) {
-      const card = el('div', { class: anim ? 'card in' : 'card' });
-      card.innerHTML = `<span class="badge" style="background:${D.color}">${D.name.length > 2 ? D.name.slice(0, -1) : D.name}</span>
-        <div style="display:flex;flex-direction:column;gap:2px"><h3>${D.name}</h3><small>정류장 ${D.stops.length}곳</small></div>`;
-      const svg = el('svg', { width: 296, height: 232, viewBox: '0 0 296 232', 'aria-hidden': 'true' }, true);
-      const g = el('g', { transform: 'translate(8 8) scale(.37)' }, true);
-      g.append(el('path', { d: miniRoad(D.stops), fill: 'none', stroke: D.color, 'stroke-width': 13, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, true));
-      D.stops.forEach(s => g.append(el('path', { d: SHAPES[s[4]], transform: `translate(${s[1] - 13.5} ${s[2] - 13.5}) scale(.675)`, fill: 'var(--stop-fill)', stroke: 'var(--ring)', 'stroke-width': 12 }, true)));
-      svg.append(g); card.append(svg);
-      const p = el('p'); p.textContent = D.desc; card.append(p);
-      const rec = el('div', { style: 'display:flex;flex-direction:column;gap:2px' });
-      rec.innerHTML = `<small>최고 기록</small><strong>${best[D.slug] ? best[D.slug] + '명' : '아직 없음'}</strong>`;
-      card.append(rec); slot.append(card);
-    } else {
-      const b = el('button', { class: anim ? 'dim in' : 'dim', 'aria-label': D.name + ' 고르기' });
-      b.innerHTML = `<b>${D.name}</b>`;
-      const svg = el('svg', { width: 212, height: 212, viewBox: '0 0 212 212', 'aria-hidden': 'true', style: 'margin-top:43px;overflow:visible' }, true);
-      const g = el('g', { transform: 'translate(6 6) scale(.263)' }, true);
-      g.append(el('path', { d: miniRoad(D.stops), fill: 'none', stroke: D.color, 'stroke-width': 19, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: .45 }, true));
-      D.stops.forEach(s => g.append(el('circle', { cx: s[1], cy: s[2], r: 19, fill: 'var(--bg)', stroke: 'var(--muted)', 'stroke-width': 9.5 }, true)));
-      svg.append(g); b.append(svg);
-      b.addEventListener('click', () => choose(i));
-      slot.append(b);
-    }
+    const b = el('button', { class: i === sel ? 'dim sel' : 'dim', 'aria-label': D.name + ' 고르기' });
+    b.innerHTML = `<b>${D.name}</b>`;
+    b.append(mapSvg(D));
+    b.addEventListener('click', () => { if (i !== sel) choose(i); });
+    slot.append(b);
     row.append(slot);
   });
   row.style.transform = `translateX(${640 - 170 - sel * 388}px)`;
+  paintCard(anim);
+}
+/* 고른 구의 카드. 줄이 멈출 즈음(.45s) 고른 구가 커지며(#picker.big) 카드의 나머지가 비친다 — 빠르게 연달아 옮기면 마지막 것만 */
+function paintCard(anim) {
+  const D = DISTRICTS[sel], card = $('card'), pick = $('picker');
+  clearTimeout(cardTimer);
+  pick.classList.remove('big');
+  pick.classList.toggle('now', !anim);
+  card.innerHTML = `<span class="badge" style="background:${D.color}">${D.name.length > 2 ? D.name.slice(0, -1) : D.name}</span>
+    <div style="display:flex;flex-direction:column;gap:2px"><h3>${D.name}</h3><small>정류장 ${D.stops.length}곳</small></div>
+    <div style="height:232px" aria-hidden="true"></div>`;
+  const p = el('p'); p.textContent = D.desc; card.append(p);
+  const rec = el('div', { style: 'display:flex;flex-direction:column;gap:2px' });
+  rec.innerHTML = `<small>최고 기록</small><strong>${best[D.slug] ? best[D.slug] + '명' : '아직 없음'}</strong>`;
+  card.append(rec);
+  $('cardBg').style.height = card.offsetHeight + 'px';
+  const grow = () => { pick.classList.add('big'); };
+  const still = !anim || matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if (still) { grow(); requestAnimationFrame(() => requestAnimationFrame(() => pick.classList.remove('now'))); }
+  else cardTimer = setTimeout(grow, 450);
 }
 function choose(i) { sel = Math.max(0, Math.min(DISTRICTS.length - 1, i)); store.set('rt-bus-pick', DISTRICTS[sel].slug); paintCards(true); }
 $('run').addEventListener('click', () => enterGame());

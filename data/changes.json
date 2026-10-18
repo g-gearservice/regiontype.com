@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.448",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기 카드 이동을 Mini Metro+ 에서 재서 옮겼습니다. 카드 배경 판은 화면 가운데에 가만히 있고, 그 위로 구 이름과 노선도 줄이 미끄러져 지나갑니다. 줄 속 노선도는 카드의 노선도와 같은 그림이라, 줄이 멈추면 고른 구의 이름과 노선도가 그 자리에서 카드 크기로 자라며 색이 입혀지고 나머지 내용이 뒤따라 비칩니다. 옆 카드의 옅은 노선도도 카드와 같은 도형으로 그려집니다.",
+    "en": "Moving between cards in the Neighborhood Bus beta's district picker now follows Mini Metro+: the card's background panel stays put at the center while the row of district names and route maps slides across it. The row's maps are the same drawing as the card's map, so once the row stops the selected district's name and map grow in place to card size and take on color, and the rest of the card fades in behind them. The dim maps beside it now use the same stop shapes as the card."
+  },
+  {
     "v": "0.11.447",
     "date": "2026-10-19",
     "ko": "동네버스 베타의 구 고르기에서 카드를 옮길 때, 새로 선 카드의 배경 판이 떠오르는 대신 옆 카드가 있던 자리에서 가운데로 미끄러져 옵니다. 안의 글자와 노선도는 판이 닿을 즈음 서서히 비칩니다.",
