@@ -17,8 +17,9 @@ https://:worker.:account.workers.dev/*
   Referrer-Policy: no-referrer
   Cache-Control: no-store
 
+# settings/index.html 도 해시만 홈 덮개로 넘기는 인라인 한 줄이다 — 고치면 이 해시도 같이 고친다.
 /settings/*
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'sha256-uzWxmQ9mtLAwkmEHYLEjJbtDTJtl579lkoadh8b3Ogs='; style-src 'self'; img-src 'self' data:; connect-src 'self' https://g.gearservicevanguard.com; form-action 'none'; base-uri 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
   Cache-Control: no-store
 

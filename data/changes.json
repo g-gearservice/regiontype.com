@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.444",
+    "date": "2026-10-19",
+    "ko": "설정 버전 줄이 실제 버전을 보여 줍니다(4.35에 멈춰 있던 것을 바로잡음). 옛 주소 regiontype.com/settings/ 도 빈 화면 대신 설정 덮개로 넘어갑니다.",
+    "en": "The Settings version line now shows the real version instead of staying at 4.35, and the old regiontype.com/settings/ address opens the Settings overlay instead of a blank page."
+  },
+  {
     "v": "0.11.443",
     "date": "2026-10-19",
     "ko": "동네버스 베타 첫 화면 맨 위에 짧은 블러가 깔립니다. 위 가장자리로 들어오는 노선이 아래로 갈수록 옅어지는 블러 속에서 부드럽게 가라앉습니다.",
