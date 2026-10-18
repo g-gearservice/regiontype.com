@@ -105,6 +105,16 @@ button{font:inherit;color:inherit}
    덮인다. 넘친 정류장만은 그 막 위에 남아 또렷하다(같은 지도 안에서 쌓임 순서만 올린다) */
 .veil{position:absolute;left:-3000px;top:-3000px;width:7000px;height:7000px;z-index:6;background:var(--veil);-webkit-backdrop-filter:blur(1.6px);backdrop-filter:blur(1.6px);animation:fade .6s var(--io) 1.15s both}
 .chrome{position:absolute;inset:0;pointer-events:none;transition:opacity .45s var(--io)}
+/* 위 블러 — 홈 화면 맨 위의 짧은 겹 블러. 아래로 갈수록 옅어진다(3D 내비 아래 띠 .backdrop-blur.bot 을
+   뒤집은 꼴). 홈 판의 맨 앞에 깔려 그 밑을 지나는 노선만 흐리고 로고·메뉴는 위에서 또렷하다. 판(1280×800)보다
+   창이 높으면 화면 맨 위가 판 위로 --pad-y 만큼 올라가 있으니(fit) 그만큼 끌어올리고, 옆은 넓은 창 끝까지 편다 */
+.top-blur{position:absolute;left:-3000px;width:7000px;top:calc(-1 * var(--pad-y,0px));height:calc(var(--pad-y,0px) + 90px);display:grid;pointer-events:none}
+.top-blur>span{grid-area:1/1}
+.top-blur>:nth-child(1){-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px);-webkit-mask-image:linear-gradient(0deg,transparent 0%,#000 25%);mask-image:linear-gradient(0deg,transparent 0%,#000 25%)}
+.top-blur>:nth-child(2){-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);-webkit-mask-image:linear-gradient(0deg,transparent 20%,#000 50%);mask-image:linear-gradient(0deg,transparent 20%,#000 50%)}
+.top-blur>:nth-child(3){-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);-webkit-mask-image:linear-gradient(0deg,transparent 45%,#000 75%);mask-image:linear-gradient(0deg,transparent 45%,#000 75%)}
+.top-blur>:nth-child(4){-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);-webkit-mask-image:linear-gradient(0deg,transparent 70%,#000 95%);mask-image:linear-gradient(0deg,transparent 70%,#000 95%)}
+.top-blur::after{content:'';grid-area:1/1;background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 35%,transparent),transparent 80%)}
 .chrome>*{pointer-events:auto}
 .chrome.gone{opacity:0}
 .chrome.gone>*{pointer-events:none}
@@ -166,6 +176,7 @@ button{font:inherit;color:inherit}
     <div id="rides"></div>
 
     <section class="place" id="home" aria-label="홈">
+      <span class="top-blur" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
       <div class="logo"><b role="img" aria-label="regiontype">regi<i class="o" id="logoO"></i>ntype</b><span aria-hidden="true">
         <svg width="56" height="56" viewBox="0 0 40 40"><path d="M9 9H31V31H9Z" fill="none" stroke="currentColor" stroke-width="5"/></svg>
         <svg width="22" height="22" viewBox="0 0 40 40"><path d="M20 6L33 30H7Z" fill="currentColor"/></svg>
@@ -336,7 +347,7 @@ $('stage').addEventListener('scroll', e => { e.target.scrollTop = 0; e.target.sc
 let CX = 640, CY = 400;
 function fit() {
   const k = Math.min(innerWidth / 1280, innerHeight / 800), W = innerWidth / k, H = innerHeight / k, st = $('stage').style;
-  st.width = W + 'px'; st.height = H + 'px'; st.transform = `scale(${k})`;
+  st.width = W + 'px'; st.height = H + 'px'; st.transform = `scale(${k})`; st.setProperty('--pad-y', (H - 800) / 2 + 'px');
   CX = W / 2; CY = H / 2;
   if (typeof place !== 'undefined') cam(place, 1, true);
 }
