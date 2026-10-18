@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.438",
+    "date": "2026-10-18",
+    "ko": "동네버스 베타가 창을 꽉 채웁니다. 창이 판보다 넓거나 길어도 양옆·위아래에 빈 띠가 남지 않고, 운행 끝과 멈춤 화면의 어두운 막도 화면 끝까지 덮습니다.",
+    "en": "The Neighborhood Bus beta now fills the whole window. Wide or tall windows no longer leave empty bars at the sides, and the dim layer behind the end and pause screens reaches every edge."
+  },
+  {
     "v": "0.11.436",
     "date": "2026-10-18",
     "ko": "베타로 동네버스를 엽니다(regiontype.com/beta/bus). 서울 25개 자치구 가운데 하나를 고르면 그 구의 행정동이 정류장이 되고, 정류장마다 손님이 쌓입니다. 정류장 이름을 치면 버스가 그리로 달려가 손님을 태우고, 손님과 같은 모양의 정류장에 내려 줍니다. 한 정류장에 손님이 넘치면 운행이 끝납니다.",
