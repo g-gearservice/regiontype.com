@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.447",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기에서 카드를 옮길 때, 새로 선 카드의 배경 판이 떠오르는 대신 옆 카드가 있던 자리에서 가운데로 미끄러져 옵니다. 안의 글자와 노선도는 판이 닿을 즈음 서서히 비칩니다.",
+    "en": "In the Neighborhood Bus beta's district picker, the newly selected card's background panel now slides in from where its neighbor sat instead of rising in place. Its text and route map fade in as the panel arrives."
+  },
+  {
     "v": "0.11.446",
     "date": "2026-10-19",
     "ko": "동네버스 베타의 구 고르기에서 카드를 옮길 때 움직임이 붙었습니다. 행이 미끄러지는 동안 새로 선 가운데 카드는 아래에서 떠오르며 나타나고, 옆 카드는 서서히 비칩니다. 모션 줄이기 설정에서는 움직이지 않습니다.",

@@ -74,10 +74,10 @@ button{font:inherit;color:inherit}
 .card p{margin:0;font-size:14px;line-height:1.55;font-weight:500}
 .card strong{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .card svg{display:block;background:var(--bg)}
-/* 카드를 옮길 때 — 행은 .55s 로 미끄러지고(.row), 새로 선 가운데 카드는 떠오르며 나타나고 옆 카드는 서서히 비친다 */
-.card.in{animation:cardin .5s var(--out) both}
+/* 카드를 옮길 때 — 새로 선 카드의 배경 판은 옆 카드가 있던 자리에 처음부터 서 있다가 행(.row, .55s)과 함께 가운데로
+   미끄러져 온다. 판은 떠오르지도 서서히 나타나지도 않고, 안의 글자·노선도만 늦게 비친다. 옆 카드는 서서히 비친다 */
+.card.in>*{animation:fade .4s var(--io) .2s both}
 .dim.in{animation:fade .5s var(--io) both}
-@keyframes cardin{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 .dim{display:flex;flex-direction:column;align-items:flex-start;width:212px;margin-top:69px;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
 .dim b{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--muted);opacity:.75}
 .dim:focus-visible{outline:3px solid currentColor;outline-offset:4px}
@@ -170,7 +170,7 @@ button{font:inherit;color:inherit}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){
   .world.fly,.map,.crowd.end,.row{transition:none}
-  .ride,.hint,.mark,.pax,.shake,.pulse,.card.in,.dim.in{animation:none}
+  .ride,.hint,.mark,.pax,.shake,.pulse,.card.in>*,.dim.in{animation:none}
   .mark{transform:translate(-50%,-50%)}
   .hint{transform:translate(-50%,-50%)}
   .veil,.over-text,.over-nav,.in-late{animation-delay:0s}
