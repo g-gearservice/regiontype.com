@@ -422,6 +422,7 @@ A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `st
     data/kr-tree.json        Korea layer tree (build_kr.py). Not served yet
     data/kr-names.json       romanized Korean place names shown outside the Korean UI (build_names.py)
     data/bus.json            Neighborhood Bus beta stops for all 25 districts (build_bus.py)
+    data/bus-terrain/        real Seoul rivers, parks and hills behind each Neighborhood Bus board, one file per district (build_terrain.py). © OpenStreetMap contributors, via OpenFreeMap
     data/board/              board tiles on one shared projection (build_board.py). Not served yet
     tools/build_map.py       GeoJSON → geom.json
     tools/build_dong.py      all 25-district dong courses at once
@@ -431,6 +432,7 @@ A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `st
     tools/build_size.py      course sizes → relay/size.mjs
     tools/build_names.py     southkorea-maps name_eng → kr-names.json
     tools/build_bus.py       dong centroids → bus stops, labels placed without overlap
+    tools/build_terrain.py   OpenFreeMap vector tiles → water, rivers, green and peaks on the bus board's projection (needs network; caches tiles)
 
 ## Refreshing map data
 

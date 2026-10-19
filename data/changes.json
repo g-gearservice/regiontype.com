@@ -1,5 +1,41 @@
 [
   {
+    "v": "0.11.449",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 운행 판 바닥이 실제 서울 지도가 됩니다. 구마다 한강과 하천, 산, 공원이 정류장과 같은 좌표로 깔려서, 김포공항 활주로 위에 공항동이, 한강변에 염창동이 서 있습니다. 판 둘레까지 이어져 창을 넓혀도 바닥이 끊기지 않고, 지형은 구를 고를 때 미리 받아 둡니다. 낮과 밤 색이 따로 있고 출처(OpenStreetMap, OpenFreeMap)를 판 아래에 적었습니다.",
+    "en": "The Neighborhood Bus beta's board now sits on the real Seoul map. Each district gets the Han River, streams, hills and parks on the same coordinates as its stops, so Gonghang-dong sits on Gimpo Airport's runways and Yeomchang-dong on the Han's bank. The ground continues past the board so widening the window never leaves it bare, and it is fetched when you pick a district. It has separate day and night colors, with credit to OpenStreetMap and OpenFreeMap below the board."
+  },
+  {
+    "v": "0.11.448",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기 카드 이동을 Mini Metro+ 에서 재서 옮겼습니다. 카드 배경 판은 화면 가운데에 가만히 있고, 그 위로 구 이름과 노선도 줄이 미끄러져 지나갑니다. 줄 속 노선도는 카드의 노선도와 같은 그림이라, 줄이 멈추면 고른 구의 이름과 노선도가 그 자리에서 카드 크기로 자라며 색이 입혀지고 나머지 내용이 뒤따라 비칩니다. 옆 카드의 옅은 노선도도 카드와 같은 도형으로 그려집니다.",
+    "en": "Moving between cards in the Neighborhood Bus beta's district picker now follows Mini Metro+: the card's background panel stays put at the center while the row of district names and route maps slides across it. The row's maps are the same drawing as the card's map, so once the row stops the selected district's name and map grow in place to card size and take on color, and the rest of the card fades in behind them. The dim maps beside it now use the same stop shapes as the card."
+  },
+  {
+    "v": "0.11.447",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기에서 카드를 옮길 때, 새로 선 카드의 배경 판이 떠오르는 대신 옆 카드가 있던 자리에서 가운데로 미끄러져 옵니다. 안의 글자와 노선도는 판이 닿을 즈음 서서히 비칩니다.",
+    "en": "In the Neighborhood Bus beta's district picker, the newly selected card's background panel now slides in from where its neighbor sat instead of rising in place. Its text and route map fade in as the panel arrives."
+  },
+  {
+    "v": "0.11.446",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기에서 카드를 옮길 때 움직임이 붙었습니다. 행이 미끄러지는 동안 새로 선 가운데 카드는 아래에서 떠오르며 나타나고, 옆 카드는 서서히 비칩니다. 모션 줄이기 설정에서는 움직이지 않습니다.",
+    "en": "Moving between cards in the Neighborhood Bus beta's district picker now animates: while the row slides, the newly selected card rises into place and its neighbors fade in. With reduced motion on, nothing moves."
+  },
+  {
+    "v": "0.11.445",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 구 고르기 화면 정렬을 맞췄습니다. 띠가 가운데 카드의 제목 바로 아래를 지나고, 옆 카드의 이름은 그 띠 위에 나란히 얹히며, 옆 카드의 노선도도 가운데 카드의 노선도와 같은 높이에 섭니다.",
+    "en": "Aligned the Neighborhood Bus beta's district picker: the band now passes just under the selected card's title, neighboring names sit on that band side by side, and neighboring route maps line up with the selected card's map."
+  },
+  {
+    "v": "0.11.444",
+    "date": "2026-10-19",
+    "ko": "동네버스 베타의 홈과 코스 고르기 화면을 돌아다니는 버스에 외곽선이 생겼습니다. 노선과 같은 색이라 선 위에서 묻히던 버스가 바탕색 테두리로 또렷하게 떠 보입니다.",
+    "en": "The buses circling the Neighborhood Bus beta's home and district picker screens now have an outline. They used to blend into their same-colored lines; a background-colored edge makes them stand out."
+  },
+  {
     "v": "0.11.443",
     "date": "2026-10-19",
     "ko": "동네버스 베타 첫 화면 맨 위에 짧은 블러가 깔립니다. 위 가장자리로 들어오는 노선이 아래로 갈수록 옅어지는 블러 속에서 부드럽게 가라앉습니다.",
