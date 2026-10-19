@@ -19,16 +19,22 @@ def stem(n):
     return re.sub(r"본$", "", re.sub(r"동$", "", re.sub(r"[0-9·,]", "", n)))
 
 
-def project(cs):
+def transform(cs):
+    """동 중심점 경도·위도 → 판 px 의 식. x = bx + (경도 - lon0) * ax, y = by + (lat1 - 위도) * ay.
+    지형(build_terrain.py)이 같은 식으로 강·산을 올리도록 bus.json 에도 적는다"""
     lat0 = sum(c[1] for c in cs) / len(cs)
     k = math.cos(math.radians(lat0))
     lo, la = [c[0] for c in cs], [c[1] for c in cs]
     w, h = (max(lo) - min(lo)) * k or 1e-9, (max(la) - min(la)) or 1e-9
     s = min(680 / w, 520 / h)
-    pts = [[40 + (c[0] - min(lo)) * k * s, 40 + (max(la) - c[1]) * s] for c in cs]
-    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
-    dx, dy = W / 2 - (min(xs) + max(xs)) / 2, H / 2 - (min(ys) + max(ys)) / 2
-    return [[round(x + dx), round(y + dy)] for x, y in pts]
+    # 가장자리 40px 를 둔 뒤 판 한가운데로 옮긴다 — 가로·세로 모두 [40, 40 + 길이 * s] 라 중심은 식으로 나온다
+    bx, by = 40 + (W / 2 - (40 + (40 + w * s)) / 2), 40 + (H / 2 - (40 + (40 + h * s)) / 2)
+    return [min(lo), max(la), k * s, s, bx, by]
+
+
+def project(cs):
+    lon0, lat1, ax, ay, bx, by = transform(cs)
+    return [[round(bx + (c[0] - lon0) * ax), round(by + (lat1 - c[1]) * ay)] for c in cs]
 
 
 def boxes(p, name, side):
@@ -155,6 +161,7 @@ for n, ent in enumerate(index):
         "stops": [[nm, pts[i][0], pts[i][1], sides[i], kind[i], (items[i].get("meta") or {}).get("description", "")]
                   for i, nm in enumerate(names)],
         "first": first_open(kind, pts),
+        "xf": [round(v, 6) for v in transform([cen[nm] for nm in names])],
     })
     print(f"{out[-1]['name']}: 정류장 {len(names)}곳")
 

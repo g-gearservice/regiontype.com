@@ -12,14 +12,14 @@
 /* ── 토큰. 화면은 이것만 쓴다. 밤이 기본이고 :root[data-day] 가 낮이다 ── */
 :root{
   --bg:#29292b; --ink:#f2f2f0; --muted:#9a9a98; --stop-fill:#29292b; --ring:#e4e4e2; --pax:#e4e4e2; --seat:#29292b;
-  --card:#323234; --river:#46667a; --river-edge:#3a5566; --crowd:#7d7d7b; --crowd-end:rgba(125,125,123,.3);
+  --card:#323234; --green:#2d3f33; --peak:#5f5f5b; --river:#46667a; --river-edge:#3a5566; --crowd:#7d7d7b; --crowd-end:rgba(125,125,123,.3);
   --veil:rgba(20,20,22,.58); --blk:#3f6fa8; --band:#f6c037; --line:#f6c037; --miss:#e8513a; --miss-text:#ff8a73;
   --font:'Helvetica Neue',Helvetica,system-ui,-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;
   --fly:cubic-bezier(.65,0,.35,1); --out:cubic-bezier(.23,1,.32,1); --io:cubic-bezier(.4,0,.2,1);
 }
 :root[data-day]{
   --bg:#f3efe6; --ink:#2a2a2c; --muted:#6f6c66; --stop-fill:#fbf9f4; --ring:#2a2a2c; --pax:#2a2a2c; --seat:#fbf9f4;
-  --card:#fbf9f4; --river:#b6d2e1; --river-edge:#9fc0d2; --crowd:#bdb8ad; --crowd-end:rgba(150,145,135,.3);
+  --card:#fbf9f4; --green:#e0e8d3; --peak:#b9b7ab; --river:#b6d2e1; --river-edge:#9fc0d2; --crowd:#bdb8ad; --crowd-end:rgba(150,145,135,.3);
   --veil:rgba(243,239,230,.62); --miss-text:#b8321f;
 }
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background-color .5s,color .5s}
@@ -100,6 +100,15 @@ button{font:inherit;color:inherit}
 
 /* ── 운행 판. 들어올 때 강이 먼저 번지고, 정류장이 차례로 튀어나오고, 계기는 맨 나중 ── */
 .in-fade{animation:fade .7s var(--io) both}
+/* 바닥 — 실제 서울의 강·산·공원(data/bus-terrain, tools/build_terrain.py). 정류장과 같은 식으로 올라가 있다. 길과 정류장 밑에서 조용히 깔린다.
+   창이 판(1280×800)보다 넓어도 바닥이 이어지게 svg 밖으로 넘치게 둔다 */
+.terrain{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.tg{fill:var(--green);stroke:var(--green);stroke-width:.6;fill-rule:evenodd}
+.tw{fill:var(--river);stroke:var(--river);stroke-width:.6;fill-rule:evenodd}
+.tr{fill:none;stroke:var(--river);stroke-linejoin:round}
+.tp{fill:var(--peak)}
+.credit{position:absolute;right:20px;bottom:10px;font-size:11px;font-weight:600;color:var(--muted);opacity:.7}
+.credit a{color:inherit}
 .in-late{animation:fade .5s var(--io) .9s both}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .mark{position:absolute;width:38px;height:38px;overflow:visible;z-index:2;animation:pop .42s cubic-bezier(.34,1.56,.64,1) both}
@@ -233,6 +242,7 @@ button{font:inherit;color:inherit}
     <section class="place" id="game" aria-label="운행" style="background:var(--bg);opacity:0;pointer-events:none">
       <div id="board" hidden>
         <div class="map" id="map">
+          <svg class="in-fade terrain" id="terrainSvg" width="1280" height="800" viewBox="0 0 1280 800" aria-hidden="true"><g id="terrain"></g></svg>
           <svg class="in-fade" width="1280" height="800" viewBox="0 0 1280 800" aria-hidden="true" style="position:absolute;left:0;top:0">
             <g id="roads"></g>
             <path id="trip" fill="none" stroke="var(--line)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
@@ -264,6 +274,7 @@ button{font:inherit;color:inherit}
             <span class="note" id="note" aria-live="polite">정류장 이름을 치고 스페이스나 Enter</span>
           </div>
           <div class="tip in-late" id="tip"></div>
+          <small class="credit in-late">지형 © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></small>
         </div>
 
         <div class="menu" id="menu" hidden>
@@ -533,7 +544,7 @@ function paintCard(anim) {
   if (still) { grow(); requestAnimationFrame(() => requestAnimationFrame(() => pick.classList.remove('now'))); }
   else cardTimer = setTimeout(grow, 450);
 }
-function choose(i) { sel = Math.max(0, Math.min(DISTRICTS.length - 1, i)); store.set('rt-bus-pick', DISTRICTS[sel].slug); paintCards(true); }
+function choose(i) { sel = Math.max(0, Math.min(DISTRICTS.length - 1, i)); store.set('rt-bus-pick', DISTRICTS[sel].slug); terrainFor(DISTRICTS[sel].slug); paintCards(true); }
 $('run').addEventListener('click', () => enterGame());
 
 /* ── 운행 ── */
@@ -545,7 +556,24 @@ function fresh() {
            last: D.first[0], ang: 0, misses: 0, speed: 1, menu: false, tickT: 0, note: 0 };
 }
 /* 판의 살 — 정류장 마다 한 번 만들어 두고, 프레임마다 값만 바꾼다(애니메이션이 끊기지 않게) */
+/* ── 바닥 지형 — 구 하나의 강·산·공원. 구를 고를 때 미리 받아 두어 운행이 열릴 때는 이미 와 있다 ── */
+const TERRAIN = new Map();
+function terrainFor(slug) {
+  if (!TERRAIN.has(slug)) TERRAIN.set(slug, fetch(DATA + 'bus-terrain/' + slug + '.json').then(r => r.ok ? r.json() : null).catch(() => null));
+  return TERRAIN.get(slug);
+}
+function paintTerrain(slug) {
+  const g = $('terrain'); g.innerHTML = '';
+  g.setAttribute('transform', `translate(${OX} ${OY})`);
+  terrainFor(slug).then(t => {
+    if (!t || !D || D.slug !== slug) return;
+    g.innerHTML = t.green.map(d => `<path class="tg" d="${d}"/>`).join('') + t.water.map(d => `<path class="tw" d="${d}"/>`).join('')
+      + t.river.map(([c, d]) => `<path class="tr" stroke-width="${c === 'river' ? 4 : 3}" d="${d}"/>`).join('')
+      + t.peak.map(([x, y]) => `<path class="tp" d="M${x} ${y - 7}l7 12h-14z"/>`).join('');
+  });
+}
 function buildBoard() {
+  paintTerrain(D.slug);
   $('roads').innerHTML = ''; $('stops').innerHTML = ''; $('seats').innerHTML = '';
   $('ticks').innerHTML = '';
   for (let k = 0; k < 12; k++) {
@@ -836,6 +864,7 @@ fetch(DATA + 'bus.json').then(r => r.json()).then(j => {
   const want = store.get('rt-bus-pick') || 'gangseo';
   sel = Math.max(0, DISTRICTS.findIndex(d => d.slug === want));
   paintCards();
+  terrainFor(DISTRICTS[sel].slug);
   cam('home', 1, true); showOnly('home');
   requestAnimationFrame(() => $('world').classList.add('fly'));
   requestAnimationFrame(loop);
