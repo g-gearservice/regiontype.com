@@ -67,7 +67,7 @@ a{color:#8dfca4}a:hover{color:#c4ffd0}
 
 <div style="display: flex; align-items: baseline; gap: 1ch; margin-top: auto">
 <label for="crtIn" style="white-space: nowrap">{{ path }}</label>
-<input id="crtIn" value="{{ typed }}" onChange="{{ onType }}" onKeyDown="{{ onKey }}" onCompositionEnd="{{ onCompEnd }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: {{ c.phos }}; text-shadow: inherit">
+<input id="crtIn" autoFocus="{{ true }}" onInput="{{ onType }}" onKeyDown="{{ onKey }}" onCompositionEnd="{{ onCompEnd }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: {{ c.phos }}; text-shadow: inherit">
 <span class="crt-cur" aria-hidden="true" style="display: inline-block; width: .6ch; height: 1.1em; background: {{ c.phos }}"></span>
 </div>
 </div>
@@ -88,7 +88,7 @@ function crtClock(ms) { var s = Math.floor(ms / 1000); return crtPad(Math.floor(
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { screen: 'pick', typed: '', on: [], miss: 0, log: [{ k: 'plain', t: 'READY. 자치구 25곳.' }], t0: 0, t1: 0, now: 0, flipped: false };
+    this.state = { screen: 'pick', on: [], miss: 0, log: [{ k: 'plain', t: 'READY. 자치구 25곳.' }], t0: 0, t1: 0, now: 0, flipped: false };
   }
   componentDidMount() { this.timer = setInterval(() => { if (this.state.screen === 'game' && !this.state.t1) this.setState({ now: Date.now() }); }, 500); }
   componentWillUnmount() { clearInterval(this.timer); }
@@ -96,13 +96,14 @@ class Component extends DCLogic {
   start(i) {
     if (i !== 0) { this.setState(s => ({ log: this.say(s.log, 'err', CRT_GU[i][0] + ': 이 시안에는 강서구 판만 담았습니다.') })); return; }
     var now = Date.now();
-    this.setState({ screen: 'game', on: [], miss: 0, t0: now, t1: 0, now: now, typed: '',
+    this.setState({ screen: 'game', on: [], miss: 0, t0: now, t1: 0, now: now,
       log: [{ k: 'plain', t: '강서구 — 동 20곳. 이름을 치고 스페이스나 Enter.' }] });
   }
-  back() { this.setState(s => ({ screen: 'pick', typed: '', log: this.say(s.log, 'plain', '목록으로.') })); }
-  confirm(raw) {
-    var typed = crtFold(raw), s = this.state;
-    this.setState({ typed: '' });
+  back() { this.setState(s => ({ screen: 'pick', log: this.say(s.log, 'plain', '목록으로.') })); }
+  /* 입력칸은 상태에 묶지 않는다 — 브라우저가 글자를 받고, 확정할 때만 칸을 비운다 */
+  confirm(el) {
+    var raw = el.value, typed = crtFold(raw), s = this.state;
+    el.value = '';
     if (!typed) return;
     if (s.screen === 'pick') {
       var n = parseInt(typed, 10);
@@ -127,7 +128,6 @@ class Component extends DCLogic {
       c: c, nightStr: String(!day), themeLabel: day ? '낮' : '밤',
       inPick: !game, inGame: game,
       path: game ? 'C:\\SEOUL\\GANGSEO>' : 'C:\\SEOUL>',
-      typed: s.typed,
       menu: CRT_GU.map((g, i) => ({ no: crtPad(i + 1), label: g[0], count: g[1], pick: () => self.start(i) })),
       cells: CRT_GANGSEO.map((d, i) => {
         var on = s.on.indexOf(i) >= 0;
@@ -140,12 +140,12 @@ class Component extends DCLogic {
       flip: () => self.setState(st => ({ flipped: !st.flipped })),
       back: () => self.back(),
       onType: e => {
-        var v = e.target.value, composing = e.nativeEvent && e.nativeEvent.isComposing;
-        if (/\s$/.test(v) && !composing) self.confirm(v); else self.setState({ typed: v });
+        var composing = e.nativeEvent && e.nativeEvent.isComposing;
+        if (/\s$/.test(e.target.value) && !composing) self.confirm(e.target);
       },
-      onCompEnd: e => { if (/\s$/.test(e.target.value)) self.confirm(e.target.value); },
+      onCompEnd: e => { if (/\s$/.test(e.target.value)) self.confirm(e.target); },
       onKey: e => {
-        if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); self.confirm(e.target.value); }
+        if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); self.confirm(e.target); }
         else if (e.key === 'Escape' && game) { e.preventDefault(); self.back(); }
         else if (e.key === 'F2') { e.preventDefault(); self.setState(st => ({ flipped: !st.flipped })); }
       }
