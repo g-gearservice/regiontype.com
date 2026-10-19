@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>CRT 터미널 디자인 언어</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8dfca4}a:hover{color:#c4ffd0}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1040px; box-sizing: border-box; padding: 18px; background: #070b08; font-family: 'Nanum Gothic Coding', monospace; color: #8dfca4">
+<div style="position: relative; width: 100%; height: 100%; box-sizing: border-box; border-radius: 28px; background: #0c130e; box-shadow: inset 0 0 0 2px #1d3324; overflow: hidden; padding: 40px 48px; display: flex; flex-direction: column; gap: 28px; text-shadow: 0 0 2px rgba(141,252,164,.55), 0 0 10px rgba(141,252,164,.28)">
+<div style="position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px)" aria-hidden="true"></div>
+<div style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.55) 100%)" aria-hidden="true"></div>
+
+<div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dashed #5fb877; padding-bottom: 14px">
+<h1 style="margin: 0; font-family: 'VT323', monospace; font-size: 56px; font-weight: 400; letter-spacing: .04em; line-height: 1">REGIONTYPE://CRT</h1>
+<p style="margin: 0; color: #5fb877; font-size: 15px">beta · 디자인 언어 v0.1</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px">
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 토큰 · 밤 (기본)</h2>
+<sc-for list="{{ night }}" as="t" hint-placeholder-count="6">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 14px">
+<div style="width: 44px; height: 28px; box-sizing: border-box; border: 1px solid #5fb877; background: {{ t.hex }}"></div>
+<span style="width: 120px">{{ t.name }}</span>
+<span style="width: 84px; color: #5fb877">{{ t.hex }}</span>
+<span style="color: #5fb877">{{ t.use }}</span>
+</div>
+</sc-for>
+</section>
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 토큰 · 낮 (:root[data-day])</h2>
+<sc-for list="{{ day }}" as="t" hint-placeholder-count="6">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 14px">
+<div style="width: 44px; height: 28px; box-sizing: border-box; border: 1px solid #5fb877; background: {{ t.hex }}"></div>
+<span style="width: 120px">{{ t.name }}</span>
+<span style="width: 84px; color: #5fb877">{{ t.hex }}</span>
+<span style="color: #5fb877">{{ t.use }}</span>
+</div>
+</sc-for>
+</section>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px">
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 글꼴</h2>
+<p style="margin: 0; font-family: 'VT323', monospace; font-size: 40px; line-height: 1">VT323 — 머리글 라틴</p>
+<p style="margin: 0; font-size: 18px">Nanum Gothic Coding — 본문·지명·로그 15px / 1.55</p>
+<p style="margin: 0; color: #5fb877; font-size: 14px">고정폭 한 줄. 글자 단위로 정렬되니 칸 폭은 em 으로 잡는다 (칸 9.5em, 메뉴 11em).</p>
+</section>
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 칸 상태 — 색만으로 가르지 않는다</h2>
+<div style="display: flex; gap: 14px; font-size: 15px">
+<span style="padding: 2px 8px">[ ] 방화1동</span>
+<span style="padding: 2px 8px; background: #8dfca4; color: #07120a; text-shadow: none">[#] 공항동</span>
+<span style="padding: 2px 8px; outline: 2px solid #8dfca4; outline-offset: 2px">[ ] 포커스</span>
+</div>
+<p style="margin: 0; color: #5fb877; font-size: 14px">미점령 [ ] · 점령 [#] + 반전 화면 · 포커스 2px 외곽선. 점령 순간 0.4s 두 번 깜빡임.</p>
+</section>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px">
+<section style="display: flex; flex-direction: column; gap: 8px; font-size: 15px">
+<h2 style="margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 로그 줄</h2>
+<span>OK&#160;&#160;공항동</span>
+<span style="color: #5fb877; padding-left: 4ch">김포국제공항이 통째로 들어앉은 동. 강서구에서 가장 넓고, 두 번째로 넓은 동의 두 배다.</span>
+<span style="color: #ffb36b">ERR 없는 이름: 공항둥</span>
+<p style="margin: 4px 0 0; color: #5fb877; font-size: 14px">OK / ERR 라벨이 상태를 말하고 색은 거든다. 소개는 data/bus.json 에 있는 것만 찍는다.</p>
+</section>
+<section style="display: flex; flex-direction: column; gap: 8px; font-size: 15px">
+<h2 style="margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 프롬프트</h2>
+<div style="display: flex; align-items: baseline; gap: 1ch">
+<span>C:\SEOUL\GANGSEO&gt;</span><span>방화2동</span><span style="display: inline-block; width: .6ch; height: 1.1em; background: #8dfca4; vertical-align: -.15em"></span>
+</div>
+<p style="margin: 4px 0 0; color: #5fb877; font-size: 14px">스페이스·Enter 로 확정. 스페이스는 keydown 으로 막지 않고 입력값 끝을 본다(IME). Esc 목록, F2 낮·밤.</p>
+</section>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; border-top: 1px dashed #5fb877; padding-top: 16px">
+<h2 style="margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: .08em">&gt; 관 효과와 지키는 선</h2>
+<span>주사선 1px / 3px 간격 · 가장자리 그늘 58%→100% · 깜빡임 4s steps(1) · 커서 점멸 1s</span>
+<span style="color: #5fb877">prefers-reduced-motion → 깜빡임·점멸·점령 깜빡임 멈춤 · prefers-reduced-transparency → 주사선·그늘 걷음</span>
+<span style="color: #5fb877">모바일은 pointer:coarse 로 가름 → 글자 16px, 메뉴 줄 높이 44px · 대비 WCAG AA (dim 6.6:1, ERR 9.8:1)</span>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      night: [
+        { name: '--bg', hex: '#070b08', use: '관 바깥' },
+        { name: '--tube', hex: '#0c130e', use: '화면 바탕' },
+        { name: '--phos', hex: '#8dfca4', use: '글자·점령 칸' },
+        { name: '--phos-dim', hex: '#5fb877', use: '보조 글자·괘선' },
+        { name: '--inv-ink', hex: '#07120a', use: '반전 위 글자' },
+        { name: '--miss', hex: '#ffb36b', use: 'ERR 줄' }
+      ],
+      day: [
+        { name: '--bg', hex: '#dfe6da', use: '관 바깥' },
+        { name: '--tube', hex: '#eef3ea', use: '화면 바탕' },
+        { name: '--phos', hex: '#173d22', use: '글자·점령 칸' },
+        { name: '--phos-dim', hex: '#3c6648', use: '보조 글자·괘선' },
+        { name: '--inv-ink', hex: '#eef3ea', use: '반전 위 글자' },
+        { name: '--miss', hex: '#8a3a00', use: 'ERR 줄' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
