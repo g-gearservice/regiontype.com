@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>CRT 터미널 플레이</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&amp;family=VT323&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8dfca4}a:hover{color:#c4ffd0}
+@keyframes crtblink{50%{opacity:0}}
+@keyframes crtflicker{0%,100%{opacity:1}47%{opacity:.86}48%{opacity:1}83%{opacity:.93}}
+.crt-cur{animation:crtblink 1s steps(1) infinite}
+.crt-vig{animation:crtflicker 4s steps(1) infinite}
+.crt-menu:hover,.crt-menu:focus-visible{outline:2px solid currentColor;outline-offset:1px}
+@media (prefers-reduced-motion:reduce){.crt-cur,.crt-vig{animation:none}}
+@media (prefers-reduced-transparency:reduce){.crt-fx{display:none}}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 18px; background: {{ c.bg }}; font-family: 'Nanum Gothic Coding', monospace; font-size: 15px; line-height: 1.55; color: {{ c.phos }}">
+<div style="position: relative; width: 100%; height: 100%; box-sizing: border-box; border-radius: 28px; background: {{ c.tube }}; box-shadow: inset 0 0 0 2px {{ c.faint }}; overflow: hidden; padding: 36px 44px; display: flex; flex-direction: column; gap: 18px; text-shadow: {{ c.glow }}">
+<div class="crt-fx" style="position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, {{ c.scan }} 0 1px, transparent 1px 3px)" aria-hidden="true"></div>
+<div class="crt-fx crt-vig" style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 58%, {{ c.vig }} 100%)" aria-hidden="true"></div>
+
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 20px; border-bottom: 1px dashed {{ c.dim }}; padding-bottom: 10px">
+<h1 style="margin: 0; font-family: 'VT323', monospace; font-size: 34px; font-weight: 400; letter-spacing: .06em; line-height: 1">REGIONTYPE://CRT <span style="color: {{ c.dim }}">beta</span></h1>
+<div style="display: flex; gap: 18px; color: {{ c.dim }}">
+<button type="button" onClick="{{ flip }}" role="switch" aria-checked="{{ nightStr }}" style="font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-shadow: inherit"><b style="color: {{ c.phos }}">F2</b> {{ themeLabel }}</button>
+<sc-if value="{{ inGame }}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{ back }}" style="font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-shadow: inherit"><b style="color: {{ c.phos }}">Esc</b> 목록</button>
+</sc-if>
+</div>
+</div>
+
+<sc-if value="{{ inPick }}" hint-placeholder-val="{{ true }}">
+<section style="display: flex; flex-direction: column; gap: 10px">
+<p style="margin: 0">&gt; 자치구를 고르세요. 번호를 치고 Enter, 또는 줄을 누릅니다.</p>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 18px">
+<sc-for list="{{ menu }}" as="m" hint-placeholder-count="25">
+<button type="button" class="crt-menu" onClick="{{ m.pick }}" style="font: inherit; color: inherit; background: none; border: 0; padding: 4px 6px; text-align: left; cursor: pointer; white-space: nowrap; text-shadow: inherit"><span style="color: {{ c.dim }}">[{{ m.no }}]</span> {{ m.label }} <span style="color: {{ c.dim }}">·{{ m.count }}</span></button>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{ inGame }}" hint-placeholder-val="{{ false }}">
+<section style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 24px"><span>점령 {{ count }}</span><span>시간 {{ clock }}</span><span>오타 {{ miss }}</span></div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px 14px">
+<sc-for list="{{ cells }}" as="cell" hint-placeholder-count="20">
+<div style="padding: 1px 6px; white-space: nowrap; {{ cell.css }}">{{ cell.mark }} {{ cell.label }}</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<div aria-live="polite" style="display: flex; flex-direction: column; min-height: 9.5em; border-top: 1px dashed {{ c.dim }}; padding-top: 10px">
+<sc-for list="{{ log }}" as="l" hint-placeholder-count="3">
+<div style="white-space: pre-wrap; {{ l.css }}">{{ l.text }}</div>
+</sc-for>
+</div>
+
+<div style="display: flex; align-items: baseline; gap: 1ch; margin-top: auto">
+<label for="crtIn" style="white-space: nowrap">{{ path }}</label>
+<input id="crtIn" value="{{ typed }}" onChange="{{ onType }}" onKeyDown="{{ onKey }}" onCompositionEnd="{{ onCompEnd }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: {{ c.phos }}; text-shadow: inherit">
+<span class="crt-cur" aria-hidden="true" style="display: inline-block; width: .6ch; height: 1.1em; background: {{ c.phos }}"></span>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"day":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":800}}'>
+var CRT_NIGHT = { bg: '#070b08', tube: '#0c130e', phos: '#8dfca4', dim: '#5fb877', faint: '#1d3324', inv: '#07120a', miss: '#ffb36b',
+  glow: '0 0 2px rgba(141,252,164,.55), 0 0 10px rgba(141,252,164,.28)', scan: 'rgba(0,0,0,.28)', vig: 'rgba(0,0,0,.55)' };
+var CRT_DAY = { bg: '#dfe6da', tube: '#eef3ea', phos: '#173d22', dim: '#3c6648', faint: '#c9d6c6', inv: '#eef3ea', miss: '#8a3a00',
+  glow: 'none', scan: 'rgba(23,61,34,.06)', vig: 'rgba(23,61,34,.16)' };
+/* data/bus.json 의 자치구와 동 수. 판은 강서구만 담았다(동 이름과 한 줄 소개는 그 파일 그대로) */
+var CRT_GU = [['강서구',20],['양천구',18],['구로구',15],['금천구',10],['영등포구',18],['은평구',16],['마포구',16],['서대문구',14],['관악구',21],['동작구',15],['용산구',16],['종로구',17],['중구',15],['서초구',18],['강북구',13],['성북구',20],['도봉구',14],['성동구',17],['동대문구',14],['강남구',22],['노원구',19],['광진구',15],['중랑구',16],['송파구',26],['강동구',18]];
+var CRT_GANGSEO = [["공항동", "김포국제공항이 통째로 들어앉은 동. 강서구에서 가장 넓고, 두 번째로 넓은 동의 두 배다."], ["방화2동", "방화(傍花)는 '꽃 곁'이라는 뜻. 개화산에 꽃이 흐드러졌다는 데서 왔다. 강서구의 가장 북쪽이다."], ["방화3동", "한강과 개화산 사이에 낀 서북쪽 자락. 구의 경계가 강을 따라 비스듬히 지난다."], ["방화1동", "방화동 셋 중 가장 남쪽. 공항 쪽과 화곡 쪽을 잇는 길목에 놓였다."], ["가양1동", "한강을 길게 낀 강서구에서 두 번째로 넓은 동. 가양(加陽)은 옛 마을 이름에서 한 글자씩 땄다."], ["가양2동", "가양동 셋 중 가운데. 한강과 등촌동 사이의 좁은 띠를 이룬다."], ["가양3동", "한강 물가에 바짝 붙은 가양동. 강 건너는 마포와 상암이다."], ["염창동", "염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다."], ["등촌1동", "등촌(登村)은 등마루에 올라앉은 마을이라는 뜻. 셋으로 갈린 등촌동 중 가장 작다."], ["등촌3동", "등촌동 셋 중 가장 서쪽. 가양동과 화곡동 사이에 끼어 남북으로 길다."], ["발산1동", "발산(鉢山)은 승려의 밥그릇인 바리때를 엎어 놓은 모양의 산에서 왔다. 강서구에서 네 번째로 넓다."], ["화곡3동", "화곡(禾谷)은 '벼 골짜기'. 벼농사가 잘 되던 땅이었다. 화곡동 일곱 중 가장 작은 축이다."], ["우장산동", "우장산(雨裝山)은 기우제를 지내던 산. 비 올 채비를 하고 올랐다는 데서 이름이 붙었다."], ["화곡1동", "강서구의 남쪽 끝자락. 여기서 더 내려가면 양천구다."], ["화곡8동", "번호가 1·2·3·4·6·8로 띄엄띄엄한 것은 5동과 7동이 다른 동에 합쳐졌기 때문이다."], ["화곡2동", "강서구 스무 개 동 가운데 가장 작고, 가장 남쪽에 있다."], ["화곡4동", "화곡동 일곱 중 동쪽 끝. 등촌2동과 어깨를 맞대고 있다."], ["등촌2동", "등촌동 셋 중 가장 동쪽. 화곡동과 염창동 사이를 세로로 가른다."], ["화곡6동", "화곡본동과 등촌동 사이에 놓인 동. 우장산 동쪽 비탈을 낀다."], ["화곡본동", "화곡동이 갈라져 나가고 남은 본동. 맞닿은 동이 일곱으로 강서구에서 이웃이 가장 많다."]];
+function crtFold(s) { return String(s).normalize('NFC').replace(/\s+/g, ''); }
+function crtPad(n) { return String(n).padStart(2, '0'); }
+function crtClock(ms) { var s = Math.floor(ms / 1000); return crtPad(Math.floor(s / 60)) + ':' + crtPad(s % 60); }
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { screen: 'pick', typed: '', on: [], miss: 0, log: [{ k: 'plain', t: 'READY. 자치구 25곳.' }], t0: 0, t1: 0, now: 0, flipped: false };
+  }
+  componentDidMount() { this.timer = setInterval(() => { if (this.state.screen === 'game' && !this.state.t1) this.setState({ now: Date.now() }); }, 500); }
+  componentWillUnmount() { clearInterval(this.timer); }
+  say(list, k, t) { return list.concat([{ k: k, t: t }]).slice(-6); }
+  start(i) {
+    if (i !== 0) { this.setState(s => ({ log: this.say(s.log, 'err', CRT_GU[i][0] + ': 이 시안에는 강서구 판만 담았습니다.') })); return; }
+    var now = Date.now();
+    this.setState({ screen: 'game', on: [], miss: 0, t0: now, t1: 0, now: now, typed: '',
+      log: [{ k: 'plain', t: '강서구 — 동 20곳. 이름을 치고 스페이스나 Enter.' }] });
+  }
+  back() { this.setState(s => ({ screen: 'pick', typed: '', log: this.say(s.log, 'plain', '목록으로.') })); }
+  confirm(raw) {
+    var typed = crtFold(raw), s = this.state;
+    this.setState({ typed: '' });
+    if (!typed) return;
+    if (s.screen === 'pick') {
+      var n = parseInt(typed, 10);
+      if (n >= 1 && n <= CRT_GU.length && /^\d+$/.test(typed)) this.start(n - 1);
+      else this.setState({ log: this.say(s.log, 'err', '없는 번호: ' + raw.trim()) });
+      return;
+    }
+    if (s.t1) return;
+    var k = CRT_GANGSEO.findIndex(d => crtFold(d[0]) === typed);
+    if (k < 0) { this.setState({ miss: s.miss + 1, log: this.say(s.log, 'err', '없는 이름: ' + raw.trim()) }); return; }
+    if (s.on.indexOf(k) >= 0) { this.setState({ log: this.say(s.log, 'err', '이미 점령: ' + CRT_GANGSEO[k][0]) }); return; }
+    var on = s.on.concat([k]), log = this.say(this.say(s.log, 'ok', CRT_GANGSEO[k][0]), 'note', CRT_GANGSEO[k][1]), t1 = 0;
+    if (on.length === CRT_GANGSEO.length) { t1 = Date.now(); log = this.say(log, 'plain', '강서구 전부 점령. ' + crtClock(t1 - s.t0) + ', 오타 ' + s.miss + '. Esc 로 목록.'); }
+    this.setState({ on: on, log: log, t1: t1 });
+  }
+  renderVals() {
+    var s = this.state, day = !!(this.props.day ?? false) !== s.flipped, c = day ? CRT_DAY : CRT_NIGHT;
+    var self = this, game = s.screen === 'game';
+    var logCss = { ok: '', err: 'color: ' + c.miss, note: 'color: ' + c.dim + '; padding-left: 4ch', plain: '' };
+    var logPre = { ok: 'OK  ', err: 'ERR ', note: '', plain: '' };
+    return {
+      c: c, nightStr: String(!day), themeLabel: day ? '낮' : '밤',
+      inPick: !game, inGame: game,
+      path: game ? 'C:\\SEOUL\\GANGSEO>' : 'C:\\SEOUL>',
+      typed: s.typed,
+      menu: CRT_GU.map((g, i) => ({ no: crtPad(i + 1), label: g[0], count: g[1], pick: () => self.start(i) })),
+      cells: CRT_GANGSEO.map((d, i) => {
+        var on = s.on.indexOf(i) >= 0;
+        return { label: d[0], mark: on ? '[#]' : '[ ]', css: on ? 'background: ' + c.phos + '; color: ' + c.inv + '; text-shadow: none' : '' };
+      }),
+      count: crtPad(s.on.length) + '/' + crtPad(CRT_GANGSEO.length),
+      clock: crtClock(game ? ((s.t1 || s.now) - s.t0) : 0),
+      miss: s.miss,
+      log: s.log.map(l => ({ text: logPre[l.k] + l.t, css: logCss[l.k] })),
+      flip: () => self.setState(st => ({ flipped: !st.flipped })),
+      back: () => self.back(),
+      onType: e => {
+        var v = e.target.value, composing = e.nativeEvent && e.nativeEvent.isComposing;
+        if (/\s$/.test(v) && !composing) self.confirm(v); else self.setState({ typed: v });
+      },
+      onCompEnd: e => { if (/\s$/.test(e.target.value)) self.confirm(e.target.value); },
+      onKey: e => {
+        if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); self.confirm(e.target.value); }
+        else if (e.key === 'Escape' && game) { e.preventDefault(); self.back(); }
+        else if (e.key === 'F2') { e.preventDefault(); self.setState(st => ({ flipped: !st.flipped })); }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
