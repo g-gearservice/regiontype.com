@@ -67,7 +67,7 @@ a{color:#8dfca4}a:hover{color:#c4ffd0}
 
 <div style="display: flex; align-items: baseline; gap: 1ch; margin-top: auto">
 <label for="crtIn" style="white-space: nowrap">{{ path }}</label>
-<input id="crtIn" autoFocus="{{ true }}" onInput="{{ onType }}" onKeyDown="{{ onKey }}" onCompositionEnd="{{ onCompEnd }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: {{ c.phos }}; text-shadow: inherit">
+<input id="crtIn" autoFocus="{{ true }}" onInput="{{ onType }}" onKeyDown="{{ onKey }}" onKeyUp="{{ onKeyUp }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: {{ c.phos }}; text-shadow: inherit">
 <span class="crt-cur" aria-hidden="true" style="display: inline-block; width: .6ch; height: 1.1em; background: {{ c.phos }}"></span>
 </div>
 </div>
@@ -143,7 +143,8 @@ class Component extends DCLogic {
         var composing = e.nativeEvent && e.nativeEvent.isComposing;
         if (/\s$/.test(e.target.value) && !composing) self.confirm(e.target);
       },
-      onCompEnd: e => { if (/\s$/.test(e.target.value)) self.confirm(e.target); },
+      /* 런타임이 compositionend 를 잇지 않는다 — 조합이 끝난 뒤 떼는 키에서 값 끝의 공백을 한 번 더 본다 */
+      onKeyUp: e => { if (!(e.nativeEvent && e.nativeEvent.isComposing) && /\s$/.test(e.target.value)) self.confirm(e.target); },
       onKey: e => {
         if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); self.confirm(e.target); }
         else if (e.key === 'Escape' && game) { e.preventDefault(); self.back(); }
