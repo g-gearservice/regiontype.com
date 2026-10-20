@@ -486,7 +486,7 @@ const racedLogin = await takeResponse({ conflict: true });
 assert.equal(racedLogin.status, 503);
 assert.ok(!racedLogin.body.token && !racedLogin.body.isNewAccount, '경쟁 생성 실패는 가입 성공을 반환하지 않는다');
 const secondFactorLogin = await takeResponse({ existing: true, passkey: true });
-assert.equal(secondFactorLogin.body.need, 'two');
+assert.equal(secondFactorLogin.body.need, 'passkey', '패스키만 켜진 계정은 옛 화면도 알아듣게 passkey 로 답한다');
 assert.equal(secondFactorLogin.body.via.passkey, true);
 assert.equal(secondFactorLogin.body.via.mail, false, '메일 2단계를 안 켠 계정은 메일로 안 넘긴다');
 assert.ok(!secondFactorLogin.body.token && !secondFactorLogin.body.isNewAccount,

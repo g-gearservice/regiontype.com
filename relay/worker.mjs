@@ -1534,7 +1534,9 @@ async function authTake(req, env, o) {
         phone: phoneOn && !!(env.SMS?.fetch && env.SMS_KEY),
         code: (rec?.n ?? 0) > 0,
       };
-      const out = { need: 'two', challenge: id, via };
+      /* 패스키만 켜진 계정은 옛 화면이 알아듣는 need:'passkey' 로 답한다.
+         메일·전화가 켜지면 'two' 다. via 는 어느 쪽이든 붙인다. */
+      const out = { need: (mailOn || phoneOn) ? 'two' : 'passkey', challenge: id, via };
       if (via.mail) out.mailTo = maskMail(row.mail);
       return send(200, out, o);
     }
