@@ -1,5 +1,29 @@
 [
   {
+    "v": "0.11.454",
+    "date": "2026-10-19",
+    "ko": "3D 내비게이션 베타의 오른쪽 지도 단추(기울이기·전체 보기·확대·축소)가 왼쪽 패널과 같은 리퀴드 글래스가 됩니다. 작은 판은 렌즈 베벨이 면 전체를 덮으므로, 패널과 같은 불투명도와 CSS 흐림을 유지합니다.",
+    "en": "The 3D navigation beta's map buttons on the right (tilt, fit, zoom in, zoom out) now use the same liquid glass as the left panel. A lens bevel would cover these small controls, so they keep the panel's opacity and a CSS blur."
+  },
+  {
+    "v": "0.11.453",
+    "date": "2026-10-19",
+    "ko": "3D 내비게이션 베타의 위·아래 메뉴 막대가 왼쪽 패널과 같은 유리가 됩니다. 같은 물들임과 흐림으로 지도가 비칩니다.",
+    "en": "The 3D navigation beta's top and bottom menus now use the same glass as the left panel, so the map shows through with the same tint and blur."
+  },
+  {
+    "v": "0.11.452",
+    "date": "2026-10-19",
+    "ko": "홈에서 regiontype 로고를 감싼 경기장 알약을 아래로 끌어 놓으면 베타 스타일 판으로 갑니다.",
+    "en": "On the home screen, drag the stadium around the regiontype logo downward and drop it to open the beta style page."
+  },
+  {
+    "v": "0.11.451",
+    "date": "2026-10-19",
+    "ko": "베타 스타일 판이 도면처럼 바뀝니다. 격자 교차점마다 점이 찍히고, 로고 아래에 머리표가 붙고, 칸마다 번호와 이름이 늘 보입니다. 칸에 올라서거나 키보드로 고르면 그 스타일의 색(3D 내비게이션 파랑, 동네버스 노랑)이 칸을 옅게 물들이고 아랫변 막대가 차오릅니다.",
+    "en": "The beta style page now reads like a blueprint: dots mark the grid crossings, a caption sits under the logo, and every cell shows its number and name. Hovering or focusing a cell tints it in that style's color (blue for 3D Navigation, yellow for Neighborhood Bus) and fills a bar along its bottom edge."
+  },
+  {
     "v": "0.11.450",
     "date": "2026-10-19",
     "ko": "스타일 페이지 주소(beta/style/)가 열리도록 길을 이었습니다.",

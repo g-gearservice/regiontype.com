@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.50';
+const VER = '4.54';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -488,6 +488,19 @@ function beep(freq, dur = .07, type = 'sine') {
 
 /* ── 화면 ───────────────────────────────────────────── */
 function go(id) {
+  /* 홈 로고의 경기장 알약을 아래로 끌어 놓으면 베타 스타일 판으로 나간다.
+     같은 문서의 화면이 아니라 별도 문서라, 기록에 쌓고 검색·해시는 떼고 간다 */
+  if (id === 'style') {
+    const url = new URL('beta/style/', location.href);
+    url.search = '';
+    url.hash = '';
+    const href = url.href;
+    try {
+      if (window.navigation) navigation.navigate(href);
+      else location.assign(href);
+    } catch { location.assign(href); }
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id !== 'play') stop();
   /* 숨어 있던 동안에는 알약을 앉힐 자리를 잴 수 없었다 — 보이고 난 다음 프레임에 앉힌다 */
@@ -1672,45 +1685,70 @@ function makeNavFollow(spec) {
   }
   /* 누른 채 끌면 알약이 손끝 쪽으로 늘어나며 끌려간다 — iOS 탭 막대의 결. 멀어질수록
      덜 따라오는 고무줄(Apple rubber band, c .55)이라 아무리 끌어도 칸을 벗어나지 않고,
-     끄는 쪽으로 늘어난 만큼 옆으로는 살짝 홀쭉해진다. 놓으면 같은 스프링으로 돌아온다 */
+     끄는 쪽으로 늘어난 만큼 옆으로는 살짝 홀쭉해진다. 놓으면 같은 스프링으로 돌아온다.
+     로고를 감싼 경기장만 예외다 — 아래로 끌면 손가락을 그대로 따라 내려가고,
+     충분히 끌어 놓으면 스타일 판으로 간다(logoDrop) */
+  function logoDown(py) {
+    if (!pull || !spec.logoDrop || !pull.it.matches('.nav-logo')) return 0;
+    if (document.body.classList.contains('rk-intro')) return 0;
+    if (!$('#regions').classList.contains('on') || document.body.matches('.signing, .setting, .paging')) return 0;
+    const shape = spec.shape();
+    if (!shape || getComputedStyle(shape).display === 'none') return 0;
+    return Math.max(0, py - pull.y0);
+  }
   function place(still) {
     let { x, y, w, h } = base;
+    let snap = still;
     if (pull && !calm()) {
-      const rb = (d, m) => Math.sign(d) * m * (1 - 1 / (Math.abs(d) * .55 / m + 1));
-      const dx = rb(pull.px - pull.nx - x - w / 2 - pull.ox, 28);
-      const dy = rb(pull.py - pull.ny - y - h / 2 - pull.oy, 14);
-      const ax = Math.abs(dx), ay = Math.abs(dy);
-      const cx = x + w / 2 + dx * .7, cy = y + h / 2 + dy * .7;
-      w += ax * .6 - ay * .3;
-      h += ay * .6 - ax * .2;
-      x = cx - w / 2; y = cy - h / 2;
+      const down = logoDown(pull.py);
+      if (down >= 8) {
+        y += Math.min(down, 160);
+        snap = true;
+      } else {
+        const rb = (d, m) => Math.sign(d) * m * (1 - 1 / (Math.abs(d) * .55 / m + 1));
+        const dx = rb(pull.px - pull.nx - x - w / 2 - pull.ox, 28);
+        const dy = rb(pull.py - pull.ny - y - h / 2 - pull.oy, 14);
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+        const cx = x + w / 2 + dx * .7, cy = y + h / 2 + dy * .7;
+        w += ax * .6 - ay * .3;
+        h += ay * .6 - ax * .2;
+        x = cx - w / 2; y = cy - h / 2;
+      }
     }
     [[SPR.x, x], [SPR.y, y], [SPR.w, w], [SPR.h, h]].forEach(([p, v]) => {
       p.to = v;
-      if (still) { p.x = v; p.v = 0; }
+      if (snap) { p.x = v; p.v = 0; }
     });
-    if (still) paint();
+    if (snap) paint();
     else kick();
   }
   function grab(e) {
     const it = spec.target(e.target);
     if (e.button || !it || pull || document.body.classList.contains('rk-intro')) return;
     const nr = spec.nav().getBoundingClientRect(), r = it.getBoundingClientRect();
-    pull = { id: e.pointerId, it, nx: nr.left, ny: nr.top, px: e.clientX, py: e.clientY,
+    pull = { id: e.pointerId, it, nx: nr.left, ny: nr.top, px: e.clientX, py: e.clientY, y0: e.clientY,
              ox: e.clientX - r.left - r.width / 2, oy: e.clientY - r.top - r.height / 2 };
     aimTo(it);
   }
   function drag(e) {
     if (!pull || e.pointerId !== pull.id) return;
     pull.px = e.clientX; pull.py = e.clientY;
-    /* 다른 칸 위로 끌고 가면 알약이 그 칸으로 건너가 거기서 다시 늘어난다 */
+    /* 다른 칸 위로 끌고 가면 알약이 그 칸으로 건너가 거기서 다시 늘어난다.
+       아래로 잰 거리는 그 칸에 앉은 뒤부터 다시 센다 */
     const hit = spec.target(document.elementFromPoint(e.clientX, e.clientY));
-    if (hit && hit !== pull.it) { pull.it = hit; pull.ox = pull.oy = 0; aimTo(hit); }
+    if (hit && hit !== pull.it) { pull.it = hit; pull.ox = pull.oy = 0; pull.y0 = e.clientY; aimTo(hit); }
     else if (base) place(false);
   }
-  function drop(e, fine) {
+  function drop(e, fine, commit) {
     if (!pull || e.pointerId !== pull.id) return;
+    const leave = commit && logoDropGo(logoDown(e.clientY), true, false);
     pull = null;
+    if (leave) {
+      /* 끌어 놓은 뒤 따라오는 click 이 로고의 홈 링크를 누르지 않게 삼킨다 */
+      skipClick = true;
+      spec.logoDrop();
+      return;
+    }
     aimTo(fine ? spec.target(document.elementFromPoint(e.clientX, e.clientY)) : null);
   }
   function wire() {
@@ -1725,8 +1763,8 @@ function makeNavFollow(spec) {
     });
     nav.addEventListener('pointerdown', grab);
     addEventListener('pointermove', drag);
-    addEventListener('pointerup', e => drop(e, fine()));
-    addEventListener('pointercancel', e => drop(e, false));
+    addEventListener('pointerup', e => drop(e, fine(), true));
+    addEventListener('pointercancel', e => drop(e, false, false));
     nav.addEventListener('pointerleave', () => {
       if (pull) return;
       const a = document.activeElement;
@@ -1751,12 +1789,19 @@ function makeNavFollow(spec) {
   function relayout() { on = false; aimTo(aim); }
   return { aim: aimTo, wire, relayout };
 }
+/* 로고 위 경기장 알약. 이만큼(px) 아래로 끌어 놓으면 스타일 판으로 간다.
+   봇이 조르는 동안은 logoDown 이 0 을 돌려 이 판정이 열리지 않는다 */
+const LOGO_DROP = 48;
+function logoDropGo(dy, onLogo, blocked) {
+  return !blocked && !!onLogo && dy >= LOGO_DROP;
+}
 const navTop = makeNavFollow({
   nav: () => $('#regions .navbar'),
   shape: () => $('#navShape'),
   home: () => $('#regions .navbar .nav-logo .dot'),
   target: navTopTarget,
   pillAtRest: false,
+  logoDrop: () => go('style'),
 });
 const navBot = makeNavFollow({
   nav: () => $('#regions .nav-bot'),
@@ -3730,6 +3775,9 @@ if (location.search.includes('rt=1')) {
     aimNavShape(logo);
     console.assert(logo.classList.contains('is-on') && shape.classList.contains('is-pill'),
       '로고를 가리키면 알약이 로고를 감싼다');
+    console.assert(logoDropGo(48, true, false) && !logoDropGo(47, true, false)
+      && !logoDropGo(80, false, false) && !logoDropGo(80, true, true),
+      '로고 알약을 아래로 끌어 놓으면 스타일 판으로, 조금만 끌거나 다른 칸·막혀 있으면 아니다');
     aimNavShape(null);
     console.assert(!logo.classList.contains('is-on') && !shape.classList.contains('is-pill'),
       '손 떼면 로고 점 자리의 원으로 돌아간다');

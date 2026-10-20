@@ -92,16 +92,24 @@ button{transition:transform 100ms ease-out,background var(--fast) var(--ease)}
 a{white-space:nowrap}
 :focus-visible{outline:3px solid var(--tint);outline-offset:2px}
 #map{position:fixed;inset:0}
-/* WebGL 유리(#glassGL)가 뜨면 판은 제 backdrop-filter 를 내려놓는다 — 굴절한 지도가 밑에 이미 깔렸다 */
+/* WebGL 유리(#glassGL)가 뜨면 큰 판은 제 backdrop-filter 를 내려놓는다 — 굴절한 지도가 밑에 이미 깔렸다.
+   오른쪽 지도 단추(.grp)와 위·아래 넵바(.nav-top, .nav-bot)는 빼 둔다. 낮은 알약은 렌즈 베벨이
+   면 전체를 덮어 왼쪽 패널과 달라지므로, 그 패널과 같은 물들임·CSS 흐림을 유지한다 */
 :root[data-gl]{--rim:0 0 #0000}
-:root[data-gl] :is(.glass,.banner,.typing,.play-sheet){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+:root[data-gl] :is(.glass,.banner,.typing,.play-sheet):not(.grp):not(.nav-top):not(.nav-bot){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .glass{background-color:var(--mat);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-lg)}
 kbd{font:inherit;font-size:.78em;font-weight:600;background:var(--fill);border-radius:5px;padding:1px 5px}
 .maplibregl-ctrl-attrib{display:none}
 
-/* ── 사이트 넵바: 지도 위 재질 알약 ── */
-.nav-top{position:fixed;left:50%;top:var(--gap);transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:2px;
-  padding:4px 6px;border-radius:999px;box-shadow:var(--shadow-sm)}
+/* ── 사이트 넵바: 왼쪽 판과 같은 두꺼운 유리. 물들임(--mat-thick)과 서린 흐림(--blur).
+   알약이 낮아 렌즈 베벨이 면 전체를 덮으므로, WebGL 이 떠도 흐림은 걷지 않는다.
+   가운데 맞춤은 줄(.nav-row)이 한다. 알약에 transform 을 두면 Safari 가 backdrop-filter 를 버린다 ── */
+.nav-row{position:fixed;left:0;right:0;display:flex;justify-content:center;pointer-events:none}
+.nav-row.is-top{top:var(--gap);z-index:4}
+.nav-row.is-bot{bottom:var(--gap);z-index:3}
+.nav-top,.nav-bot{pointer-events:auto}
+.nav-top{display:flex;align-items:center;gap:2px;padding:4px 6px;border-radius:999px;background-color:var(--mat-thick);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-sm)}
 .nav-top a{color:var(--label);text-decoration:none;font-weight:600;font-size:15px;padding:8px 12px;border-radius:999px}
 .nav-top a:hover{background:var(--fill-2)}
 .logo{font-size:20px!important;font-weight:700!important;letter-spacing:-.02em;padding:4px 10px!important}
@@ -145,17 +153,22 @@ kbd{font:inherit;font-size:.78em;font-weight:600;background:var(--fill);border-r
 .pager button:disabled{opacity:.35;cursor:default}
 .hint{margin:0 16px 14px;font-size:12px;color:var(--label-2)}
 
-/* 지도 단추 — Apple 지도 오른쪽 위 묶음: 44pt 칸, 파란 아이콘 */
+/* 지도 단추 — Apple 지도 오른쪽 위 묶음: 44pt 칸, 파란 아이콘.
+   왼쪽 패널(.panel)과 같은 리퀴드 글래스: 두꺼운 물들임(--mat-thick)과 CSS 흐림(--blur).
+   .glass 의 얇은 물들임만 쓰면 지도 위에 거의 안 보이고, WebGL 렌즈는 이 크기에서 면 전체를 휜다 */
 .ctl{position:fixed;right:var(--gap);top:var(--gap);display:flex;flex-direction:column;gap:10px;z-index:3}
-.ctl .grp{border-radius:var(--r-ctl);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
+.ctl .grp{border-radius:var(--r-ctl);overflow:hidden;display:flex;flex-direction:column;
+  background-color:var(--mat-thick);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  box-shadow:var(--shadow-sm)}
 .ctl button{width:44px;height:44px;border:0;background:none;display:flex;align-items:center;justify-content:center;color:var(--tint)}
 .ctl button:hover{background:var(--fill-2)}
 .ctl button[aria-pressed=true]{background:var(--tint);color:var(--on-tint)}
 .ctl .grp button+button{box-shadow:inset 0 .5px 0 var(--sep)}
 .ctl svg{width:20px;height:20px}
 
-/* 아래 막대 */
-.nav-bot{position:fixed;left:50%;bottom:var(--gap);transform:translateX(-50%);z-index:3;display:flex;gap:4px;padding:5px;border-radius:999px;box-shadow:var(--shadow-sm)}
+/* 아래 막대 — 위 넵바와 같은 유리. 자리는 .nav-row.is-bot */
+.nav-bot{display:flex;gap:4px;padding:5px;border-radius:999px;
+  background-color:var(--mat-thick);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow-sm)}
 .nav-bot a,.nav-bot button{border:0;background:none;padding:10px 18px;border-radius:999px;color:var(--label);text-decoration:none;font-size:17px;font-weight:600}
 .nav-bot a:hover{background:var(--fill-2)}
 .nav-bot .is-play{background:color-mix(in srgb,var(--go) var(--tintmix),transparent);color:#fff;font-weight:700;padding:10px 26px}
@@ -307,7 +320,7 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
 .done h2{margin:0 0 6px;font-size:28px;font-weight:700;letter-spacing:-.02em}
 .done p{margin:0;color:var(--label-2);font-variant-numeric:tabular-nums}
 .done .pill{margin:20px auto 0;width:100%;justify-content:center;background:color-mix(in srgb,var(--tint) var(--tintmix),transparent);color:var(--on-tint);font-weight:700;box-shadow:none}
-.attrib{position:fixed;right:var(--gap);bottom:4px;margin:0;font-size:10px;color:var(--label-2);z-index:2}
+.attrib{position:fixed;right:var(--gap);bottom:4px;margin:0;font-size:11px;color:var(--label-2);z-index:2}
 .attrib a{color:inherit}
 .toast{position:fixed;left:50%;top:68px;transform:translateX(-50%);z-index:5;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;display:none}
 .toast.on{display:block}
@@ -321,7 +334,7 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
   .panel::before{content:'';width:36px;height:5px;border-radius:3px;background:var(--label-3);margin:6px auto 0;flex:none}
   .panel-head{padding-top:8px}
   .ctl{top:60px}
-  .nav-bot{bottom:calc(var(--gap) + env(safe-area-inset-bottom))}
+  .nav-row.is-bot{bottom:calc(var(--gap) + env(safe-area-inset-bottom))}
   .nav-bot a,.nav-bot button{font-size:16px;padding:10px 16px}
   .hint{display:none}
   .banner .dist{font-size:30px}.banner .arrow{width:44px;height:44px}.banner .street{font-size:20px}
@@ -353,13 +366,13 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
 <body>
 <div id="map" role="region" aria-label="지도"></div>
 
-<nav class="nav-top glass home" aria-label="사이트 메뉴">
+<div class="nav-row is-top"><nav class="nav-top glass home" aria-label="사이트 메뉴">
   <a class="side" href="../../about/">소개</a>
   <a class="side" href="../../#ranking">순위</a>
   <a class="logo" href="../../" aria-label="regiontype 홈">region<span>type</span><i aria-hidden="true"></i></a>
   <span class="beta">BETA</span>
   <a class="side" href="../../community/">커뮤니티</a>
-</nav>
+</nav></div>
 
 <section class="panel glass home" aria-labelledby="ttl">
   <div class="panel-head">
@@ -386,11 +399,11 @@ body.driving .backdrop-blur.bot.drive{display:grid!important}
   </div>
 </div>
 
-<nav class="nav-bot glass home" aria-label="놀이 메뉴">
+<div class="nav-row is-bot"><nav class="nav-bot glass home" aria-label="놀이 메뉴">
   <a href="settings/">설정</a>
   <button type="button" class="is-play" id="play">출발</button>
   <a href="../../signin/">로그인</a>
-</nav>
+</nav></div>
 
 <!-- 운전 -->
 <section class="banner drive" aria-live="polite" aria-label="길 안내">
@@ -469,7 +482,8 @@ const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.o
    DOM 만 바뀔 때는 받아 둔 텍스처로 다시 그린다 */
 (()=>{
   const root=document.documentElement,k=NAV.lens/100;
-  const els=[...document.querySelectorAll('.glass,.banner,.typing,.play-sheet')].filter(el=>getComputedStyle(el).backdropFilter!=='none');
+  /* .grp 와 위·아래 넵바는 CSS 흐림을 유지하므로 렌즈 패스에서 뺀다 */
+  const els=[...document.querySelectorAll('.glass,.banner,.typing,.play-sheet')].filter(el=>!el.matches('.grp,.nav-top,.nav-bot')&&getComputedStyle(el).backdropFilter!=='none');
   const cv=document.createElement('canvas'),gl=k>0&&!matchMedia('(prefers-reduced-transparency:reduce),(prefers-contrast:more)').matches
     &&cv.getContext('webgl',{premultipliedAlpha:true,antialias:false});
   /* 굴절을 못 그리면 맑은 판 위 글자가 안 읽힌다 — 서린 유리(--blur)로 물러나고 물들임도 .55 밑으로 내리지 않는다 */
