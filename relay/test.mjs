@@ -436,7 +436,7 @@ console.log('auth self-check done');
 /* 실제 /auth/take 응답을 검사한다. D1 경계만 대역으로 바꿔 최초 생성과
    재로그인·공급자 연결·경쟁 생성 실패를 구분한다. */
 async function takeResponse({ existing = false, linked = false, changes = 1,
-  conflict = false, passkey = false } = {}) {
+  conflict = false, passkey = false, intro = true } = {}) {
   const DB = {
     prepare(sql) {
       return {
@@ -452,6 +452,7 @@ async function takeResponse({ existing = false, linked = false, changes = 1,
           if (sql.startsWith('select mail, phone from twofa')) return null;
           if (sql.startsWith('select 1 as n from phonebox')) return null;
           if (sql.startsWith('select count(*) as n from recovery')) return null;
+          if (sql.startsWith('select 1 as n from intro')) return intro ? { n: 1 } : null;
           throw new Error(`Unexpected query: ${sql}`);
         },
         async run() {
@@ -491,6 +492,9 @@ assert.equal(secondFactorLogin.body.via.passkey, true);
 assert.equal(secondFactorLogin.body.via.mail, false, '메일 2단계를 안 켠 계정은 메일로 안 넘긴다');
 assert.ok(!secondFactorLogin.body.token && !secondFactorLogin.body.isNewAccount,
   '2단계 확인 전에는 가입 성공이나 세션을 반환하지 않는다');
+const unfinished = await takeResponse({ existing: true, passkey: true, intro: false });
+assert.ok(unfinished.body.token, '안내를 끝내기 전에는 패스키가 있어도 세션을 준다');
+assert.equal(unfinished.body.need, undefined);
 
 /* ── SSO 2단계 (Google·Apple → 패스키·복구 코드) ────────────────
    authCb·authTake·peekTwo·issueRecoveryCodes 는 worker.mjs 가 내보내지 않고,
@@ -1617,6 +1621,7 @@ console.log('security rule self-check done');
   db.prepare('insert into user (id, mail, at) values (?, null, ?)').run(bare, Date.now());
   db.prepare("insert into sso (provider, sub, who, at) values ('google', ?, ?, ?)").run('bare-sub', bare, Date.now());
   db.prepare('insert into twofa (who, mail, phone, at) values (?, 1, 0, ?)').run(bare, Date.now());
+  db.prepare('insert into intro (who, platform, medium, nps, at) values (?, ?, ?, ?, ?)').run(bare, '', '', null, Date.now());
   const b4 = 'bind-closed', tag4 = 'x'.repeat(43);
   const id4 = b64u(await sha(b64u(await sha(b4)) + tag4));
   db.prepare('insert into pending (id, kind, who, until, provider, sub) values (?, ?, ?, ?, ?, ?)').run(id4, 'take', bare, Date.now() + 60_000, 'google', 'bare-sub');

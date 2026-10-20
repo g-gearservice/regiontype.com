@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.460",
+    "date": "2026-10-21",
+    "ko": "가입 안내를 끝내지 않았으면 다시 로그인해도 안내로 돌아갑니다. 안내를 마치기 전에는 패스키를 요구하지 않습니다.",
+    "en": "An unfinished signup returns to the welcome steps on the next sign-in. A passkey is not required until those steps are finished."
+  },
+  {
     "v": "0.11.459",
     "date": "2026-10-21",
     "ko": "가입할 때 보조 메일 단계의 설명을 뺐습니다. 개인정보 처리방침 단추만 남겼습니다.",

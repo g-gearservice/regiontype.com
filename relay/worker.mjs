@@ -1520,12 +1520,15 @@ async function authTake(req, env, o) {
     const tf = await env.DB.prepare('select mail, phone from twofa where who = ?').bind(who).first();
     const hand = await env.DB.prepare('select 1 as n from phonebox where who = ?').bind(who).first();
     const rec = await env.DB.prepare('select count(*) as n from recovery where who = ?').bind(who).first();
-    /* 켜 둔 수단이 하나라도 있으면 토큰을 주지 않는다. 이번 로그인에 그 수단을
-       쓸 수 없어도(메일이 안 실렸거나 문자 설정이 없어도) 여기서 통과시키지 않는다. */
+    const begun = await env.DB.prepare('select 1 as n from intro where who = ?').bind(who).first();
+    /* 가입 안내를 끝내기 전에는 2단계를 요구하지 않는다. 중간에 나갔다가
+       다시 들어와도 패스키에 막히지 않고 안내로 돌아간다. */
     const phoneOn = tf?.phone === 1 && !!hand;
     const mailOn = tf?.mail === 1;
-    if (has || phoneOn || mailOn) {
-      /* 같은 id 를 그대로 이어 쓴다 — /auth/log·/auth/code·/auth/two 가 b·t 로 되짚는다.
+    if (begun && (has || phoneOn || mailOn)) {
+      /* 켜 둔 수단이 하나라도 있으면 토큰을 주지 않는다. 이번 로그인에 그 수단을
+         쓸 수 없어도 여기서 통과시키지 않는다.
+         같은 id 를 그대로 이어 쓴다 — /auth/log·/auth/code·/auth/two 가 b·t 로 되짚는다.
          mail 은 이번 로그인의 Google 확인 주소다. user 로는 옮기지 않는다. */
       await challenge(env, 'two', who, { id, mail: row.mail || null });
       const via = {
