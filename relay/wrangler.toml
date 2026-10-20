@@ -123,7 +123,7 @@ namespace_id = "1010"
   period = 60
 
 [[routes]]
-pattern = "g.gearservicevanguard.com"
+pattern = "regiontype.gearservicevanguard.com"
 zone_name = "gearservicevanguard.com"
 custom_domain = true
 

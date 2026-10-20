@@ -3471,7 +3471,7 @@ const NAME_KEY = 'rt.name';
    비밀번호는 안 받는다. 1차는 Google·Apple(SSO)이 하고, 패스키는 계정에 걸어
    둔 사람만 얹는 2단계다 — 어느 쪽 비밀도 우리가 쥐지 않는다.
    토큰을 쿠키가 아니라 localStorage 에 두는 건 중계기가 사이트와 다른 도메인
-   (g.gearservicevanguard.com)에 있어서다. 남의 도메인 쿠키는 브라우저가
+   (regiontype.gearservicevanguard.com)에 있어서다. 남의 도메인 쿠키는 브라우저가
    점점 더 막는다 — 도메인이 갈린 이상 HttpOnly 쿠키로 올릴 길은 닫혔다. */
 const TOKEN_KEY = 'rt.token';
 const token = () => { try { return localStorage.getItem(TOKEN_KEY) || '' } catch { return '' } };

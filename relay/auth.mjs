@@ -52,7 +52,7 @@ export async function open(key, token) {
 }
 
 /* Authorization: Bearer <토큰>.
-   쿠키를 안 쓰는 이유는 중계기가 사이트와 아예 다른 도메인(g.gearservicevanguard.com
+   쿠키를 안 쓰는 이유는 중계기가 사이트와 아예 다른 도메인(regiontype.gearservicevanguard.com
    ↔ regiontype.com)에 있어서다 — 남의 도메인 쿠키는 브라우저가 점점 더 막는다.
    헤더로 들고 다니면 CSRF 도 없다.
    도메인이 갈린 이상 HttpOnly 쿠키로 올릴 길은 닫혔다. 그 길을 원하면 중계기를
