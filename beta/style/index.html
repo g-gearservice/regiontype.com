@@ -7,16 +7,30 @@
 <meta name="robots" content="noindex">
 <link rel="icon" href="../../favicon/favicon.svg">
 <!-- 홈의 비트맵 말(색 토큰)을 그대로 입는다 — 옮겨 적지 않는다 -->
-<link rel="stylesheet" href="../../style.css?v=4.42">
+<link rel="stylesheet" href="../../style.css?v=4.50">
 <style>
 /* 홈처럼 한 장의 격자 판. 로고 하나가 루트로 들어가는 문이고, 그 아래 칸마다 우리가 만든
-   스타일 하나가 대표 기호로 선다 */
-body{--deco-cw:min(152px,calc(100vw / 3));--deco-ch:var(--deco-cw);overflow:auto;min-height:100%;
+   스타일 하나가 대표 기호로 선다. 판은 도면처럼 읽힌다 — 격자 교차점마다 작은 십자,
+   칸마다 번호·이름이 붙는다 */
+:root{--deco-cw:min(152px,calc(100vw / 3));--deco-ch:var(--deco-cw);
+  /* 이 판에서만 쓰는 말. 바탕색은 style.css 것을 그대로 받고, 여기서는 섞기만 한다 */
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --tick:color-mix(in srgb,var(--ink) 30%,transparent);     /* 격자 교차점의 점 */
+  /* 칸마다 그 스타일의 서명색. 3D 내비게이션은 시스템 파랑, 동네버스는 노선 노랑 —
+     각 베타가 쓰는 값이다. 그래픽(막대·물든 바탕)에만 쓰고 글자에는 쓰지 않는다 */
+  --sig-nav:#007aff; --sig-bus:#f6c037;
+  --sheen:linear-gradient(118deg,rgba(255,255,255,.30),rgba(255,255,255,0) 34%);   /* 홈과 같은 대각 빛 */
   background:
+    /* 교차점 점: 반 칸 밀어 칸 한가운데 그린 점이 교차점에 앉는다 */
+    radial-gradient(circle,var(--tick) 1.6px,transparent 2.2px) calc(var(--deco-cw) / -2) calc(var(--deco-ch) / -2)/var(--deco-cw) var(--deco-ch),
     linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/var(--deco-cw) var(--deco-ch),
     linear-gradient(0deg,var(--grid) 1px,transparent 1px) 0 0/var(--deco-cw) var(--deco-ch),
+    var(--sheen) fixed no-repeat,
     var(--bg)}
+:root[data-night]{--tick:color-mix(in srgb,var(--ink) 24%,transparent);--sig-nav:#0a84ff;--sheen:none}
+body{overflow:auto;min-height:100%;margin:0;background:none}
 .wall{position:relative;height:calc(var(--deco-ch) * 4)}
+
 /* 로고 — 홈 넵바 로고와 같은 꼴(굵은 region · 가는 type · 주황 점) */
 .home{position:absolute;left:var(--deco-cw);top:var(--deco-ch);height:var(--deco-ch);display:flex;align-items:center;
   font-size:min(56px,calc(var(--deco-cw) * .37));font-weight:800;letter-spacing:-.03em;color:var(--ink);text-decoration:none;border-radius:12px}
@@ -24,24 +38,48 @@ body{--deco-cw:min(152px,calc(100vw / 3));--deco-ch:var(--deco-cw);overflow:auto
 .home i{display:inline-block;width:.16em;height:.16em;border-radius:50%;background:var(--accent);margin:0 0 .9em .04em}
 .home:hover{color:var(--accent-text)}
 .home:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
-/* 기호 칸. 둥근 판 없이 격자 한 칸에 그 스타일의 대표 기호 하나만 선다 — 3D 내비게이션은 정육각형,
-   동네버스는 정류장 도넛(검은 속 · 흰 테). 이름은 aria-label 과 title 로 붙는다 */
+/* 머리표 — 로고 칸 아랫변에 붙는 도면 제목. 주황 짧은 막대 하나가 로고 점과 운을 맞춘다 */
+.kicker{position:absolute;left:var(--deco-cw);top:calc(var(--deco-ch) * 2 - 26px);margin:0;padding-left:20px;
+  font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+.kicker::before{content:"";position:absolute;left:0;top:50%;width:12px;height:3px;margin-top:-1.5px;background:var(--accent)}
+
+/* 기호 칸. 둥근 판 없이 격자 한 칸에 그 스타일의 대표 기호 하나 — 3D 내비게이션은 정육각형,
+   동네버스는 정류장 도넛(검은 속 · 흰 테). 왼위 모서리에 번호, 아래에 이름이 늘 보인다.
+   올라서면(포커스도) 서명색이 칸을 옅게 물들이고 아랫변 막대가 차오른다 — 색만으로
+   말하지 않도록 이름 글자는 처음부터 있다 */
 .cell{position:absolute;left:calc(var(--deco-cw) * var(--btn-col));top:calc(var(--deco-ch) * var(--btn-row));
-  width:var(--deco-cw);height:var(--deco-ch);display:flex;align-items:center;justify-content:center;color:var(--ink)}
-.cell svg{width:46%;height:46%;overflow:visible;transition:transform var(--fast) var(--ease-out)}
-.cell:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
-@media (hover:hover) and (pointer:fine){ .cell:hover svg{transform:scale(1.12)} }
-@media (prefers-reduced-motion:reduce){.cell svg{transition:none}}
+  width:var(--deco-cw);height:var(--deco-ch);display:grid;grid-template-rows:1fr auto;justify-items:center;
+  padding:18px 8px 14px;box-sizing:border-box;color:var(--ink);text-decoration:none;
+  transition:background-color var(--fast) var(--ease-out);
+  animation:cell-in .5s var(--ease-out) both;animation-delay:calc(var(--btn-col) * 70ms)}
+.cell svg{align-self:center;width:42%;height:auto;overflow:visible;transition:transform var(--fast) var(--ease-out)}
+.cell b{font-size:13px;font-weight:700;letter-spacing:-.01em;line-height:1.2;text-align:center}
+.cell::before{content:attr(data-n);position:absolute;left:8px;top:7px;font:500 10px/1 var(--mono);letter-spacing:.08em;color:var(--ink-soft)}
+.cell::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--sig);
+  transform:scaleX(0);transform-origin:left;transition:transform var(--slow) var(--ease-out)}
+.cell:focus-visible{background:color-mix(in srgb,var(--sig) 14%,transparent);outline:3px solid var(--accent);outline-offset:-3px}
+.cell:focus-visible::after{transform:scaleX(1)}
+/* 손가락은 올라섬이 끈적하게 남으니 마우스에서만 */
+@media (hover:hover) and (pointer:fine){
+  .cell:hover{background:color-mix(in srgb,var(--sig) 14%,transparent)}
+  .cell:hover::after{transform:scaleX(1)}
+  .cell:hover svg{transform:scale(1.12)}
+}
+@keyframes cell-in{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.cell,.cell svg,.cell::after{transition:none;animation:none}}
 </style>
 </head>
 <body>
 <main class="wall">
   <a class="home" href="../../" aria-label="regiontype 홈">region<span>type</span><i aria-hidden="true"></i></a>
+  <p class="kicker">beta · style index</p>
   <nav aria-label="스타일">
-    <a class="cell" href="../3dnavigation/" style="--btn-col:1;--btn-row:2" aria-label="3D 내비게이션" title="3D 내비게이션">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4L89.84 27V73L50 96L10.16 73V27Z" fill="currentColor"/></svg></a>
-    <a class="cell" href="../bus/" style="--btn-col:2;--btn-row:2" aria-label="동네버스" title="동네버스">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="38" fill="#000" stroke="#fff" stroke-width="20"/></svg></a>
+    <a class="cell" href="../3dnavigation/" style="--btn-col:1;--btn-row:2;--sig:var(--sig-nav)" data-n="01">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4L89.84 27V73L50 96L10.16 73V27Z" fill="currentColor"/></svg>
+      <b>3D 내비게이션</b></a>
+    <a class="cell" href="../bus/" style="--btn-col:2;--btn-row:2;--sig:var(--sig-bus)" data-n="02">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="38" fill="#000" stroke="#fff" stroke-width="20"/></svg>
+      <b>동네버스</b></a>
   </nav>
 </main>
 <script>
