@@ -16,6 +16,10 @@ directory = "."
 # Keep URLs exactly as the files are named — hreflang and canonical links use .html
 html_handling = "none"
 
+# Pull-request builds run `wrangler preview`. That command stops unless this
+# block exists. It stays empty: assets and routes remain above.
+[previews]
+
 # www owns its DNS record: Cloudflare made a Worker record for it, so the hostname is the
 # Worker's and nothing else can answer there.
 [[routes]]
