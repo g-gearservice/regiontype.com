@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.35">
+<link rel="stylesheet" href="style.css?v=4.55">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -334,13 +334,46 @@
     <!-- 2단계 확인 — SSO 를 넘은 뒤 패스키(또는 복구 코드)를 한 번 더 묻는다 -->
     <div class="si-view" id="vTwo" hidden>
       <h2 class="si-head" data-i18n="twoStepHead">2단계 인증</h2>
-      <p class="si-lead" data-i18n="passkeyHow">이 기기의 지문·얼굴·PIN 으로 들어옵니다.</p>
+      <p class="si-lead" data-i18n="twoHow">아래 방법 중 하나로 본인임을 확인합니다.</p>
       <div class="si-btns">
-        <button type="button" id="twoGo" data-i18n="passkeyGo">패스키로 로그인</button>
-        <button type="button" id="twoMail" data-i18n="mailAuth">이메일로 인증</button>
-        <button type="button" id="twoPhone" data-i18n="phoneAuth">전화번호로 인증</button>
+        <button type="button" id="twoGo" data-i18n="passkeyGo" hidden>패스키로 로그인</button>
+        <button type="button" id="twoMail" data-i18n="twoMailGo" hidden>이메일로 코드 받기</button>
+        <button type="button" id="twoPhone" data-i18n="twoPhoneGo" hidden>문자로 코드 받기</button>
         <button type="button" id="twoCode" data-i18n="useCode" hidden>복구 코드 쓰기</button>
       </div>
+      <p class="si-note" id="twoMailTo" hidden></p>
+      <form class="si-code" id="twoPhoneForm" hidden>
+        <label for="twoPhoneIn" data-i18n="twoPhoneLabel">가입할 때 확인한 휴대폰 번호</label>
+        <div>
+          <input id="twoPhoneIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
+          <button type="submit" id="twoPhoneSend" data-i18n="twoSend">코드 보내기</button>
+        </div>
+      </form>
+      <form class="si-code" id="twoOtpForm" hidden novalidate>
+        <label for="twoOtpIn" data-i18n="twoOtpLabel">확인 코드</label>
+        <div>
+          <input id="twoOtpIn" maxlength="16" required pattern="[A-Za-z ]{8,16}" inputmode="text"
+                 autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="twoOtpHelp">
+          <button type="submit" id="twoOtpGo" data-i18n="codeSubmit">인증하기</button>
+        </div>
+        <span id="twoOtpHelp" data-i18n="otpHelp">영문 대소문자 8자리 · 대소문자를 구분합니다</span>
+        <button type="button" class="si-sub" id="twoResend" data-i18n="twoResend">코드 다시 보내기</button>
+      </form>
+      <form class="si-code" id="codeForm" hidden>
+        <label for="codeIn" data-i18n="useCode">복구 코드 쓰기</label>
+        <div>
+          <input id="codeIn" maxlength="10" required pattern="[A-Za-z0-9]{10}"
+                 autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
+          <button type="submit" data-i18n="codeSubmit">인증하기</button>
+        </div>
+      </form>
+      <details class="si-lost" id="twoLost">
+        <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
+        <p data-i18n="lostAllHow">미리 확인해 둔 보조 메일이나 휴대폰으로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소·번호로는 보내지 않습니다.</p>
+        <div class="si-lost-btns">
+          <button type="button" class="si-sub" id="twoRescueMail" data-i18n="rescueMailGo">보조 메일로 새 복구 코드 받기</button>
+          <button type="button" class="si-sub" id="twoRescuePhone" data-i18n="rescuePhoneGo">휴대폰으로 새 복구 코드 받기</button>
+        </div>
       <form class="si-code" id="rescueForm" hidden>
         <p class="si-notice"><span data-i18n="mailNotice">메일 주소를 받습니다. 이유는 본인 확인과 계정 복구입니다. 확인된 주소라면 recover@regiontype.com 이 일회용 코드를 평문으로 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 주소는 공개 프로필과 공개 이슈에 보이지 않고, 서버에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
         <label for="rescueIn" data-i18n="rescueLabel">확인한 메일</label>
@@ -357,17 +390,6 @@
           <button type="submit" data-i18n="phoneSend">확인 코드 보내기</button>
         </div>
       </form>
-      <form class="si-code" id="codeForm" hidden>
-        <label for="codeIn" data-i18n="useCode">복구 코드 쓰기</label>
-        <div>
-          <input id="codeIn" maxlength="10" required pattern="[A-Za-z0-9]{10}"
-                 autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
-          <button type="submit" data-i18n="codeSubmit">인증하기</button>
-        </div>
-      </form>
-      <details class="si-lost">
-        <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
-        <p data-i18n="lostAllHow">미리 확인해 둔 메일로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소로는 보내지 않습니다.</p>
       </details>
     </div>
 
@@ -481,52 +503,60 @@
             </section>
             <section class="profile-section">
               <h3 class="profile-label" data-i18n="secTwoHead">이중 인증 및 보안</h3>
-              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" id="securityTwoText">상태 확인 중</p></div><span class="security-two-state"><span class="security-badge" id="securityTwo">확인 중</span><button type="button" id="securityTwoSwitch" class="profile-switch" data-i18n-aria="secTwoAria" aria-label="2단계 인증 상태 (패스키 추가로 켜기)" aria-pressed="false" disabled></button></span></div>
+              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" id="securityTwoText">상태 확인 중</p></div><span class="security-two-state"><span class="security-badge" id="securityTwo">확인 중</span><button type="button" id="securityTwoSwitch" class="profile-switch" data-i18n-aria="secTwoAria" aria-label="2단계 인증 상태 (패스키 추가 또는 이메일·휴대폰 인증으로 켜기)" aria-pressed="false" disabled></button></span></div>
+              <div class="profile-row"><div><strong data-i18n="secMail2fa">이메일 인증</strong><p class="profile-help" id="secMailHelp" data-i18n="secMail2faHow">로그인한 Google 계정 메일로 확인 코드를 보냅니다.</p></div><span class="security-two-state"><span class="security-flag" id="secMailFlag" aria-hidden="true"></span><button type="button" id="secMailSwitch" class="profile-switch" data-i18n-aria="secMail2fa" aria-label="이메일 인증" aria-describedby="secMailHelp" aria-pressed="false" disabled></button></span></div>
+              <div class="profile-row"><div><strong data-i18n="secPhone2fa">휴대폰 인증</strong><p class="profile-help" id="secPhoneHelp" data-i18n="secPhone2faHow">확인된 전화번호로 영문 대소문자 8자리 코드를 문자로 보냅니다.</p></div><span class="security-two-state"><span class="security-flag" id="secPhoneFlag" aria-hidden="true"></span><button type="button" id="secPhoneSwitch" class="profile-switch" data-i18n-aria="secPhone2fa" aria-label="휴대폰 인증" aria-describedby="secPhoneHelp" aria-pressed="false" disabled></button></span></div>
               <div class="profile-row"><div><strong data-i18n="secAlert">새로운 로그인 알림</strong><p class="profile-help" data-i18n="secAlertSoon">이메일 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" data-i18n-aria="secAlertAria" aria-label="새로운 로그인 알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
               </section>
+            <section class="profile-section" aria-labelledby="securityPhoneTitle">
+              <h3 class="profile-label" id="securityPhoneTitle" data-i18n="phoneHead">휴대폰 인증</h3>
+              <p class="profile-help" id="phoneStatus"></p>
+              <p class="profile-help" data-i18n="phoneHow">확인한 번호로 로그인 2단계 인증 문자를 받고, 새 복구 코드도 받을 수 있습니다. 문자로 받은 영문 대소문자 8자리 코드를 적어야 확인됩니다. 문자를 보내는 설정이 없으면 보내지 않습니다.</p>
+              <p class="si-notice"><span data-i18n="phoneNotice">전화번호를 받습니다. 이유는 로그인 2단계 인증과 계정 복구입니다. 문자는 보내는 쪽이 있을 때만 나가며, 없으면 보내지 않고 실패로 끝냅니다. 복구 메일로 문자를 대신하지 않습니다. 나갈 때는 일회용 코드이고, 그 코드와 확인 요청은 5분 동안만 유효합니다. 번호는 공개 프로필과 공개 이슈에 보이지 않고, 확인 뒤에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+              <form class="si-code" id="phoneForm">
+                <label for="phoneIn" data-i18n="phoneLabel">전화번호</label>
+                <div>
+                  <input id="phoneIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
+                  <button type="submit" data-i18n="phoneSend">확인 코드 보내기</button>
+                </div>
+              </form>
+              <form class="si-code" id="phoneConfirm" hidden novalidate>
+                <label for="phoneCode" data-i18n="mailCode">확인 코드</label>
+                <div>
+                  <input id="phoneCode" maxlength="16" required pattern="[A-Za-z ]{8,16}" inputmode="text" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="phoneCodeHelp">
+                  <button type="submit" data-i18n="mailConfirm">확인</button>
+                </div>
+                <span id="phoneCodeHelp" data-i18n="otpHelp">영문 대소문자 8자리 · 대소문자를 구분합니다</span>
+              </form>
+              <p class="si-say" id="phoneSay" role="status" aria-live="polite"></p>
+            </section>
+            <section class="profile-section" aria-labelledby="securityMailTitle">
+              <h3 class="profile-label" id="securityMailTitle" data-i18n="mailHead">보조 메일</h3>
+              <p class="profile-help" id="mailStatus"></p>
+              <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보냅니다. 메일로 받은 영문 대소문자 8자리 코드를 적어야 확인됩니다.</p>
+              <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery(계정 복구)에만 씁니다. 로그인 2단계 인증에는 쓰지 않습니다. 확인된 주소라면 recover@regiontype.com 이 일회용 코드를 평문으로 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 주소는 공개 프로필과 공개 이슈에 보이지 않고, 서버에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+              <form class="si-code" id="mailForm">
+                <label for="mailIn" data-i18n="mailLabel">메일</label>
+                <div>
+                  <input id="mailIn" type="email" maxlength="254" required autocomplete="email" spellcheck="false" autocapitalize="off">
+                  <button type="submit" data-i18n="mailSend">확인 코드 보내기</button>
+                </div>
+              </form>
+              <form class="si-code" id="mailConfirm" hidden novalidate>
+                <label for="mailCode" data-i18n="mailCode">확인 코드</label>
+                <div>
+                  <input id="mailCode" maxlength="16" required pattern="[A-Za-z ]{8,16}" inputmode="text" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="mailCodeHelp">
+                  <button type="submit" data-i18n="mailConfirm">확인</button>
+                </div>
+                <span id="mailCodeHelp" data-i18n="otpHelp">영문 대소문자 8자리 · 대소문자를 구분합니다</span>
+              </form>
+              <p class="si-say" id="mailSay" role="status" aria-live="polite"></p>
+            </section>
             <div class="profile-actions security-session-actions"><button type="button" class="profile-button" disabled aria-describedby="securitySessionHelp" data-i18n="secOutAll">모든 기기에서 로그아웃</button><button type="button" class="profile-button destructive" disabled aria-describedby="securitySessionHelp" data-i18n="secKillAll">모든 세션 강제 종료</button></div>
             <p class="profile-help" id="securitySessionHelp" data-i18n="secSessionSoon">전체 기기·세션 종료는 아직 지원하지 않습니다.</p>
             <details class="security-recovery"><summary data-i18n="secRecovery">복구 코드 및 현재 브라우저</summary>
               <div class="profile-row"><div><strong data-i18n="secCodes">복구 코드</strong><p class="profile-help" id="acctCodes" hidden></p></div><button type="button" class="profile-button" id="acctCodesNew" data-i18n="secCodesNew">코드 새로 만들기</button></div>
               <p class="profile-help" data-i18n="secCodesWarn">새 코드를 만들면 이전 복구 코드는 모두 사용할 수 없습니다.</p>
-              <section class="profile-section">
-                <h3 class="profile-label" data-i18n="mailHead">복구 메일</h3>
-                <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보냅니다. 메일로 받은 코드를 적어야 확인됩니다.</p>
-                <p class="si-notice"><span data-i18n="mailNotice">메일 주소를 받습니다. 이유는 본인 확인과 계정 복구입니다. 확인된 주소라면 recover@regiontype.com 이 일회용 코드를 평문으로 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 주소는 공개 프로필과 공개 이슈에 보이지 않고, 서버에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
-                <form class="si-code" id="mailForm">
-                  <label for="mailIn" data-i18n="mailLabel">메일</label>
-                  <div>
-                    <input id="mailIn" type="email" maxlength="254" required autocomplete="email" spellcheck="false" autocapitalize="off">
-                    <button type="submit" data-i18n="mailSend">확인 코드 보내기</button>
-                  </div>
-                </form>
-                <form class="si-code" id="mailConfirm" hidden>
-                  <label for="mailCode" data-i18n="mailCode">확인 코드</label>
-                  <div>
-                    <input id="mailCode" maxlength="10" required autocomplete="one-time-code" spellcheck="false" autocapitalize="off">
-                    <button type="submit" data-i18n="mailConfirm">확인</button>
-                  </div>
-                </form>
-                <p class="si-say" id="mailSay" role="status" aria-live="polite"></p>
-                <h3 class="profile-label" data-i18n="phoneHead">복구 전화</h3>
-                <p class="profile-help" data-i18n="phoneHow">이 번호로만 새 복구 코드를 보냅니다. 문자로 받은 코드를 적어야 확인됩니다. 문자를 보내는 설정이 없으면 보내지 않습니다.</p>
-                <p class="si-notice"><span data-i18n="phoneNotice">전화번호를 받습니다. 이유는 본인 확인과 계정 복구입니다. 문자는 보내는 쪽이 있을 때만 나가며, 없으면 보내지 않고 실패로 끝냅니다. 복구 메일로 문자를 대신하지 않습니다. 나갈 때는 일회용 코드이고, 그 코드와 확인 요청은 5분 동안만 유효합니다. 번호는 공개 프로필과 공개 이슈에 보이지 않고, 확인 뒤에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
-                <form class="si-code" id="phoneForm">
-                  <label for="phoneIn" data-i18n="phoneLabel">전화번호</label>
-                  <div>
-                    <input id="phoneIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
-                    <button type="submit" data-i18n="phoneSend">확인 코드 보내기</button>
-                  </div>
-                </form>
-                <form class="si-code" id="phoneConfirm" hidden>
-                  <label for="phoneCode" data-i18n="mailCode">확인 코드</label>
-                  <div>
-                    <input id="phoneCode" maxlength="10" required autocomplete="one-time-code" spellcheck="false" autocapitalize="off">
-                    <button type="submit" data-i18n="mailConfirm">확인</button>
-                  </div>
-                </form>
-                <p class="si-say" id="phoneSay" role="status" aria-live="polite"></p>
-              </section>
               <details class="security-recovery"><summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary><p data-i18n="lostAllHow">미리 확인해 둔 메일로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소로는 보내지 않습니다.</p></details>
               <div class="profile-actions"><button type="button" class="profile-button" id="acctOut" data-i18n="secOutHere">이 브라우저에서 로그아웃</button></div>
             </details>
@@ -701,8 +731,8 @@
 
 <script src="relay.js?v=4.35"></script>
 <script src="app.js?v=4.35"></script>
-<script src="auth.js?v=4.35"></script>
-<script src="settings/settings.js?v=4.35"></script>
+<script src="auth.js?v=4.55"></script>
+<script src="settings/settings.js?v=4.55"></script>
 <script src="ranked.js?v=4.35"></script>
 </body>
 </html>

@@ -124,3 +124,8 @@ namespace_id = "1012"
 [[services]]
 binding = "MAIL"
 service = "rt-mail"
+
+# 문자는 rt-sms 만 보낸다. 브라우저에 열린 경로가 아니다. 키가 없으면 전화 확인은 503.
+[[services]]
+binding = "SMS"
+service = "rt-sms"

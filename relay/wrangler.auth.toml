@@ -9,6 +9,7 @@ workers_dev = false
 # 배포: wrangler deploy -c wrangler.auth.toml
 # 시크릿(wrangler secret put X -c wrangler.auth.toml):
 #   SESSION_KEY · SUB_KEY(선택, 없으면 SESSION_KEY) · GOOGLE_SECRET · APPLE_KEY
+#   MAIL_KEY(rt-mail 과 같은 값) · SMS_KEY(rt-sms 와 같은 값)
 [vars]
 GOOGLE_ID = "553049755538-kbc24ao0p1hv6re0nspv50j9e6hrqr0j.apps.googleusercontent.com"
 APPLE_ID = ""
@@ -51,3 +52,8 @@ enabled = true
 [[services]]
 binding = "MAIL"
 service = "rt-mail"
+
+# 문자(전화 확인·로그인 코드)는 rt-sms 만 보낸다. 같은 이유로 브라우저에 열린 경로가 아니다.
+[[services]]
+binding = "SMS"
+service = "rt-sms"

@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.455",
+    "date": "2026-10-20",
+    "ko": "로그인 2단계에 이메일 코드와 휴대폰 코드가 더해집니다. 코드는 영문 대소문자 8자리입니다. 처음 가입하면 전화번호를 인증하고, 계정 복구에만 쓰는 보조 메일을 더할 수 있습니다. 설정 › 보안에서 둘을 켜고 끕니다.",
+    "en": "Sign-in can now ask for an email code or a text code as a second step. The code is 8 letters, upper and lower case. New accounts verify a phone number and can add a secondary email used only for account recovery. Both are switched on and off in Settings › Security."
+  },
+  {
     "v": "0.11.454",
     "date": "2026-10-19",
     "ko": "3D 내비게이션 베타의 오른쪽 지도 단추(기울이기·전체 보기·확대·축소)가 왼쪽 패널과 같은 리퀴드 글래스가 됩니다. 작은 판은 렌즈 베벨이 면 전체를 덮으므로, 패널과 같은 불투명도와 CSS 흐림을 유지합니다.",

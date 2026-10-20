@@ -157,16 +157,29 @@ create table if not exists phonebox (
   at   integer not null
 );
 
+-- 2단계(메일·문자 코드) 를 켠 계정의 스위치. 메일은 '이번 로그인에서 Google 이
+-- 확인해 준 주소' 로만 보내므로 주소를 어디에도 저장하지 않는다 — 여기엔 켜짐 여부뿐이다.
+-- 전화는 phonebox 해시와 맞춰 본다. 이미 있는 DB 에는 migrate-two.sql 로 붙인다.
+create table if not exists twofa (
+  who   text primary key,
+  mail  integer not null default 0,   -- 1: 로그인 2단계를 Google 메일 코드로도 넘을 수 있다
+  phone integer not null default 0,   -- 1: 확인된 전화(phonebox)로 문자 코드를 받는다
+  at    integer not null
+);
+
 -- 로그인 도중의 일회용 상태. 서버가 낸 것인지 확인해야 하므로 남겨 둔다.
 -- kind 는 'reg'(패스키 등록) | 'sso-google' | 'sso-apple'(SSO 진행 중) |
 -- 'take'(SSO 를 마치고 토큰을 받으러 오길 기다림) | 'two'(2단계 확인 중) |
 -- 'mail'(복구 메일 확인) | 'phone'(복구 전화 확인) 이다.
+-- 'two' 줄은 sub·provider 를 다시 쓴다 — 지금 살아 있는 로그인 코드의 sha256 hex 와
+-- 그 코드가 나간 길('mail' | 'phone'). 새로 보내면 덮어써 옛 코드는 죽는다.
 --
 -- ★ 이미 pending 표가 있는 DB 에 이 파일을 다시 적용하는 경우:
 -- `create table if not exists` 는 표가 이미 있으면 아무것도 안 한다 — 새로
--- 늘어난 칸(back·provider·sub·tries)이 안 붙는다. sqlite 의 존재 검사는 표
+-- 늘어난 칸(back·provider·sub·tries·mail·sends)이 안 붙는다. sqlite 의 존재 검사는 표
 -- 단위지 칸 단위가 아니다. 붙이지 않은 채로 두면 challenge() 의 insert 가
 -- "no column named sub" 로 터지고, 그 순간부터 로그인이 전부 실패한다.
+-- (mail·sends 만 모자란 DB 는 migrate-two.sql 한 번이면 된다.)
 -- pending 은 수명 5분짜리 상태만 담아 지킬 데이터가 없으니, 아래 둘 중 하나를
 -- 사람이 직접 실행한다(이 파일이나 우리가 대신 돌리지 않는다):
 --
@@ -179,6 +192,8 @@ create table if not exists phonebox (
 --   wrangler d1 execute rt-board --remote --command "alter table pending add column provider text"
 --   wrangler d1 execute rt-board --remote --command "alter table pending add column sub text"
 --   wrangler d1 execute rt-board --remote --command "alter table pending add column tries integer not null default 0"
+--   wrangler d1 execute rt-board --remote --command "alter table pending add column mail text"
+--   wrangler d1 execute rt-board --remote --command "alter table pending add column sends integer not null default 0"
 --
 -- 'take' 줄의 id 는 bind 하나가 아니라 b64u(sha(state + tag)) 다 — tag 는
 -- /auth/cb 가 새로 내어 302 의 URL 프래그먼트로만 돌려준다(서버 로그에도
@@ -199,10 +214,14 @@ create table if not exists pending (
                                    -- bind+tag 를 증명하기 전엔(=/auth/take 전엔)
                                    -- user·sso 표를 건드리지 않는다 — 그래야 남의
                                    -- 동의 화면 결과를 내 계정에 조용히 엮을 수 없다
-  tries    integer not null default 0   -- kind='two' 재시도 횟수. 5회에서 스스로
+  tries    integer not null default 0,  -- kind='two' 재시도 횟수. 5회에서 스스로
                                          -- 태운다 — 패스키를 취소하거나 틀려도
                                          -- 복구 코드로 갈아탈 수 있어야 해서, 그
                                          -- 사이엔 이 줄을 지우지 않는다
+  mail     text,                  -- kind='take'|'two' 일 때만: 이번 로그인에서 Google 이
+                                   -- 확인해 준 메일. 이 줄과 함께 죽는다(마지막 발송 뒤
+                                   -- 5분) — user·twofa 어디에도 옮겨 적지 않는다
+  sends    integer not null default 0   -- kind='two': 로그인 코드를 보낸 횟수(5회 상한)
 );
 
 -- ── 경쟁전 · 전적 ──────────────────────────────────────────

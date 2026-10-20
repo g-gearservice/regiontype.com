@@ -1563,6 +1563,17 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .si-lost{font-size:14px;color:var(--ink-soft);max-width:32em;text-align:left}
 .si-lost summary{cursor:pointer;padding:6px 0}
 .si-lost p{line-height:1.6;padding-bottom:6px}
+.si-lost-btns{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-bottom:6px}
+.si-lost .si-code{margin-top:8px}
+/* 보조 단추 — 주황 큰 단추 곁에서 눈에 덜 띄게, 테두리와 글로 말한다 */
+.si-sub,.si-code .si-sub{
+  font:inherit;font-size:14px;font-weight:400;color:var(--ink);background:transparent;
+  border:1px solid var(--ink);border-radius:4px;padding:8px 12px;min-height:36px;cursor:pointer;
+}
+.si-code .si-sub{align-self:flex-start}
+.si-sub:focus-visible,.si-code .si-sub:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.si-sub:disabled{opacity:.55;cursor:not-allowed}
+@media (pointer:coarse){.si-sub,.si-code .si-sub{min-height:44px}}
 
 /* 손가락으로 여는 화면은 폭이 아니라 pointer 로 가른다 */
 @media (pointer:coarse){
@@ -1837,9 +1848,12 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .security-history+.profile-help{font-size:10px;margin-top:-6px}
 .security-two-state{display:flex;align-items:center;gap:8px;flex:none}
 .security-badge{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%)}
+/* 스위치 곁의 글자 — 켜짐/꺼짐을 색이 아니라 말로도 적는다 */
+.security-flag{font-size:11px;line-height:1;color:var(--ink-soft);min-width:3.2em;text-align:end}
 .security-recovery{font-size:11px;color:var(--ink-soft);margin-top:12px}
 #optsSecurity .si-warn{font-size:11px;margin-top:6px}
 #optsSecurity .si-say{font-size:12px;text-align:start}
+#optsSecurity .si-notice{font-size:12px;line-height:1.5;max-width:none}
 #secOut{padding-top:14px}
 #secOut .profile-button{margin-top:12px}
 
@@ -3110,3 +3124,26 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 @media (pointer:coarse){
   .rk-opp{padding:0 14px;font-size:13px;margin-top:6px}
 }
+
+
+/* ── 가입 안내: 보안 두 장 (welcome.js 의 phone·mail) ─────────
+   상태는 글이 말한다(✓ 인증됐습니다). 테두리는 구역을 나눌 뿐이다. 움직임 없음. */
+.intro-verify{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.intro-notice{margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--ink);
+ border:1px solid var(--grid);border-left:4px solid var(--ink);padding:10px 12px}
+.intro-notice a{color:var(--accent-text)}
+.intro-notice a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.intro-vrow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.intro-vrow .intro-field{flex:1 1 220px}
+.intro-vcode{display:flex;flex-direction:column;gap:8px}
+.intro-help{margin:0;font-size:13px;line-height:1.5;color:var(--ink-soft)}
+.intro-ok{margin:0;font-size:15px;font-weight:700;color:var(--ink);
+ border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
+.intro-code input{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em}
+.intro-codes{display:flex;flex-direction:column;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
+.intro-codes:focus{outline:none}
+.intro-codes ol{margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5em,1fr));gap:6px 16px;
+ list-style:decimal inside;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;letter-spacing:.06em}
+.intro-check{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;cursor:pointer}
+.intro-check input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
+.intro-check input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
