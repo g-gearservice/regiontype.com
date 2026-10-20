@@ -8,8 +8,9 @@
 
    흐름은 relay/worker.mjs 가 정한 대로다:
      /auth/sso  → 공급자로 나갔다가 #signin=ok&t=<tag> 로 돌아온다
-     /auth/take → bind + tag 로 토큰을 받는다 (패스키가 있으면 2단계를 더 묻는다)
+     /auth/take → bind + tag 로 토큰을 받는다 (2단계가 걸려 있으면 need:'two' + via 를 준다)
      /auth/log  → 2단계를 패스키로 넘는다
+     /auth/two/send, /auth/two/check → 2단계를 메일·문자 코드(영문 8자, 대소문자 구분)로 넘는다
      /auth/code → 2단계를 복구 코드로 넘는다
    공급자는 Worker 의 /auth/cb 로 돌아오고, Worker 는 브라우저를 /signin/ 으로
    보낸다. 그 자리는 해시만 여기로 넘기는 빈 착지대다(signin/index.html).      */
@@ -95,13 +96,19 @@ const say = (msg, bad) => {
   p.classList.toggle('bad', !!bad);
 };
 
+/* 메일·문자 코드는 영문 대소문자 8자 — 공백만 걷고 대소문자는 그대로 둔다. 모양이 아니면 '' */
+const otpOf = el => {
+  const s = el.value.replace(/\s+/g, '');
+  return /^[A-Za-z]{8}$/.test(s) ? s : '';
+};
+
 const VIEWS = ['vSignin', 'vTwo'];
 /* 첫 화면을 그리는 동안은 포커스를 옮기지 않는다 — 짚지도 않았는데 포커스 테두리가
    그려져 글자가 선택된 것처럼 보인다. 탭 키는 그대로 첫 버튼에 닿는다 */
 let live = false;
 function show(id) {
   VIEWS.forEach(v => { $('#' + v).hidden = v !== id; });
-  if (id === 'vTwo') resetTwo();
+  if (id === 'vTwo') { resetTwo(); paintTwo(); }
   /* 화면이 바뀌면 손이 갈 첫 자리로 포커스를 옮긴다 — 키보드만으로도 이어진다.
      숨긴 버튼은 건너뛴다. */
   const first = live && [...$('#' + id).querySelectorAll('button:not([disabled]), input:not([disabled])')]
@@ -140,12 +147,37 @@ async function passkeyTwo(generation) {
   if (current(generation)) done(out.token, generation);
 }
 
-/* 복구 코드 버튼은 패스키가 실패한 뒤에만 연다. 코드 칸은 그 버튼을 누르기 전에는 열지 않는다. */
+/* 2단계 화면은 열 때마다 통째로 비운다 — 방법 단추는 via 가 허락한 것만 paintTwo 가 다시 연다.
+   코드 칸은 그 단추를 누르기 전에는 열지 않고, 쓴 코드·번호는 칸에 남기지 않는다. */
+const TWO_SHOW = ['twoGo', 'twoMail', 'twoPhone', 'twoCode', 'twoMailTo', 'twoPhoneForm', 'twoOtpForm', 'codeForm', 'rescueForm', 'phoneAuthForm'];
+const TWO_TYPED = ['twoPhoneIn', 'twoOtpIn', 'codeIn', 'rescueIn', 'phoneAuthIn'];
+const TWO_BTNS = ['twoGo', 'twoMail', 'twoPhone', 'twoCode', 'twoPhoneSend', 'twoOtpGo', 'twoResend', 'twoRescueMail', 'twoRescuePhone'];
 function resetTwo() {
-  ['twoCode', 'codeForm', 'rescueForm', 'phoneAuthForm'].forEach(id => {
-    const el = $('#' + id);
-    if (el) el.hidden = true;
-  });
+  TWO_SHOW.forEach(id => { const el = $('#' + id); if (el) el.hidden = true; });
+  TWO_TYPED.forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+  TWO_BTNS.forEach(id => { const el = $('#' + id); if (el) el.disabled = false; });
+  const lost = $('#twoLost');
+  if (lost) lost.open = false;
+  const to = $('#twoMailTo');
+  if (to) to.textContent = '';
+  if (TWO) { TWO.sent = ''; TWO.phone = ''; }
+}
+/* via 가 허락한 방법만 보인다. 하나도 없으면 복구 쪽을 펼쳐 놓는다 */
+function paintTwo() {
+  const two = TWO;
+  if (!two) return;
+  const v = two.via;
+  $('#twoGo').hidden = !v.passkey;
+  $('#twoMail').hidden = !v.mail;
+  $('#twoPhone').hidden = !v.phone;
+  $('#twoCode').hidden = !v.code;
+  const to = $('#twoMailTo');
+  to.hidden = !(v.mail && two.mailTo);
+  to.textContent = to.hidden ? '' : t('twoMailTo', { to: two.mailTo });
+  if (!(v.passkey || v.mail || v.phone || v.code)) {
+    $('#twoLost').open = true;
+    say(t('twoNone'), true);
+  }
 }
 function showCodeDoor() {
   const code = $('#twoCode');
@@ -172,7 +204,7 @@ async function tryAuth(run, doing, btns) {
 }
 
 /* ── SSO ─────────────────────────────────────────────── */
-let TWO = null;      // { bind, tag, challenge } — 2단계가 도는 동안만 산다
+let TWO = null;      // { bind, tag, challenge, via, mailTo, sent, phone } — 2단계가 도는 동안만 산다
 
 async function sso(p) {
   const generation = modalGeneration;
@@ -235,8 +267,15 @@ async function take(bind, tag, generation) {
   }
   if (!current(generation)) return;
   if (d.token) return done(d.token, generation, d.isNewAccount === true);
-  if (d.need === 'passkey') {
-    TWO = { bind, tag, challenge: d.challenge };
+  /* 옛 중계기는 need:'passkey' 만 준다 — 패스키와 복구 코드뿐이다 */
+  if (d.need === 'two' || d.need === 'passkey') {
+    const v = d.need === 'passkey' ? { passkey: true, code: true } : (d.via || {});
+    TWO = {
+      bind, tag, challenge: d.challenge,
+      via: { passkey: !!v.passkey, mail: !!v.mail, phone: !!v.phone, code: !!v.code },
+      mailTo: v.mail && typeof d.mailTo === 'string' ? d.mailTo : '',
+      sent: '', phone: '',
+    };
     say('');
     return show('vTwo');
   }
@@ -569,7 +608,7 @@ function wire() {
   if (rescue) rescue.onsubmit = async e => {
     e.preventDefault();
     const generation = modalGeneration;
-    say(t('signinWait'));
+    say(t('twoSending'));
     try {
       await ask('/auth/rescue', { email: $('#rescueIn').value.trim() });
       if (!current(generation)) return;
@@ -591,7 +630,7 @@ function wire() {
   const mailForm = $('#mailForm');
   if (mailForm) mailForm.onsubmit = async e => {
     e.preventDefault();
-    mailSay(t('signinWait'));
+    mailSay(t('twoSending'));
     try {
       await ask('/auth/mail', { email: $('#mailIn').value.trim() });
       $('#mailIn').value = '';
@@ -599,19 +638,26 @@ function wire() {
       $('#mailCode').focus();
       mailSay(t('mailSent'));
     } catch (err) {
-      mailSay(err.status === 503 ? (t('mailFail') || err.message) : (err.message || t('signinFail')), true);
+      mailSay(err.status === 503 ? (t('mailFail') || err.message)
+        : err.status === 429 ? (t('twoBusy') || err.message)
+        : (err.message || t('signinFail')), true);
     }
   };
   const mailConfirm = $('#mailConfirm');
   if (mailConfirm) mailConfirm.onsubmit = async e => {
     e.preventDefault();
-    mailSay(t('signinWait'));
+    const code = otpOf($('#mailCode'));
+    if (!code) return mailSay(t('twoOtpBad'), true);
+    mailSay(t('twoChecking'));
     try {
-      await ask('/auth/mail/confirm', { code: $('#mailCode').value.trim() });
+      await ask('/auth/mail/confirm', { code });
       $('#mailCode').value = '';
+      mailConfirm.hidden = true;
       mailSay(t('mailOk'));
+      dispatchEvent(new Event('rt-acct'));
     } catch (err) {
-      mailSay(err.message || t('signinFail'), true);
+      mailSay(err.status === 401 ? t('twoOtpWrong') : (err.message || t('signinFail')), true);
+      $('#mailCode').select();
     }
   };
   const phoneSay = (msg, bad) => {
@@ -623,7 +669,7 @@ function wire() {
   const phoneForm = $('#phoneForm');
   if (phoneForm) phoneForm.onsubmit = async e => {
     e.preventDefault();
-    phoneSay(t('signinWait'));
+    phoneSay(t('twoSending'));
     try {
       await ask('/auth/phone', { phone: $('#phoneIn').value.trim() });
       $('#phoneIn').value = '';
@@ -631,33 +677,126 @@ function wire() {
       $('#phoneCode').focus();
       phoneSay(t('phoneCodeSent'));
     } catch (err) {
-      phoneSay(err.status === 503 ? (t('phoneFail') || err.message) : (err.message || t('signinFail')), true);
+      phoneSay(err.status === 503 ? (t('phoneFail') || err.message)
+        : err.status === 429 ? (t('twoBusy') || err.message)
+        : (err.message || t('signinFail')), true);
     }
   };
   const phoneConfirm = $('#phoneConfirm');
   if (phoneConfirm) phoneConfirm.onsubmit = async e => {
     e.preventDefault();
-    phoneSay(t('signinWait'));
+    const code = otpOf($('#phoneCode'));
+    if (!code) return phoneSay(t('twoOtpBad'), true);
+    phoneSay(t('twoChecking'));
     try {
-      await ask('/auth/phone/confirm', { code: $('#phoneCode').value.trim() });
+      const d = await ask('/auth/phone/confirm', { code });
       $('#phoneCode').value = '';
+      phoneConfirm.hidden = true;
       phoneSay(t('phoneOk'));
+      dispatchEvent(new Event('rt-acct'));
+      /* 복구 코드가 처음 만들어졌으면 설정 쪽 코드 판이 받아 연다(settings.js) — 이 판을 닫으면 다시 못 본다 */
+      if (Array.isArray(d.codes) && d.codes.length) dispatchEvent(new CustomEvent('rt-codes', { detail: d.codes }));
     } catch (err) {
-      phoneSay(err.message || t('signinFail'), true);
+      phoneSay(err.status === 401 ? t('twoOtpWrong') : (err.message || t('signinFail')), true);
+      $('#phoneCode').select();
     }
   };
 
   $('#twoGo').onclick = () => tryAuth(passkeyTwo, t('askingDevice'),
     [$('#twoGo'), $('#twoCode'), $('#twoMail'), $('#twoPhone')]);
+  /* 메일·문자 코드 보내기. 같은 길로 다시 보내면 중계기가 앞 코드를 버린다(마지막 것만 유효) */
+  async function sendTwo(via, phone) {
+    const generation = modalGeneration;
+    const two = TWO;
+    if (!two) return;
+    const btns = [$('#twoMail'), $('#twoPhone'), $('#twoPhoneSend'), $('#twoResend')];
+    btns.forEach(b => { b.disabled = true; });
+    say(t('twoSending'));
+    try {
+      const d = await ask('/auth/two/send', via === 'phone' ? { b: two.bind, t: two.tag, via, phone } : { b: two.bind, t: two.tag, via });
+      if (!current(generation)) return;
+      two.sent = via;
+      if (phone) two.phone = phone;
+      $('#twoPhoneIn').value = '';
+      $('#twoPhoneForm').hidden = true;
+      $('#twoOtpForm').hidden = false;
+      $('#twoOtpIn').value = '';
+      $('#twoOtpIn').focus();
+      say(typeof d.to === 'string' && d.to ? t('twoSent', { to: d.to }) : t('twoSentPlain'));
+    } catch (err) {
+      if (!current(generation)) return;
+      say(err.status === 429 ? t('twoTooMany')
+        : err.status === 503 ? (via === 'phone' ? t('phoneFail') : t('mailFail'))
+        : err.status === 400 && via === 'phone' ? t('twoPhoneWrong')
+        : t('twoSendFail'), true);
+      if (via === 'phone' && !$('#twoPhoneForm').hidden) $('#twoPhoneIn').select();
+    }
+    if (current(generation)) btns.forEach(b => { b.disabled = false; });
+  }
   $('#twoMail').onclick = () => {
+    $('#twoPhoneForm').hidden = true;
+    sendTwo('mail');
+  };
+  $('#twoPhone').onclick = () => {
+    $('#twoOtpForm').hidden = true;
+    $('#twoPhoneForm').hidden = false;
+    $('#twoPhoneIn').focus();
+  };
+  $('#twoPhoneForm').onsubmit = e => {
+    e.preventDefault();
+    const phone = $('#twoPhoneIn').value.trim();
+    if (phone) sendTwo('phone', phone);
+  };
+  $('#twoResend').onclick = () => {
+    const two = TWO;
+    if (two && two.sent) sendTwo(two.sent, two.phone);
+  };
+  $('#twoOtpForm').onsubmit = async e => {
+    e.preventDefault();
+    const generation = modalGeneration;
+    const two = TWO;
+    if (!two) return;
+    const code = otpOf($('#twoOtpIn'));
+    if (!code) { say(t('twoOtpBad'), true); return $('#twoOtpIn').select(); }
+    $('#twoOtpGo').disabled = true;
+    say(t('twoChecking'));
+    try {
+      const d = await ask('/auth/two/check', { b: two.bind, t: two.tag, code });
+      if (!current(generation)) return;
+      $('#twoOtpIn').value = '';        // 쓴 코드를 칸에 남겨 두지 않는다
+      return done(d.token, generation);
+    } catch (err) {
+      if (!current(generation)) return;
+      if (err.status === 400) {       // 요청이 만료됐다 — 처음부터
+        TWO = null;
+        try { sessionStorage.removeItem(BIND_KEY); } catch {}
+        resetTwo();
+        show('vSignin');
+        return say(t('twoExpired'), true);
+      }
+      say(err.status === 401 ? t('twoOtpWrong')
+        : err.status === 429 ? t('twoTooMany')
+        : err.status === 503 ? t('twoSendFail')
+        : t('loginFail'), true);
+      if (err.status === 401) $('#twoOtpIn').select();
+    }
+    $('#twoOtpGo').disabled = false;
+  };
+  $('#twoRescueMail').onclick = () => {
+    $('#phoneAuthForm').hidden = true;
     $('#rescueForm').hidden = false;
     $('#rescueIn').focus();
+  };
+  $('#twoRescuePhone').onclick = () => {
+    $('#rescueForm').hidden = true;
+    $('#phoneAuthForm').hidden = false;
+    $('#phoneAuthIn').focus();
   };
   const phoneAuth = $('#phoneAuthForm');
   if (phoneAuth) phoneAuth.onsubmit = async e => {
     e.preventDefault();
     const generation = modalGeneration;
-    say(t('signinWait'));
+    say(t('twoSending'));
     try {
       await ask('/auth/phone/rescue', { phone: $('#phoneAuthIn').value.trim() });
       if (!current(generation)) return;
@@ -669,10 +808,6 @@ function wire() {
       if (!current(generation)) return;
       say(err.status === 503 ? (t('phoneFail') || err.message) : (err.message || t('signinFail')), true);
     }
-  };
-  $('#twoPhone').onclick = () => {
-    $('#phoneAuthForm').hidden = false;
-    $('#phoneAuthIn').focus();
   };
   $('#twoCode').onclick = () => {
     $('#codeForm').hidden = false;

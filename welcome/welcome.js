@@ -4,6 +4,8 @@
    서버에 남는 것은 두 줄뿐이다: intro 한 줄(무엇을 보고 왔는지·추천 의향)과
    profile 한 줄(닉네임·아이디·캐릭터·스위치 둘). 자유 입력 칸은 닉네임·아이디·
    캐릭터 이름 셋이고, 셋 다 worker.mjs 의 profile() 이 같은 규칙으로 다듬는다.
+   끝의 보안 두 장은 이 두 줄과 별개로 /auth/phone·/auth/mail 에 곧장 건다 —
+   서버엔 번호·보조 메일의 해시만 남고, 복구 코드는 처음 한 번만 내려온다.
 
    '건너뛰기' 는 진짜로 건너뛴다 — 안 고른 값은 안 보낸다. 다만 아이디는 한 번
    정하면 여기서 비울 수 없다(서버가 빈 값으로 덮지 않는다).                */
@@ -116,9 +118,44 @@ const STEPS = [
     note: '새 코스와 바뀐 것을 이 기기의 알림으로 알려 드립니다. 예를 고르면 브라우저가 한 번 더 묻습니다.' },
   { kind: 'yesno', key: 'shut', kicker: '프로필 6/6',
     ask: '계정을 비공개로 둘까요?',
-    note: '비공개로 두면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.' },
+      note: '비공개로 두면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.' },
+  /* 보안 두 장은 서버 응답이 답이다(sec). 전화는 인증하거나 문자 발송이 아직
+     안 열렸을 때(503)만 지나간다 — skip 을 달지 않는다. 보조 메일은 건너뛸 수 있다. */
+  { kind: 'phone', kicker: '보안 1/2',
+    ask: '전화번호를 인증해 주세요.',
+    note: '전화번호 인증으로 보안 수단을 하나 더합니다. 이 번호가 문자로 받은 코드로 로그인하는 2단계 인증 수단이자 계정 복구 수단이 됩니다. '
+      + '영문 대소문자가 섞인 8자리 코드(대소문자 구분)를 문자로 보내 드리며, 코드는 5분 동안 유효합니다.' },
+  { kind: 'mail', skip: true, kicker: '보안 2/2',
+    ask: '보조 메일을 추가할까요?',
+    note: '보조 메일은 Password & Account Recovery(계정 복구)를 위한 메일로만 씁니다. '
+      + 'recover@regiontype.com 이 한 번만 쓰는 영문 8자리 코드(대소문자 구분, 5분 유효)를 보냅니다.' },
   { kind: 'done' },
 ];
+
+/* 보안 두 장의 상태. 번호·메일 값은 서버가 쥐고, 여기엔 '어디까지 왔나' 만 둔다.
+   off 는 서버가 503(발송 미설정)을 한 번 말한 것 — 그때만 인증 없이 지나간다.
+   codes 는 복구 코드를 처음 받은 순간부터 체크할 때까지만 메모리에 있다 */
+const sec = {
+  phone: { done: false, already: false, off: false, sent: false, busy: false, value: '', codes: null, acked: false },
+  mail: { want: null, done: false, already: false, off: false, sent: false, busy: false, value: '' },
+};
+const CHAN = {
+  phone: {
+    path: '/auth/phone', field: 'phone', send: '인증 문자 보내기',
+    empty: '전화번호를 적어 주세요.', bad: '번호를 다시 확인해 주세요.',
+    sent: '문자를 보냈습니다. 5분 안에 받은 코드를 입력해 주세요.',
+    off: '문자 발송이 아직 준비되지 않았습니다. 이 단계는 지금 넘어가고, 설정 › 보안에서 나중에 인증할 수 있습니다.',
+    ok: '✓ 인증됐습니다', already: '✓ 이미 인증된 번호가 있습니다.',
+  },
+  mail: {
+    path: '/auth/mail', field: 'email', send: '확인 코드 보내기',
+    empty: '메일 주소를 적어 주세요.', bad: '메일 주소를 다시 확인해 주세요.',
+    sent: '메일을 보냈습니다. 5분 안에 받은 코드를 입력해 주세요.',
+    off: '메일 발송이 아직 준비되지 않았습니다. 설정 › 보안에서 나중에 추가할 수 있습니다.',
+    ok: '✓ 확인됐습니다', already: '✓ 이미 확인된 보조 메일이 있습니다.',
+  },
+};
+const isSec = k => k === 'phone' || k === 'mail';
 
 $('#introTotal').textContent = STEPS.length;
 
@@ -183,7 +220,8 @@ function draw() {
   say('');
   body().replaceChildren();
   ({ hello: drawHello, pick: drawPick, scale: drawScale, face: drawFace,
-     text: drawText, yesno: drawYesno, done: drawDone })[s.kind](s);
+     text: drawText, yesno: drawYesno, phone: drawVerify, mail: drawVerify,
+     done: drawDone })[s.kind](s);
   const card = $('#introCard');
   card.dataset.way = way;
   card.classList.remove('is-in');
@@ -197,7 +235,8 @@ function draw() {
 
      글 칸만 예외다 — 거기서는 바로 치기 시작해야 하고, 글 칸의 테두리는 재촉이
      아니라 '여기에 친다' 는 표시다. 화면이 튀지 않게 스크롤은 건드리지 않는다. */
-  const typing = STEPS[at].kind === 'text' && body().querySelector('input');
+  const typing = (s.kind === 'text' || s.kind === 'phone')
+    && [...body().querySelectorAll('input')].find(i => !i.closest('[hidden]'));
   (typing || card).focus({ preventScroll: true });
 }
 
@@ -357,6 +396,249 @@ function drawFace() {
   mountFace();
 }
 
+/* ── 보안 두 장 ────────────────────────────────────────────
+   전화(phone)와 보조 메일(mail)은 같은 몸이다: 칸 → 보내기 → 코드 → 확인.
+   칸의 id 는 한 장에 하나뿐이라 고정이다(vIn·vCode…). 코드는 영문 대소문자 8자리이고
+   대소문자를 구분한다 — 공백만 지우고 대소문자는 건드리지 않는다. */
+const h = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+};
+const here = kind => STEPS[at].kind === kind;
+
+function drawVerify(s) {
+  const kind = s.kind, m = sec[kind], c = CHAN[kind];
+  $('#introAsk').textContent = s.ask;
+
+  const notice = h('p', 'intro-notice');
+  const link = h('a', '', '개인정보 처리방침');
+  link.href = '../policy/';
+  link.target = '_blank';          // 같은 탭으로 가면 이 장의 진행이 날아간다
+  link.rel = 'noopener';
+  notice.append(kind === 'phone'
+    ? '전화번호는 본인 확인, 보안 수단 추가, 계정 복구를 위해서만 받습니다. 확인이 끝나면 번호 자체가 아니라 해시만 보관하며, 다른 사람에게 보이지 않습니다. '
+    : '받은 메일 주소는 확인이 끝나면 해시만 서버에 보관하며, 다른 사람에게 보이지 않습니다. ',
+    link, ' 에서 자세히 볼 수 있습니다.');
+  body().append(notice);
+
+  if (kind === 'mail' && !m.already) {
+    const picks = h('div', 'intro-picks intro-yesno');
+    [[true, '추가하기'], [false, '추가하지 않기']].forEach(([v, label], i) => {
+      const b = h('button', 'intro-pick');
+      b.type = 'button';
+      b.dataset.want = String(v);
+      const key = h('kbd', '', String(i + 1));
+      const tick = h('span', 'tick', '✓');
+      tick.setAttribute('aria-hidden', 'true');
+      b.append(key, h('span', '', label), tick);
+      b.style.setProperty('--i', i);
+      b.onclick = () => pickMail(v);
+      picks.append(b);
+    });
+    body().append(picks);
+  }
+
+  const box = h('div', 'intro-verify');
+  box.id = 'vBox';
+  const ok = h('p', 'intro-ok');
+  ok.id = 'vOk';
+
+  const sendRow = h('div', 'intro-vrow');
+  sendRow.id = 'vSendRow';
+  const f1 = h('label', 'intro-field');
+  const input = document.createElement('input');
+  input.id = 'vIn';
+  input.value = m.value;
+  input.setAttribute('aria-label', kind === 'phone' ? '전화번호' : '보조 메일 주소');
+  if (kind === 'phone') {
+    input.type = 'tel'; input.inputMode = 'tel'; input.autocomplete = 'tel';
+    input.maxLength = 20; input.placeholder = '010-1234-5678';
+  } else {
+    input.type = 'email'; input.inputMode = 'email'; input.autocomplete = 'email';
+    input.maxLength = 254; input.placeholder = 'name@example.com';
+    input.spellcheck = false;
+  }
+  f1.append(input);
+  const send = h('button', 'profile-button', c.send);
+  send.type = 'button';
+  send.id = 'vSend';
+  send.onclick = () => sendCode(kind);
+  sendRow.append(f1, send);
+
+  const codeRow = h('div', 'intro-vcode');
+  codeRow.id = 'vCodeRow';
+  const help = h('p', 'intro-help', '영문 대소문자 8자리 · 대소문자를 구분합니다');
+  help.id = 'vHelp';
+  const f2 = h('label', 'intro-field intro-code');
+  const code = document.createElement('input');
+  code.id = 'vCode';
+  code.maxLength = 16;
+  code.autocomplete = 'one-time-code';
+  code.setAttribute('autocapitalize', 'off');
+  code.setAttribute('autocorrect', 'off');
+  code.spellcheck = false;
+  code.pattern = '[A-Za-z ]{8,16}';
+  code.setAttribute('aria-label', '확인 코드 (영문 대소문자 8자리)');
+  code.setAttribute('aria-describedby', 'vHelp');
+  f2.append(code);
+  const btns = h('div', 'intro-vrow');
+  const go = h('button', 'profile-button', '확인');
+  go.type = 'button';
+  go.id = 'vConfirm';
+  go.onclick = () => confirmCode(kind);
+  const again = h('button', 'profile-button', '다시 보내기');
+  again.type = 'button';
+  again.id = 'vResend';
+  again.onclick = () => sendCode(kind);
+  btns.append(go, again);
+  codeRow.append(help, f2, btns);
+
+  box.append(ok, sendRow, codeRow);
+
+  if (kind === 'phone') {
+    const codes = h('div', 'intro-codes');
+    codes.id = 'vCodes';
+    codes.tabIndex = -1;
+    const list = h('ol');
+    list.id = 'vList';
+    const ack = h('label', 'intro-check');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'vAck';
+    cb.onchange = () => { m.acked = cb.checked; };
+    ack.append(cb, h('span', '', '적어 두었습니다'));
+    codes.append(
+      h('p', 'intro-help', '이 복구 코드를 안전한 곳에 적어 두세요. 각 코드는 한 번만 쓸 수 있고, 다시 볼 수 없습니다.'),
+      list, ack);
+    box.append(codes);
+  }
+  body().append(box);
+  paintVerify(kind);
+  if (m.off) say(c.off);
+}
+
+/* 상태를 칸에 칠한다. 장을 다시 그리지 않는다 — 입력 중인 글이 날아간다 */
+function paintVerify(kind) {
+  if (!here(kind)) return;
+  const m = sec[kind], c = CHAN[kind];
+  $('#vBox').hidden = kind === 'mail' && m.want !== true && !m.done;
+  const ok = $('#vOk');
+  ok.hidden = !m.done;
+  ok.textContent = m.done ? (m.already ? c.already : c.ok) : '';
+  const open = !m.done && !m.off;
+  $('#vSendRow').hidden = !open;
+  $('#vSend').hidden = m.sent;
+  $('#vCodeRow').hidden = !(open && m.sent);
+  for (const id of ['vSend', 'vConfirm', 'vResend']) $('#' + id).disabled = m.busy;
+  body().querySelectorAll('[data-want]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.want === String(m.want)));
+    b.disabled = m.busy;
+  });
+  if (kind === 'phone') {
+    const box = $('#vCodes'), list = $('#vList');
+    box.hidden = !m.codes;
+    if (m.codes && !list.children.length) {
+      list.replaceChildren(...m.codes.map(x => h('li', '', x)));
+    }
+    $('#vAck').checked = m.acked;
+  }
+}
+
+/* 요청이 날아가는 동안은 이 장을 못 떠난다 — 코드가 도착했는데 장이 바뀌어 있으면
+   복구 코드를 영영 못 본다 */
+function setBusy(kind, on) {
+  sec[kind].busy = on;
+  $('#introNext').disabled = on;
+  $('#introBack').disabled = on;
+  $('#introSkip').disabled = on;
+  paintVerify(kind);
+}
+
+function failSay(kind, how, e) {
+  const c = CHAN[kind];
+  if (e.status === 401) return;      // post() 가 이미 로그아웃으로 보냈다
+  if (how === 'send' && e.status === 503) return say(c.off);
+  if (e.status === 400) return say(how === 'send' ? c.bad : '코드가 맞지 않거나 만료되었습니다.', true);
+  if (e.status === 429) return say('잠시 후 다시 시도해 주세요.', true);
+  say('처리하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.', true);
+}
+
+async function sendCode(kind) {
+  const m = sec[kind], c = CHAN[kind];
+  if (m.busy || m.done || m.off) return;
+  const v = ($('#vIn')?.value || '').trim();
+  if (!v) { say(c.empty, true); $('#vIn')?.focus(); return; }
+  m.value = v;
+  const again = m.sent;
+  setBusy(kind, true);
+  say('보내고 있습니다…');
+  let ok = false;
+  try {
+    await post(c.path, { [c.field]: v });
+    m.sent = ok = true;
+    if (here(kind)) say(again ? '다시 보냈습니다. 가장 나중에 받은 코드만 쓸 수 있습니다.' : c.sent);
+  } catch (e) {
+    if (e.status === 503) m.off = true;
+    if (here(kind)) failSay(kind, 'send', e);
+  } finally {
+    setBusy(kind, false);
+  }
+  if (!here(kind)) return;
+  (ok ? $('#vCode') : m.off ? $('#introCard') : $('#vIn'))?.focus({ preventScroll: true });
+}
+
+async function confirmCode(kind) {
+  const m = sec[kind];
+  if (m.busy || m.done) return;
+  const v = ($('#vCode')?.value || '').replace(/\s+/g, '');
+  if (!/^[A-Za-z]{8}$/.test(v)) {
+    say('코드는 영문 대소문자 8자리입니다. 대소문자를 구분합니다.', true);
+    $('#vCode')?.focus();
+    return;
+  }
+  setBusy(kind, true);
+  say('확인하고 있습니다…');
+  let d = null;
+  try {
+    d = await post(CHAN[kind].path + '/confirm', { code: v });
+    m.done = true;
+    /* 복구 코드는 이 계정에 처음 하나 만들어질 때만 내려온다 */
+    if (kind === 'phone' && Array.isArray(d.codes) && d.codes.length) {
+      m.codes = d.codes.map(String);
+      m.acked = false;
+    }
+    if (here(kind)) say('');
+  } catch (e) {
+    if (here(kind)) failSay(kind, 'confirm', e);
+  } finally {
+    setBusy(kind, false);
+  }
+  if (!here(kind)) return;
+  ((m.done ? (m.codes ? $('#vCodes') : $('#introCard')) : $('#vCode')))?.focus({ preventScroll: m.done && !m.codes });
+}
+
+function pickMail(v) {
+  const m = sec.mail;
+  if (m.busy) return;
+  clearTimeout(beating);
+  if (!v && m.done) { say('이미 확인된 메일입니다. 설정 › 보안에서 바꿀 수 있습니다.'); return; }
+  m.want = v;
+  say(m.off ? CHAN.mail.off : '');
+  paintVerify('mail');
+  if (v) { if (!m.done && !m.off) $('#vIn')?.focus(); return; }
+  const wait = still() ? 0 : beat();
+  if (!wait) return next();
+  beating = setTimeout(next, wait);
+}
+
+/* 복구 코드는 이 장을 떠나는 순간 화면에서도 메모리에서도 지운다 */
+function wipeCodes() {
+  sec.phone.codes = null;
+  $('#vList')?.replaceChildren();
+}
+
 function drawDone() {
   $('#introAsk').textContent = '다 됐습니다.';
   const list = document.createElement('dl');
@@ -368,6 +650,8 @@ function drawDone() {
     ['아이디', '@' + answer.handle],
     ['알림', answer.push === true ? '받음' : '안 받음'],
     ['계정', answer.shut === true ? '비공개' : '공개'],
+    ['전화번호', sec.phone.done ? '인증됨' : '나중에 인증'],
+    ['보조 메일', sec.mail.done ? '추가함' : '추가 안 함'],
   ];
   for (const [k, v] of rows) {
     const dt = document.createElement('dt'); dt.textContent = k;
@@ -505,6 +789,16 @@ const save = () => post('/auth/profile', {
 /* 그 장을 채웠는가. 못 채웠으면 무엇이 빠졌는지 그 자리에서 말한다 —
    '다음' 이 말없이 안 눌리면 고장으로 보인다 */
 function missing(s) {
+  if (s.kind === 'phone') {
+    const p = sec.phone;
+    if (p.codes && !p.acked) return '복구 코드를 적어 두고 "적어 두었습니다"에 체크해 주세요.';
+    return p.done || p.off ? '' : '전화번호를 인증해 주세요.';
+  }
+  if (s.kind === 'mail') {
+    const m = sec.mail;
+    return m.want === true && !m.done && !m.off
+      ? '확인 코드를 입력하거나 "추가하지 않기"를 골라 주세요.' : '';
+  }
   if (s.skip) return '';
   if (s.kind === 'text' && !answer[s.key]) return {
     botname: '캐릭터 이름을 지어 주세요.',
@@ -519,6 +813,7 @@ async function next() {
   clearTimeout(beating);
   way = 'fwd';
   const s = STEPS[at];
+  if (isSec(s.kind) && sec[s.kind].busy) return;
   if (s.kind === 'text') {
     const input = $('#introInput');
     let v = (input?.value || '').trim();
@@ -539,6 +834,7 @@ async function next() {
   }
   if (s.kind === 'text' && s.key === 'handle' && !(await claimHandle())) return;
   if (s.kind === 'face') dropFace();
+  if (s.kind === 'phone') wipeCodes();
   if (s.kind === 'done') return finish();
   at = Math.min(at + 1, STEPS.length - 1);
   mirror();
@@ -548,7 +844,15 @@ async function next() {
 function back() {
   clearTimeout(beating);
   way = 'back';
-  if (STEPS[at].kind === 'face') dropFace();
+  const s = STEPS[at];
+  if (isSec(s.kind) && sec[s.kind].busy) return;
+  /* 복구 코드는 다시 볼 수 없다 — 적어 두었다고 체크하기 전엔 못 떠난다 */
+  if (s.kind === 'phone' && sec.phone.codes && !sec.phone.acked) {
+    say(missing(s), true);
+    return;
+  }
+  if (s.kind === 'face') dropFace();
+  if (s.kind === 'phone') wipeCodes();
   at = Math.max(at - 1, 0);
   draw();
 }
@@ -560,6 +864,10 @@ function skip() {
   way = 'fwd';
   const s = STEPS[at];
   if (!s.skip) return;
+  if (s.kind === 'mail') {
+    if (sec.mail.busy) return;
+    if (!sec.mail.done) sec.mail.want = false;   // 확인 못 한 메일은 추가하지 않은 것이다
+  }
   if (s.kind === 'pick') answer[s.key] = '';
   if (s.kind === 'scale') answer.nps = null;
   at = Math.min(at + 1, STEPS.length - 1);
@@ -598,20 +906,38 @@ $('#introNext').onclick = () => next();
 $('#introBack').onclick = back;
 $('#introSkip').onclick = skip;
 
+/* 복구 코드를 받고 적어 두기 전에 탭을 닫으면 코드를 영영 못 본다 */
+addEventListener('beforeunload', e => {
+  if (sec.phone.codes && !sec.phone.acked) e.preventDefault();
+});
+
 addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const s = STEPS[at];
+  const el = document.activeElement;
   if (e.key === 'Enter') {
+    /* 보안 두 장에서는 칸마다 Enter 의 뜻이 다르다: 번호·메일 칸은 보내기, 코드 칸은
+       확인. 칸 안의 단추(보내기·확인·다시 보내기·추가하기)는 브라우저가 누르게 둔다.
+       한글 조합 중의 Enter 는 조합 확정이라 건드리지 않는다 */
+    if (isSec(s.kind) && el) {
+      if (e.isComposing) return;
+      if (el.id === 'vIn') { e.preventDefault(); sendCode(s.kind); return; }
+      if (el.id === 'vCode') { e.preventDefault(); confirmCode(s.kind); return; }
+      if (el.tagName === 'BUTTON' && body().contains(el)) return;
+    }
     /* 글 칸 안에서도 Enter 는 '다음' 이다 — 폼이 아니라 장이 하나씩 넘어간다 */
     e.preventDefault();
     next();
     return;
   }
   /* 숫자 키는 고르는 장에서만 뜻이 있다. 글 칸에 숫자를 치는 걸 뺏지 않는다 */
-  if (document.activeElement?.tagName === 'INPUT') return;
+  if (el?.tagName === 'INPUT') return;
   if (!/^[0-9]$/.test(e.key)) return;
   const n = Number(e.key);
-  if (s.kind === 'pick' && n >= 1 && n <= s.list.length) {
+  if (s.kind === 'mail' && (n === 1 || n === 2) && !sec.mail.already) {
+    e.preventDefault();
+    pickMail(n === 1);
+  } else if (s.kind === 'pick' && n >= 1 && n <= s.list.length) {
     e.preventDefault();
     chose(s.key, s.list[n - 1][0]);
   } else if (s.kind === 'yesno' && (n === 1 || n === 2)) {
@@ -638,6 +964,11 @@ addEventListener('keydown', e => {
     if (r.status === 401) { forget(); location.replace('../'); return; }
     const d = await r.json();
     if (d.intro) { write(DONE_KEY, token()); location.replace('../'); return; }
+    /* 이미 확인된 번호·메일은 다시 묻지 않는다 */
+    const was = [sec.phone.done, sec.mail.done];
+    if (d.phone === true) sec.phone.done = sec.phone.already = true;
+    if (d.mailbox === true) sec.mail.done = sec.mail.already = true;
+    const moved = was[0] !== sec.phone.done || was[1] !== sec.mail.done;
     /* 다시 들어온 사람은 하다 만 자리에서 잇는다 */
     const p = d.profile;
     if (p) {
@@ -650,7 +981,7 @@ addEventListener('keydown', e => {
       const [shape, expression, colour] = String(p.face || '').split(',');
       if (shape) answer.face = { shape, expression, colour };
       if (STEPS[at].kind !== 'face') draw();
-    }
+    } else if (moved && isSec(STEPS[at].kind)) draw();
   } catch {}
 })();
 })();

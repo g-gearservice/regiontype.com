@@ -1,0 +1,34 @@
+# regiontype.com 존의 복구 문자. 브라우저가 부르는 문이 아니다 — 라우트를 달지 않는다.
+# 중계기(rt-auth, 그리고 /auth 를 아직 받는 rt-feedback)가 SMS 서비스 바인딩으로만 부른다.
+# 배포는 중계기보다 먼저: wrangler deploy -c sms/wrangler.toml
+# 그 다음 같은 값을 세 곳에 넣는다(값을 저장소에 적지 않는다):
+#   wrangler secret put SMS_KEY -c sms/wrangler.toml
+#   wrangler secret put SMS_KEY -c relay/wrangler.auth.toml
+#   wrangler secret put SMS_KEY -c relay/wrangler.toml
+# 공급자 열쇠는 문자 워커에만 넣는다(저장소에 적지 않는다):
+#   wrangler secret put SOLAPI_KEY -c sms/wrangler.toml
+#   wrangler secret put SOLAPI_SECRET -c sms/wrangler.toml
+#   wrangler secret put TWILIO_SID -c sms/wrangler.toml
+#   wrangler secret put TWILIO_TOKEN -c sms/wrangler.toml
+# Solapi 는 발신번호 사전등록이 끝난 번호를 SOLAPI_FROM 에 넣어야 한다.
+# SMS_ALLOW 는 과금 유도 문자 남용을 막는 허용 번호 접두어 울타리다.
+name = "rt-sms"
+main = "worker.mjs"
+compatibility_date = "2026-09-15"
+workers_dev = false
+
+[vars]
+SMS_PROVIDER = "auto"
+SMS_ALLOW = ""
+SOLAPI_FROM = ""
+TWILIO_FROM = ""
+TWILIO_SERVICE = ""
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+[observability.traces]
+enabled = true

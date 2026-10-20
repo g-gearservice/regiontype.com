@@ -449,6 +449,9 @@ async function takeResponse({ existing = false, linked = false, changes = 1,
           };
           if (sql.startsWith('select who from sso')) return existing ? { who: 'existing-user' } : null;
           if (sql.startsWith('select 1 from passkey')) return passkey ? { 1: 1 } : null;
+          if (sql.startsWith('select mail, phone from twofa')) return null;
+          if (sql.startsWith('select 1 as n from phonebox')) return null;
+          if (sql.startsWith('select count(*) as n from recovery')) return null;
           throw new Error(`Unexpected query: ${sql}`);
         },
         async run() {
@@ -483,7 +486,9 @@ const racedLogin = await takeResponse({ conflict: true });
 assert.equal(racedLogin.status, 503);
 assert.ok(!racedLogin.body.token && !racedLogin.body.isNewAccount, '경쟁 생성 실패는 가입 성공을 반환하지 않는다');
 const secondFactorLogin = await takeResponse({ existing: true, passkey: true });
-assert.equal(secondFactorLogin.body.need, 'passkey');
+assert.equal(secondFactorLogin.body.need, 'two');
+assert.equal(secondFactorLogin.body.via.passkey, true);
+assert.equal(secondFactorLogin.body.via.mail, false, '메일 2단계를 안 켠 계정은 메일로 안 넘긴다');
 assert.ok(!secondFactorLogin.body.token && !secondFactorLogin.body.isNewAccount,
   '2단계 확인 전에는 가입 성공이나 세션을 반환하지 않는다');
 
@@ -1432,7 +1437,8 @@ console.log('security rule self-check done');
   assert.equal(sent.at(-1).to, owner);
   assert.equal(sent.at(-1).from, 'recover@regiontype.com');
   assert.equal(sent.at(-1).html, undefined);
-  const code = sent.at(-1).text.match(/[a-z0-9]{10}/).at(-1);
+  const code = sent.at(-1).text.match(/[A-Za-z]{8}/g).at(-1);
+  assert.match(code, /[A-Z]/); assert.match(code, /[a-z]/);
   const badCode = await call('/auth/mail/confirm', { code: 'zzzzzzzzzz' }, { headers: auth });
   assert.equal(badCode.status, 400, '틀린 코드');
   const confirmed = await call('/auth/mail/confirm', { code }, { headers: auth });
@@ -1515,7 +1521,7 @@ console.log('security rule self-check done');
   const ssoState = 's'.repeat(43);
   const live = await call('/auth/sso', { p: 'google', s: ssoState });
   assert.equal(live.status, 200, live.msg);
-  assert.match(live.url, /scope=openid(?!\+email|%20email)/, '배포 scope 는 openid 뿐이다');
+  assert.match(live.url, /scope=openid\+email/, 'Google 은 확인된 주소를 2단계 코드에만 쓴다');
   const localSso = await call('/auth/sso', { p: 'google', s: 'l'.repeat(43) }, { origin: 'http://localhost:3000' });
   assert.match(localSso.url, /scope=openid\+email/);
   const apple = await call('/auth/sso', { p: 'apple', s: 'a'.repeat(43) }, { origin: 'http://127.0.0.1:3000', env: { ...base, APPLE_ID: 'a', APPLE_KEY: 'k', APPLE_TEAM: 't', APPLE_KID: 'kid' } });
@@ -1551,13 +1557,19 @@ console.log('security rule self-check done');
   assert.equal(smsSent.length, 1);
   assert.equal(smsSent[0].to, phone);
   assert.equal(sent.length, mailBefore, '확인 코드도 메일 통로를 쓰지 않는다');
-  const phoneCode = smsSent[0].text.match(/[a-z0-9]{10}/).at(-1);
-  const badPhone = await call('/auth/phone/confirm', { code: 'zzzzzzzzzz' }, { headers: auth, env: smsEnv });
+  const phoneCode = smsSent[0].text.match(/[A-Za-z]{8}/g).at(-1);
+  assert.match(phoneCode, /[A-Z]/); assert.match(phoneCode, /[a-z]/);
+  assert.ok(!/[Il0-9]/.test(phoneCode), 'I·l·숫자는 빼 둔다');
+  const badPhone = await call('/auth/phone/confirm', { code: 'zzzzzzzz' }, { headers: auth, env: smsEnv });
+  const wrongCase = await call('/auth/phone/confirm', { code: phoneCode.toLowerCase() }, { headers: auth, env: smsEnv });
+  assert.equal(wrongCase.status, 400, '대소문자를 구분한다');
   assert.equal(badPhone.status, 400);
   const okPhone = await call('/auth/phone/confirm', { code: phoneCode }, { headers: auth, env: smsEnv });
   assert.equal(okPhone.status, 200, okPhone.msg);
   const mePhone = await call('/auth/me', null, { method: 'GET', headers: auth });
   assert.equal(mePhone.phone, true);
+  assert.equal(mePhone.two.phone, true, '번호를 확인하면 휴대폰 2단계가 켜진다');
+  assert.equal(mePhone.google, false);
   assert.equal(mePhone.mailbox, true);
   assert.ok(!JSON.stringify(mePhone).includes(phone) && !JSON.stringify(mePhone).includes('8210'), '계정 응답에 번호가 없다');
 
@@ -1566,6 +1578,53 @@ console.log('security rule self-check done');
   assert.equal(rescuedPhone.msg, unknownPhone.msg, '없는 번호와 있는 번호의 말이 같다');
   assert.equal(smsSent.at(-1).to, phone);
   assert.equal(sent.length, mailBefore);
+
+  const noGoogle = await call('/auth/two/set', { mail: true }, { headers: auth });
+  assert.equal(noGoogle.status, 400, 'Google 연결이 없으면 이메일 2단계를 못 켠다');
+  db.prepare("insert into sso (provider, sub, who, at) values ('google', ?, ?, ?)").run('subhash', who, Date.now());
+  const turned = await call('/auth/two/set', { mail: true }, { headers: auth });
+  assert.deepEqual(turned.two, { mail: true, phone: true });
+  assert.equal(db.prepare('select mail from user where id = ?').get(who).mail, null, '계정에는 주소를 안 적는다');
+
+  const b2 = 'bind-two', tag2 = 'u'.repeat(43);
+  const id2 = b64u(await sha(b64u(await sha(b2)) + tag2));
+  db.prepare('insert into pending (id, kind, who, until, mail, sends) values (?, ?, ?, ?, ?, 0)').run(id2, 'two', who, Date.now() + 60_000, owner);
+  const sentN = sent.length;
+  const mailed = await call('/auth/two/send', { b: b2, t: tag2, via: 'mail' });
+  assert.equal(mailed.status, 200, mailed.msg);
+  assert.equal(mailed.to, 'o***@example.com');
+  assert.equal(sent.length, sentN + 1);
+  const loginCode = sent.at(-1).text.match(/[A-Za-z]{8}/g).at(-1);
+  const mismatch = await call('/auth/two/check', { b: b2, t: tag2, code: loginCode.toLowerCase() });
+  assert.equal(mismatch.status, 401, '로그인 코드도 대소문자를 구분한다');
+  const passed = await call('/auth/two/check', { b: b2, t: tag2, code: loginCode });
+  assert.equal(passed.status, 200);
+  assert.ok(passed.token);
+  assert.equal(db.prepare('select 1 as n from pending where id = ?').get(id2), undefined, '맞으면 줄을 지운다');
+
+  const b3 = 'bind-phone', tag3 = 'w'.repeat(43);
+  const id3 = b64u(await sha(b64u(await sha(b3)) + tag3));
+  db.prepare('insert into pending (id, kind, who, until, sends) values (?, ?, ?, ?, 0)').run(id3, 'two', who, Date.now() + 60_000);
+  const wrongPhone = await call('/auth/two/send', { b: b3, t: tag3, via: 'phone', phone: '+821011111111' }, { env: smsEnv });
+  assert.equal(wrongPhone.status, 400);
+  assert.equal(db.prepare('select tries from pending where id = ?').get(id3).tries, 1, '틀린 번호는 시도로 센다');
+  const rightPhone = await call('/auth/two/send', { b: b3, t: tag3, via: 'phone', phone }, { env: smsEnv });
+  assert.equal(rightPhone.status, 200, rightPhone.msg);
+  assert.ok(rightPhone.to.startsWith('+82') && rightPhone.to.endsWith('5678'));
+  assert.ok(!JSON.stringify(rightPhone).includes('1234'));
+
+  const bare = 'cd'.repeat(16);
+  db.prepare('insert into user (id, mail, at) values (?, null, ?)').run(bare, Date.now());
+  db.prepare("insert into sso (provider, sub, who, at) values ('google', ?, ?, ?)").run('bare-sub', bare, Date.now());
+  db.prepare('insert into twofa (who, mail, phone, at) values (?, 1, 0, ?)').run(bare, Date.now());
+  const b4 = 'bind-closed', tag4 = 'x'.repeat(43);
+  const id4 = b64u(await sha(b64u(await sha(b4)) + tag4));
+  db.prepare('insert into pending (id, kind, who, until, provider, sub) values (?, ?, ?, ?, ?, ?)').run(id4, 'take', bare, Date.now() + 60_000, 'google', 'bare-sub');
+  const closed = await call('/auth/take', { b: b4, t: tag4 });
+  assert.equal(closed.need, 'two');
+  assert.deepEqual(closed.via, { passkey: false, mail: false, phone: false, code: false }, '쓸 수단이 없어도 토큰은 안 준다');
+  assert.ok(!closed.token);
+  assert.equal(db.prepare('select mail from user where id = ?').get(bare).mail, null);
 
   console.log('local login and recovery mail self-check done');
 }
@@ -2434,4 +2493,150 @@ console.log('security rule self-check done');
 
   globalThis.setInterval = realSet; globalThis.clearInterval = realClear;
   console.log('compete rating self-check done');
+}
+
+{
+  const { handle, normPhone } = await import('../sms/sms.mjs');
+  const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const hmacHex = async (secret, msg) => {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return toHex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg)));
+  };
+  const baseEnv = {
+    SMS_KEY: 'sms-key-0123456789',
+    SMS_PROVIDER: 'auto',
+    SMS_ALLOW: '',
+    SOLAPI_KEY: 'sol-key',
+    SOLAPI_SECRET: 'sol-secret',
+    SOLAPI_FROM: '029876543',
+    TWILIO_SID: 'AC123',
+    TWILIO_TOKEN: 'tw-token',
+    TWILIO_FROM: '+15005550006',
+    TWILIO_SERVICE: '',
+  };
+  const req = (body, extra = {}) => new Request(extra.url || 'https://rt-sms/send', {
+    method: extra.method || 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(extra.auth === null ? {} : { authorization: extra.auth || 'Bearer ' + baseEnv.SMS_KEY }),
+      ...(extra.headers || {}),
+    },
+    body: Object.prototype.hasOwnProperty.call(extra, 'rawBody')
+      ? extra.rawBody
+      : (body == null ? undefined : JSON.stringify(body)),
+  });
+  const call = (env, body, extra = {}, fetchImpl = async () => new Response('{}', { status: 200 })) =>
+    handle(req(body, extra), env, fetchImpl);
+
+  assert.equal(normPhone('+821012345678'), '+821012345678');
+  assert.equal(normPhone('01012345678'), '', '국내 형식은 여기서 접지 않는다');
+  assert.equal(normPhone('+82 10 1234 5678'), '', '공백은 거절한다');
+  assert.equal(normPhone(' +821012345678'), '');
+
+  let r = await call(baseEnv, null, { method: 'GET' });
+  assert.equal(r.status, 404);
+  r = await call(baseEnv, { to: '+821012345678', text: 'ok' }, { url: 'https://rt-sms/nope' });
+  assert.equal(r.status, 404);
+  r = await call({ ...baseEnv, SMS_KEY: '' }, { to: '+821012345678', text: 'ok' });
+  assert.equal(r.status, 503, '열쇠가 없으면 닫는다');
+  r = await call({
+    ...baseEnv,
+    SOLAPI_KEY: '', SOLAPI_SECRET: '', SOLAPI_FROM: '',
+    TWILIO_SID: '', TWILIO_TOKEN: '', TWILIO_FROM: '', TWILIO_SERVICE: '',
+  }, { to: '+821012345678', text: 'ok' });
+  assert.equal(r.status, 503, '공급자가 하나도 없으면 닫는다');
+  r = await call(baseEnv, { to: '+821012345678', text: 'ok' }, { auth: 'Bearer wrong' });
+  assert.equal(r.status, 401);
+  r = await call(baseEnv, null, { rawBody: '{' });
+  assert.equal(r.status, 400, '깨진 JSON 은 거절한다');
+  r = await call(baseEnv, { to: '+82 10 1234 5678', text: 'ok' });
+  assert.equal(r.status, 400, '잘못된 번호는 거절한다');
+  r = await call(baseEnv, { to: '+821012345678', text: '', html: '<b>no</b>' });
+  assert.equal(r.status, 400, '여분 필드는 받지 않는다');
+  r = await call(baseEnv, { to: '+821012345678', text: 'x'.repeat(301) });
+  assert.equal(r.status, 400, '본문이 너무 길면 거절한다');
+  r = await call(baseEnv, { to: '+821012345678', text: 'a\0b' });
+  assert.equal(r.status, 400, '널 문자는 거절한다');
+
+  r = await call({ ...baseEnv, SMS_ALLOW: '+82,+81' }, { to: '+12025550123', text: 'blocked' });
+  const deniedText = await r.text();
+  assert.equal(r.status, 403);
+  assert.ok(!deniedText.includes('12025550123') && !deniedText.includes('blocked'), '응답에 번호와 본문을 싣지 않는다');
+
+  const solReqs = [];
+  r = await call(baseEnv, { to: '+821012345678', text: 'hello' }, {}, async (url, init) => {
+    solReqs.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(r.status, 200);
+  assert.equal(solReqs.length, 1);
+  assert.equal(solReqs[0].url, 'https://api.solapi.com/messages/v4/send');
+  assert.equal(solReqs[0].init.redirect, 'manual');
+  const solHead = new Headers(solReqs[0].init.headers);
+  assert.equal(solHead.get('content-type'), 'application/json');
+  const solBody = JSON.parse(solReqs[0].init.body);
+  assert.deepEqual(solBody, { message: { to: '01012345678', from: '029876543', text: 'hello' } });
+  const solAuth = solHead.get('authorization');
+  const solMatch = solAuth.match(/^HMAC-SHA256 apiKey=sol-key, date=([^,]+), salt=([0-9a-f]{32}), signature=([0-9a-f]{64})$/);
+  assert.ok(solMatch, 'Solapi 인증 머리글 형식');
+  assert.equal(solMatch[3], await hmacHex('sol-secret', solMatch[1] + solMatch[2]), '서명은 date+salt HMAC');
+
+  const twReqs = [];
+  r = await call(baseEnv, { to: '+12025550123', text: 'hello' }, {}, async (url, init) => {
+    twReqs.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(r.status, 200);
+  assert.equal(twReqs[0].url, 'https://api.twilio.com/2010-04-01/Accounts/AC123/Messages.json');
+  assert.equal(twReqs[0].init.redirect, 'manual');
+  const twHead = new Headers(twReqs[0].init.headers);
+  assert.equal(twHead.get('authorization'), 'Basic ' + btoa('AC123:tw-token'));
+  assert.equal(twHead.get('content-type'), 'application/x-www-form-urlencoded');
+  const twForm = new URLSearchParams(twReqs[0].init.body);
+  assert.deepEqual([twForm.get('To'), twForm.get('Body'), twForm.get('From'), twForm.get('MessagingServiceSid')], ['+12025550123', 'hello', '+15005550006', null]);
+
+  const svcReqs = [];
+  r = await call({ ...baseEnv, SMS_PROVIDER: 'twilio', TWILIO_FROM: '', TWILIO_SERVICE: 'MG999' }, { to: '+12025550123', text: 'service' }, {}, async (url, init) => {
+    svcReqs.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(r.status, 200);
+  const svcForm = new URLSearchParams(svcReqs[0].init.body);
+  assert.deepEqual([svcForm.get('To'), svcForm.get('Body'), svcForm.get('From'), svcForm.get('MessagingServiceSid')], ['+12025550123', 'service', null, 'MG999']);
+
+  const autoKr = [];
+  await call(baseEnv, { to: '+82105551234', text: 'kr' }, {}, async (url, init) => {
+    autoKr.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(autoKr[0].url, 'https://api.solapi.com/messages/v4/send', '+82 는 Solapi');
+  const autoUs = [];
+  await call(baseEnv, { to: '+12025550123', text: 'us' }, {}, async (url, init) => {
+    autoUs.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(autoUs[0].url, 'https://api.twilio.com/2010-04-01/Accounts/AC123/Messages.json', '그 밖은 Twilio');
+
+  const fallTw = [];
+  await call({ ...baseEnv, SOLAPI_KEY: '', SOLAPI_SECRET: '', SOLAPI_FROM: '' }, { to: '+82105551234', text: 'fallback' }, {}, async (url, init) => {
+    fallTw.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(fallTw[0].url, 'https://api.twilio.com/2010-04-01/Accounts/AC123/Messages.json', 'Solapi 가 없으면 Twilio 로 돈다');
+  const fallSol = [];
+  await call({ ...baseEnv, TWILIO_SID: '', TWILIO_TOKEN: '', TWILIO_FROM: '', TWILIO_SERVICE: '' }, { to: '+12025550123', text: 'fallback' }, {}, async (url, init) => {
+    fallSol.push({ url, init });
+    return new Response('{}', { status: 200 });
+  });
+  assert.equal(fallSol[0].url, 'https://api.solapi.com/messages/v4/send', 'Twilio 가 없으면 Solapi 로 돈다');
+  assert.equal(JSON.parse(fallSol[0].init.body).message.to, '12025550123');
+
+  r = await call(baseEnv, { to: '+821012345678', text: 'oops' }, {}, async () => new Response('{}', { status: 500 }));
+  const failText = await r.text();
+  assert.equal(r.status, 502);
+  assert.ok(!failText.includes('821012345678'));
+  r = await call(baseEnv, { to: '+12025550123', text: 'oops' }, {}, async () => { throw new Error('down'); });
+  assert.equal(r.status, 502, 'fetch 예외도 502');
+
+  console.log('sms sender self-check done');
 }
