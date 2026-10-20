@@ -220,7 +220,7 @@ async function sso(p) {
     let relay = RELAY;
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && RELAY.startsWith('http://')) {
       localStorage.setItem('rt.relay', 'live');
-      relay = self.RT_LIVE || 'https://g.gearservicevanguard.com';
+      relay = self.RT_LIVE || 'https://regiontype.gearservicevanguard.com';
     }
     const head = { 'content-type': 'application/json' };
     const tok = token();

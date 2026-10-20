@@ -39,7 +39,7 @@ namespace_id = "1012"
 
 # 시크릿을 넣은 뒤 주석을 푼다 — 그 전에는 이 워커가 실제 요청을 받지 않는다.
 # [[routes]]
-# pattern = "g.gearservicevanguard.com/compete/*"
+# pattern = "regiontype.gearservicevanguard.com/compete/*"
 # zone_name = "gearservicevanguard.com"
 
 # 하루 한 번(UTC 19:17 = 한국 04:17): 키 기록 보존 기한 삭제 · 봇 CPM 표 보정(compete-do.mjs 의 daily)

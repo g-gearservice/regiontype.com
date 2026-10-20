@@ -5,7 +5,7 @@
    로 다른 로컬 포트를 고르면 rt.relay 에 남아 다른 페이지도 따라간다. ?relay=local 은 기본으로 되돌린다.
    토큰이 남의 주소로 나가면 안 되므로 운영 주소와 로컬 주소만 받는다. */
 (() => {
-  const LIVE = 'https://g.gearservicevanguard.com', LOCAL = 'http://127.0.0.1:8788';
+  const LIVE = 'https://regiontype.gearservicevanguard.com', LOCAL = 'http://127.0.0.1:8788';
   let url = LIVE;
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
     url = LOCAL;

@@ -4,7 +4,7 @@ The feedback relay must be **anonymous** (no login). If Zero Trust protects thes
 
 Hostname to keep clear of Access:
 
-- `g.gearservicevanguard.com`
+- `regiontype.gearservicevanguard.com`
 
 That custom domain is the only door. The `rt-feedback.*.workers.dev` address answered the
 same calls until `workers_dev = false` in `relay/wrangler.toml` closed it.
@@ -23,7 +23,7 @@ same calls until `workers_dev = false` in `relay/wrangler.toml` closed it.
 
 ```bash
 curl -sS -o /dev/null -w '%{http_code}\n' -X OPTIONS \
-  'https://g.gearservicevanguard.com/' \
+  'https://regiontype.gearservicevanguard.com/' \
   -H 'Origin: https://regiontype.com' \
   -H 'Access-Control-Request-Method: POST'
 ```
@@ -31,7 +31,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' -X OPTIONS \
 Expect **204**, not 403 HTML.
 
 ```bash
-curl -sS 'https://g.gearservicevanguard.com/where' \
+curl -sS 'https://regiontype.gearservicevanguard.com/where' \
   -H 'Origin: https://regiontype.com'
 ```
 
@@ -39,13 +39,13 @@ Expect JSON `{"ok":true,...}`, not a 302 to Access login.
 
 ## Deploy route (keep custom domain in wrangler)
 
-Local `relay/wrangler.toml` includes `g.gearservicevanguard.com`. After changing Access, redeploy:
+Local `relay/wrangler.toml` includes `regiontype.gearservicevanguard.com`. After changing Access, redeploy:
 
 ```bash
 cd relay && npx wrangler deploy
 ```
 
-Site `FEEDBACK_URL` in `app.js` should be `https://g.gearservicevanguard.com`.
+Site `FEEDBACK_URL` in `app.js` should be `https://regiontype.gearservicevanguard.com`.
 
 ## Split workers
 

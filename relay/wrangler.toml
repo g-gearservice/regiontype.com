@@ -122,8 +122,14 @@ namespace_id = "1010"
   limit = 60
   period = 60
 
+# g. 는 사이트가 regiontype. 으로 넘어가기 전까지 같이 연다. 로그인 콜백은 regiontype. 이다.
 [[routes]]
 pattern = "g.gearservicevanguard.com"
+zone_name = "gearservicevanguard.com"
+custom_domain = true
+
+[[routes]]
+pattern = "regiontype.gearservicevanguard.com"
 zone_name = "gearservicevanguard.com"
 custom_domain = true
 

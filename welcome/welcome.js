@@ -119,21 +119,19 @@ const STEPS = [
   { kind: 'yesno', key: 'shut', kicker: '프로필 6/6',
     ask: '계정을 비공개로 둘까요?',
       note: '비공개로 두면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.' },
-  /* 보안 두 장은 서버 응답이 답이다(sec). 전화는 인증하거나 문자 발송이 아직
-     안 열렸을 때(503)만 지나간다 — skip 을 달지 않는다. 보조 메일은 건너뛸 수 있다. */
+  /* 보안 두 장은 서버 응답이 답이다(sec). 전화는 인증이 끝나야 다음으로 간다.
+     문자를 못 보내도 넘어가지 않는다. 보조 메일은 건너뛸 수 있다. */
   { kind: 'phone', kicker: '보안 1/2',
-    ask: '전화번호를 인증해 주세요.',
-    note: '전화번호 인증으로 보안 수단을 하나 더합니다. 이 번호가 문자로 받은 코드로 로그인하는 2단계 인증 수단이자 계정 복구 수단이 됩니다. '
-      + '영문 대소문자가 섞인 8자리 코드(대소문자 구분)를 문자로 보내 드리며, 코드는 5분 동안 유효합니다.' },
+    ask: '기본 인증 수단인 전화번호를 입력한 뒤 인증해 주세요.',
+    note: '' },
   { kind: 'mail', skip: true, kicker: '보안 2/2',
     ask: '보조 메일을 추가할까요?',
-    note: '보조 메일은 Password & Account Recovery(계정 복구)를 위한 메일로만 씁니다. '
-      + 'recover@regiontype.com 이 한 번만 쓰는 영문 8자리 코드(대소문자 구분, 5분 유효)를 보냅니다.' },
+    note: '' },
   { kind: 'done' },
 ];
 
 /* 보안 두 장의 상태. 번호·메일 값은 서버가 쥐고, 여기엔 '어디까지 왔나' 만 둔다.
-   off 는 서버가 503(발송 미설정)을 한 번 말한 것 — 그때만 인증 없이 지나간다.
+   off 는 보조 메일이 503(발송 미설정)인 것. 전화는 이 칸으로 넘어가지 않는다.
    codes 는 복구 코드를 처음 받은 순간부터 체크할 때까지만 메모리에 있다 */
 const sec = {
   phone: { done: false, already: false, off: false, sent: false, busy: false, value: '', codes: null, acked: false },
@@ -144,7 +142,7 @@ const CHAN = {
     path: '/auth/phone', field: 'phone', send: '인증 문자 보내기',
     empty: '전화번호를 적어 주세요.', bad: '번호를 다시 확인해 주세요.',
     sent: '문자를 보냈습니다. 5분 안에 받은 코드를 입력해 주세요.',
-    off: '문자 발송이 아직 준비되지 않았습니다. 이 단계는 지금 넘어가고, 설정 › 보안에서 나중에 인증할 수 있습니다.',
+    off: '문자를 보내지 못했습니다. 인증이 끝나야 다음으로 갈 수 있습니다.',
     ok: '✓ 인증됐습니다', already: '✓ 이미 인증된 번호가 있습니다.',
   },
   mail: {
@@ -412,17 +410,6 @@ function drawVerify(s) {
   const kind = s.kind, m = sec[kind], c = CHAN[kind];
   $('#introAsk').textContent = s.ask;
 
-  const notice = h('p', 'intro-notice');
-  const link = h('a', '', '개인정보 처리방침');
-  link.href = '../policy/';
-  link.target = '_blank';          // 같은 탭으로 가면 이 장의 진행이 날아간다
-  link.rel = 'noopener';
-  notice.append(kind === 'phone'
-    ? '전화번호는 본인 확인, 보안 수단 추가, 계정 복구를 위해서만 받습니다. 확인이 끝나면 번호 자체가 아니라 해시만 보관하며, 다른 사람에게 보이지 않습니다. '
-    : '받은 메일 주소는 확인이 끝나면 해시만 서버에 보관하며, 다른 사람에게 보이지 않습니다. ',
-    link, ' 에서 자세히 볼 수 있습니다.');
-  body().append(notice);
-
   if (kind === 'mail' && !m.already) {
     const picks = h('div', 'intro-picks intro-yesno');
     [[true, '추가하기'], [false, '추가하지 않기']].forEach(([v, label], i) => {
@@ -515,6 +502,14 @@ function drawVerify(s) {
     box.append(codes);
   }
   body().append(box);
+  if (kind === 'phone' || kind === 'mail') {
+    const policy = h('a', 'profile-button', '개인정보 처리방침');
+    policy.href = '../policy/';
+    policy.target = '_blank';        // 같은 탭으로 가면 이 장의 진행이 날아간다
+    policy.rel = 'noopener';
+    policy.style.marginTop = '12px';
+    body().append(policy);
+  }
   paintVerify(kind);
   if (m.off) say(c.off);
 }
@@ -527,7 +522,7 @@ function paintVerify(kind) {
   const ok = $('#vOk');
   ok.hidden = !m.done;
   ok.textContent = m.done ? (m.already ? c.already : c.ok) : '';
-  const open = !m.done && !m.off;
+  const open = !m.done && (kind === 'phone' || !m.off);
   $('#vSendRow').hidden = !open;
   $('#vSend').hidden = m.sent;
   $('#vCodeRow').hidden = !(open && m.sent);
@@ -559,7 +554,7 @@ function setBusy(kind, on) {
 function failSay(kind, how, e) {
   const c = CHAN[kind];
   if (e.status === 401) return;      // post() 가 이미 로그아웃으로 보냈다
-  if (how === 'send' && e.status === 503) return say(c.off);
+  if (how === 'send' && e.status === 503) return say(c.off, kind === 'phone');
   if (e.status === 400) return say(how === 'send' ? c.bad : '코드가 맞지 않거나 만료되었습니다.', true);
   if (e.status === 429) return say('잠시 후 다시 시도해 주세요.', true);
   say('처리하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.', true);
@@ -567,7 +562,7 @@ function failSay(kind, how, e) {
 
 async function sendCode(kind) {
   const m = sec[kind], c = CHAN[kind];
-  if (m.busy || m.done || m.off) return;
+  if (m.busy || m.done || (kind !== 'phone' && m.off)) return;
   const v = ($('#vIn')?.value || '').trim();
   if (!v) { say(c.empty, true); $('#vIn')?.focus(); return; }
   m.value = v;
@@ -580,13 +575,13 @@ async function sendCode(kind) {
     m.sent = ok = true;
     if (here(kind)) say(again ? '다시 보냈습니다. 가장 나중에 받은 코드만 쓸 수 있습니다.' : c.sent);
   } catch (e) {
-    if (e.status === 503) m.off = true;
+    if (e.status === 503 && kind !== 'phone') m.off = true;
     if (here(kind)) failSay(kind, 'send', e);
   } finally {
     setBusy(kind, false);
   }
   if (!here(kind)) return;
-  (ok ? $('#vCode') : m.off ? $('#introCard') : $('#vIn'))?.focus({ preventScroll: true });
+  (ok ? $('#vCode') : (kind !== 'phone' && m.off) ? $('#introCard') : $('#vIn'))?.focus({ preventScroll: true });
 }
 
 async function confirmCode(kind) {
@@ -792,7 +787,7 @@ function missing(s) {
   if (s.kind === 'phone') {
     const p = sec.phone;
     if (p.codes && !p.acked) return '복구 코드를 적어 두고 "적어 두었습니다"에 체크해 주세요.';
-    return p.done || p.off ? '' : '전화번호를 인증해 주세요.';
+    return p.done ? '' : '기본 인증 수단인 전화번호를 입력한 뒤 인증해 주세요.';
   }
   if (s.kind === 'mail') {
     const m = sec.mail;

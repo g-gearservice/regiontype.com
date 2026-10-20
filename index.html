@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.55">
+<link rel="stylesheet" href="style.css?v=4.59">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -375,7 +375,7 @@
           <button type="button" class="si-sub" id="twoRescuePhone" data-i18n="rescuePhoneGo">휴대폰으로 새 복구 코드 받기</button>
         </div>
       <form class="si-code" id="rescueForm" hidden>
-        <p class="si-notice"><span data-i18n="mailNotice">메일 주소를 받습니다. 이유는 본인 확인과 계정 복구입니다. 확인된 주소라면 recover@regiontype.com 이 일회용 코드를 평문으로 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 주소는 공개 프로필과 공개 이슈에 보이지 않고, 서버에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+        <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery에만 쓰며, 2단계 로그인에는 쓰지 않습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
         <label for="rescueIn" data-i18n="rescueLabel">확인한 메일</label>
         <div>
           <input id="rescueIn" type="email" maxlength="254" required autocomplete="email" spellcheck="false" autocapitalize="off">
@@ -383,7 +383,7 @@
         </div>
       </form>
       <form class="si-code" id="phoneAuthForm" hidden>
-        <p class="si-notice"><span data-i18n="phoneNotice">전화번호를 받습니다. 이유는 본인 확인과 계정 복구입니다. 문자는 보내는 쪽이 있을 때만 나가며, 없으면 보내지 않고 실패로 끝냅니다. 복구 메일로 문자를 대신하지 않습니다. 나갈 때는 일회용 코드이고, 그 코드와 확인 요청은 5분 동안만 유효합니다. 번호는 공개 프로필과 공개 이슈에 보이지 않고, 확인 뒤에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+        <p class="si-notice"><span data-i18n="phoneNotice">전화번호는 2단계 로그인과 계정 복구에만 씁니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
         <label for="phoneAuthIn" data-i18n="phoneLabel">전화번호</label>
         <div>
           <input id="phoneAuthIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
@@ -511,8 +511,8 @@
             <section class="profile-section" aria-labelledby="securityPhoneTitle">
               <h3 class="profile-label" id="securityPhoneTitle" data-i18n="phoneHead">휴대폰 인증</h3>
               <p class="profile-help" id="phoneStatus"></p>
-              <p class="profile-help" data-i18n="phoneHow">확인한 번호로 로그인 2단계 인증 문자를 받고, 새 복구 코드도 받을 수 있습니다. 문자로 받은 영문 대소문자 8자리 코드를 적어야 확인됩니다. 문자를 보내는 설정이 없으면 보내지 않습니다.</p>
-              <p class="si-notice"><span data-i18n="phoneNotice">전화번호를 받습니다. 이유는 로그인 2단계 인증과 계정 복구입니다. 문자는 보내는 쪽이 있을 때만 나가며, 없으면 보내지 않고 실패로 끝냅니다. 복구 메일로 문자를 대신하지 않습니다. 나갈 때는 일회용 코드이고, 그 코드와 확인 요청은 5분 동안만 유효합니다. 번호는 공개 프로필과 공개 이슈에 보이지 않고, 확인 뒤에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+              <p class="profile-help" data-i18n="phoneHow">이 번호로 2단계 로그인 문자와 복구 코드를 받고, 영문 대소문자 8자리 코드로 확인합니다.</p>
+              <p class="si-notice"><span data-i18n="phoneNotice">전화번호는 2단계 로그인과 계정 복구에만 씁니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
               <form class="si-code" id="phoneForm">
                 <label for="phoneIn" data-i18n="phoneLabel">전화번호</label>
                 <div>
@@ -533,8 +533,8 @@
             <section class="profile-section" aria-labelledby="securityMailTitle">
               <h3 class="profile-label" id="securityMailTitle" data-i18n="mailHead">보조 메일</h3>
               <p class="profile-help" id="mailStatus"></p>
-              <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보냅니다. 메일로 받은 영문 대소문자 8자리 코드를 적어야 확인됩니다.</p>
-              <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery(계정 복구)에만 씁니다. 로그인 2단계 인증에는 쓰지 않습니다. 확인된 주소라면 recover@regiontype.com 이 일회용 코드를 평문으로 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 주소는 공개 프로필과 공개 이슈에 보이지 않고, 서버에는 해시만 남습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+              <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보내며, 영문 대소문자 8자리 코드로 확인합니다.</p>
+              <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery에만 쓰며, 2단계 로그인에는 쓰지 않습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
               <form class="si-code" id="mailForm">
                 <label for="mailIn" data-i18n="mailLabel">메일</label>
                 <div>
@@ -564,11 +564,11 @@
           <div id="secOut" hidden><p class="profile-help" data-i18n="secOutHelp">로그인하면 패스키와 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
           <section class="profile-section" aria-labelledby="privTitle">
             <h3 class="profile-label" id="privTitle" data-i18n="privTitle">개인정보와 이 브라우저</h3>
-            <div class="profile-row"><div><strong data-i18n="privWhere">접속 지역 추정</strong><p class="profile-help" id="privWhereHelp" data-i18n="privWhereHelp">중계기가 IP 로 추정한 나라 코드와 시간대(도시 제외)를 받아 언어 기본값에 씁니다. 끄면 이 브라우저의 언어·시간대만 씁니다. 다음에 열 때부터 적용. 꺼도 순위표·로그인 같은 다른 요청은 중계기를 거치며, IP 는 요청 제한에만 쓰고 저장하지 않습니다. 정밀 위치(GPS)는 쓰지 않고 권한도 요청하지 않습니다.</p></div><button type="button" class="profile-switch" data-opt="where" data-i18n-aria="privWhere" aria-label="접속 지역 추정" aria-describedby="privWhereHelp"></button></div>
-            <div class="profile-row"><div><strong data-i18n="privCookie">쿠키</strong><p class="profile-help" data-i18n="privCookieHelp">이 사이트는 쿠키를 쓰지 않습니다. 로그인 공급자·스팸 방지(Turnstile) 같은 외부 서비스는 자기 쿠키를 둘 수 있습니다. 설정·게임 기록·로그인 토큰은 이 브라우저 저장소(localStorage)에만 있습니다.</p></div></div>
-            <div class="profile-row"><div><strong data-i18n="privForget">순위표에서 내리기</strong><p class="profile-help" id="privForgetHelp" data-i18n="privForgetHelp">로그인해야 합니다. 순위표와 경쟁전에 올린 내 기록을 서버에서 내립니다. 커뮤니티 글·댓글·공개 프로필은 남으며 '계정 삭제'로만 지워집니다.</p></div><button type="button" class="profile-button destructive" id="privForget" aria-describedby="privForgetHelp" data-i18n="privForget" disabled>순위표에서 내리기</button></div>
+            <div class="profile-row"><div><strong data-i18n="privWhere">접속 지역 추정</strong><p class="profile-help" id="privWhereHelp" data-i18n="privWhereHelp">IP로 나라와 시간대만 추정해 기본 언어를 고릅니다. 끄면 이 브라우저 설정만 씁니다.</p></div><button type="button" class="profile-switch" data-opt="where" data-i18n-aria="privWhere" aria-label="접속 지역 추정" aria-describedby="privWhereHelp"></button></div>
+            <div class="profile-row"><div><strong data-i18n="privCookie">쿠키</strong><p class="profile-help" data-i18n="privCookieHelp">이 사이트는 쿠키를 쓰지 않습니다. 설정과 로그인 토큰은 이 브라우저에만 있습니다.</p></div></div>
+            <div class="profile-row"><div><strong data-i18n="privForget">순위표에서 내리기</strong><p class="profile-help" id="privForgetHelp" data-i18n="privForgetHelp">로그인한 다음 순위와 기록만 지웁니다. 글과 프로필은 계정 삭제 때 지워집니다.</p></div><button type="button" class="profile-button destructive" id="privForget" aria-describedby="privForgetHelp" data-i18n="privForget" disabled>순위표에서 내리기</button></div>
             <div class="profile-actions"><button type="button" class="profile-button" id="privKeys" data-i18n="privKeys">게임 기록 지우기</button><button type="button" class="profile-button" id="privOpt" data-i18n="privOpt">설정 초기화</button><button type="button" class="profile-button destructive" id="privAll" data-i18n="privAll">이 브라우저 기록 모두 지우기</button></div>
-            <p class="profile-help" data-i18n="privNote">이 브라우저에서 지워도 서버의 순위표·경쟁전 기록, 커뮤니티 글·댓글·공개 프로필, 계정은 남습니다. 기록은 '순위표에서 내리기', 나머지는 계정 탭의 '계정 삭제'로 지웁니다. 초기화해도 지역 추정 선택은 그대로 둡니다.</p>
+            <p class="profile-help" data-i18n="privNote">이 브라우저만 비웁니다. 서버의 기록과 계정은 남습니다.</p>
           </section>
         </div>
         <p class="si-say" id="optSay" role="status" aria-live="polite"></p>
@@ -731,8 +731,8 @@
 
 <script src="relay.js?v=4.35"></script>
 <script src="app.js?v=4.35"></script>
-<script src="auth.js?v=4.55"></script>
-<script src="settings/settings.js?v=4.55"></script>
+<script src="auth.js?v=4.59"></script>
+<script src="settings/settings.js?v=4.59"></script>
 <script src="ranked.js?v=4.35"></script>
 </body>
 </html>

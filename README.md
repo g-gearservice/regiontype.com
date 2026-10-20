@@ -500,7 +500,7 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
 
 Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
 
-**Do not put Cloudflare Access in front of this Worker.** If `g.gearservicevanguard.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code, which the site shows as a 502. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. That custom domain is the only door: `workers_dev = false` closes the `*.workers.dev` one. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
+**Do not put Cloudflare Access in front of this Worker.** If `regiontype.gearservicevanguard.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code, which the site shows as a 502. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. That custom domain is the only door: `workers_dev = false` closes the `*.workers.dev` one. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
 
     node relay/test.mjs      checks that one issue and one score row are filtered correctly
 
@@ -595,7 +595,7 @@ Turning the second step on registers a passkey, enables email or SMS 2FA, or iss
 
 **Recovery codes are the door when other methods are unavailable.** Turning on 2FA or registering a passkey shows eight one-time codes exactly once; only their hashes reach D1. Each is spent once — a redeemed code is gone for good — and reissuing wipes every old code in the same stroke, so there is no way to see a code again once that screen closes.
 
-The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `g.gearservicevanguard.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
+The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `regiontype.gearservicevanguard.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
 
 **The row owner is read from the token.** The body is ignored — the old record-code path let anyone who knew the code post under that name.
 
