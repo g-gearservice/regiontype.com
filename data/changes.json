@@ -1,5 +1,29 @@
 [
   {
+    "v": "0.11.459",
+    "date": "2026-10-21",
+    "ko": "가입할 때 보조 메일 단계의 설명을 뺐습니다. 개인정보 처리방침 단추만 남겼습니다.",
+    "en": "The secondary-email step during signup no longer has a long note. Only the privacy-policy button remains."
+  },
+  {
+    "v": "0.11.458",
+    "date": "2026-10-21",
+    "ko": "가입할 때 전화번호를 인증해야 다음으로 갑니다.",
+    "en": "Signup now stays on the phone step until the number is verified."
+  },
+  {
+    "v": "0.11.457",
+    "date": "2026-10-21",
+    "ko": "가입할 때 전화번호 단계의 설명을 뺐습니다. 개인정보 처리방침으로 가는 단추만 입력칸 아래에 있습니다.",
+    "en": "The phone step during signup no longer has a long note. A privacy-policy button sits under the field."
+  },
+  {
+    "v": "0.11.456",
+    "date": "2026-10-20",
+    "ko": "설정 › 보안의 안내를 짧게 줄였습니다.",
+    "en": "The notes in Settings › Security are now much shorter."
+  },
+  {
     "v": "0.11.455",
     "date": "2026-10-20",
     "ko": "로그인 2단계에 이메일 코드와 휴대폰 코드가 더해집니다. 코드는 영문 대소문자 8자리입니다. 처음 가입하면 전화번호를 인증하고, 계정 복구에만 쓰는 보조 메일을 더할 수 있습니다. 설정 › 보안에서 둘을 켜고 끕니다.",
