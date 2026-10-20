@@ -1,1 +1,54 @@
-{"v":3,"createdOnFiles":{"v":1,"at":"2026-10-19T06:11:36Z"},"title":"regiontype CRT 터미널 스타일","launch":{"view":"canvas"},"pages":[],"boards":{"Main.dc.html":{"x":0,"y":0,"w":1280,"h":1040,"title":"디자인 언어 · 토큰과 부품"},"Game.dc.html":{"x":1360,"y":0,"w":1280,"h":800,"title":"플레이 · 밤","is_interactive":true},"GameDay.dc.html":{"x":2720,"y":0,"w":1280,"h":800,"title":"플레이 · 낮","is_interactive":true}},"order":["Main.dc.html","Game.dc.html","GameDay.dc.html"],"notes":{"head":{"x":0,"y":-300,"text":"regiontype beta · CRT 터미널","kind":"title1","maxW":4000}},"designSystems":[]}
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Game.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "title": "플레이 · 밤",
+      "w": 1280,
+      "x": 1360,
+      "y": 0
+    },
+    "GameDay.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "title": "플레이 · 낮",
+      "w": 1280,
+      "x": 2720,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 1040,
+      "title": "디자인 언어 · 토큰과 부품",
+      "w": 1280,
+      "x": 0,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-19T06:11:36Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "head": {
+      "kind": "title1",
+      "maxW": 4000,
+      "text": "regiontype beta · CRT 터미널",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Game.dc.html",
+    "GameDay.dc.html"
+  ],
+  "pages": [],
+  "title": "regiontype CRT 터미널 스타일"
+}

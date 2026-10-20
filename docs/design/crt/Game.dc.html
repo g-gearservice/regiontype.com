@@ -65,11 +65,11 @@ a{color:#8dfca4}a:hover{color:#c4ffd0}
 </sc-for>
 </div>
 
-<div style="display: flex; align-items: baseline; gap: 1ch; margin-top: auto">
-<label for="crtIn" style="white-space: nowrap">{{ path }}</label>
-<input id="crtIn" value="{{ typed }}" onChange="{{ onType }}" onKeyDown="{{ onKey }}" onCompositionEnd="{{ onCompEnd }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: {{ c.phos }}; text-shadow: inherit">
-<span class="crt-cur" aria-hidden="true" style="display: inline-block; width: .6ch; height: 1.1em; background: {{ c.phos }}"></span>
-</div>
+<label for="crtIn" style="display: flex; align-items: baseline; margin-top: auto; cursor: text">
+<span style="white-space: nowrap; margin-right: 1ch">{{ path }}</span>
+<input id="crtIn" autoFocus="{{ true }}" onInput="{{ onType }}" onKeyDown="{{ onKey }}" onKeyUp="{{ onKeyUp }}" autocomplete="off" spellcheck="false" aria-label="동 이름을 치고 스페이스나 Enter" style="flex: none; width: {{ inW }}; max-width: 70%; background: transparent; border: 0; outline: 0; padding: 0; font: inherit; color: {{ c.phos }}; caret-color: transparent; text-shadow: inherit">
+<span class="crt-cur" aria-hidden="true" style="display: inline-block; flex: none; width: .6ch; height: 1.1em; align-self: center; background: {{ c.phos }}"></span>
+</label>
 </div>
 </div>
 </x-dc>
@@ -83,12 +83,20 @@ var CRT_GU = [['강서구',20],['양천구',18],['구로구',15],['금천구',10
 var CRT_GANGSEO = [["공항동", "김포국제공항이 통째로 들어앉은 동. 강서구에서 가장 넓고, 두 번째로 넓은 동의 두 배다."], ["방화2동", "방화(傍花)는 '꽃 곁'이라는 뜻. 개화산에 꽃이 흐드러졌다는 데서 왔다. 강서구의 가장 북쪽이다."], ["방화3동", "한강과 개화산 사이에 낀 서북쪽 자락. 구의 경계가 강을 따라 비스듬히 지난다."], ["방화1동", "방화동 셋 중 가장 남쪽. 공항 쪽과 화곡 쪽을 잇는 길목에 놓였다."], ["가양1동", "한강을 길게 낀 강서구에서 두 번째로 넓은 동. 가양(加陽)은 옛 마을 이름에서 한 글자씩 땄다."], ["가양2동", "가양동 셋 중 가운데. 한강과 등촌동 사이의 좁은 띠를 이룬다."], ["가양3동", "한강 물가에 바짝 붙은 가양동. 강 건너는 마포와 상암이다."], ["염창동", "염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다."], ["등촌1동", "등촌(登村)은 등마루에 올라앉은 마을이라는 뜻. 셋으로 갈린 등촌동 중 가장 작다."], ["등촌3동", "등촌동 셋 중 가장 서쪽. 가양동과 화곡동 사이에 끼어 남북으로 길다."], ["발산1동", "발산(鉢山)은 승려의 밥그릇인 바리때를 엎어 놓은 모양의 산에서 왔다. 강서구에서 네 번째로 넓다."], ["화곡3동", "화곡(禾谷)은 '벼 골짜기'. 벼농사가 잘 되던 땅이었다. 화곡동 일곱 중 가장 작은 축이다."], ["우장산동", "우장산(雨裝山)은 기우제를 지내던 산. 비 올 채비를 하고 올랐다는 데서 이름이 붙었다."], ["화곡1동", "강서구의 남쪽 끝자락. 여기서 더 내려가면 양천구다."], ["화곡8동", "번호가 1·2·3·4·6·8로 띄엄띄엄한 것은 5동과 7동이 다른 동에 합쳐졌기 때문이다."], ["화곡2동", "강서구 스무 개 동 가운데 가장 작고, 가장 남쪽에 있다."], ["화곡4동", "화곡동 일곱 중 동쪽 끝. 등촌2동과 어깨를 맞대고 있다."], ["등촌2동", "등촌동 셋 중 가장 동쪽. 화곡동과 염창동 사이를 세로로 가른다."], ["화곡6동", "화곡본동과 등촌동 사이에 놓인 동. 우장산 동쪽 비탈을 낀다."], ["화곡본동", "화곡동이 갈라져 나가고 남은 본동. 맞닿은 동이 일곱으로 강서구에서 이웃이 가장 많다."]];
 function crtFold(s) { return String(s).normalize('NFC').replace(/\s+/g, ''); }
 function crtPad(n) { return String(n).padStart(2, '0'); }
+/* 프롬프트 블록 커서가 친 글자 바로 뒤에 서도록 입력칸 폭을 글자 폭으로 잰다 — 한글은 라틴보다 넓어 ch 로 셈 수 없다 */
+var crtCtx = null;
+function crtWidth(text) {
+  if (!text) return 1;
+  if (!crtCtx) { crtCtx = document.createElement('canvas').getContext('2d'); }
+  crtCtx.font = "15px 'Nanum Gothic Coding', monospace";
+  return Math.ceil(crtCtx.measureText(text).width) + 1;
+}
 function crtClock(ms) { var s = Math.floor(ms / 1000); return crtPad(Math.floor(s / 60)) + ':' + crtPad(s % 60); }
 
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { screen: 'pick', typed: '', on: [], miss: 0, log: [{ k: 'plain', t: 'READY. 자치구 25곳.' }], t0: 0, t1: 0, now: 0, flipped: false };
+    this.state = { screen: 'pick', draft: '', on: [], miss: 0, log: [{ k: 'plain', t: 'READY. 자치구 25곳.' }], t0: 0, t1: 0, now: 0, flipped: false };
   }
   componentDidMount() { this.timer = setInterval(() => { if (this.state.screen === 'game' && !this.state.t1) this.setState({ now: Date.now() }); }, 500); }
   componentWillUnmount() { clearInterval(this.timer); }
@@ -96,13 +104,15 @@ class Component extends DCLogic {
   start(i) {
     if (i !== 0) { this.setState(s => ({ log: this.say(s.log, 'err', CRT_GU[i][0] + ': 이 시안에는 강서구 판만 담았습니다.') })); return; }
     var now = Date.now();
-    this.setState({ screen: 'game', on: [], miss: 0, t0: now, t1: 0, now: now, typed: '',
+    this.setState({ screen: 'game', on: [], miss: 0, t0: now, t1: 0, now: now,
       log: [{ k: 'plain', t: '강서구 — 동 20곳. 이름을 치고 스페이스나 Enter.' }] });
   }
-  back() { this.setState(s => ({ screen: 'pick', typed: '', log: this.say(s.log, 'plain', '목록으로.') })); }
-  confirm(raw) {
-    var typed = crtFold(raw), s = this.state;
-    this.setState({ typed: '' });
+  back() { this.setState(s => ({ screen: 'pick', log: this.say(s.log, 'plain', '목록으로.') })); }
+  /* 입력칸은 상태에 묶지 않는다 — 브라우저가 글자를 받고, 확정할 때만 칸을 비운다 */
+  confirm(el) {
+    var raw = el.value, typed = crtFold(raw), s = this.state;
+    el.value = '';
+    this.setState({ draft: '' });
     if (!typed) return;
     if (s.screen === 'pick') {
       var n = parseInt(typed, 10);
@@ -127,7 +137,7 @@ class Component extends DCLogic {
       c: c, nightStr: String(!day), themeLabel: day ? '낮' : '밤',
       inPick: !game, inGame: game,
       path: game ? 'C:\\SEOUL\\GANGSEO>' : 'C:\\SEOUL>',
-      typed: s.typed,
+      inW: crtWidth(s.draft) + 'px',
       menu: CRT_GU.map((g, i) => ({ no: crtPad(i + 1), label: g[0], count: g[1], pick: () => self.start(i) })),
       cells: CRT_GANGSEO.map((d, i) => {
         var on = s.on.indexOf(i) >= 0;
@@ -140,12 +150,14 @@ class Component extends DCLogic {
       flip: () => self.setState(st => ({ flipped: !st.flipped })),
       back: () => self.back(),
       onType: e => {
-        var v = e.target.value, composing = e.nativeEvent && e.nativeEvent.isComposing;
-        if (/\s$/.test(v) && !composing) self.confirm(v); else self.setState({ typed: v });
+        var composing = e.nativeEvent && e.nativeEvent.isComposing;
+        if (/\s$/.test(e.target.value) && !composing) self.confirm(e.target);
+        else self.setState({ draft: e.target.value });
       },
-      onCompEnd: e => { if (/\s$/.test(e.target.value)) self.confirm(e.target.value); },
+      /* 런타임이 compositionend 를 잇지 않는다 — 조합이 끝난 뒤 떼는 키에서 값 끝의 공백을 한 번 더 본다 */
+      onKeyUp: e => { if (!(e.nativeEvent && e.nativeEvent.isComposing) && /\s$/.test(e.target.value)) self.confirm(e.target); },
       onKey: e => {
-        if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); self.confirm(e.target.value); }
+        if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); self.confirm(e.target); }
         else if (e.key === 'Escape' && game) { e.preventDefault(); self.back(); }
         else if (e.key === 'F2') { e.preventDefault(); self.setState(st => ({ flipped: !st.flipped })); }
       }
