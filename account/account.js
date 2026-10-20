@@ -434,7 +434,7 @@ function checkSession() {
       } else if (!r.ok) $('#accountSession').textContent = t('acctCheckFail');
       /* 서버에 남은 프로필이 원본이다 — 이 브라우저에 있던 값은 여기서 덮는다 */
       else return r.json().then(data => {
-        if (!data.intro && !data.profile?.name) {
+        if (!data.intro) {
           try {
             localStorage.removeItem('rt.intro');
             localStorage.setItem('rt.rescue', '1');

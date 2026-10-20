@@ -331,7 +331,8 @@ async function done(tok, generation, isNewAccount = false) {
       if (r.ok) {
         const d = await r.json().catch(() => null);
         if (!current(generation)) return;
-        if (d && !d.intro && !d.profile?.name) isNewAccount = true;
+        /* 이름을 이미 적어도 안내(intro)를 끝내기 전이면 다시 안내로 보낸다. */
+        if (d && !d.intro) isNewAccount = true;
         else if (d) mirrorProfile(d.profile, d.intro ? tok : '');
       }
     } catch {}
@@ -887,7 +888,7 @@ if (!ssoBack) {
         if (!r.ok) return;
         const d = await r.json().catch(() => null);
         if (!d || checkedTok !== token()) return;
-        if (!d.intro && !d.profile?.name) {
+        if (!d.intro) {
           try {
             localStorage.removeItem('rt.intro');
             localStorage.setItem('rt.rescue', '1');
