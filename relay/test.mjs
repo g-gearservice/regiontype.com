@@ -1335,7 +1335,7 @@ console.log('security rule self-check done');
   const sent = [];
   const MAIL_KEY = 'mail-key-0123456789';
   const mailEnv = {
-    MAIL_KEY, MAIL_FROM: 'recover@regiontype.com',
+    MAIL_KEY, MAIL_FROM: 'noreply@regiontype.gearservicevanguard.com', MAIL_NAME: 'regiontype',
     EMAIL: { send: async m => { sent.push(m); return { messageId: 'm1' }; } },
   };
   const MAIL = { fetch: (url, init) => handle(new Request(url, init), mailEnv) };
@@ -1398,7 +1398,7 @@ console.log('security rule self-check done');
   assert.equal(started.status, 200, started.msg);
   assert.equal(sent.length, before + 1);
   assert.equal(sent.at(-1).to, owner);
-  assert.equal(sent.at(-1).from, 'recover@regiontype.com');
+  assert.deepEqual(sent.at(-1).from, { email: 'noreply@regiontype.gearservicevanguard.com', name: 'regiontype' }, '보내는 이름이 주소 대신 보인다');
   assert.equal(sent.at(-1).html, undefined);
   const code = sent.at(-1).text.match(/\b\d{6}\b/g).at(-1);
   assert.ok(!/대소문자/.test(sent.at(-1).text), '숫자 코드에 대소문자 안내가 없다');

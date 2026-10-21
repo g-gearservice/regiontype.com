@@ -122,38 +122,65 @@ async function ask(path, body) {
   return d;
 }
 
-/* 2단계 화면은 열 때마다 통째로 비운다 — 방법 단추는 via 가 허락한 것만 paintTwo 가 다시 연다.
-   코드 칸은 그 단추를 누르기 전에는 열지 않고, 쓴 코드·번호는 칸에 남기지 않는다. */
-const TWO_SHOW = ['twoMail', 'twoCode', 'twoMailTo', 'twoOtpForm', 'codeForm', 'rescueForm'];
-const TWO_TYPED = ['twoOtpIn', 'codeIn', 'rescueIn'];
-const TWO_BTNS = ['twoMail', 'twoCode', 'twoOtpGo', 'twoResend', 'twoRescueMail'];
+/* 2단계 화면 — 한 장에 할 일 하나다. mode 'mail' 은 메일 코드 칸, 'code' 는 복구 코드 칸과
+   보조 메일 구조다. 열 때마다 칸을 비우고, 쓴 코드는 칸에 남기지 않는다 */
+const RESEND_S = 30;   // 다시 보내기 사이 쉬는 초. 중계기는 한 시도에 5통까지 받는다
+let resendTimer = 0;
 function resetTwo() {
-  TWO_SHOW.forEach(id => { const el = $('#' + id); if (el) el.hidden = true; });
-  TWO_TYPED.forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
-  TWO_BTNS.forEach(id => { const el = $('#' + id); if (el) el.disabled = false; });
-  const lost = $('#twoLost');
-  if (lost) lost.open = false;
-  const to = $('#twoMailTo');
-  if (to) to.textContent = '';
-  if (TWO) TWO.sent = '';
+  ['twoOtpIn', 'codeIn', 'rescueIn'].forEach(id => { $('#' + id).value = ''; });
+  ['twoOtpGo', 'codeGo', 'rescueGo', 'twoCode', 'twoBack'].forEach(id => { $('#' + id).disabled = false; });
+  clearInterval(resendTimer);
+  const again = $('#twoResend');
+  again.disabled = false;
+  again.textContent = t('twoResend');
+  $('#twoLost').open = false;
+  if (TWO) { TWO.sent = ''; TWO.mode = TWO.via.mail ? 'mail' : 'code'; }
 }
-/* via 가 허락한 방법만 보인다. 하나도 없으면 복구 쪽을 펼쳐 놓는다 */
+/* 메일을 보낼 수 있으면 메일 코드부터, 아니면 복구 코드부터 보인다. 둘 다 없으면 보조 메일 구조를 펼친다 */
 function paintTwo() {
   const two = TWO;
   if (!two) return;
-  const v = two.via;
-  $('#twoMail').hidden = !v.mail;
-  $('#twoCode').hidden = !v.code;
-  const to = $('#twoMailTo');
-  to.hidden = !(v.mail && two.mailTo);
-  to.textContent = to.hidden ? '' : t('twoMailTo', { to: two.mailTo });
-  if (!(v.mail || v.code)) {
+  const mail = two.mode === 'mail';
+  $('#twoLead').textContent = !mail ? t('twoLeadCode')
+    : two.mailTo ? t('twoLead', { to: two.mailTo }) : t('twoLeadPlain');
+  $('#twoOtpForm').hidden = !mail;
+  $('#codeForm').hidden = mail;
+  $('#twoResend').hidden = !mail;
+  $('#twoCode').hidden = !mail;
+  $('#twoBack').hidden = mail || !two.via.mail;
+  $('#twoLost').hidden = mail;
+  if (!two.via.mail && !two.via.code) {
     $('#twoLost').open = true;
     say(t('twoNone'), true);
   }
 }
+function twoMode(mode) {
+  TWO.mode = mode;
+  say('');
+  paintTwo();
+  $(mode === 'mail' ? '#twoOtpIn' : '#codeIn').focus();
+}
+/* 보낸 직후에는 다시 보내기를 잠시 쉰다 — 남은 초를 글로 센다(색만으로 막지 않는다) */
+function coolResend() {
+  const b = $('#twoResend');
+  let left = RESEND_S;
+  const tick = () => {
+    if (left <= 0) { clearInterval(resendTimer); b.disabled = false; b.textContent = t('twoResend'); return; }
+    b.disabled = true;
+    b.textContent = t('twoResendIn', { s: left-- });
+  };
+  clearInterval(resendTimer);
+  tick();
+  resendTimer = setInterval(tick, 1000);
+}
+/* 틀렸다는 말은 글(siSay)이 하고, 칸은 한 번 흔들려 어디가 틀렸는지 가리킨다 */
+function shake(el) {
+  el.classList.remove('is-wrong');
+  void el.offsetWidth;
+  el.classList.add('is-wrong');
+}
 /* ── SSO ─────────────────────────────────────────────── */
-let TWO = null;      // { bind, tag, isNew, via, mailTo, sent } — 2단계가 도는 동안만 산다
+let TWO = null;      // { bind, tag, isNew, via, mailTo, sent, mode } — 2단계가 도는 동안만 산다
 
 async function sso(p) {
   const generation = modalGeneration;
@@ -222,11 +249,11 @@ async function take(bind, tag, generation) {
       bind, tag, isNew: d.isNewAccount === true,
       via: { mail: !!v.mail, code: !!v.code },
       mailTo: v.mail && typeof d.mailTo === 'string' ? d.mailTo : '',
-      sent: '',
+      sent: '', mode: '',
     };
     say('');
     show('vTwo');
-    if (TWO.via.mail) $('#twoMail').click();
+    if (TWO.via.mail) $('#twoResend').click();
     return;
   }
   sessionStorage.removeItem(BIND_KEY);
@@ -543,7 +570,7 @@ function close() {
   const rescueIn = $('#rescueIn');
   if (rescueIn) rescueIn.value = '';
   resetTwo();
-  [$('#goGoogle'), $('#twoCode'), $('#twoMail')].forEach(b => { if (b) b.disabled = false; });
+  $('#goGoogle').disabled = false;
   say('');
   setBackgroundInert(false);
   if (opener) { opener.focus(); opener = null; }
@@ -563,7 +590,6 @@ function wire() {
       if (!current(generation)) return;
       $('#rescueIn').value = '';
       say(t('rescueSent'));
-      $('#codeForm').hidden = false;
       $('#codeIn').focus();
     } catch (err) {
       if (!current(generation)) return;
@@ -609,48 +635,52 @@ function wire() {
       $('#mailCode').select();
     }
   };
-  /* 메일 코드 보내기. 다시 보내면 중계기가 앞 코드를 버린다(마지막 것만 유효) */
-  async function sendTwo(via) {
+  /* 메일 코드 보내기. 다시 보내면 중계기가 앞 코드를 버린다(마지막 것만 유효).
+     어디로 갔는지는 머리말이 이미 말한다 — 첫 발송은 따로 알리지 않는다 */
+  async function sendTwo() {
     const generation = modalGeneration;
     const two = TWO;
     if (!two) return;
-    const btns = [$('#twoMail'), $('#twoResend')];
-    btns.forEach(b => { b.disabled = true; });
+    const again = !!two.sent;
+    $('#twoResend').disabled = true;
     say(t('twoSending'));
     try {
-      const d = await ask('/auth/two/send', { b: two.bind, t: two.tag, via });
+      await ask('/auth/two/send', { b: two.bind, t: two.tag, via: 'mail' });
       if (!current(generation)) return;
-      two.sent = via;
-      $('#twoOtpForm').hidden = false;
-      $('#twoOtpIn').value = '';
-      $('#twoOtpIn').focus();
-      say(typeof d.to === 'string' && d.to ? t('twoSent', { to: d.to }) : t('twoSentPlain'));
+      two.sent = 'mail';
+      say(again ? t('twoSentAgain') : '');
+      coolResend();
+      if (two.mode === 'mail') $('#twoOtpIn').focus();
     } catch (err) {
       if (!current(generation)) return;
+      $('#twoResend').disabled = false;
       say(err.status === 429 ? t('twoTooMany')
         : err.status === 503 ? t('mailFail')
         : t('twoSendFail'), true);
     }
-    if (current(generation)) btns.forEach(b => { b.disabled = false; });
   }
-  $('#twoMail').onclick = () => sendTwo('mail');
-  $('#twoResend').onclick = () => {
-    const two = TWO;
-    if (two && two.sent) sendTwo(two.sent);
-  };
+  $('#twoResend').onclick = () => sendTwo();
+  /* 여섯 자리가 차면 바로 확인한다 — 붙여 넣기·자동 채움도 한 번에 끝난다 */
+  $('#twoOtpIn').addEventListener('input', e => {
+    const el = e.target, v = el.value.replace(/\D/g, '').slice(0, 6);
+    if (v !== el.value) el.value = v;
+    el.classList.remove('is-wrong');
+    if (v.length === 6 && !$('#twoOtpGo').disabled) $('#twoOtpForm').requestSubmit();
+  });
   $('#twoOtpForm').onsubmit = async e => {
     e.preventDefault();
     const generation = modalGeneration;
     const two = TWO;
     if (!two) return;
-    const code = otpOf($('#twoOtpIn'));
-    if (!code) { say(t('twoOtpBad'), true); return $('#twoOtpIn').select(); }
+    const inp = $('#twoOtpIn');
+    const code = otpOf(inp);
+    if (!code) { say(t('twoOtpBad'), true); shake(inp); return inp.select(); }
     $('#twoOtpGo').disabled = true;
     say(t('twoChecking'));
     try {
       const d = await ask('/auth/two/check', { b: two.bind, t: two.tag, code });
       if (!current(generation)) return;
-      $('#twoOtpIn').value = '';        // 쓴 코드를 칸에 남겨 두지 않는다
+      inp.value = '';                 // 쓴 코드를 칸에 남겨 두지 않는다
       return done(d.token, generation, two.isNew);
     } catch (err) {
       if (!current(generation)) return;
@@ -665,35 +695,34 @@ function wire() {
         : err.status === 429 ? t('twoTooMany')
         : err.status === 503 ? t('twoSendFail')
         : t('loginFail'), true);
-      if (err.status === 401) $('#twoOtpIn').select();
+      if (err.status === 401) { shake(inp); inp.select(); }
     }
     $('#twoOtpGo').disabled = false;
   };
-  $('#twoRescueMail').onclick = () => {
-    $('#rescueForm').hidden = false;
-    $('#rescueIn').focus();
-  };
-  $('#twoCode').onclick = () => {
-    $('#codeForm').hidden = false;
-    $('#codeIn').focus();
-  };
+  $('#twoCode').onclick = () => twoMode('code');
+  $('#twoBack').onclick = () => twoMode('mail');
+  $('#codeIn').addEventListener('input', e => e.target.classList.remove('is-wrong'));
   $('#codeForm').onsubmit = async e => {
     e.preventDefault();
     const generation = modalGeneration;
     const two = TWO;
     if (!two) return;
-    const code = $('#codeIn').value.trim().toLowerCase();
+    const inp = $('#codeIn');
+    const code = inp.value.trim().toLowerCase();
+    $('#codeGo').disabled = true;
     say(t('twoChecking'));
     try {
       const d = await ask('/auth/code', { b: two.bind, t: two.tag, code });
       if (!current(generation)) return;
-      $('#codeIn').value = '';        // 쓴 코드를 칸에 남겨 두지 않는다
-      done(d.token, generation, two.isNew);
+      inp.value = '';                 // 쓴 코드를 칸에 남겨 두지 않는다
+      return done(d.token, generation, two.isNew);
     } catch {
       if (!current(generation)) return;
       say(t('loginFail'), true);
-      $('#codeIn').select();
+      shake(inp);
+      inp.select();
     }
+    $('#codeGo').disabled = false;
   };
 
   /* 홈의 '로그인' 은 이제 페이지가 아니라 이 덮개를 연다. 로그인해 있으면

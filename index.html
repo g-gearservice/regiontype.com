@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.62">
+<link rel="stylesheet" href="style.css?v=4.64">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -331,47 +331,40 @@
       </div>
     </div>
 
-    <!-- 2단계 확인 — SSO 를 넘은 뒤 Google 메일 숫자 6자리(또는 복구 코드)를 한 번 더 묻는다 -->
+    <!-- 2단계 확인 — SSO 를 넘은 뒤 Google 메일 숫자 6자리를 묻는다. 한 장에 할 일 하나:
+         메일 코드(기본) 또는 복구 코드. 보조 메일 구조는 복구 코드 쪽에만 펼친다 -->
     <div class="si-view" id="vTwo" hidden>
       <h2 class="si-head" data-i18n="twoStepHead">2단계 인증</h2>
-      <p class="si-lead" data-i18n="twoHow">아래 방법 중 하나로 본인임을 확인합니다.</p>
-      <div class="si-btns">
-        <button type="button" id="twoMail" data-i18n="twoMailGo" hidden>이메일로 코드 받기</button>
-        <button type="button" id="twoCode" data-i18n="useCode" hidden>복구 코드 쓰기</button>
+      <p class="si-lead" id="twoLead"></p>
+      <form class="si-otp" id="twoOtpForm" novalidate>
+        <label class="si-vh" for="twoOtpIn" data-i18n="twoOtpLabel">확인 코드</label>
+        <input id="twoOtpIn" class="si-otp-in" maxlength="12" required pattern="[0-9]{6}" inputmode="numeric"
+               autocomplete="one-time-code" spellcheck="false" placeholder="000000" aria-describedby="twoOtpHelp siSay">
+        <span class="si-vh" id="twoOtpHelp" data-i18n="otpHelp">숫자 6자리</span>
+        <div class="si-btns"><button type="submit" id="twoOtpGo" data-i18n="codeSubmit">인증하기</button></div>
+      </form>
+      <form class="si-otp" id="codeForm" novalidate hidden>
+        <label class="si-vh" for="codeIn" data-i18n="useCode">복구 코드 쓰기</label>
+        <input id="codeIn" class="si-otp-in is-code" maxlength="10" required pattern="[A-Za-z0-9]{10}"
+               autocomplete="one-time-code" autocapitalize="off" spellcheck="false" aria-describedby="siSay">
+        <div class="si-btns"><button type="submit" id="codeGo" data-i18n="codeSubmit">인증하기</button></div>
+      </form>
+      <div class="si-links">
+        <button type="button" class="si-link" id="twoResend" data-i18n="twoResend">코드 다시 보내기</button>
+        <button type="button" class="si-link" id="twoCode" data-i18n="useCode">복구 코드 쓰기</button>
+        <button type="button" class="si-link" id="twoBack" data-i18n="twoBack" hidden>메일 코드로 돌아가기</button>
       </div>
-      <p class="si-note" id="twoMailTo" hidden></p>
-      <form class="si-code" id="twoOtpForm" hidden novalidate>
-        <label for="twoOtpIn" data-i18n="twoOtpLabel">확인 코드</label>
-        <div>
-          <input id="twoOtpIn" maxlength="7" required pattern="[0-9 ]{6,7}" inputmode="numeric"
-                 autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="twoOtpHelp">
-          <button type="submit" id="twoOtpGo" data-i18n="codeSubmit">인증하기</button>
-        </div>
-        <span id="twoOtpHelp" data-i18n="otpHelp">숫자 6자리</span>
-        <button type="button" class="si-sub" id="twoResend" data-i18n="twoResend">코드 다시 보내기</button>
-      </form>
-      <form class="si-code" id="codeForm" hidden>
-        <label for="codeIn" data-i18n="useCode">복구 코드 쓰기</label>
-        <div>
-          <input id="codeIn" maxlength="10" required pattern="[A-Za-z0-9]{10}"
-                 autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
-          <button type="submit" data-i18n="codeSubmit">인증하기</button>
-        </div>
-      </form>
-      <details class="si-lost" id="twoLost">
-        <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
+      <details class="si-lost" id="twoLost" hidden>
+        <summary data-i18n="lostAll">메일도 복구 코드도 쓸 수 없다면</summary>
         <p data-i18n="lostAllHow">미리 확인해 둔 보조 메일로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소로는 보내지 않습니다.</p>
-        <div class="si-lost-btns">
-          <button type="button" class="si-sub" id="twoRescueMail" data-i18n="rescueMailGo">보조 메일로 새 복구 코드 받기</button>
-        </div>
-      <form class="si-code" id="rescueForm" hidden>
-        <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery에만 쓰며, 2단계 로그인에는 쓰지 않습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
-        <label for="rescueIn" data-i18n="rescueLabel">확인한 메일</label>
-        <div>
-          <input id="rescueIn" type="email" maxlength="254" required autocomplete="email" spellcheck="false" autocapitalize="off">
-          <button type="submit" data-i18n="rescueSend">복구 코드 보내기</button>
-        </div>
-      </form>
+        <form class="si-code" id="rescueForm">
+          <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery에만 쓰며, 2단계 로그인에는 쓰지 않습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
+          <label for="rescueIn" data-i18n="rescueLabel">확인한 메일</label>
+          <div>
+            <input id="rescueIn" type="email" maxlength="254" required autocomplete="email" spellcheck="false" autocapitalize="off">
+            <button type="submit" id="rescueGo" data-i18n="rescueSend">복구 코드 보내기</button>
+          </div>
+        </form>
       </details>
     </div>
 
@@ -680,9 +673,9 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=4.62"></script>
-<script src="auth.js?v=4.62"></script>
-<script src="settings/settings.js?v=4.62"></script>
-<script src="ranked.js?v=4.61"></script>
+<script src="app.js?v=4.64"></script>
+<script src="auth.js?v=4.64"></script>
+<script src="settings/settings.js?v=4.64"></script>
+<script src="ranked.js?v=4.64"></script>
 </body>
 </html>

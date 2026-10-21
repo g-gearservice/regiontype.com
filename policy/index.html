@@ -72,7 +72,7 @@
 
   <h2>로그인 2단계 인증</h2>
   <p>로그인할 때마다 Google 계정 메일로 숫자 6자리 일회용 코드를
-  <code>recover@regiontype.com</code>에서 보내고, 그 코드를 입력해야 로그인이 끝납니다.
+  <code>noreply@regiontype.gearservicevanguard.com</code>에서 보내고, 그 코드를 입력해야 로그인이 끝납니다.
   메일을 받을 수 없으면 복구 코드로 거칠 수 있습니다. 코드는 5분 동안 유효합니다.
   한 번의 로그인 시도에 코드는 최대 5회까지 요청할 수 있고, 5회 틀리면 그 시도는
   종료됩니다.</p>
@@ -83,7 +83,7 @@
   그 줄은 지워집니다.</p>
 
   <h2>보조 메일</h2>
-  <p>계정 복구를 위해 선택적으로 보조 메일 주소를 직접 적을 수 있습니다(비밀번호 및 계정 복구 용도이나 regiontype에는 비밀번호가 없으므로 계정 복구에만 쓰입니다). 로그인 공급자에게 그 주소를 요청하지 않습니다. 확인된 주소에만 <code>recover@regiontype.com</code>이 평문으로 일회용 코드를 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 확인이 끝나면 주소 원문은 저장하지 않고 해시만 남깁니다. 계정 조회, 공개 프로필, 공개 이슈에는 주소를 싣지 않습니다. 확인되지 않은 주소에는 보내지 않으며, 화면의 안내 문구는 주소가 확인됐는지와 상관없이 같습니다.</p>
+  <p>계정 복구를 위해 선택적으로 보조 메일 주소를 직접 적을 수 있습니다(비밀번호 및 계정 복구 용도이나 regiontype에는 비밀번호가 없으므로 계정 복구에만 쓰입니다). 로그인 공급자에게 그 주소를 요청하지 않습니다. 확인된 주소에만 <code>noreply@regiontype.gearservicevanguard.com</code>이 평문으로 일회용 코드를 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 확인이 끝나면 주소 원문은 저장하지 않고 해시만 남깁니다. 계정 조회, 공개 프로필, 공개 이슈에는 주소를 싣지 않습니다. 확인되지 않은 주소에는 보내지 않으며, 화면의 안내 문구는 주소가 확인됐는지와 상관없이 같습니다.</p>
   <p>메일을 묻기 전에, 무엇을 받는지, 왜 받는지(본인 확인과 계정 복구), 누가 보내는지, 일회용 코드와 확인 요청이 5분 동안만 유효한지, 그 주소가 공개 프로필과 공개 이슈에 보이지 않는지를 화면의 글로 먼저 알립니다.</p>
 
   <h2>로그인 세션</h2>
@@ -114,7 +114,7 @@
   <h2>제3자</h2>
   <p>이 서비스가 실제로 주고받는 곳은 로그인을 처리하는 Google·Apple, 피드백이
   올라가는 GitHub, 사이트와 로그인 서버를 올려 두고 복구 메일을
-  <code>recover@regiontype.com</code> 에서 평문으로 보내는 Cloudflare, 그리고 홈 봇과의
+  <code>noreply@regiontype.gearservicevanguard.com</code> 에서 평문으로 보내는 Cloudflare, 그리고 홈 봇과의
   대화를 받는 NVIDIA뿐입니다. 봇에게
   친 글(최근 몇 마디)은 대답을 짓도록 NVIDIA의 AI 모델로 넘어가니, 개인정보는
   적지 마세요. 로그인 정보는 함께 가지 않습니다. 그 밖의 광고·분석·추적 서비스는
@@ -145,7 +145,7 @@
   The provider's account id (its <code>sub</code>) is HMAC-hashed with a server-side key before storing, and the original id is never kept anywhere.</p>
 
   <h2>Two-step verification</h2>
-  <p>Every sign-in sends a 6-digit one-time code from <code>recover@regiontype.com</code> to your Google account email, and sign-in finishes only once you enter it.
+  <p>Every sign-in sends a 6-digit one-time code from <code>noreply@regiontype.gearservicevanguard.com</code> to your Google account email, and sign-in finishes only once you enter it.
   If you can't receive that mail, a recovery code works instead. Codes are valid for 5 minutes.
   At most 5 codes can be requested per sign-in attempt, and 5 wrong tries end the attempt.</p>
 
@@ -154,7 +154,7 @@
   We store only their hash, never the codes themselves. Using a code deletes that entry.</p>
 
   <h2>Secondary email</h2>
-  <p>You can optionally provide a secondary email address for Password & Account Recovery (account recovery; regiontype has no passwords). We do not ask the sign-in provider for that address. Only a confirmed address receives a one-time code, as plain text, from <code>recover@regiontype.com</code>. That code and its challenge last five minutes. After confirmation we do not store the address, only a hash. Account lookup, public profiles, and public issues do not include the address. An unconfirmed address is sent nothing, and the words on the screen are the same whether or not the address was confirmed.</p>
+  <p>You can optionally provide a secondary email address for Password & Account Recovery (account recovery; regiontype has no passwords). We do not ask the sign-in provider for that address. Only a confirmed address receives a one-time code, as plain text, from <code>noreply@regiontype.gearservicevanguard.com</code>. That code and its challenge last five minutes. After confirmation we do not store the address, only a hash. Account lookup, public profiles, and public issues do not include the address. An unconfirmed address is sent nothing, and the words on the screen are the same whether or not the address was confirmed.</p>
   <p>Before asking for an email, the screen states in words what is collected, why (to verify who you are and to recover the account), who sends it, that the one-time code and its challenge last five minutes, and that the address is not shown on a public profile or a public issue.</p>
 
   <h2>Sessions</h2>
@@ -187,7 +187,7 @@
 
   <h2>Third parties</h2>
   <p>The outside parties this service talks to are Google and Apple (for sign-in),
-  GitHub (for feedback), Cloudflare (hosting the site and sign-in server, and sending recovery mail from <code>recover@regiontype.com</code>),
+  GitHub (for feedback), Cloudflare (hosting the site and sign-in server, and sending recovery mail from <code>noreply@regiontype.gearservicevanguard.com</code>),
   and NVIDIA (for chatting with the home bot). What you type to the bot (the last few lines) is sent to an NVIDIA AI model to write the reply, so please don't type personal details; your sign-in is not sent with it.
   No advertising, analytics, or tracking services.</p>
 

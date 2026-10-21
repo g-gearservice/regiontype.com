@@ -1565,6 +1565,39 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 .si-lost p{line-height:1.6;padding-bottom:6px}
 .si-lost-btns{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-bottom:6px}
 .si-lost .si-code{margin-top:8px}
+/* 2단계 — 한 장에 칸 하나. 코드 칸이 화면의 주인공이고, 다른 길은 글 링크로 물러선다 */
+.si-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.si-otp{display:flex;flex-direction:column;align-items:center;gap:12px;width:min(280px,86vw)}
+.si-otp[hidden]{display:none}
+.si-otp .si-btns{width:100%}
+.si-otp-in{
+  width:100%;box-sizing:border-box;padding:12px 10px;
+  font:600 30px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;
+  letter-spacing:.35em;text-indent:.35em;text-align:center;
+  color:var(--ink);background:var(--bg);caret-color:var(--accent);
+  border:2px solid var(--grid);border-radius:10px;
+  transition:border-color var(--fast) var(--ease-out);
+}
+.si-otp-in.is-code{font-size:20px;letter-spacing:.12em;text-indent:.12em}
+.si-otp-in::placeholder{color:var(--ink-soft);opacity:.35}
+.si-otp-in:focus{border-color:var(--ink)}
+.si-otp-in:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+/* 틀리면 테두리와 글(siSay)로 말하고, 칸이 한 번 고개를 젓는다 */
+.si-otp-in.is-wrong{border-color:var(--bad);animation:si-shake 320ms var(--ease-out)}
+@keyframes si-shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+@media (prefers-reduced-motion:reduce){.si-otp-in.is-wrong{animation:none}}
+:root[data-motion="off"] .si-otp-in.is-wrong{animation:none}
+.si-links{display:flex;flex-wrap:wrap;justify-content:center;gap:0 20px}
+.si-link{
+  font:inherit;font-size:14px;color:var(--accent-text);background:none;border:0;
+  padding:8px 4px;min-height:36px;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;font-variant-numeric:tabular-nums;
+}
+.si-link[hidden]{display:none}
+.si-link:disabled{color:var(--ink-soft);text-decoration:none;cursor:default}
+.si-link:focus-visible{outline:3px solid var(--ink);outline-offset:2px;border-radius:4px}
+@media (pointer:coarse){.si-link{min-height:44px}}
+.si-lost[hidden]{display:none}
 /* 보조 단추 — 주황 큰 단추 곁에서 눈에 덜 띄게, 테두리와 글로 말한다 */
 .si-sub,.si-code .si-sub{
   font:inherit;font-size:14px;font-weight:400;color:var(--ink);background:transparent;

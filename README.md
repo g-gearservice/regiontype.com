@@ -567,7 +567,7 @@ Honest scores and well-built lies still look the same here. **The board is a hal
 **Google sign-in requests the `openid email` scope; Apple carries no scope.** The Google-verified email address is used solely to send the 5-minute sign-in code; it is kept temporarily in the server's sign-in challenge row, deleted on success, and never stored in the account or shown publicly. What comes back from the provider is an account id, and it is never kept as-is: it goes through an HMAC (`SUB_KEY`, or `SESSION_KEY` if that secret is unset) before it reaches D1, so a leak of that id somewhere else cannot be matched back to a row here.
 
 Second step:
-- **Email code**: 6-digit code sent from `recover@regiontype.com` to the Google account email (valid 5 minutes; max 5 codes per attempt; 5 wrong tries end the attempt). The relay needs `MAIL_KEY` and the `rt-mail` worker — without them nobody can finish signing in.
+- **Email code**: 6-digit code sent from `noreply@regiontype.gearservicevanguard.com` to the Google account email (valid 5 minutes; max 5 codes per attempt; 5 wrong tries end the attempt). The relay needs `MAIL_KEY` and the `rt-mail` worker — without them nobody can finish signing in.
 - **Recovery code**: One-time backup codes from Settings › Security.
 
     wrangler secret put SESSION_KEY   # any long random string. rotating it kills every session, but leaves SSO links alone

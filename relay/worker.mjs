@@ -1108,8 +1108,9 @@ async function authTwoSend(req, env, o) {
     await env.DB.prepare(
       'update pending set sub = ?, provider = ?, sends = sends + 1, until = ? where id = ? and kind = ?'
     ).bind(toHex(await sha(code)), via, Date.now() + LIVE, id, 'two').run();
-    const sent = await deliver(env, dest, 'regiontype sign-in code',
-      `로그인 확인 코드입니다. 5분 안에 입력하세요.\n\n${code}\n`);
+    const sent = await deliver(env, dest, `regiontype 로그인 확인 코드 ${code}`,
+      `regiontype 로그인 확인 코드입니다.\n\n${code}\n\n5분 안에 로그인 화면에 입력하세요.\n` +
+      `직접 로그인하지 않았다면 이 메일은 무시해도 됩니다. 코드가 없으면 계정에 들어올 수 없습니다.\n\nregiontype.com\n`);
     if (!sent) {
       await env.DB.prepare('update pending set sub = null where id = ?').bind(id).run();
       return reply(503, '메일을 보내지 못했습니다.', o);
@@ -1153,8 +1154,9 @@ async function authMail(req, env, o) {
     const id = toHex(await sha(me + ':' + code));
     const hash = toHex(await sha(email));
     await challenge(env, 'mail', me, { id, sub: hash });
-    const text = `확인 코드입니다. 5분 안에 입력하세요.\n\n${code}\n`;
-    const sent = await deliver(env, email, 'regiontype mailbox code', text);
+    const text = `regiontype 보조 메일 확인 코드입니다.\n\n${code}\n\n5분 안에 설정 화면에 입력하세요.\n` +
+      `직접 요청하지 않았다면 이 메일은 무시해도 됩니다.\n\nregiontype.com\n`;
+    const sent = await deliver(env, email, `regiontype 보조 메일 확인 코드 ${code}`, text);
     if (!sent) {
       await env.DB.prepare('delete from pending where id = ?').bind(id).run();
       return reply(503, '메일을 보내지 못했습니다.', o);
@@ -1195,7 +1197,7 @@ async function authRescue(req, env, o) {
     if (row?.who) {
       const codes = newCodes();
       const text = `복구 코드입니다. 각각 한 번만 쓸 수 있습니다.\n\n${codes.join('\n')}\n`;
-      if (await deliver(env, email, 'regiontype recovery codes', text))
+      if (await deliver(env, email, 'regiontype 복구 코드', text))
         await storeRecoveryCodes(env, row.who, codes);
     }
     return send(200, RESCUE, o);
