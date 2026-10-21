@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.465",
+    "date": "2026-10-21",
+    "ko": "로그인·보조 메일·복구 코드 메일이 regiontype 심볼과 사이트 색을 입은 HTML 메일로 옵니다. 코드는 크게, 밝은·어두운 화면 모두 맞춥니다.",
+    "en": "Sign-in, secondary-mail and recovery-code mail now arrives as an HTML message with the regiontype symbol and site colors, the code shown large, in light and dark."
+  },
+  {
     "v": "0.11.464",
     "date": "2026-10-21",
     "ko": "2단계 인증 화면을 정리했습니다. 메일 코드 칸 하나만 크게 보이고, 여섯 자리를 치면 바로 확인합니다. 다시 보내기는 30초를 세고, 복구 코드는 따로 넘어갑니다.",

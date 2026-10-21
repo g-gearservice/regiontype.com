@@ -1347,12 +1347,18 @@ console.log('security rule self-check done');
     body: JSON.stringify({ to: 'a@b.com\nBcc: x@y.z', subject: 'hi', text: 'body' }),
   }), mailEnv);
   assert.equal(injected.status, 400, '헤더를 늘리는 주소는 거절한다');
-  const html = await handle(new Request('https://rt-mail/send', {
+  const attach = await handle(new Request('https://rt-mail/send', {
     method: 'POST',
     headers: { authorization: 'Bearer ' + MAIL_KEY, 'content-type': 'application/json' },
-    body: JSON.stringify({ to: 'a@b.co', subject: 'hi', text: 'body', html: '<b>no</b>' }),
+    body: JSON.stringify({ to: 'a@b.co', subject: 'hi', text: 'body', attachments: [] }),
   }), mailEnv);
-  assert.equal(html.status, 400, 'html 은 받지 않는다');
+  assert.equal(attach.status, 400, '첨부는 받지 않는다');
+  const huge = await handle(new Request('https://rt-mail/send', {
+    method: 'POST',
+    headers: { authorization: 'Bearer ' + MAIL_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify({ to: 'a@b.co', subject: 'hi', text: 'body', html: 'x'.repeat(20001) }),
+  }), mailEnv);
+  assert.equal(huge.status, 400, '너무 큰 html 은 거절한다');
   assert.equal(sent.length, 0);
 
   const { DatabaseSync } = await import('node:sqlite');
@@ -1399,8 +1405,11 @@ console.log('security rule self-check done');
   assert.equal(sent.length, before + 1);
   assert.equal(sent.at(-1).to, owner);
   assert.deepEqual(sent.at(-1).from, { email: 'noreply@regiontype.gearservicevanguard.com', name: 'regiontype' }, '보내는 이름이 주소 대신 보인다');
-  assert.equal(sent.at(-1).html, undefined);
   const code = sent.at(-1).text.match(/\b\d{6}\b/g).at(-1);
+  const mailHtml = sent.at(-1).html;
+  assert.ok(mailHtml.startsWith('<!doctype html>') && mailHtml.includes(`>${code}</td>`), '평문과 같은 코드가 HTML 본문에도 있다');
+  assert.ok(!/<img/i.test(mailHtml) && mailHtml.includes('region<span'), '머리는 글자 로고뿐이다 — 심볼은 보낸 사람 그림 몫이다');
+  assert.ok(!/<script/i.test(mailHtml), '메일 본문에 스크립트가 없다');
   assert.ok(!/대소문자/.test(sent.at(-1).text), '숫자 코드에 대소문자 안내가 없다');
   const badCode = await call('/auth/mail/confirm', { code: 'zzzzzz' }, { headers: auth });
   assert.equal(badCode.status, 400, '틀린 코드');
