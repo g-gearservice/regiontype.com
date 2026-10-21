@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.463",
+    "date": "2026-10-21",
+    "ko": "로그인·확인 메일이 regiontype 이름으로 noreply@regiontype.gearservicevanguard.com 에서 오고, 제목에 코드가 보입니다.",
+    "en": "Sign-in and confirmation mail now comes from regiontype at noreply@regiontype.gearservicevanguard.com, with the code in the subject."
+  },
+  {
     "v": "0.11.462",
     "date": "2026-10-21",
     "ko": "전화번호 인증과 패스키를 없앴습니다. 이제 로그인할 때마다 Google 계정 메일로 오는 숫자 6자리 코드를 입력합니다. 메일을 받을 수 없으면 복구 코드로 들어옵니다.",

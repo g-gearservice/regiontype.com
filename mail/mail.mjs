@@ -62,6 +62,9 @@ export async function handle(req, env) {
   const text = String(c?.text ?? '').replace(/\r\n?/g, '\n');
   if (!from || !to || !subject || subject.length > 80 || /[\r\n]/.test(subject)) return json(400);
   if (!text || text.length > 2000 || text.includes('\0')) return json(400);
-  await env.EMAIL.send({ to, from, subject, text });
+  /* 받는 쪽 메일함에 주소 대신 이름(regiontype)이 보이게 한다. 줄바꿈 낀 이름은 버린다 */
+  const name = String(env.MAIL_NAME ?? '').trim();
+  const sender = name && name.length <= 40 && !/[\r\n<>"]/.test(name) ? { email: from, name } : from;
+  await env.EMAIL.send({ to, from: sender, subject, text });
   return json(200);
 }
