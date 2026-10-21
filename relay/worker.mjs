@@ -23,25 +23,18 @@
      순위표·사다리는 기기(dev)마다 따로 선다 — 'pc' | 'mobile'. 쓰기는 몸통의 dev,
      읽기(/top·/ladder·/games)는 ?dev= 로 받는다. 'mobile' 이 아니면 전부 'pc' 다
 
-     1차 인증은 Google·Apple(SSO) 이 하고, 패스키는 그 위에 얹는 2단계다.
-     POST /auth/new    패스키 만들기 시작 (로그인 필요)   → 챌린지
-     POST /auth/reg    패스키 만들기 끝   (로그인 필요)   → 세션 토큰(첫 패스키면 복구 코드도)
+     1차 인증은 Google·Apple(SSO) 이 하고, 2단계는 늘 로그인 Google 메일로 가는 숫자 6자리다.
      POST /auth/sso    SSO 시작 {p,s}                    → 공급자 URL
      GET  /auth/cb     공급자가 돌아오는 자리 (GET, Origin 없음) → 302 (#signin=ok&t=…)
-     POST /auth/take   {b,t} 로 토큰을 받는다 — 패스키·이메일·휴대폰 중 켜진 것이 있으면 2단계
-     POST /auth/log    2단계: 패스키로 넘는다              → 세션 토큰
-     POST /auth/two/send {b,t,via}  2단계: 로그인 Google 메일 또는 확인된 번호로 8자 코드
+     POST /auth/take   {b,t} → 2단계로 넘긴다 {need:'two', via, mailTo?, isNewAccount}
+     POST /auth/two/send {b,t,via}  2단계: 로그인 Google 메일로 숫자 6자리
      POST /auth/two/check {b,t,code}  그 코드로 넘는다      → 세션 토큰
-     POST /auth/two/set {mail?,phone?}  이메일·휴대폰 2단계 켜고 끄기 (로그인 필요)
      POST /auth/code   2단계: {b,t,code} 복구 코드로 넘는다 → 세션 토큰
      POST /auth/codes  복구 코드 재발급 (로그인 필요, 복구 코드가 없을 때만 자동 발급, 옛 코드는 전량 교체)
      POST /auth/mail   로그인한 사람이 복구 메일을 확인하기 시작한다 → 그 주소로만 확인 코드
      POST /auth/mail/confirm {code}  확인 코드를 맞추면 그 사서함을 이 계정에 묶는다
      POST /auth/rescue {email}  확인된 주소라면 새 복구 코드를 그 주소로만 보낸다
-     POST /auth/phone  로그인한 사람이 복구 전화를 확인하기 시작한다 → 문자 설정이 없으면 503
-     POST /auth/phone/confirm {code}  확인 코드를 맞추면 그 번호의 해시만 이 계정에 묶는다
-     POST /auth/phone/rescue {phone}  확인된 번호라면 새 복구 코드를 문자로만 보낸다. 설정이 없으면 503
-     GET  /auth/me     계정 화면이 볼 값 (로그인 필요) → {keys, codes, mailbox, phone, two, google} — who·sub·메일·번호는
+     GET  /auth/me     계정 화면이 볼 값 (로그인 필요) → {codes, mailbox, google} — who·sub·메일은
                         식별자는 안 싣는다. 이 브라우저의 localStorage 만으론 다른 기기에서
                         만든 패스키·거기서 쓴 복구 코드를 몰라 "남은 비상구" 숫자가 틀릴 수 있다
      GET  /where    이 요청의 나라 코드 (cf.country). 도시는 안 보낸다
@@ -74,12 +67,9 @@
        wrangler secret put TURNSTILE_SECRET  // Turnstile 서버 검증 비밀키
        wrangler secret put NV_KEY       // build.nvidia.com API 키 — 봇 대화
        wrangler secret put MAIL_KEY     // rt-mail 과 같은 값. 없으면 복구 메일만 503
-       wrangler secret put SMS_KEY      // 문자 서비스와 같은 값. 없으면 전화 확인은 503.
-                                          // 메일은 문자 대신 쓰지 않는다
        wrangler deploy                                                        */
 
-import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac,
-         readClientData, readAuthData, verify, sha, eq } from './auth.mjs';
+import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac, sha } from './auth.mjs';
 import { SIZE } from './size.mjs';
 
 const REPO = 'g-gearservice/regiontype.com';
@@ -829,13 +819,7 @@ async function ladderTop(req, env, o) {
 }
 
 /* ── 로그인 ──────────────────────────────────────────────
-   1차 인증은 Google·Apple 이 한다(SSO, 아래). 패스키는 계정에 하나라도 있으면
-   그 위에 얹는 2단계다 — 로그인하지 않은 사람이 패스키를 만들 수는 없다.
-   rpId 는 페이지가 있는 도메인이어야 한다 — 중계기 도메인이 아니다.
-   그래서 요청한 곳에서 뽑되, 우리가 아는 곳인지 mine() 으로 먼저 거른다. */
-const RPNAME = 'regiontype';
-const ALGS = [-7, -257];   // ES256 · RS256
-const rpOf = o => new URL(o).hostname;
+   1차 인증은 Google·Apple 이 한다(SSO, 아래). 2단계는 그 Google 메일로 가는 숫자 6자리다. */
 const LIVE = 5 * 60e3;   // 챌린지 · pending 줄이 사는 시간
 
 const nokey = o => reply(503, '로그인 설정이 덜 되었습니다.', o);
@@ -866,7 +850,7 @@ async function claim(env, id, kind = null) {
   ]);
   return row && row.until > Date.now() ? row : null;
 }
-/* 2단계 줄은 읽었다고 바로 지우지 않는다 — 패스키를 취소하거나 틀려도 복구
+/* 2단계 줄은 읽었다고 바로 지우지 않는다 — 코드를 틀려도 복구
    코드로 갈아탈 수 있어야 한다. 대신 시도를 세어 5회에서 스스로 태운다.
    성공했을 때만 호출자가 consumeTwo 로 명시적으로 지운다. */
 async function peekTwo(env, id) {
@@ -883,69 +867,6 @@ async function peekTwo(env, id) {
 }
 const consumeTwo = (env, id) =>
   env.DB.prepare('delete from pending where id = ? and kind = ?').bind(id, 'two').run();
-
-/* 패스키를 만들기 전에 브라우저가 알아야 할 것들. keys 는 이 계정이 이미 가진
-   credential id 들이다 — excludeCredentials 에 실으면 같은 기기에서 두 번 만들
-   때 새 줄이 아니라 "이미 있습니다" 가 뜬다. 그게 없으면 한 사람의 열쇠고리에
-   같은 사이트가 여러 줄로 쌓여, 어느 줄이 어느 계정인지 알 길이 없어진다.
-   name 은 열쇠고리에 걸릴 이름이다 — 정해 둔 아이디·닉네임이 있으면 그것을 쓴다.
-   없을 때만 계정 id 앞 여섯 자로 떨어진다. */
-async function authNew(req, env, o) {
-  const me = await sessionWho(env, req);
-  if (!me) return reply(401, '로그인이 필요합니다.', o);
-  return safely(o, async () => {
-    const [keys, row] = await env.DB.batch([
-      env.DB.prepare('select id from passkey where who = ?').bind(me),
-      env.DB.prepare('select handle, name from profile where who = ?').bind(me),
-    ]);
-    const p = row.results[0] || {};
-    return send(200, {
-      challenge: await challenge(env, 'reg', me),
-      rp: { id: rpOf(o), name: RPNAME },
-      user: me,
-      keys: keys.results.map(k => k.id),
-      name: p.handle ? '@' + p.handle : (p.name || ''),
-    }, o);
-  });
-}
-
-/* 등록 마무리. attestation 을 안 받으므로 공개키는 브라우저가 준 것을 그대로 믿는다 —
-   등록은 원래 신뢰를 처음 세우는 순간이라, 남이 아니라 자기 키를 넣을 뿐이다.
-   우리가 여기서 지키는 건 '이 챌린지에, 로그인한 그 사람이, 이 출처에서 답했다' 이다. */
-async function authReg(req, env, o) {
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const me = await sessionWho(env, req);
-  if (!me) return reply(401, '로그인이 필요합니다.', o);
-  const id = cut(c.id, 400), key = cut(c.key, 2000), alg = Number(c.alg);
-  if (!id || !key || !ALGS.includes(alg)) return reply(400, '만들 수 없는 패스키입니다.', o);
-
-  return safely(o, async () => {
-    const row = await claim(env, cut(c.challenge, 100), 'reg');
-    /* 챌린지를 낸 사람과 지금 등록을 마치는 사람이 같아야 한다 — 아니면
-       남이 발급받은 챌린지에 내 패스키를 끼워 넣을 수 있다. */
-    if (!row || row.who !== me) return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
-    const bad = readClientData(c.clientDataJSON, 'webauthn.create', cut(c.challenge, 100), SITE.concat(o));
-    if (bad) return reply(400, bad, o);
-    const a = readAuthData(unb64u(c.authData));
-    if (!a || !a.up) return reply(400, '기기가 확인해 주지 않았습니다.', o);
-    if (!eq(a.rpIdHash, await sha(rpOf(o)))) return reply(400, '다른 곳에서 만든 패스키입니다.', o);
-
-    await env.DB.prepare(
-      'insert into passkey (id, who, key, alg, count, at) values (?, ?, ?, ?, ?, ?)'
-    ).bind(id, me, key, alg, a.count, Date.now()).run();
-    const token = await sign(env.SESSION_KEY, me);
-    /* '첫 패스키인지' 가 아니라 '복구 코드가 있는지' 로 본다 — /auth/codes 로
-       이미 받아 둔 사람의 코드를 여기서 말없이 갈아엎으면 안 된다(화면이
-       새 코드를 안 그리면 이미 죽은 옛 코드를 유효한 줄 알고 들고 있게 된다).
-       반대로 패스키가 이미 있어도 복구 코드가 하나도 없으면(안 받았거나
-       전부 써서 소진됐거나) 여기서 채워 준다 — 패스키만 걸고 넘을 수단이
-       없는 계정을 만들지 않는다. */
-    const hasCodes = await env.DB.prepare('select 1 from recovery where who = ? limit 1').bind(me).first();
-    if (hasCodes) return send(201, { token, user: me }, o);
-    return send(201, { token, user: me, codes: await issueRecoveryCodes(env, me) }, o);
-  });
-}
 
 /* ── SSO (Google · Apple) ────────────────────────────────
    1차 인증은 공급자가 한다. Google 은 openid email 을 묻는다 — 확인된 주소는
@@ -1148,15 +1069,6 @@ export function normMail(s) {
   return e;
 }
 
-/* E.164. 한국 지역번호(0으로 시작)는 +82 로 접는다. 줄바꿈이 끼면 거절한다. */
-export function normPhone(s) {
-  let e = String(s ?? '').trim().replace(/[\s().-]/g, '');
-  if (e.startsWith('00')) e = '+' + e.slice(2);
-  if (/^0\d{9,10}$/.test(e)) e = '+82' + e.slice(1);
-  if (!/^\+[1-9]\d{7,14}$/.test(e)) return '';
-  return e;
-}
-
 /* rt-mail 서비스 바인딩만 부른다. 주소는 로그에 남기지 않는다. */
 async function deliver(env, to, subject, text) {
   if (!env.MAIL?.fetch || !env.MAIL_KEY) return false;
@@ -1170,18 +1082,6 @@ async function deliver(env, to, subject, text) {
   } catch { return false; }
 }
 
-/* 문자만. env.MAIL 로는 절대 보내지 않는다 — 메일을 문자인 척하지 않는다. */
-async function deliverSms(env, to, text) {
-  if (!env.SMS?.fetch || !env.SMS_KEY) return false;
-  try {
-    const r = await env.SMS.fetch('https://rt-sms/send', {
-      method: 'POST',
-      headers: { authorization: 'Bearer ' + env.SMS_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ to, text }),
-    });
-    return r.ok === true;
-  } catch { return false; }
-}
 
 
 /* 2단계 로그인 코드. b·t 로 two 줄을 찾는다. 보내기는 시도로 세지 않는다 —
@@ -1190,7 +1090,7 @@ async function authTwoSend(req, env, o) {
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
   const b = cut(c.b, 200), t = cut(c.t, 60);
-  const via = c.via === 'mail' || c.via === 'phone' ? c.via : '';
+  const via = c.via === 'mail' ? c.via : '';
   if (!b || !/^[\w-]{43}$/.test(t) || !via) return reply(400, '요청이 이상합니다.', o);
   return safely(o, async () => {
     const id = await takeId(await stateOf(b), t);
@@ -1201,41 +1101,20 @@ async function authTwoSend(req, env, o) {
       return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
     if ((row.sends ?? 0) >= 5)
       return reply(429, '코드를 너무 많이 보냈습니다. 처음부터 다시 로그인하세요.', o);
-    const tf = await env.DB.prepare('select mail, phone from twofa where who = ?').bind(row.who).first();
-    let dest;
-    if (via === 'mail') {
-      if (tf?.mail !== 1 || !row.mail) return reply(400, '요청이 이상합니다.', o);
-      if (!env.MAIL?.fetch || !env.MAIL_KEY) return reply(503, '메일 설정이 덜 되었습니다.', o);
-      dest = row.mail;
-    } else {
-      const phone = normPhone(c.phone);
-      if (!phone) return reply(400, '요청이 이상합니다.', o);
-      if (tf?.phone !== 1) return reply(400, '등록된 번호가 아닙니다.', o);
-      if (!env.SMS?.fetch || !env.SMS_KEY) return reply(503, '문자 설정이 덜 되었습니다.', o);
-      const box = await env.DB.prepare('select hash from phonebox where who = ?').bind(row.who).first();
-      if (!box || box.hash !== toHex(await sha(phone))) {
-        await env.DB.prepare('update pending set tries = tries + 1 where id = ?').bind(id).run();
-        return reply(400, '등록된 번호가 아닙니다.', o);
-      }
-      dest = phone;
-    }
+    if (!row.mail) return reply(400, '요청이 이상합니다.', o);
+    if (!env.MAIL?.fetch || !env.MAIL_KEY) return reply(503, '메일 설정이 덜 되었습니다.', o);
+    const dest = row.mail;
     const code = twoCode();
     await env.DB.prepare(
       'update pending set sub = ?, provider = ?, sends = sends + 1, until = ? where id = ? and kind = ?'
     ).bind(toHex(await sha(code)), via, Date.now() + LIVE, id, 'two').run();
-    const sent = via === 'mail'
-      ? await deliver(env, dest, 'regiontype sign-in code',
-          `로그인 확인 코드입니다. 5분 안에 입력하세요. 대소문자를 구분합니다.\n\n${code}\n`)
-      : await deliverSms(env, dest,
-          `[regiontype] 로그인 인증 코드 ${code}\n5분 안에 입력하세요. 대소문자를 구분합니다.`);
+    const sent = await deliver(env, dest, 'regiontype sign-in code',
+      `로그인 확인 코드입니다. 5분 안에 입력하세요.\n\n${code}\n`);
     if (!sent) {
       await env.DB.prepare('update pending set sub = null where id = ?').bind(id).run();
-      return reply(503, via === 'mail' ? '메일을 보내지 못했습니다.' : '문자를 보내지 못했습니다.', o);
+      return reply(503, '메일을 보내지 못했습니다.', o);
     }
-    return send(200, {
-      msg: '확인 코드를 보냈습니다.', via,
-      to: via === 'mail' ? maskMail(dest) : maskPhone(dest),
-    }, o);
+    return send(200, { msg: '확인 코드를 보냈습니다.', via, to: maskMail(dest) }, o);
   });
 }
 
@@ -1244,7 +1123,7 @@ async function authTwoCheck(req, env, o) {
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
   const b = cut(c.b, 200), t = cut(c.t, 60);
   const code = String(c.code ?? '').replace(/\s+/g, '');
-  if (!b || !/^[\w-]{43}$/.test(t) || !/^[A-Za-z]{8}$/.test(code))
+  if (!b || !/^[\w-]{43}$/.test(t) || !/^\d{6}$/.test(code))
     return reply(400, '요청이 이상합니다.', o);
   return safely(o, async () => {
     const id = await takeId(await stateOf(b), t);
@@ -1254,33 +1133,6 @@ async function authTwoCheck(req, env, o) {
     if (toHex(await sha(code)) !== row.sub) return reply(401, '맞지 않는 코드입니다.', o);
     await consumeTwo(env, id);
     return send(200, { token: await sign(env.SESSION_KEY, row.who) }, o);
-  });
-}
-
-async function authTwoSet(req, env, o) {
-  const me = await sessionWho(env, req);
-  if (!me) return reply(401, '로그인이 필요합니다.', o);
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const wantMail = Object.hasOwn(c, 'mail'), wantPhone = Object.hasOwn(c, 'phone');
-  if ((wantMail && typeof c.mail !== 'boolean') || (wantPhone && typeof c.phone !== 'boolean') || (!wantMail && !wantPhone))
-    return reply(400, '요청이 이상합니다.', o);
-  return safely(o, async () => {
-    if (wantPhone && c.phone) {
-      const hand = await env.DB.prepare('select 1 as n from phonebox where who = ?').bind(me).first();
-      if (!hand) return reply(400, '먼저 전화번호를 확인하세요.', o);
-    }
-    if (wantMail && c.mail) {
-      const g = await env.DB.prepare("select 1 as n from sso where who = ? and provider = 'google'").bind(me).first();
-      if (!g) return reply(400, 'Google 계정으로 로그인하는 계정만 쓸 수 있습니다.', o);
-    }
-    const cur = await env.DB.prepare('select mail, phone from twofa where who = ?').bind(me).first();
-    const mail = wantMail ? (c.mail ? 1 : 0) : (cur?.mail ?? 0);
-    const phone = wantPhone ? (c.phone ? 1 : 0) : (cur?.phone ?? 0);
-    await env.DB.prepare(
-      'insert into twofa (who, mail, phone, at) values (?, ?, ?, ?) on conflict(who) do update set mail = excluded.mail, phone = excluded.phone, at = excluded.at'
-    ).bind(me, mail, phone, Date.now()).run();
-    return send(200, { two: { mail: mail === 1, phone: phone === 1 } }, o);
   });
 }
 
@@ -1297,10 +1149,11 @@ async function authMail(req, env, o) {
   if (await tooMany(env, me, 'mail')) return reply(429, '잠시 후 다시 시도하세요.', o);
   return safely(o, async () => {
     const code = twoCode();
-    const id = toHex(await sha(code));
+    /* 숫자 6자리는 계정끼리 겹칠 수 있다 — 줄 id 에 계정을 섞는다 */
+    const id = toHex(await sha(me + ':' + code));
     const hash = toHex(await sha(email));
     await challenge(env, 'mail', me, { id, sub: hash });
-    const text = `확인 코드입니다. 5분 안에 입력하세요. 대소문자를 구분합니다.\n\n${code}\n`;
+    const text = `확인 코드입니다. 5분 안에 입력하세요.\n\n${code}\n`;
     const sent = await deliver(env, email, 'regiontype mailbox code', text);
     if (!sent) {
       await env.DB.prepare('delete from pending where id = ?').bind(id).run();
@@ -1316,9 +1169,9 @@ async function authMailConfirm(req, env, o) {
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
   const code = String(c?.code ?? '').replace(/\s+/g, '');
-  if (!/^[A-Za-z]{8}$/.test(code)) return reply(400, '요청이 이상합니다.', o);
+  if (!/^\d{6}$/.test(code)) return reply(400, '요청이 이상합니다.', o);
   return safely(o, async () => {
-    const row = await claim(env, toHex(await sha(code)), 'mail');
+    const row = await claim(env, toHex(await sha(me + ':' + code)), 'mail');
     if (!row || row.who !== me || !row.sub) return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
     try {
       await env.DB.prepare(
@@ -1349,75 +1202,6 @@ async function authRescue(req, env, o) {
   });
 }
 
-const PHONE_RESCUE = { msg: '확인된 번호라면 복구 코드를 보냈습니다.' };
-
-async function authPhone(req, env, o) {
-  const me = await sessionWho(env, req);
-  if (!me) return reply(401, '로그인이 필요합니다.', o);
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const phone = normPhone(c?.phone);
-  if (!phone) return reply(400, '요청이 이상합니다.', o);
-  if (!env.SMS?.fetch || !env.SMS_KEY) return reply(503, '문자 설정이 덜 되었습니다.', o);
-  if (await tooMany(env, me, 'phone')) return reply(429, '잠시 후 다시 시도하세요.', o);
-  return safely(o, async () => {
-    const code = twoCode();
-    const id = toHex(await sha(code));
-    const hash = toHex(await sha(phone));
-    await challenge(env, 'phone', me, { id, sub: hash });
-    const text = `[regiontype] 전화번호 확인 코드 ${code}\n5분 안에 입력하세요. 대소문자를 구분합니다.`;
-    const sent = await deliverSms(env, phone, text);
-    if (!sent) {
-      await env.DB.prepare('delete from pending where id = ?').bind(id).run();
-      return reply(503, '문자를 보내지 못했습니다.', o);
-    }
-    return send(200, { msg: '확인 코드를 보냈습니다.' }, o);
-  });
-}
-
-async function authPhoneConfirm(req, env, o) {
-  const me = await sessionWho(env, req);
-  if (!me) return reply(401, '로그인이 필요합니다.', o);
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const code = String(c?.code ?? '').replace(/\s+/g, '');
-  if (!/^[A-Za-z]{8}$/.test(code)) return reply(400, '요청이 이상합니다.', o);
-  return safely(o, async () => {
-    const row = await claim(env, toHex(await sha(code)), 'phone');
-    if (!row || row.who !== me || !row.sub) return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
-    try {
-      await env.DB.prepare(
-        'insert into phonebox (who, hash, at) values (?, ?, ?) on conflict(who) do update set hash = excluded.hash, at = excluded.at'
-      ).bind(me, row.sub, Date.now()).run();
-      await env.DB.prepare(
-        'insert into twofa (who, mail, phone, at) values (?, 0, 1, ?) on conflict(who) do update set phone = 1, at = excluded.at'
-      ).bind(me, Date.now()).run();
-    } catch { return reply(400, '그 번호는 확인할 수 없습니다.', o); }
-    const hasCodes = await env.DB.prepare('select 1 from recovery where who = ? limit 1').bind(me).first();
-    if (hasCodes) return send(200, { msg: '확인했습니다.' }, o);
-    return send(200, { msg: '확인했습니다.', codes: await issueRecoveryCodes(env, me) }, o);
-  });
-}
-
-/* 로그인하지 않은 사람이 부른다. 번호가 확인됐든 아니든, 문자를 보낼 수 있을 때의 응답은 같다.
-   보내는 쪽(SMS)이 없으면 503 이고, 메일은 대신 나가지 않는다. */
-async function authPhoneRescue(req, env, o) {
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const phone = normPhone(c?.phone);
-  if (!phone) return reply(400, '요청이 이상합니다.', o);
-  if (!env.SMS?.fetch || !env.SMS_KEY) return reply(503, '문자 설정이 덜 되었습니다.', o);
-  return safely(o, async () => {
-    const row = await env.DB.prepare('select who from phonebox where hash = ?').bind(toHex(await sha(phone))).first();
-    if (row?.who) {
-      const codes = newCodes();
-      const text = `복구 코드입니다. 각각 한 번만 쓸 수 있습니다.\n\n${codes.join('\n')}\n`;
-      if (await deliverSms(env, phone, text))
-        await storeRecoveryCodes(env, row.who, codes);
-    }
-    return send(200, PHONE_RESCUE, o);
-  });
-}
 
 /* 이 응답 하나로 브라우저를 돌려보낸다 — 경로는 여기 고정한 값뿐이고,
    오리진만 pending.back(허용 목록을 통과한 값) 에서 읽는다. 사용자가 보낸
@@ -1480,11 +1264,8 @@ async function authCb(req, env) {
   }
 }
 
-/* 돌아온 뒤 토큰을 받는 자리 — bind(b)와 authCb 가 프래그먼트로만 돌려준
-   tag(t)를 함께 대야 한다. 계정 조회·생성·sso 연결을 실제로 하는 곳이 여기다.
-   계정에 패스키가 하나라도 있으면 2단계를 더 요구한다 — SSO 는 '그 메일함·
-   그 기기의 생체인증을 통과했다' 이상을 보장하지 않으니, 패스키를 만들어 둔
-   사람에게는 그 위에 한 겹을 더 씌운다. */
+/* 돌아온 뒤 2단계로 넘기는 자리 — bind(b)와 authCb 가 프래그먼트로만 돌려준
+   tag(t)를 함께 대야 한다. 계정 조회·생성·sso 연결을 실제로 하는 곳이 여기다. */
 async function authTake(req, env, o) {
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
@@ -1516,70 +1297,22 @@ async function authTake(req, env, o) {
       isNewAccount = !row.who && created[0]?.meta?.changes === 1;
     }
 
-    const has = await env.DB.prepare('select 1 from passkey where who = ? limit 1').bind(who).first();
-    const tf = await env.DB.prepare('select mail, phone from twofa where who = ?').bind(who).first();
-    const hand = await env.DB.prepare('select 1 as n from phonebox where who = ?').bind(who).first();
+    /* 토큰은 여기서 주지 않는다 — 누구든 늘 로그인 Google 메일로 숫자 6자리를 받아 넘는다.
+       같은 id 를 그대로 이어 쓴다 — /auth/code·/auth/two 가 b·t 로 되짚는다.
+       mail 은 이번 로그인의 Google 확인 주소다. user 로는 옮기지 않는다. */
     const rec = await env.DB.prepare('select count(*) as n from recovery where who = ?').bind(who).first();
-    const begun = await env.DB.prepare('select 1 as n from intro where who = ?').bind(who).first();
-    /* 가입 안내를 끝내기 전에는 2단계를 요구하지 않는다. 중간에 나갔다가
-       다시 들어와도 패스키에 막히지 않고 안내로 돌아간다. */
-    const phoneOn = tf?.phone === 1 && !!hand;
-    const mailOn = tf?.mail === 1;
-    if (begun && (has || phoneOn || mailOn)) {
-      /* 켜 둔 수단이 하나라도 있으면 토큰을 주지 않는다. 이번 로그인에 그 수단을
-         쓸 수 없어도 여기서 통과시키지 않는다.
-         같은 id 를 그대로 이어 쓴다 — /auth/log·/auth/code·/auth/two 가 b·t 로 되짚는다.
-         mail 은 이번 로그인의 Google 확인 주소다. user 로는 옮기지 않는다. */
-      await challenge(env, 'two', who, { id, mail: row.mail || null });
-      const via = {
-        passkey: !!has,
-        mail: mailOn && !!row.mail && !!(env.MAIL?.fetch && env.MAIL_KEY),
-        phone: phoneOn && !!(env.SMS?.fetch && env.SMS_KEY),
-        code: (rec?.n ?? 0) > 0,
-      };
-      /* 패스키만 켜진 계정은 옛 화면이 알아듣는 need:'passkey' 로 답한다.
-         메일·전화가 켜지면 'two' 다. via 는 어느 쪽이든 붙인다. */
-      const out = { need: (mailOn || phoneOn) ? 'two' : 'passkey', challenge: id, via };
-      if (via.mail) out.mailTo = maskMail(row.mail);
-      return send(200, out, o);
-    }
-    return send(200, { token: await sign(env.SESSION_KEY, who), isNewAccount }, o);
+    await challenge(env, 'two', who, { id, mail: row.mail || null });
+    const via = {
+      mail: !!row.mail && !!(env.MAIL?.fetch && env.MAIL_KEY),
+      code: (rec?.n ?? 0) > 0,
+    };
+    const out = { need: 'two', challenge: id, via, isNewAccount };
+    if (via.mail) out.mailTo = maskMail(row.mail);
+    return send(200, out, o);
   });
 }
 
-/* 2단계: 패스키로 넘는다. SSO 뒤 확인 전용이라 who 를 스스로 정하지 않는다 —
-   /auth/take 가 pending 에 적어 둔 그 계정과, 이 패스키의 주인이 같아야 한다.
-   claim 대신 peekTwo 를 쓴다 — 서명이 틀리거나 사용자가 취소해도 줄을 지우지
-   않아야 복구 코드로 갈아탈 수 있다(성공했을 때만 consumeTwo 로 지운다). */
-async function authLog(req, env, o) {
-  let c;
-  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const id = cut(c.id, 400), chal = cut(c.challenge, 100);
-  return safely(o, async () => {
-    const row = await peekTwo(env, chal);
-    if (!row) return reply(400, '만료되었거나 우리가 낸 요청이 아닙니다.', o);
-    const bad = readClientData(c.clientDataJSON, 'webauthn.get', chal, SITE.concat(o));
-    if (bad) return reply(400, bad, o);
-    const a = readAuthData(unb64u(c.authData));
-    if (!a || !a.up) return reply(400, '기기가 확인해 주지 않았습니다.', o);
-    if (!eq(a.rpIdHash, await sha(rpOf(o)))) return reply(400, '다른 곳의 패스키입니다.', o);
-
-    const k = await env.DB.prepare('select who, key, alg, count from passkey where id = ?')
-      .bind(id).first();
-    if (!k) return reply(401, '모르는 패스키입니다.', o);
-    if (k.who !== row.who) return reply(401, '이 계정의 패스키가 아닙니다.', o);
-    const ok = await verify({ alg: k.alg, key: k.key, authData: c.authData,
-                              clientDataJSON: c.clientDataJSON, signature: cut(c.sig, 2000) });
-    if (!ok) return reply(401, '서명이 맞지 않습니다.', o);
-    /* 셈이 뒤로 가면 복제된 기기다. 0 을 그대로 두는 인증기가 많아 0 은 안 본다 */
-    if (a.count && k.count && a.count <= k.count) return reply(401, '복제된 기기로 보입니다.', o);
-    await env.DB.prepare('update passkey set count = ? where id = ?').bind(a.count, id).run();
-    await consumeTwo(env, chal);
-    return send(200, { token: await sign(env.SESSION_KEY, k.who), user: k.who }, o);
-  });
-}
-
-/* 2단계: 복구 코드로 넘는다. 패스키를 잃어버린(또는 아예 안 가진 다른 기기의)
+/* 2단계: 복구 코드로 넘는다. Google 메일을 받을 수 없는
    사람을 위한 비상구다. 코드는 그 자체가 고엔트로피 난수(10글자, 약 50비트)라
    사전공격을 걱정할 이유가 없다 — 비밀번호처럼 느린 KDF 를 씌울 이유가 없어
    기존 sha() 한 번으로 충분하고, RL_AU 만으로도 무차별 대입은 막힌다. */
@@ -1614,27 +1347,18 @@ const pickCodeChar = () => {
   return CODE_ALPHABET[b % 36];
 };
 const oneCode = () => Array.from({ length: 10 }, pickCodeChar).join('');
-/* 로그인·확인용 8자. 숫자·I·l 은 빼 문자 글꼴에서 안 헷갈리게 한다.
-   252 가 아니라 250(=50×5) 을 넘는 바이트는 버려 글자 분포를 고르게 한다.
-   대문자만·소문자만인 값은 다시 뽑는다 — 받는 쪽이 대소문자를 구분한다. */
-const TWO_ALPHABET = 'ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-const pickTwoChar = () => {
-  let b;
-  do { b = crypto.getRandomValues(new Uint8Array(1))[0]; } while (b >= 250);
-  return TWO_ALPHABET[b % 50];
-};
+/* 로그인·확인용 숫자 6자리. 4294000000(=10⁶×4294) 이상은 버려 자리마다 고르게 한다.
+   추측은 2단계 줄의 시도 5회·5분 수명이 막는다. */
 function twoCode() {
-  for (;;) {
-    const s = Array.from({ length: 8 }, pickTwoChar).join('');
-    if (/[A-Z]/.test(s) && /[a-z]/.test(s)) return s;
-  }
+  const n = new Uint32Array(1);
+  do crypto.getRandomValues(n); while (n[0] >= 4294000000);
+  return String(n[0] % 1e6).padStart(6, '0');
 }
 const maskMail = e => {
   const at = String(e).indexOf('@');
   return at > 0 ? e[0] + '***' + e.slice(at) : '***';
 };
-const maskPhone = p => p.length < 8 ? '***' : p.slice(0, 3) + '•'.repeat(p.length - 7) + p.slice(-4);
-/* 확인 코드를 한 계정이 한꺼번에 여러 장 쌓지 못하게 한다 — 문자 펌핑을 막는다. */
+/* 확인 코드를 한 계정이 한꺼번에 여러 장 쌓지 못하게 한다 — 메일 폭탄을 막는다. */
 async function tooMany(env, who, kind) {
   const n = await env.DB.prepare(
     'select count(*) as n from pending where who = ? and kind = ? and until > ?'
@@ -1821,23 +1545,18 @@ async function authMe(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
   return safely(o, async () => {
-    const [keys, codes, row, intro, box, hand, two, google] = await env.DB.batch([
-      env.DB.prepare('select count(*) as n from passkey where who = ?').bind(me),
+    const [codes, row, intro, box, google] = await env.DB.batch([
       env.DB.prepare('select count(*) as n from recovery where who = ?').bind(me),
       env.DB.prepare('select name, bio, face, lang, handle, botname, push, shut from profile where who = ?').bind(me),
       env.DB.prepare('select 1 as n from intro where who = ?').bind(me),
       env.DB.prepare('select 1 as n from mailbox where who = ?').bind(me),
-      env.DB.prepare('select 1 as n from phonebox where who = ?').bind(me),
-      env.DB.prepare('select mail, phone from twofa where who = ?').bind(me),
       env.DB.prepare("select 1 as n from sso where who = ? and provider = 'google'").bind(me),
     ]);
     /* intro 는 '가입 안내를 이미 마쳤다' 는 표시다. 화면(auth.js·welcome.js)이
        이걸 보고 안내를 다시 띄울지 정한다 — 두 번 묻지 않기 위한 값 하나다. */
-    const tf = two.results[0] || {};
-    return send(200, { keys: keys.results[0]?.n ?? 0, codes: codes.results[0]?.n ?? 0,
+    return send(200, { codes: codes.results[0]?.n ?? 0,
                        profile: row.results[0] ?? null, intro: !!intro.results[0],
-                       mailbox: !!box.results[0], phone: !!hand.results[0],
-                       two: { mail: tf.mail === 1, phone: tf.phone === 1 },
+                       mailbox: !!box.results[0],
                        google: !!google.results[0] }, o);
   });
 }
@@ -2268,15 +1987,11 @@ export default {
         const ok = await pass(env.RL_AU, ip(req));
         if (ok !== true) return shut(ok, o);
         if (path === '/auth/me') return authMe(req, env, o);
-        if (path === '/auth/new') return authNew(req, env, o);
-        if (path === '/auth/reg') return authReg(req, env, o);
         if (path === '/auth/sso') return authSso(req, env, o);
         if (path === '/auth/take') return authTake(req, env, o);
-        if (path === '/auth/log') return authLog(req, env, o);
         if (path === '/auth/code') return authCode(req, env, o);
         if (path === '/auth/two/send') return authTwoSend(req, env, o);
         if (path === '/auth/two/check') return authTwoCheck(req, env, o);
-        if (path === '/auth/two/set') return authTwoSet(req, env, o);
         if (path === '/auth/codes') return authCodes(req, env, o);
         if (path === '/auth/profile') return authProfile(req, env, o);
         if (path === '/auth/intro') return authIntro(req, env, o);
@@ -2284,9 +1999,6 @@ export default {
         if (path === '/auth/mail' && req.method === 'POST') return authMail(req, env, o);
         if (path === '/auth/mail/confirm') return authMailConfirm(req, env, o);
         if (path === '/auth/rescue') return authRescue(req, env, o);
-        if (path === '/auth/phone' && req.method === 'POST') return authPhone(req, env, o);
-        if (path === '/auth/phone/confirm') return authPhoneConfirm(req, env, o);
-        if (path === '/auth/phone/rescue') return authPhoneRescue(req, env, o);
       }
     }
     /* 순위표는 D1 을 붙이기 전에도 사이트가 멀쩡해야 한다 — 없으면 없다고만 한다 */
