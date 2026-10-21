@@ -503,11 +503,10 @@ function drawVerify(s) {
   }
   body().append(box);
   if (kind === 'phone' || kind === 'mail') {
-    const policy = h('a', 'profile-button', '개인정보 처리방침');
+    const policy = h('a', 'profile-button intro-policy', '개인정보 처리방침');
     policy.href = '../policy/';
     policy.target = '_blank';        // 같은 탭으로 가면 이 장의 진행이 날아간다
     policy.rel = 'noopener';
-    policy.style.marginTop = '12px';
     body().append(policy);
   }
   paintVerify(kind);
