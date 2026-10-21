@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.462",
+    "date": "2026-10-21",
+    "ko": "전화번호 인증과 패스키를 없앴습니다. 이제 로그인할 때마다 Google 계정 메일로 오는 숫자 6자리 코드를 입력합니다. 메일을 받을 수 없으면 복구 코드로 들어옵니다.",
+    "en": "Phone verification and passkeys are gone. Every sign-in now asks for a 6-digit code sent to your Google account email; a recovery code still works if that mail cannot arrive."
+  },
+  {
     "v": "0.11.461",
     "date": "2026-10-21",
     "ko": "가입 안내 뒤의 구 이름 위치가 스타일 정책에 막히지 않습니다.",

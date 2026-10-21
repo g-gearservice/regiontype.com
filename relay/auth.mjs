@@ -2,8 +2,8 @@
 
    비밀번호는 받지 않는다. 정적 사이트가 비밀번호를 다루면 해시·재설정·유출
    대응을 전부 떠안는데, 그건 이 저장소가 감당할 층이 아니다. 1차 인증은
-   Google·Apple 이 하고(OIDC), 계정에 패스키가 있으면 그 위에 2단계로 얹는다.
-   복구 코드는 패스키가 없는 기기에서 2단계를 넘는 비상구다.
+   Google·Apple 이 하고(OIDC), 2단계는 그 Google 메일로 가는 숫자 6자리다.
+   복구 코드는 그 메일을 받을 수 없을 때 2단계를 넘는 비상구다.
 
    세션은 서명한 토큰이다. 서명이 맞아도 사람 줄이 없으면 로그인이 아니다 —
    계정을 지우면 user 가 사라지고, 그 전에 낸 토큰은 그때부터 거절된다.
@@ -65,80 +65,6 @@ export async function who(env, req) {
   if (!id) return null;
   const row = await env.DB.prepare('select 1 as n from user where id = ?').bind(id).first();
   return row ? id : null;
-}
-
-/* ── 패스키 (WebAuthn) ────────────────────────────────────
-   등록 때 브라우저가 getPublicKey() 로 SPKI 를 그대로 준다. 그래서 서버에
-   CBOR 파서를 들일 필요가 없다 — attestation 은 'none' 으로 받는다.
-   증명서를 안 받는 대신 우리가 지키는 건 '이 챌린지에 이 기기가 답했다' 하나다.
-   순위표에는 그거면 된다. 은행이면 attestation 을 받아야 한다. */
-
-export const eq = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
-
-/* clientDataJSON — 브라우저가 무엇에 서명했는지 적어 보내는 쪽지.
-   챌린지와 출처를 여기서 맞춰야 남의 사이트에서 받아온 서명을 못 쓴다. */
-export function readClientData(raw, want, challenge, origins) {
-  let c;
-  try { c = JSON.parse(new TextDecoder().decode(unb64u(raw))); } catch { return '읽을 수 없는 응답입니다.'; }
-  if (c.type !== want) return '응답 종류가 맞지 않습니다.';
-  if (c.challenge !== challenge) return '만료되었거나 우리가 낸 요청이 아닙니다.';
-  if (!origins.includes(c.origin)) return '허용된 곳이 아닙니다.';
-  return null;
-}
-
-/* authenticatorData — 앞 37바이트가 고정 자리다.
-   rpIdHash 32 | flags 1 | signCount 4 | (그 뒤는 안 본다) */
-export function readAuthData(bytes) {
-  if (bytes.length < 37) return null;
-  const flags = bytes[32];
-  return {
-    rpIdHash: bytes.slice(0, 32),
-    up: !!(flags & 1),          // 사람이 실제로 만졌다
-    uv: !!(flags & 4),          // 지문·PIN 으로 본인 확인까지 했다
-    count: new DataView(bytes.buffer, bytes.byteOffset + 33, 4).getUint32(0),
-  };
-}
-
-/* ECDSA 서명은 DER 로 온다. WebCrypto 는 r||s 원시 64바이트를 받는다 —
-   길이가 33바이트로 오는 값(앞의 0)을 잘라 맞춰야 한다. */
-export function derToRaw(der) {
-  if (der[0] !== 0x30) return der;             // 이미 원시형이면 그대로
-  let i = 2;
-  if (der[1] & 0x80) i += der[1] & 0x7f;       // 긴 길이 표기
-  const take = () => {
-    if (der[i++] !== 0x02) return null;
-    let n = der[i++];
-    let v = der.slice(i, i + n); i += n;
-    while (v.length > 32 && v[0] === 0) v = v.slice(1);
-    const out = new Uint8Array(32);
-    out.set(v, 32 - v.length);
-    return out;
-  };
-  const r = take(), s = take();
-  if (!r || !s) return der;
-  const raw = new Uint8Array(64);
-  raw.set(r, 0); raw.set(s, 32);
-  return raw;
-}
-
-const ALG = {
-  '-7':   { import: { name: 'ECDSA', namedCurve: 'P-256' }, verify: { name: 'ECDSA', hash: 'SHA-256' } },
-  '-257': { import: { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, verify: { name: 'RSASSA-PKCS1-v1_5' } },
-};
-
-/* 저장해 둔 공개키로 '이 기기가 이 챌린지에 답했다'를 확인한다.
-   서명 대상은 authenticatorData 뒤에 clientDataJSON 의 해시를 붙인 것이다. */
-export async function verify({ alg, key, authData, clientDataJSON, signature }) {
-  const spec = ALG[String(alg)];
-  if (!spec) return false;
-  const pub = await crypto.subtle.importKey('spki', unb64u(key), spec.import, false, ['verify']);
-  const a = unb64u(authData);
-  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', unb64u(clientDataJSON)));
-  const signed = new Uint8Array(a.length + hash.length);
-  signed.set(a, 0); signed.set(hash, a.length);
-  let sig = unb64u(signature);
-  if (spec.import.name === 'ECDSA') sig = derToRaw(sig);
-  return crypto.subtle.verify(spec.verify, pub, sig, signed);
 }
 
 export const sha = async s => new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(s)));

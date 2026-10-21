@@ -403,7 +403,7 @@ A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `st
 
     index.html               screens (title / regions / settings / play / result)
     about/                    about page — one file per UI language (about/index.html is Korean); inherits style.css tokens, does not load app.js
-    auth.js                  sign-in overlay on the home screen: Google SSO, two-step verification (passkey, email, SMS, recovery codes)
+    auth.js                  sign-in overlay on the home screen: Google SSO, then a 6-digit email code (or a recovery code)
     signin/                  provider callback landing route; forwards its hash to the home screen
     account/                 My Account overlay script; index.html only forwards to /#account
     settings/                settings overlay script and hash-passthrough landing route
@@ -414,7 +414,6 @@ A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `st
     app.js                   matching engine + game loop + result card
     design/                  play/queue design (`design.pen`)
     relay/                   Cloudflare Worker — feedback → GitHub issues, leaderboard → D1
-    sms/                     rt-sms Cloudflare Worker — SMS delivery via Solapi / Twilio
     mimi/                    Mini Motorways-style board (dev only)
     data/*.course.json       items, aliases, one-line blurbs (mode: sequence)
     data/*.geom.json         bitmap dot grid
@@ -528,18 +527,14 @@ Every run finished while signed in counts: normal runs through `/played`, ranked
     POST /dist     {c, t} → {bins, bucket, cap, total, score, over}
     POST /forget   {} → {gone}      drop all of my rows
 
-    POST /auth/new    start passkey create (needs login) → challenge
-    POST /auth/reg    finish passkey create (needs login) → session token (recovery codes too, on the first key)
     POST /auth/sso    start SSO {p,s} → provider URL
     GET  /auth/cb     where the provider redirects back (GET, no Origin) → 302 (#signin=ok&t=…)
-    POST /auth/take   {b,t} claims the session token — two-step verification on the account demands a second step
-    POST /auth/log    second step: clear it with a passkey → session token
+    POST /auth/take   {b,t} → {need:'two', via, mailTo?, isNewAccount} — every sign-in takes the second step
     POST /auth/code   second step: {b,t,code} clear it with a recovery code → session token
-    POST /auth/two/send  {b,t,via,phone?} send two-step verification code (email or SMS)
-    POST /auth/two/check {b,t,code} verify two-step code (8 letters, case-sensitive) → session token
-    POST /auth/two/set   {mail?,phone?} (needs login) configure two-step verification settings
+    POST /auth/two/send  {b,t,via:'mail'} send the 6-digit code to the Google account email
+    POST /auth/two/check {b,t,code} verify the 6-digit code → session token
     POST /auth/codes  reissue recovery codes (needs login; auto-issued only when the account has none yet; old codes all die)
-    GET  /auth/me     what the account screen shows (needs login) → {keys, codes, two, google} counts/switches, plus {profile} — never `who` or a provider id
+    GET  /auth/me     what the account screen shows (needs login) → {codes, mailbox, google}, plus {profile} — never `who` or a provider id
     POST /auth/erase  delete the account and everything tied to it (needs login, {sure:true}) → {gone}
     POST /auth/profile save the account screen's fields (needs login) → {name, bio, face, lang}; renaming also renames your rows in `board` and `ladder`
 
@@ -549,7 +544,7 @@ Every run finished while signed in counts: normal runs through `/played`, ranked
     wrangler d1 execute rt-board --remote --file relay/migrate-two.sql
     wrangler deploy
 
-To update an existing database, run `wrangler d1 execute rt-board --remote --file relay/migrate-two.sql`. Deploy order: deploy `rt-sms` before the relay; the static site (front) may go first since it accepts both old and new responses.
+To update an existing database, run `wrangler d1 execute rt-board --remote --file relay/migrate-two.sql`. Deploy order: deploy `rt-mail` before the relay; the static site (front) may go first since it accepts both old and new responses.
 
 If `pending` already exists from an earlier deploy, that last command adds nothing to it — `create table if not exists` skips a table that is already there, even though this file gave it new columns (`back`, `provider`, `sub`, `tries`). Without them, login fails outright on the first insert. Either drop and recreate `pending` (it only holds five-minute login state, nothing to lose) or add the columns by hand — see the comment above the `pending` table in `schema.sql` for both commands.
 
@@ -567,39 +562,29 @@ Honest scores and well-built lies still look the same here. **The board is a hal
 
 **Only required to post to the leaderboard.** The game runs without it. The distribution still shows — only your seat is missing. Login opens as an overlay on the home map (`auth.js`); `signin/` only forwards the provider callback hash back there. The home link swaps to "my account" once a token exists.
 
-**Google or Apple signs you in first. Two-step verification (passkey, email code, SMS code, or recovery code) can be turned on as a second step.** A static site that handles passwords inherits hashing, reset, and breach response, which this repo will not own, so it never asks for one — the provider makes that first check instead.
+**Google or Apple signs you in first. Every sign-in then takes a second step: a 6-digit code sent to the Google account email, or a recovery code.** A static site that handles passwords inherits hashing, reset, and breach response, which this repo will not own, so it never asks for one — the provider makes that first check instead.
 
-**Google sign-in requests the `openid email` scope; Apple carries no scope.** The Google-verified email address is used solely to send a 5-minute one-time code when email two-step verification is enabled; it is kept temporarily in the server's sign-in challenge row, deleted on success, and never stored in the account or shown publicly. What comes back from the provider is an account id, and it is never kept as-is: it goes through an HMAC (`SUB_KEY`, or `SESSION_KEY` if that secret is unset) before it reaches D1, so a leak of that id somewhere else cannot be matched back to a row here.
+**Google sign-in requests the `openid email` scope; Apple carries no scope.** The Google-verified email address is used solely to send the 5-minute sign-in code; it is kept temporarily in the server's sign-in challenge row, deleted on success, and never stored in the account or shown publicly. What comes back from the provider is an account id, and it is never kept as-is: it goes through an HMAC (`SUB_KEY`, or `SESSION_KEY` if that secret is unset) before it reaches D1, so a leak of that id somewhere else cannot be matched back to a row here.
 
-Two-step verification methods:
-- **Passkey**: Verified on device via fingerprint, face, or PIN.
-- **Email code**: 8-letter case-sensitive code sent to the Google account email (valid 5 minutes; max 5 codes per attempt; 5 wrong tries end the attempt).
-- **SMS code**: 8-letter case-sensitive code sent to the verified phone number (verified against the stored phone hash; max 5 codes per attempt; 5 wrong tries end the attempt).
-- **Recovery code**: One-time backup codes shown on setup.
+Second step:
+- **Email code**: 6-digit code sent from `recover@regiontype.com` to the Google account email (valid 5 minutes; max 5 codes per attempt; 5 wrong tries end the attempt). The relay needs `MAIL_KEY` and the `rt-mail` worker — without them nobody can finish signing in.
+- **Recovery code**: One-time backup codes from Settings › Security.
 
-    wrangler secret put SESSION_KEY   # any long random string. rotating it kills every session, but leaves SSO links and passkeys alone
+    wrangler secret put SESSION_KEY   # any long random string. rotating it kills every session, but leaves SSO links alone
     wrangler secret put SUB_KEY       # optional, falls back to SESSION_KEY. its own lever: rotating it kills every SSO link instead, and the next sign-in opens a new, empty account
     wrangler secret put GOOGLE_SECRET # Google OAuth client secret
     wrangler secret put APPLE_KEY     # Apple Sign in .p8 private key, as issued
-    wrangler secret put SMS_KEY       # secret shared between relay and rt-sms worker
-    wrangler secret put SOLAPI_KEY    # Solapi API key for Korean SMS
-    wrangler secret put SOLAPI_SECRET # Solapi API secret
-    wrangler secret put TWILIO_SID    # Twilio Account SID for international SMS
-    wrangler secret put TWILIO_TOKEN  # Twilio Auth Token
+    wrangler secret put MAIL_KEY      # same value as the rt-mail worker's MAIL_KEY
 
-`GOOGLE_ID`, `APPLE_ID`, `APPLE_TEAM`, and `APPLE_KID` are plain `[vars]` in `wrangler.toml`, not secrets — leave one empty and that provider's button answers 503 instead of failing halfway through. `SMS_PROVIDER` (`auto`|`solapi`|`twilio`), `SMS_ALLOW`, `SOLAPI_FROM`, `TWILIO_FROM`, and `TWILIO_SERVICE` configure the `rt-sms` worker (`sms/`). `/auth/cb`, where the provider's redirect lands, counts against its own window, `RL_CB`: it is a GET so the POST-only rate limiter never sees it, and a single login already spends several POSTs (`sso`, `take`, then `log` or `code`) that should not share a budget with it.
+`GOOGLE_ID`, `APPLE_ID`, `APPLE_TEAM`, and `APPLE_KID` are plain `[vars]` in `wrangler.toml`, not secrets — leave one empty and that provider's button answers 503 instead of failing halfway through. `/auth/cb`, where the provider's redirect lands, counts against its own window, `RL_CB`: it is a GET so the POST-only rate limiter never sees it, and a single login already spends several POSTs (`sso`, `take`, then `two/send` and `two/check` or `code`) that should not share a budget with it.
 
-Turning the second step on registers a passkey, enables email or SMS 2FA, or issues recovery codes. **No extra dependency.** Passkey registration gives SPKI from `getPublicKey()`, so the server does not need a CBOR parser. Signatures are checked with WebCrypto, and the authenticator's DER signature is unfolded to raw 64 bytes (`derToRaw`).
-
-`attestation` is `none`. We skip vendor certs and keep one claim: **this challenge, this origin, this device answered**. That is enough for a leaderboard.
-
-**Recovery codes are the door when other methods are unavailable.** Turning on 2FA or registering a passkey shows eight one-time codes exactly once; only their hashes reach D1. Each is spent once — a redeemed code is gone for good — and reissuing wipes every old code in the same stroke, so there is no way to see a code again once that screen closes.
+**Recovery codes are the door when the Google mail cannot arrive.** Getting them in Settings › Security shows eight one-time codes exactly once; only their hashes reach D1. Each is spent once — a redeemed code is gone for good — and reissuing wipes every old code in the same stroke, so there is no way to see a code again once that screen closes.
 
 The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `regiontype.gearservicevanguard.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
 
 **The row owner is read from the token.** The body is ignored — the old record-code path let anyone who knew the code post under that name.
 
-Stateless sessions cannot be revoked one by one. In a pinch, rotate `SESSION_KEY` and drop them all — that breaks every session but leaves SSO links and passkeys as they are.
+Stateless sessions cannot be revoked one by one. In a pinch, rotate `SESSION_KEY` and drop them all — that breaks every session but leaves SSO links as they are.
 
 ### Rank tab
 

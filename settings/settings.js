@@ -303,12 +303,6 @@ function paintUnit() {
 }
 
 /* ── 계정 보안 ──────────────────────────────────────── */
-const toB64u = b => btoa(String.fromCharCode(...new Uint8Array(b)))
-  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const fromB64u = s => {
-  const x = s.replace(/-/g, '+').replace(/_/g, '/');
-  return Uint8Array.from(atob(x + '='.repeat((4 - x.length % 4) % 4)), c => c.charCodeAt(0));
-};
 const say = (msg, bad) => {
   const p = $('#optSay');
   p.textContent = msg || '';
@@ -357,133 +351,21 @@ async function me() {
   return r.ok ? r.json().catch(() => null) : null;
 }
 
-const canPasskey = () => !!(window.PublicKeyCredential && navigator.credentials?.create);
-
-/* 이 기기에 패스키를 하나 만든다 — 로그인해 있어야 한다(2단계를 얹는 것이다) */
-async function passkeyMake() {
-  const d = await ask('/auth/new', {});
-  /* 열쇠고리(애플 암호·구글 비밀번호 관리자)에 걸릴 이름. 정해 둔 아이디나
-     닉네임이 있으면 그것을 쓴다 — 'regiontype · 55f247' 두 줄이 나란히 있으면
-     같은 계정의 기기 둘인지 계정이 둘인지 사람이 가릴 수가 없다. 계정 id 앞
-     여섯 자는 이름이 아직 없을 때의 마지막 수단으로만 남긴다(그래도 계정마다
-     다른 값이라 두 줄이 서로 다른 계정임은 드러난다).
-     ponytail: 이름을 나중에 바꿔도 이미 걸린 줄은 안 바뀐다 — 그건 열쇠고리가
-     쥔 값이라 우리가 고칠 수 없다. 새로 만드는 줄부터 적용된다. */
-  const name = d.name || ('regiontype · ' + d.user.slice(0, 6));
-  const cred = await navigator.credentials.create({ publicKey: {
-    challenge: fromB64u(d.challenge),
-    rp: d.rp,
-    /* 사람 이름은 여전히 안 받는다 — 여기 실리는 건 이 사이트에서 고른 표시뿐이다 */
-    user: { id: new TextEncoder().encode(d.user), name, displayName: name },
-    /* 이 계정이 이미 가진 열쇠. 같은 기기에서 또 만들려 하면 브라우저가
-       "이미 등록돼 있습니다" 로 막는다 — 한 기기가 한 계정에 두 줄을 쌓지 않는다 */
-    excludeCredentials: (d.keys || []).map(id => ({ type: 'public-key', id: fromB64u(id) })),
-    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-    authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
-    attestation: 'none', timeout: 60000,
-  } });
-  const r = cred.response;
-  const out = await ask('/auth/reg', {
-    challenge: d.challenge, id: toB64u(cred.rawId),
-    /* getPublicKey() 가 SPKI 를 그대로 준다 — 서버에 CBOR 파서를 들일 이유가 없다 */
-    key: toB64u(r.getPublicKey()), alg: r.getPublicKeyAlgorithm(),
-    clientDataJSON: toB64u(r.clientDataJSON), authData: toB64u(r.getAuthenticatorData()),
-  });
-  localStorage.setItem(TOKEN_KEY, out.token);
-  return out;
-}
-
-/* 패스키를 부르는 버튼은 전부 이 문을 지난다 — 취소와 진짜 실패는 다른 말이다 */
-async function tryAuth(run, doing, btns) {
-  if (!canPasskey()) return say(t('noPasskey'), true);
-  btns.forEach(b => b.disabled = true);
-  say(doing);
-  try {
-    await run();
-  } catch (e) {
-    say(e && e.name === 'NotAllowedError' ? t('cancelled')
-      : e && e.status === 401 ? t('noKey')
-      : t('loginFail'), true);
-  }
-  btns.forEach(b => b.disabled = false);
-}
-
-/* 패스키를 등록한 브라우저. 한 줄에 브라우저 이름과 마지막 사용만 싣는다 —
-   credential id·user handle 같은 날 WebAuthn 값은 받아도 그리지 않는다.
-   이름은 밖에서 온 글자라 textContent 로만 넣는다.
-   ponytail: 중계기가 아직 이 목록을 주지 않는다(passkey 표에 브라우저·마지막 사용
-   칸이 없고 /auth/me 는 개수만 준다). 그래서 지금은 늘 빈 상태다. 나중에 /auth/me 가
-   browsers: [{ browser, used }] (used 는 epoch ms) 를 주면 이 함수가 그대로 받는다 */
-function paintBrowsers(list) {
-  const ul = $('#securityBrowsers');
-  const rows = (Array.isArray(list) ? list : [])
-    .filter(b => b && typeof b.browser === 'string' && b.browser.trim())
-    .map(b => ({ browser: b.browser.trim().slice(0, 40), used: Number(b.used) }));
-  ul.replaceChildren(...rows.map(({ browser, used }) => {
-    const li = document.createElement('li');
-    li.className = 'security-browser';
-    li.textContent = t('secBrowserRow', { browser, when: usedAgo(used) });
-    return li;
-  }));
-  ul.hidden = !rows.length;
-  $('#securityBrowsersNone').hidden = !!rows.length;
-}
-/* '어제' · '3일 전' — 날짜 경계로 센다. 말은 Intl 이 그 언어로 짓는다 */
-function usedAgo(ms) {
-  if (!(ms > 0)) return t('secBrowserNever');
-  const day = d => { const x = new Date(d); return Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()) / 864e5; };
-  const days = Math.max(0, day(Date.now()) - day(ms));
-  try { return new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' }).format(-days, 'day'); }
-  catch { return String(days); }
-}
-
 let CODES = [];      // 복구 코드. 판이 떠 있는 동안만 산다
 let securityRequest = 0;
-let ME = null;       // 마지막으로 읽은 /auth/me — 스위치를 누른 뒤 응답만으로 다시 칠하려고 쥔다
-
-/* 2단계 인증 — 패스키가 있거나 메일·문자 스위치가 하나라도 켜져 있으면 켜진 것이다.
-   스위치는 aria-pressed 와 옆의 글자로 말한다(색만으로 말하지 않는다) */
-function paintTwo() {
-  const a = ME;
-  const two = (a && a.two) || {};
-  const on = !!a && (a.keys > 0 || !!two.mail || !!two.phone);
-  const rows = [
-    ['secMail', !!two.mail, !!a && a.google === true, 'secMail2faHow', 'secMail2faNoGoogle'],
-    ['secPhone', !!two.phone, !!a && !!a.phone, 'secPhone2faHow', 'secPhone2faNeed'],
-  ];
-  for (const [id, pressed, usable, how, why] of rows) {
-    const b = $('#' + id + 'Switch');
-    b.setAttribute('aria-pressed', String(pressed));
-    b.disabled = !usable && !pressed;
-    $('#' + id + 'Flag').textContent = a ? t(pressed ? 'secTwoOn' : 'secTwoOff') : '';
-    $('#' + id + 'Help').textContent = t(how) + (a && !usable ? ' ' + t(why) : '');
-  }
-  if (!a) return;
-  $('#securityState').textContent = t(a.keys > 0 ? 'secStateKey' : on ? 'secState2fa' : 'secStateWeak');
-  $('#securityTwo').textContent = t(on ? 'secTwoOn' : 'secTwoOff');
-  $('#securityTwoSwitch').setAttribute('aria-pressed', String(on));
-  $('#securityTwoText').textContent = t(on ? 'secTwoOnHow' : 'secTwoOffHow');
-}
 
 async function account() {
   const request = ++securityRequest;
   const inn = !!token();
   $('#secIn').hidden = !inn;
   $('#secOut').hidden = inn;
-  [$('#acctKey'), $('#acctCodesNew'), $('#acctOut'), $('#privForget')].forEach(b => { b.disabled = !inn; });
+  [$('#acctCodesNew'), $('#acctOut'), $('#privForget')].forEach(b => { b.disabled = !inn; });
   $('#securityState').textContent = t(inn ? 'secChecking' : 'secStateOut');
   const platform = navigator.userAgentData?.platform || navigator.platform || '';
   const device = /Mac/i.test(platform) ? 'Mac' : /Win/i.test(platform) ? 'Windows PC' : /Linux/i.test(platform) ? 'Linux' : t('secDeviceAny');
   $('#securityDevice').textContent = inn ? t('secDeviceHere', { device }) : t('secDeviceOut');
-  $('#securityKeys').textContent = '';
-  $('#securityTwo').textContent = t(inn ? 'secChecking' : 'secStateOut');
-  $('#securityTwoSwitch').setAttribute('aria-pressed', 'false');
-  $('#securityTwoText').textContent = t('secTwoChecking');
-  $('#acctWarn').hidden = $('#acctCodes').hidden = true;
-  ME = null;
-  paintTwo();
-  $('#phoneStatus').textContent = $('#mailStatus').textContent = '';
-  paintBrowsers([]);
+  $('#acctCodes').hidden = true;
+  $('#mailStatus').textContent = '';
   if (!inn) return;
   const a = await me().catch(() => null);
   if (request !== securityRequest) return;
@@ -491,18 +373,11 @@ async function account() {
   if (!a) {
     if (!token()) return account();
     $('#securityState').textContent = t('secStateUnknown');
-    $('#securityTwo').textContent = t('secTwoUnknown');
-    $('#securityTwoText').textContent = t('secTwoRetry');
-    $('#acctWarn').hidden = $('#acctCodes').hidden = true;
     return;
   }
-  ME = a;
-  $('#securityKeys').textContent = t('secKeys', { n: a.keys });
-  paintTwo();
-  $('#phoneStatus').textContent = t(a.phone ? 'secVerified' : 'secNotVerified');
+  /* 2단계는 늘 켜져 있다 — 로그인마다 Google 메일로 숫자 6자리를 받는다 */
+  $('#securityState').textContent = t('secState2fa');
   $('#mailStatus').textContent = t(a.mailbox ? 'secVerified' : 'secNotVerified');
-  paintBrowsers(a.browsers);
-  $('#acctWarn').hidden = a.keys !== 1;
   $('#acctCodes').hidden = !a.codes;
   if (a.codes) $('#acctCodes').textContent = t('codesLeft', { n: a.codes });
 }
@@ -611,27 +486,7 @@ function wire() {
   $('#securityShield').src = asset('assets/security-shield.svg');
   $('#securityDeviceIcon').src = asset('assets/security-device.svg');
   $('#securityCheck').onclick = account;
-  /* 로그인 2단계에 메일·문자 코드를 쓸지 — 응답의 two 로 다시 칠한다 */
-  for (const [id, key] of [['secMailSwitch', 'mail'], ['secPhoneSwitch', 'phone']]) {
-    $('#' + id).onclick = async () => {
-      const b = $('#' + id);
-      if (!ME) return;
-      const next = b.getAttribute('aria-pressed') !== 'true';
-      const request = ++securityRequest;
-      b.disabled = true;
-      say(t('reading'));
-      try {
-        const d = await ask('/auth/two/set', { [key]: next });
-        if (request === securityRequest && ME && d.two) ME = { ...ME, two: { mail: !!d.two.mail, phone: !!d.two.phone } };
-        say('');
-      } catch (e) {
-        say(e && e.status === 401 ? t('loginFail') : t('secTwoSetFail'), true);
-      }
-      paintTwo();
-      b.focus();
-    };
-  }
-  /* auth.js 의 휴대폰·보조 메일 확인이 끝나면 상태를 다시 읽고, 복구 코드가 새로 나왔으면 그 판을 연다 */
+  /* auth.js 의 보조 메일 확인이 끝나면 상태를 다시 읽고, 복구 코드가 새로 나왔으면 그 판을 연다 */
   addEventListener('rt-acct', account);
   addEventListener('rt-codes', e => { if (Array.isArray(e.detail) && e.detail.length) showCodes(e.detail); });
   document.addEventListener('click', e => {
@@ -662,15 +517,8 @@ function wire() {
     fillRegionPick();
   });
 
-  $('#acctKey').onclick = () => tryAuth(async () => {
-    const out = await passkeyMake();
-    say('');
-    /* 첫 패스키면 중계기가 복구 코드를 함께 준다 — 이 판을 닫으면 다시 못 본다 */
-    if (out.codes) showCodes(out.codes); else account();
-  }, t('makingKey'), [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')]);
-
   $('#acctCodesNew').onclick = async () => {
-    const btns = [$('#acctKey'), $('#acctCodesNew'), $('#acctOut')];
+    const btns = [$('#acctCodesNew'), $('#acctOut')];
     btns.forEach(b => b.disabled = true);
     say(t('reading'));
     try { showCodes((await ask('/auth/codes', {})).codes); say(''); }

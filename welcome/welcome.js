@@ -4,8 +4,8 @@
    서버에 남는 것은 두 줄뿐이다: intro 한 줄(무엇을 보고 왔는지·추천 의향)과
    profile 한 줄(닉네임·아이디·캐릭터·스위치 둘). 자유 입력 칸은 닉네임·아이디·
    캐릭터 이름 셋이고, 셋 다 worker.mjs 의 profile() 이 같은 규칙으로 다듬는다.
-   끝의 보안 두 장은 이 두 줄과 별개로 /auth/phone·/auth/mail 에 곧장 건다 —
-   서버엔 번호·보조 메일의 해시만 남고, 복구 코드는 처음 한 번만 내려온다.
+   끝의 보안 한 장은 이 두 줄과 별개로 /auth/mail 에 곧장 건다 —
+   서버엔 보조 메일의 해시만 남는다.
 
    '건너뛰기' 는 진짜로 건너뛴다 — 안 고른 값은 안 보낸다. 다만 아이디는 한 번
    정하면 여기서 비울 수 없다(서버가 빈 값으로 덮지 않는다).                */
@@ -119,32 +119,19 @@ const STEPS = [
   { kind: 'yesno', key: 'shut', kicker: '프로필 6/6',
     ask: '계정을 비공개로 둘까요?',
       note: '비공개로 두면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.' },
-  /* 보안 두 장은 서버 응답이 답이다(sec). 전화는 인증이 끝나야 다음으로 간다.
-     문자를 못 보내도 넘어가지 않는다. 보조 메일은 건너뛸 수 있다. */
-  { kind: 'phone', kicker: '보안 1/2',
-    ask: '기본 인증 수단인 전화번호를 입력한 뒤 인증해 주세요.',
-    note: '' },
-  { kind: 'mail', skip: true, kicker: '보안 2/2',
+  /* 보안 장은 서버 응답이 답이다(sec). 보조 메일은 건너뛸 수 있다. */
+  { kind: 'mail', skip: true, kicker: '보안',
     ask: '보조 메일을 추가할까요?',
     note: '' },
   { kind: 'done' },
 ];
 
-/* 보안 두 장의 상태. 번호·메일 값은 서버가 쥐고, 여기엔 '어디까지 왔나' 만 둔다.
-   off 는 보조 메일이 503(발송 미설정)인 것. 전화는 이 칸으로 넘어가지 않는다.
-   codes 는 복구 코드를 처음 받은 순간부터 체크할 때까지만 메모리에 있다 */
+/* 보안 장의 상태. 메일 값은 서버가 쥐고, 여기엔 '어디까지 왔나' 만 둔다.
+   off 는 보조 메일이 503(발송 미설정)인 것 */
 const sec = {
-  phone: { done: false, already: false, off: false, sent: false, busy: false, value: '', codes: null, acked: false },
   mail: { want: null, done: false, already: false, off: false, sent: false, busy: false, value: '' },
 };
 const CHAN = {
-  phone: {
-    path: '/auth/phone', field: 'phone', send: '인증 문자 보내기',
-    empty: '전화번호를 적어 주세요.', bad: '번호를 다시 확인해 주세요.',
-    sent: '문자를 보냈습니다. 5분 안에 받은 코드를 입력해 주세요.',
-    off: '문자를 보내지 못했습니다. 인증이 끝나야 다음으로 갈 수 있습니다.',
-    ok: '✓ 인증됐습니다', already: '✓ 이미 인증된 번호가 있습니다.',
-  },
   mail: {
     path: '/auth/mail', field: 'email', send: '확인 코드 보내기',
     empty: '메일 주소를 적어 주세요.', bad: '메일 주소를 다시 확인해 주세요.',
@@ -153,7 +140,7 @@ const CHAN = {
     ok: '✓ 확인됐습니다', already: '✓ 이미 확인된 보조 메일이 있습니다.',
   },
 };
-const isSec = k => k === 'phone' || k === 'mail';
+const isSec = k => k === 'mail';
 
 $('#introTotal').textContent = STEPS.length;
 
@@ -218,7 +205,7 @@ function draw() {
   say('');
   body().replaceChildren();
   ({ hello: drawHello, pick: drawPick, scale: drawScale, face: drawFace,
-     text: drawText, yesno: drawYesno, phone: drawVerify, mail: drawVerify,
+     text: drawText, yesno: drawYesno, mail: drawVerify,
      done: drawDone })[s.kind](s);
   const card = $('#introCard');
   card.dataset.way = way;
@@ -233,7 +220,7 @@ function draw() {
 
      글 칸만 예외다 — 거기서는 바로 치기 시작해야 하고, 글 칸의 테두리는 재촉이
      아니라 '여기에 친다' 는 표시다. 화면이 튀지 않게 스크롤은 건드리지 않는다. */
-  const typing = (s.kind === 'text' || s.kind === 'phone')
+  const typing = s.kind === 'text'
     && [...body().querySelectorAll('input')].find(i => !i.closest('[hidden]'));
   (typing || card).focus({ preventScroll: true });
 }
@@ -394,10 +381,9 @@ function drawFace() {
   mountFace();
 }
 
-/* ── 보안 두 장 ────────────────────────────────────────────
-   전화(phone)와 보조 메일(mail)은 같은 몸이다: 칸 → 보내기 → 코드 → 확인.
-   칸의 id 는 한 장에 하나뿐이라 고정이다(vIn·vCode…). 코드는 영문 대소문자 8자리이고
-   대소문자를 구분한다 — 공백만 지우고 대소문자는 건드리지 않는다. */
+/* ── 보안 장 ──────────────────────────────────────────────
+   보조 메일(mail): 칸 → 보내기 → 코드 → 확인.
+   칸의 id 는 한 장에 하나뿐이라 고정이다(vIn·vCode…). 코드는 숫자 6자리다 — 공백만 지운다. */
 const h = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -438,15 +424,10 @@ function drawVerify(s) {
   const input = document.createElement('input');
   input.id = 'vIn';
   input.value = m.value;
-  input.setAttribute('aria-label', kind === 'phone' ? '전화번호' : '보조 메일 주소');
-  if (kind === 'phone') {
-    input.type = 'tel'; input.inputMode = 'tel'; input.autocomplete = 'tel';
-    input.maxLength = 20; input.placeholder = '010-1234-5678';
-  } else {
-    input.type = 'email'; input.inputMode = 'email'; input.autocomplete = 'email';
-    input.maxLength = 254; input.placeholder = 'name@example.com';
-    input.spellcheck = false;
-  }
+  input.setAttribute('aria-label', '보조 메일 주소');
+  input.type = 'email'; input.inputMode = 'email'; input.autocomplete = 'email';
+  input.maxLength = 254; input.placeholder = 'name@example.com';
+  input.spellcheck = false;
   f1.append(input);
   const send = h('button', 'profile-button', c.send);
   send.type = 'button';
@@ -456,18 +437,17 @@ function drawVerify(s) {
 
   const codeRow = h('div', 'intro-vcode');
   codeRow.id = 'vCodeRow';
-  const help = h('p', 'intro-help', '영문 대소문자 8자리 · 대소문자를 구분합니다');
+  const help = h('p', 'intro-help', '숫자 6자리');
   help.id = 'vHelp';
   const f2 = h('label', 'intro-field intro-code');
   const code = document.createElement('input');
   code.id = 'vCode';
-  code.maxLength = 16;
+  code.maxLength = 7;
+  code.inputMode = 'numeric';
   code.autocomplete = 'one-time-code';
-  code.setAttribute('autocapitalize', 'off');
-  code.setAttribute('autocorrect', 'off');
   code.spellcheck = false;
-  code.pattern = '[A-Za-z ]{8,16}';
-  code.setAttribute('aria-label', '확인 코드 (영문 대소문자 8자리)');
+  code.pattern = '[0-9 ]{6,7}';
+  code.setAttribute('aria-label', '확인 코드 (숫자 6자리)');
   code.setAttribute('aria-describedby', 'vHelp');
   f2.append(code);
   const btns = h('div', 'intro-vrow');
@@ -484,25 +464,8 @@ function drawVerify(s) {
 
   box.append(ok, sendRow, codeRow);
 
-  if (kind === 'phone') {
-    const codes = h('div', 'intro-codes');
-    codes.id = 'vCodes';
-    codes.tabIndex = -1;
-    const list = h('ol');
-    list.id = 'vList';
-    const ack = h('label', 'intro-check');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.id = 'vAck';
-    cb.onchange = () => { m.acked = cb.checked; };
-    ack.append(cb, h('span', '', '적어 두었습니다'));
-    codes.append(
-      h('p', 'intro-help', '이 복구 코드를 안전한 곳에 적어 두세요. 각 코드는 한 번만 쓸 수 있고, 다시 볼 수 없습니다.'),
-      list, ack);
-    box.append(codes);
-  }
   body().append(box);
-  if (kind === 'phone' || kind === 'mail') {
+  {
     const policy = h('a', 'profile-button intro-policy', '개인정보 처리방침');
     policy.href = '../policy/';
     policy.target = '_blank';        // 같은 탭으로 가면 이 장의 진행이 날아간다
@@ -521,7 +484,7 @@ function paintVerify(kind) {
   const ok = $('#vOk');
   ok.hidden = !m.done;
   ok.textContent = m.done ? (m.already ? c.already : c.ok) : '';
-  const open = !m.done && (kind === 'phone' || !m.off);
+  const open = !m.done && !m.off;
   $('#vSendRow').hidden = !open;
   $('#vSend').hidden = m.sent;
   $('#vCodeRow').hidden = !(open && m.sent);
@@ -530,18 +493,9 @@ function paintVerify(kind) {
     b.setAttribute('aria-pressed', String(b.dataset.want === String(m.want)));
     b.disabled = m.busy;
   });
-  if (kind === 'phone') {
-    const box = $('#vCodes'), list = $('#vList');
-    box.hidden = !m.codes;
-    if (m.codes && !list.children.length) {
-      list.replaceChildren(...m.codes.map(x => h('li', '', x)));
-    }
-    $('#vAck').checked = m.acked;
-  }
 }
 
-/* 요청이 날아가는 동안은 이 장을 못 떠난다 — 코드가 도착했는데 장이 바뀌어 있으면
-   복구 코드를 영영 못 본다 */
+/* 요청이 날아가는 동안은 이 장을 못 떠난다 */
 function setBusy(kind, on) {
   sec[kind].busy = on;
   $('#introNext').disabled = on;
@@ -553,7 +507,7 @@ function setBusy(kind, on) {
 function failSay(kind, how, e) {
   const c = CHAN[kind];
   if (e.status === 401) return;      // post() 가 이미 로그아웃으로 보냈다
-  if (how === 'send' && e.status === 503) return say(c.off, kind === 'phone');
+  if (how === 'send' && e.status === 503) return say(c.off);
   if (e.status === 400) return say(how === 'send' ? c.bad : '코드가 맞지 않거나 만료되었습니다.', true);
   if (e.status === 429) return say('잠시 후 다시 시도해 주세요.', true);
   say('처리하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.', true);
@@ -561,7 +515,7 @@ function failSay(kind, how, e) {
 
 async function sendCode(kind) {
   const m = sec[kind], c = CHAN[kind];
-  if (m.busy || m.done || (kind !== 'phone' && m.off)) return;
+  if (m.busy || m.done || m.off) return;
   const v = ($('#vIn')?.value || '').trim();
   if (!v) { say(c.empty, true); $('#vIn')?.focus(); return; }
   m.value = v;
@@ -574,35 +528,29 @@ async function sendCode(kind) {
     m.sent = ok = true;
     if (here(kind)) say(again ? '다시 보냈습니다. 가장 나중에 받은 코드만 쓸 수 있습니다.' : c.sent);
   } catch (e) {
-    if (e.status === 503 && kind !== 'phone') m.off = true;
+    if (e.status === 503) m.off = true;
     if (here(kind)) failSay(kind, 'send', e);
   } finally {
     setBusy(kind, false);
   }
   if (!here(kind)) return;
-  (ok ? $('#vCode') : (kind !== 'phone' && m.off) ? $('#introCard') : $('#vIn'))?.focus({ preventScroll: true });
+  (ok ? $('#vCode') : m.off ? $('#introCard') : $('#vIn'))?.focus({ preventScroll: true });
 }
 
 async function confirmCode(kind) {
   const m = sec[kind];
   if (m.busy || m.done) return;
   const v = ($('#vCode')?.value || '').replace(/\s+/g, '');
-  if (!/^[A-Za-z]{8}$/.test(v)) {
-    say('코드는 영문 대소문자 8자리입니다. 대소문자를 구분합니다.', true);
+  if (!/^\d{6}$/.test(v)) {
+    say('코드는 숫자 6자리입니다.', true);
     $('#vCode')?.focus();
     return;
   }
   setBusy(kind, true);
   say('확인하고 있습니다…');
-  let d = null;
   try {
-    d = await post(CHAN[kind].path + '/confirm', { code: v });
+    await post(CHAN[kind].path + '/confirm', { code: v });
     m.done = true;
-    /* 복구 코드는 이 계정에 처음 하나 만들어질 때만 내려온다 */
-    if (kind === 'phone' && Array.isArray(d.codes) && d.codes.length) {
-      m.codes = d.codes.map(String);
-      m.acked = false;
-    }
     if (here(kind)) say('');
   } catch (e) {
     if (here(kind)) failSay(kind, 'confirm', e);
@@ -610,7 +558,7 @@ async function confirmCode(kind) {
     setBusy(kind, false);
   }
   if (!here(kind)) return;
-  ((m.done ? (m.codes ? $('#vCodes') : $('#introCard')) : $('#vCode')))?.focus({ preventScroll: m.done && !m.codes });
+  (m.done ? $('#introCard') : $('#vCode'))?.focus({ preventScroll: m.done });
 }
 
 function pickMail(v) {
@@ -627,12 +575,6 @@ function pickMail(v) {
   beating = setTimeout(next, wait);
 }
 
-/* 복구 코드는 이 장을 떠나는 순간 화면에서도 메모리에서도 지운다 */
-function wipeCodes() {
-  sec.phone.codes = null;
-  $('#vList')?.replaceChildren();
-}
-
 function drawDone() {
   $('#introAsk').textContent = '다 됐습니다.';
   const list = document.createElement('dl');
@@ -644,7 +586,6 @@ function drawDone() {
     ['아이디', '@' + answer.handle],
     ['알림', answer.push === true ? '받음' : '안 받음'],
     ['계정', answer.shut === true ? '비공개' : '공개'],
-    ['전화번호', sec.phone.done ? '인증됨' : '나중에 인증'],
     ['보조 메일', sec.mail.done ? '추가함' : '추가 안 함'],
   ];
   for (const [k, v] of rows) {
@@ -783,11 +724,6 @@ const save = () => post('/auth/profile', {
 /* 그 장을 채웠는가. 못 채웠으면 무엇이 빠졌는지 그 자리에서 말한다 —
    '다음' 이 말없이 안 눌리면 고장으로 보인다 */
 function missing(s) {
-  if (s.kind === 'phone') {
-    const p = sec.phone;
-    if (p.codes && !p.acked) return '복구 코드를 적어 두고 "적어 두었습니다"에 체크해 주세요.';
-    return p.done ? '' : '기본 인증 수단인 전화번호를 입력한 뒤 인증해 주세요.';
-  }
   if (s.kind === 'mail') {
     const m = sec.mail;
     return m.want === true && !m.done && !m.off
@@ -828,7 +764,6 @@ async function next() {
   }
   if (s.kind === 'text' && s.key === 'handle' && !(await claimHandle())) return;
   if (s.kind === 'face') dropFace();
-  if (s.kind === 'phone') wipeCodes();
   if (s.kind === 'done') return finish();
   at = Math.min(at + 1, STEPS.length - 1);
   mirror();
@@ -840,13 +775,7 @@ function back() {
   way = 'back';
   const s = STEPS[at];
   if (isSec(s.kind) && sec[s.kind].busy) return;
-  /* 복구 코드는 다시 볼 수 없다 — 적어 두었다고 체크하기 전엔 못 떠난다 */
-  if (s.kind === 'phone' && sec.phone.codes && !sec.phone.acked) {
-    say(missing(s), true);
-    return;
-  }
   if (s.kind === 'face') dropFace();
-  if (s.kind === 'phone') wipeCodes();
   at = Math.max(at - 1, 0);
   draw();
 }
@@ -899,11 +828,6 @@ async function finish() {
 $('#introNext').onclick = () => next();
 $('#introBack').onclick = back;
 $('#introSkip').onclick = skip;
-
-/* 복구 코드를 받고 적어 두기 전에 탭을 닫으면 코드를 영영 못 본다 */
-addEventListener('beforeunload', e => {
-  if (sec.phone.codes && !sec.phone.acked) e.preventDefault();
-});
 
 addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -958,11 +882,10 @@ addEventListener('keydown', e => {
     if (r.status === 401) { forget(); location.replace('../'); return; }
     const d = await r.json();
     if (d.intro) { write(DONE_KEY, token()); location.replace('../'); return; }
-    /* 이미 확인된 번호·메일은 다시 묻지 않는다 */
-    const was = [sec.phone.done, sec.mail.done];
-    if (d.phone === true) sec.phone.done = sec.phone.already = true;
+    /* 이미 확인된 메일은 다시 묻지 않는다 */
+    const was = sec.mail.done;
     if (d.mailbox === true) sec.mail.done = sec.mail.already = true;
-    const moved = was[0] !== sec.phone.done || was[1] !== sec.mail.done;
+    const moved = was !== sec.mail.done;
     /* 다시 들어온 사람은 하다 만 자리에서 잇는다 */
     const p = d.profile;
     if (p) {

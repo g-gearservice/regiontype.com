@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.61">
+<link rel="stylesheet" href="style.css?v=4.62">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -331,32 +331,23 @@
       </div>
     </div>
 
-    <!-- 2단계 확인 — SSO 를 넘은 뒤 패스키(또는 복구 코드)를 한 번 더 묻는다 -->
+    <!-- 2단계 확인 — SSO 를 넘은 뒤 Google 메일 숫자 6자리(또는 복구 코드)를 한 번 더 묻는다 -->
     <div class="si-view" id="vTwo" hidden>
       <h2 class="si-head" data-i18n="twoStepHead">2단계 인증</h2>
       <p class="si-lead" data-i18n="twoHow">아래 방법 중 하나로 본인임을 확인합니다.</p>
       <div class="si-btns">
-        <button type="button" id="twoGo" data-i18n="passkeyGo" hidden>패스키로 로그인</button>
         <button type="button" id="twoMail" data-i18n="twoMailGo" hidden>이메일로 코드 받기</button>
-        <button type="button" id="twoPhone" data-i18n="twoPhoneGo" hidden>문자로 코드 받기</button>
         <button type="button" id="twoCode" data-i18n="useCode" hidden>복구 코드 쓰기</button>
       </div>
       <p class="si-note" id="twoMailTo" hidden></p>
-      <form class="si-code" id="twoPhoneForm" hidden>
-        <label for="twoPhoneIn" data-i18n="twoPhoneLabel">가입할 때 확인한 휴대폰 번호</label>
-        <div>
-          <input id="twoPhoneIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
-          <button type="submit" id="twoPhoneSend" data-i18n="twoSend">코드 보내기</button>
-        </div>
-      </form>
       <form class="si-code" id="twoOtpForm" hidden novalidate>
         <label for="twoOtpIn" data-i18n="twoOtpLabel">확인 코드</label>
         <div>
-          <input id="twoOtpIn" maxlength="16" required pattern="[A-Za-z ]{8,16}" inputmode="text"
+          <input id="twoOtpIn" maxlength="7" required pattern="[0-9 ]{6,7}" inputmode="numeric"
                  autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="twoOtpHelp">
           <button type="submit" id="twoOtpGo" data-i18n="codeSubmit">인증하기</button>
         </div>
-        <span id="twoOtpHelp" data-i18n="otpHelp">영문 대소문자 8자리 · 대소문자를 구분합니다</span>
+        <span id="twoOtpHelp" data-i18n="otpHelp">숫자 6자리</span>
         <button type="button" class="si-sub" id="twoResend" data-i18n="twoResend">코드 다시 보내기</button>
       </form>
       <form class="si-code" id="codeForm" hidden>
@@ -369,10 +360,9 @@
       </form>
       <details class="si-lost" id="twoLost">
         <summary data-i18n="lostAll">기기와 복구 코드를 모두 잃었다면</summary>
-        <p data-i18n="lostAllHow">미리 확인해 둔 보조 메일이나 휴대폰으로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소·번호로는 보내지 않습니다.</p>
+        <p data-i18n="lostAllHow">미리 확인해 둔 보조 메일로 새 복구 코드를 보낼 수 있습니다. 확인하지 않은 주소로는 보내지 않습니다.</p>
         <div class="si-lost-btns">
           <button type="button" class="si-sub" id="twoRescueMail" data-i18n="rescueMailGo">보조 메일로 새 복구 코드 받기</button>
-          <button type="button" class="si-sub" id="twoRescuePhone" data-i18n="rescuePhoneGo">휴대폰으로 새 복구 코드 받기</button>
         </div>
       <form class="si-code" id="rescueForm" hidden>
         <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery에만 쓰며, 2단계 로그인에는 쓰지 않습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
@@ -380,14 +370,6 @@
         <div>
           <input id="rescueIn" type="email" maxlength="254" required autocomplete="email" spellcheck="false" autocapitalize="off">
           <button type="submit" data-i18n="rescueSend">복구 코드 보내기</button>
-        </div>
-      </form>
-      <form class="si-code" id="phoneAuthForm" hidden>
-        <p class="si-notice"><span data-i18n="phoneNotice">전화번호는 2단계 로그인과 계정 복구에만 씁니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
-        <label for="phoneAuthIn" data-i18n="phoneLabel">전화번호</label>
-        <div>
-          <input id="phoneAuthIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
-          <button type="submit" data-i18n="phoneSend">확인 코드 보내기</button>
         </div>
       </form>
       </details>
@@ -491,49 +473,17 @@
           </div>
           <div id="secIn" hidden>
             <section class="profile-section">
-              <h3 class="profile-label" data-i18n="secAuth">인증 및 패스키</h3>
-              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" data-i18n="sec2faHow">로그인할 때 기기의 패스키로 한 번 더 확인합니다.</p></div><button type="button" class="profile-button" id="acctKey" data-i18n="secKeyAdd">패스키 추가</button></div>
-              <p class="profile-help" id="securityKeys"></p>
-              <p class="si-warn" id="acctWarn" hidden data-i18n="twoStepWarn">패스키가 하나뿐입니다.</p>
-            </section>
-            <section class="profile-section" aria-labelledby="securityBrowsersTitle">
-              <h3 class="profile-label" id="securityBrowsersTitle" data-i18n="secBrowsers">등록된 브라우저</h3>
-              <ul class="security-browsers" id="securityBrowsers"></ul>
-              <p class="profile-help" id="securityBrowsersNone" data-i18n="secBrowsersNone">등록된 브라우저가 없습니다</p>
+              <h3 class="profile-label" data-i18n="secAuth">인증</h3>
+              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" data-i18n="sec2faHow">로그인할 때마다 Google 계정 메일로 숫자 6자리 코드를 보내 한 번 더 확인합니다.</p></div><span class="security-flag" data-i18n="secTwoOn">사용 중</span></div>
             </section>
             <section class="profile-section">
               <h3 class="profile-label" data-i18n="secTwoHead">이중 인증 및 보안</h3>
-              <div class="profile-row"><div><strong data-i18n="sec2fa">2단계 인증 (2FA)</strong><p class="profile-help" id="securityTwoText">상태 확인 중</p></div><span class="security-two-state"><span class="security-badge" id="securityTwo">확인 중</span><button type="button" id="securityTwoSwitch" class="profile-switch" data-i18n-aria="secTwoAria" aria-label="2단계 인증 상태 (패스키 추가 또는 이메일·휴대폰 인증으로 켜기)" aria-pressed="false" disabled></button></span></div>
-              <div class="profile-row"><div><strong data-i18n="secMail2fa">이메일 인증</strong><p class="profile-help" id="secMailHelp" data-i18n="secMail2faHow">로그인한 Google 계정 메일로 확인 코드를 보냅니다.</p></div><span class="security-two-state"><span class="security-flag" id="secMailFlag" aria-hidden="true"></span><button type="button" id="secMailSwitch" class="profile-switch" data-i18n-aria="secMail2fa" aria-label="이메일 인증" aria-describedby="secMailHelp" aria-pressed="false" disabled></button></span></div>
-              <div class="profile-row"><div><strong data-i18n="secPhone2fa">휴대폰 인증</strong><p class="profile-help" id="secPhoneHelp" data-i18n="secPhone2faHow">확인된 전화번호로 영문 대소문자 8자리 코드를 문자로 보냅니다.</p></div><span class="security-two-state"><span class="security-flag" id="secPhoneFlag" aria-hidden="true"></span><button type="button" id="secPhoneSwitch" class="profile-switch" data-i18n-aria="secPhone2fa" aria-label="휴대폰 인증" aria-describedby="secPhoneHelp" aria-pressed="false" disabled></button></span></div>
               <div class="profile-row"><div><strong data-i18n="secAlert">새로운 로그인 알림</strong><p class="profile-help" data-i18n="secAlertSoon">이메일 알림은 아직 지원하지 않습니다.</p></div><button type="button" class="profile-switch" data-i18n-aria="secAlertAria" aria-label="새로운 로그인 알림 (아직 지원하지 않음)" aria-pressed="false" disabled></button></div>
               </section>
-            <section class="profile-section" aria-labelledby="securityPhoneTitle">
-              <h3 class="profile-label" id="securityPhoneTitle" data-i18n="phoneHead">휴대폰 인증</h3>
-              <p class="profile-help" id="phoneStatus"></p>
-              <p class="profile-help" data-i18n="phoneHow">이 번호로 2단계 로그인 문자와 복구 코드를 받고, 영문 대소문자 8자리 코드로 확인합니다.</p>
-              <p class="si-notice"><span data-i18n="phoneNotice">전화번호는 2단계 로그인과 계정 복구에만 씁니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
-              <form class="si-code" id="phoneForm">
-                <label for="phoneIn" data-i18n="phoneLabel">전화번호</label>
-                <div>
-                  <input id="phoneIn" type="tel" inputmode="tel" maxlength="20" required autocomplete="tel" spellcheck="false">
-                  <button type="submit" data-i18n="phoneSend">확인 코드 보내기</button>
-                </div>
-              </form>
-              <form class="si-code" id="phoneConfirm" hidden novalidate>
-                <label for="phoneCode" data-i18n="mailCode">확인 코드</label>
-                <div>
-                  <input id="phoneCode" maxlength="16" required pattern="[A-Za-z ]{8,16}" inputmode="text" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="phoneCodeHelp">
-                  <button type="submit" data-i18n="mailConfirm">확인</button>
-                </div>
-                <span id="phoneCodeHelp" data-i18n="otpHelp">영문 대소문자 8자리 · 대소문자를 구분합니다</span>
-              </form>
-              <p class="si-say" id="phoneSay" role="status" aria-live="polite"></p>
-            </section>
             <section class="profile-section" aria-labelledby="securityMailTitle">
               <h3 class="profile-label" id="securityMailTitle" data-i18n="mailHead">보조 메일</h3>
               <p class="profile-help" id="mailStatus"></p>
-              <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보내며, 영문 대소문자 8자리 코드로 확인합니다.</p>
+              <p class="profile-help" data-i18n="mailHow">이 주소로만 새 복구 코드를 보내며, 숫자 6자리 코드로 확인합니다.</p>
               <p class="si-notice"><span data-i18n="mailNotice">보조 메일은 Password &amp; Account Recovery에만 쓰며, 2단계 로그인에는 쓰지 않습니다.</span> <a href="policy/" data-i18n="privacyLink">개인정보처리방침</a></p>
               <form class="si-code" id="mailForm">
                 <label for="mailIn" data-i18n="mailLabel">메일</label>
@@ -545,10 +495,10 @@
               <form class="si-code" id="mailConfirm" hidden novalidate>
                 <label for="mailCode" data-i18n="mailCode">확인 코드</label>
                 <div>
-                  <input id="mailCode" maxlength="16" required pattern="[A-Za-z ]{8,16}" inputmode="text" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="mailCodeHelp">
+                  <input id="mailCode" maxlength="7" required pattern="[0-9 ]{6,7}" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="mailCodeHelp">
                   <button type="submit" data-i18n="mailConfirm">확인</button>
                 </div>
-                <span id="mailCodeHelp" data-i18n="otpHelp">영문 대소문자 8자리 · 대소문자를 구분합니다</span>
+                <span id="mailCodeHelp" data-i18n="otpHelp">숫자 6자리</span>
               </form>
               <p class="si-say" id="mailSay" role="status" aria-live="polite"></p>
             </section>
@@ -561,7 +511,7 @@
               <div class="profile-actions"><button type="button" class="profile-button" id="acctOut" data-i18n="secOutHere">이 브라우저에서 로그아웃</button></div>
             </details>
           </div>
-          <div id="secOut" hidden><p class="profile-help" data-i18n="secOutHelp">로그인하면 패스키와 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
+          <div id="secOut" hidden><p class="profile-help" data-i18n="secOutHelp">로그인하면 복구 코드를 관리할 수 있습니다.</p><a class="profile-button" href="signin/" data-i18n="signinBtn">로그인</a></div>
           <section class="profile-section" aria-labelledby="privTitle">
             <h3 class="profile-label" id="privTitle" data-i18n="privTitle">개인정보와 이 브라우저</h3>
             <div class="profile-row"><div><strong data-i18n="privWhere">접속 지역 추정</strong><p class="profile-help" id="privWhereHelp" data-i18n="privWhereHelp">IP로 나라와 시간대만 추정해 기본 언어를 고릅니다. 끄면 이 브라우저 설정만 씁니다.</p></div><button type="button" class="profile-switch" data-opt="where" data-i18n-aria="privWhere" aria-label="접속 지역 추정" aria-describedby="privWhereHelp"></button></div>
@@ -730,9 +680,9 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=4.61"></script>
-<script src="auth.js?v=4.61"></script>
-<script src="settings/settings.js?v=4.61"></script>
+<script src="app.js?v=4.62"></script>
+<script src="auth.js?v=4.62"></script>
+<script src="settings/settings.js?v=4.62"></script>
 <script src="ranked.js?v=4.61"></script>
 </body>
 </html>

@@ -1838,16 +1838,10 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .security-device{display:flex;flex-direction:column;gap:10px;font-size:11px}
 .security-device .profile-label{margin:0}
 .device-current{display:flex;align-items:center;gap:8px;padding:6px;border:1px solid var(--ink);border-radius:8px;background:color-mix(in srgb,var(--block-hi) 11%,transparent);font-weight:600}
-/* 등록된 브라우저 — 로그인된 기기 칩과 같은 결이지만 따로 둔다(그 칩을 고치지 않게) */
-.security-browsers{display:flex;flex-direction:column;gap:6px;margin:8px 0 0;padding:0;list-style:none}
-.security-browser{padding:6px;border:1px solid var(--ink);border-radius:8px;background:color-mix(in srgb,var(--block-hi) 11%,transparent);font-size:11px;color:var(--ink);overflow-wrap:anywhere}
-#securityBrowsersNone{margin-top:8px}
 #securityDeviceIcon{width:16px;height:16px;object-fit:contain;flex:none}
 :root[data-night] #securityDeviceIcon{filter:invert(1)}
 .security-history{font-size:11px;color:var(--ink)}
 .security-history+.profile-help{font-size:10px;margin-top:-6px}
-.security-two-state{display:flex;align-items:center;gap:8px;flex:none}
-.security-badge{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%)}
 /* 스위치 곁의 글자 — 켜짐/꺼짐을 색이 아니라 말로도 적는다 */
 .security-flag{font-size:11px;line-height:1;color:var(--ink-soft);min-width:3.2em;text-align:end}
 .security-recovery{font-size:11px;color:var(--ink-soft);margin-top:12px}
@@ -3130,7 +3124,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 }
 
 
-/* ── 가입 안내: 보안 두 장 (welcome.js 의 phone·mail) ─────────
+/* ── 가입 안내: 보안 장 (welcome.js 의 mail) ─────────────────
    상태는 글이 말한다(✓ 인증됐습니다). 테두리는 구역을 나눌 뿐이다. 움직임 없음. */
 .intro-verify{display:flex;flex-direction:column;gap:12px;margin-top:12px}
 .intro-policy{margin-top:12px}
@@ -3145,10 +3139,3 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 .intro-ok{margin:0;font-size:15px;font-weight:700;color:var(--ink);
  border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
 .intro-code input{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em}
-.intro-codes{display:flex;flex-direction:column;gap:10px;border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
-.intro-codes:focus{outline:none}
-.intro-codes ol{margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5em,1fr));gap:6px 16px;
- list-style:decimal inside;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;letter-spacing:.06em}
-.intro-check{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;cursor:pointer}
-.intro-check input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
-.intro-check input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}

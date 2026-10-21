@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>개인정보처리방침 — regiontype</title>
-<meta name="description" content="regiontype이 무엇을 모으고, 무엇을 모으지 않는지. 로그인·패스키·복구 코드·순위표·피드백에서 실제로 오가는 값만 적었습니다.">
+<meta name="description" content="regiontype이 무엇을 모으고, 무엇을 모으지 않는지. 로그인·복구 코드·순위표·피드백에서 실제로 오가는 값만 적었습니다.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://regiontype.com/policy/">
 
@@ -50,46 +50,41 @@
   <a class="logo" href="/">region<span>type</span><i class="dot"></i></a>
 
   <h1>개인정보처리방침</h1>
-  <p class="updated">2026년 10월 20일 시행</p>
+  <p class="updated">2026년 10월 21일 시행</p>
 
   <p class="lead">regiontype은 지명 타자연습입니다. 게임 자체는 로그인 없이 그대로
   돌고, 아래 값들은 순위표에 이름을 올리기로 한 사람에게만 생깁니다.</p>
 
   <h2>안 받는 것</h2>
-  <p>비밀번호를 받지 않습니다. Apple 로그인에는 메일·전화번호·실명을 요청하지
+  <p>비밀번호와 전화번호를 받지 않습니다. Apple 로그인에는 메일·실명을 요청하지
   않습니다. Google 로그인에서는 메일 주소(openid email 범위)를 요청하지만,
-  이 주소는 이중 인증을 켰을 때 일회용 코드를 보내는 데만 쓰고 계정에는 저장하지
+  이 주소는 로그인 2단계 인증 코드를 보내는 데만 쓰고 계정에는 저장하지
   않습니다. 광고나 방문자 분석 스크립트를 넣지 않고, 쿠키도 쓰지 않습니다.
-  계정 복구와 이중 인증을 위해 적는 메일과 전화번호는 아래 절에 적었습니다.</p>
+  계정 복구를 위해 직접 적는 보조 메일은 아래 절에 적었습니다.</p>
 
   <h2>로그인 (Google·Apple)</h2>
   <p>로그인은 Google 또는 Apple 계정으로 합니다. Google에는 <code>openid email</code>
   범위를 요청하고, Apple에는 아무 범위도 요청하지 않습니다. Google에서 넘어온
-  메일 주소는 이메일 이중 인증을 켰을 때 일회용 코드를 보내는 데만 쓰며,
+  메일 주소는 로그인할 때마다 일회용 코드를 보내는 데만 쓰며,
   서버의 단기 로그인 요청 줄에만 머물다 로그인 완료 시 지워지고 계정에는
   저장되지도 공개되지도 않습니다. 공급자가 주는 계정 식별 번호(sub)는 저희
   서버 키로 한 번 더 섞어(HMAC) 저장하며, 원래 번호는 어디에도 남지 않습니다.</p>
 
-  <h2>로그인 2단계 인증 및 패스키</h2>
-  <p>로그인 2단계 인증은 패스키, Google 계정 메일 코드, 검증된 휴대폰 문자 코드,
-  복구 코드로 거칠 수 있습니다. 이메일과 휴대폰 2단계 인증은 설정 › 보안에서
-  켜거나 끌 수 있습니다. 메일과 문자로 나가는 일회용 코드는 영문 대소문자가
-  섞인 8자리 문자열(대소문자 구분)이며, 5분 동안 유효합니다. 한 번의 로그인
-  시도에 코드는 최대 5회까지 요청할 수 있고, 5회 틀리면 그 시도는 종료됩니다.</p>
-  <p>패스키는 기기의 지문·얼굴·PIN으로 확인합니다. 저장하는 값은 기기가 만든
-  공개키와 자격증명 번호뿐이며 지문이나 얼굴 자체는 기기 밖으로 나오지 않습니다.</p>
+  <h2>로그인 2단계 인증</h2>
+  <p>로그인할 때마다 Google 계정 메일로 숫자 6자리 일회용 코드를
+  <code>recover@regiontype.com</code>에서 보내고, 그 코드를 입력해야 로그인이 끝납니다.
+  메일을 받을 수 없으면 복구 코드로 거칠 수 있습니다. 코드는 5분 동안 유효합니다.
+  한 번의 로그인 시도에 코드는 최대 5회까지 요청할 수 있고, 5회 틀리면 그 시도는
+  종료됩니다.</p>
 
   <h2>복구 코드</h2>
-  <p>보안 수단 등록 시 일회용 복구 코드 8개를 한 번만 보여줍니다. 저장은
+  <p>설정 › 보안에서 복구 코드를 받으면 일회용 복구 코드 8개를 한 번만 보여줍니다. 저장은
   그 코드의 해시값만 하고, 코드 원문은 서버에 남지 않습니다. 코드를 쓰면
   그 줄은 지워집니다.</p>
 
   <h2>보조 메일</h2>
   <p>계정 복구를 위해 선택적으로 보조 메일 주소를 직접 적을 수 있습니다(비밀번호 및 계정 복구 용도이나 regiontype에는 비밀번호가 없으므로 계정 복구에만 쓰입니다). 로그인 공급자에게 그 주소를 요청하지 않습니다. 확인된 주소에만 <code>recover@regiontype.com</code>이 평문으로 일회용 코드를 보냅니다. 그 코드와 확인 요청은 5분 동안만 유효합니다. 확인이 끝나면 주소 원문은 저장하지 않고 해시만 남깁니다. 계정 조회, 공개 프로필, 공개 이슈에는 주소를 싣지 않습니다. 확인되지 않은 주소에는 보내지 않으며, 화면의 안내 문구는 주소가 확인됐는지와 상관없이 같습니다.</p>
-  <p>메일이나 전화번호를 묻기 전에, 무엇을 받는지, 왜 받는지(본인 확인과 계정 복구), 누가 보내는지, 일회용 코드와 확인 요청이 5분 동안만 유효한지, 그 주소나 번호가 공개 프로필과 공개 이슈에 보이지 않는지를 화면의 글로 먼저 알립니다.</p>
-
-  <h2>휴대폰 번호</h2>
-  <p>처음 가입 설정할 때 전화번호를 확인하고 보안 수단(로그인 2단계 인증 및 계정 복구)으로 등록합니다. 확인이 끝나면 번호 원문은 저장하지 않고 해시만 남깁니다. 로그인 시 문자로 코드를 받으려면 등록했던 전화번호를 다시 입력하며, 서버는 해시값과 일치하는지 확인합니다. 문자가 나갈 때는 영문 대소문자 8자리 일회용 코드이며 5분 동안만 유효합니다. 계정 조회, 공개 프로필, 공개 이슈에는 번호를 싣지 않습니다.</p>
+  <p>메일을 묻기 전에, 무엇을 받는지, 왜 받는지(본인 확인과 계정 복구), 누가 보내는지, 일회용 코드와 확인 요청이 5분 동안만 유효한지, 그 주소가 공개 프로필과 공개 이슈에 보이지 않는지를 화면의 글로 먼저 알립니다.</p>
 
   <h2>로그인 세션</h2>
   <p>로그인 상태는 쿠키가 아니라 브라우저의 localStorage에 담긴 토큰으로 유지합니다.
@@ -108,7 +103,7 @@
   누구나 볼 수 있으니, 남길 내용에 개인 정보를 적지 마세요.</p>
 
   <h2>어디에 저장되나</h2>
-  <p>순위표·계정·패스키 값은 Cloudflare D1(아시아·태평양 리전)에 저장합니다.
+  <p>순위표·계정 값은 Cloudflare D1(아시아·태평양 리전)에 저장합니다.
   피드백은 GitHub 저장소의 공개 이슈로 저장합니다. 그 밖에 저희가 따로 두는
   서버나 데이터베이스는 없습니다.</p>
 
@@ -119,10 +114,8 @@
   <h2>제3자</h2>
   <p>이 서비스가 실제로 주고받는 곳은 로그인을 처리하는 Google·Apple, 피드백이
   올라가는 GitHub, 사이트와 로그인 서버를 올려 두고 복구 메일을
-  <code>recover@regiontype.com</code> 에서 평문으로 보내는 Cloudflare, 문자를
-  발송하는 SMS 공급자(국내 번호는 Solapi, 해외 번호는 Twilio), 그리고 홈 봇과의
-  대화를 받는 NVIDIA뿐입니다. SMS 공급자에게는 인증 코드가 담긴 문자 내용과
-  수신 전화번호가 전달되며, 발송 서버가 설정되어 있을 때만 호출됩니다. 봇에게
+  <code>recover@regiontype.com</code> 에서 평문으로 보내는 Cloudflare, 그리고 홈 봇과의
+  대화를 받는 NVIDIA뿐입니다. 봇에게
   친 글(최근 몇 마디)은 대답을 짓도록 NVIDIA의 AI 모델로 넘어가니, 개인정보는
   적지 마세요. 로그인 정보는 함께 가지 않습니다. 그 밖의 광고·분석·추적 서비스는
   쓰지 않습니다.</p>
@@ -133,41 +126,36 @@
 
   <div class="lang-split">
   <h1>Privacy Policy</h1>
-  <p class="updated">Effective October 20, 2026</p>
+  <p class="updated">Effective October 21, 2026</p>
 
   <p class="lead">regiontype is a place-name typing drill. The game itself works
   without signing in. Everything below only applies once you choose to sign in
   and post to the leaderboard.</p>
 
   <h2>What we don't collect</h2>
-  <p>No passwords. We do not ask Apple for an email, a phone number, or a real name.
+  <p>No passwords and no phone numbers. We do not ask Apple for an email or a real name.
   For Google sign-in, we request the email scope (<code>openid email</code>) solely to send
-  a one-time code when email two-step verification is enabled, and the address is never stored in your account.
-  No ads, no analytics scripts, no cookies. An email or phone number you type yourself for security and recovery is described below.</p>
+  the sign-in one-time code, and the address is never stored in your account.
+  No ads, no analytics scripts, no cookies. A secondary email you type yourself for recovery is described below.</p>
 
   <h2>Signing in (Google · Apple)</h2>
   <p>Sign-in goes through Google or Apple. We request the <code>openid email</code>
   scope from Google and no scope at all from Apple. The Google-verified email address is used ONLY
-  to send a 5-minute one-time code when email two-step verification is enabled; it is kept temporarily in the server's sign-in challenge row, deleted upon successful sign-in, and never stored in your account or displayed publicly.
+  to send a 5-minute one-time code at each sign-in; it is kept temporarily in the server's sign-in challenge row, deleted upon successful sign-in, and never stored in your account or displayed publicly.
   The provider's account id (its <code>sub</code>) is HMAC-hashed with a server-side key before storing, and the original id is never kept anywhere.</p>
 
-  <h2>Two-step verification & Passkeys</h2>
-  <p>Two-step verification can be completed via passkey, a code sent to your Google account email, an SMS code sent to your verified phone, or a recovery code.
-  You can switch email or phone two-step verification on or off in Settings › Security.
-  One-time codes sent via email or SMS consist of 8 case-sensitive English letters, valid for 5 minutes.
+  <h2>Two-step verification</h2>
+  <p>Every sign-in sends a 6-digit one-time code from <code>recover@regiontype.com</code> to your Google account email, and sign-in finishes only once you enter it.
+  If you can't receive that mail, a recovery code works instead. Codes are valid for 5 minutes.
   At most 5 codes can be requested per sign-in attempt, and 5 wrong tries end the attempt.</p>
-  <p>Passkeys verify using your device's fingerprint, face, or PIN. We store only the public key and credential id handed by the device — the biometric itself never leaves your device.</p>
 
   <h2>Recovery codes</h2>
-  <p>Registering a security method shows eight one-time recovery codes, once.
+  <p>Getting recovery codes in Settings › Security shows eight one-time codes, once.
   We store only their hash, never the codes themselves. Using a code deletes that entry.</p>
 
   <h2>Secondary email</h2>
   <p>You can optionally provide a secondary email address for Password & Account Recovery (account recovery; regiontype has no passwords). We do not ask the sign-in provider for that address. Only a confirmed address receives a one-time code, as plain text, from <code>recover@regiontype.com</code>. That code and its challenge last five minutes. After confirmation we do not store the address, only a hash. Account lookup, public profiles, and public issues do not include the address. An unconfirmed address is sent nothing, and the words on the screen are the same whether or not the address was confirmed.</p>
-  <p>Before asking for an email or a phone number, the screen states in words what is collected, why (to verify who you are and to recover the account), who sends it, that the one-time code and its challenge last five minutes, and that the address or number is not shown on a public profile or a public issue.</p>
-
-  <h2>Phone number</h2>
-  <p>During initial sign-up setup, you are asked to verify your phone number to add it as a security method (2-step sign-in + account recovery). Only a hash of the number is stored after confirmation. To receive a sign-in SMS code, you type the registered number again, which is verified against the stored hash. Texts carry an 8-letter case-sensitive one-time code valid for 5 minutes. Account lookup, public profiles, and public issues do not include the number.</p>
+  <p>Before asking for an email, the screen states in words what is collected, why (to verify who you are and to recover the account), who sends it, that the one-time code and its challenge last five minutes, and that the address is not shown on a public profile or a public issue.</p>
 
   <h2>Sessions</h2>
   <p>Sign-in state lives in a token in your browser's localStorage, not a
@@ -190,7 +178,7 @@
   information in what you send.</p>
 
   <h2>Where it's stored</h2>
-  <p>Leaderboard, account, and passkey data live in Cloudflare D1 (Asia-Pacific
+  <p>Leaderboard and account data live in Cloudflare D1 (Asia-Pacific
   region). Feedback lives as public issues in our GitHub repository. We keep
   no other server or database.</p>
 
@@ -200,7 +188,6 @@
   <h2>Third parties</h2>
   <p>The outside parties this service talks to are Google and Apple (for sign-in),
   GitHub (for feedback), Cloudflare (hosting the site and sign-in server, and sending recovery mail from <code>recover@regiontype.com</code>),
-  SMS providers (Solapi for Korean numbers, Twilio for others) receiving the phone number and verification text when an SMS sender is configured,
   and NVIDIA (for chatting with the home bot). What you type to the bot (the last few lines) is sent to an NVIDIA AI model to write the reply, so please don't type personal details; your sign-in is not sent with it.
   No advertising, analytics, or tracking services.</p>
 

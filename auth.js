@@ -84,10 +84,6 @@ function uiLang(home = false) {
 /* ── 잔손 ────────────────────────────────────────────── */
 const toB64u = b => btoa(String.fromCharCode(...new Uint8Array(b)))
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const fromB64u = s => {
-  const x = s.replace(/-/g, '+').replace(/_/g, '/');
-  return Uint8Array.from(atob(x + '='.repeat((4 - x.length % 4) % 4)), c => c.charCodeAt(0));
-};
 const shaB64u = async s => toB64u(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
 
 const say = (msg, bad) => {
@@ -96,10 +92,10 @@ const say = (msg, bad) => {
   p.classList.toggle('bad', !!bad);
 };
 
-/* 메일·문자 코드는 영문 대소문자 8자 — 공백만 걷고 대소문자는 그대로 둔다. 모양이 아니면 '' */
+/* 메일 코드는 숫자 6자리 — 공백만 걷는다. 모양이 아니면 '' */
 const otpOf = el => {
   const s = el.value.replace(/\s+/g, '');
-  return /^[A-Za-z]{8}$/.test(s) ? s : '';
+  return /^\d{6}$/.test(s) ? s : '';
 };
 
 const VIEWS = ['vSignin', 'vTwo'];
@@ -126,32 +122,11 @@ async function ask(path, body) {
   return d;
 }
 
-/* ── 패스키 ──────────────────────────────────────────── */
-const canPasskey = () => !!(window.PublicKeyCredential && navigator.credentials?.create);
-
-/* 2단계: 챌린지를 여기서 새로 받지 않는다 — /auth/take 가 준 id 를 그대로 쓴다 */
-async function passkeyTwo(generation) {
-  const two = TWO;
-  if (!two) return;
-  const cred = await navigator.credentials.get({ publicKey: {
-    challenge: fromB64u(two.challenge), rpId: location.hostname,
-    userVerification: 'preferred', timeout: 60000,
-  } });
-  if (!current(generation)) return;
-  const r = cred.response;
-  const out = await ask('/auth/log', {
-    challenge: two.challenge, id: toB64u(cred.rawId),
-    clientDataJSON: toB64u(r.clientDataJSON),
-    authData: toB64u(r.authenticatorData), sig: toB64u(r.signature),
-  });
-  if (current(generation)) done(out.token, generation);
-}
-
 /* 2단계 화면은 열 때마다 통째로 비운다 — 방법 단추는 via 가 허락한 것만 paintTwo 가 다시 연다.
    코드 칸은 그 단추를 누르기 전에는 열지 않고, 쓴 코드·번호는 칸에 남기지 않는다. */
-const TWO_SHOW = ['twoGo', 'twoMail', 'twoPhone', 'twoCode', 'twoMailTo', 'twoPhoneForm', 'twoOtpForm', 'codeForm', 'rescueForm', 'phoneAuthForm'];
-const TWO_TYPED = ['twoPhoneIn', 'twoOtpIn', 'codeIn', 'rescueIn', 'phoneAuthIn'];
-const TWO_BTNS = ['twoGo', 'twoMail', 'twoPhone', 'twoCode', 'twoPhoneSend', 'twoOtpGo', 'twoResend', 'twoRescueMail', 'twoRescuePhone'];
+const TWO_SHOW = ['twoMail', 'twoCode', 'twoMailTo', 'twoOtpForm', 'codeForm', 'rescueForm'];
+const TWO_TYPED = ['twoOtpIn', 'codeIn', 'rescueIn'];
+const TWO_BTNS = ['twoMail', 'twoCode', 'twoOtpGo', 'twoResend', 'twoRescueMail'];
 function resetTwo() {
   TWO_SHOW.forEach(id => { const el = $('#' + id); if (el) el.hidden = true; });
   TWO_TYPED.forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
@@ -160,51 +135,25 @@ function resetTwo() {
   if (lost) lost.open = false;
   const to = $('#twoMailTo');
   if (to) to.textContent = '';
-  if (TWO) { TWO.sent = ''; TWO.phone = ''; }
+  if (TWO) TWO.sent = '';
 }
 /* via 가 허락한 방법만 보인다. 하나도 없으면 복구 쪽을 펼쳐 놓는다 */
 function paintTwo() {
   const two = TWO;
   if (!two) return;
   const v = two.via;
-  $('#twoGo').hidden = !v.passkey;
   $('#twoMail').hidden = !v.mail;
-  $('#twoPhone').hidden = !v.phone;
   $('#twoCode').hidden = !v.code;
   const to = $('#twoMailTo');
   to.hidden = !(v.mail && two.mailTo);
   to.textContent = to.hidden ? '' : t('twoMailTo', { to: two.mailTo });
-  if (!(v.passkey || v.mail || v.phone || v.code)) {
+  if (!(v.mail || v.code)) {
     $('#twoLost').open = true;
     say(t('twoNone'), true);
   }
 }
-function showCodeDoor() {
-  const code = $('#twoCode');
-  if (code) code.hidden = false;
-}
-
-/* 패스키를 부르는 버튼은 전부 이 문을 지난다 — 취소와 진짜 실패는 다른 말이다.
-   성공은 이 함수가 버튼을 드러내기 전에 덮개를 닫으므로 복구 버튼이 깜빡이지 않는다. */
-async function tryAuth(run, doing, btns) {
-  if (!canPasskey()) { showCodeDoor(); return say(t('noPasskey'), true); }
-  const generation = modalGeneration;
-  btns.forEach(b => { if (b) b.disabled = true; });
-  say(doing);
-  try {
-    await run(generation);
-  } catch (e) {
-    if (!current(generation)) return;
-    showCodeDoor();
-    say(e && e.name === 'NotAllowedError' ? t('cancelled')
-      : e && e.status === 401 ? t('noKey')
-      : t('loginFail'), true);
-  }
-  if (current(generation)) btns.forEach(b => { if (b) b.disabled = false; });
-}
-
 /* ── SSO ─────────────────────────────────────────────── */
-let TWO = null;      // { bind, tag, challenge, via, mailTo, sent, phone } — 2단계가 도는 동안만 산다
+let TWO = null;      // { bind, tag, isNew, via, mailTo, sent } — 2단계가 도는 동안만 산다
 
 async function sso(p) {
   const generation = modalGeneration;
@@ -266,18 +215,19 @@ async function take(bind, tag, generation) {
     return show('vSignin');
   }
   if (!current(generation)) return;
-  if (d.token) return done(d.token, generation, d.isNewAccount === true);
-  /* 옛 중계기는 need:'passkey' 만 준다 — 패스키와 복구 코드뿐이다 */
-  if (d.need === 'two' || d.need === 'passkey') {
-    const v = d.need === 'passkey' ? { passkey: true, code: true } : (d.via || {});
+  /* 누구든 2단계(메일 숫자 6자리)를 거친다. 메일을 보낼 수 있으면 바로 보낸다 */
+  if (d.need === 'two') {
+    const v = d.via || {};
     TWO = {
-      bind, tag, challenge: d.challenge,
-      via: { passkey: !!v.passkey, mail: !!v.mail, phone: !!v.phone, code: !!v.code },
+      bind, tag, isNew: d.isNewAccount === true,
+      via: { mail: !!v.mail, code: !!v.code },
       mailTo: v.mail && typeof d.mailTo === 'string' ? d.mailTo : '',
-      sent: '', phone: '',
+      sent: '',
     };
     say('');
-    return show('vTwo');
+    show('vTwo');
+    if (TWO.via.mail) $('#twoMail').click();
+    return;
   }
   sessionStorage.removeItem(BIND_KEY);
   say(t('signinFail'), true);
@@ -592,10 +542,8 @@ function close() {
   $('#codeIn').value = '';
   const rescueIn = $('#rescueIn');
   if (rescueIn) rescueIn.value = '';
-  const phoneAuthIn = $('#phoneAuthIn');
-  if (phoneAuthIn) phoneAuthIn.value = '';
   resetTwo();
-  [$('#goGoogle'), $('#twoGo'), $('#twoCode'), $('#twoMail'), $('#twoPhone')].forEach(b => { if (b) b.disabled = false; });
+  [$('#goGoogle'), $('#twoCode'), $('#twoMail')].forEach(b => { if (b) b.disabled = false; });
   say('');
   setBackgroundInert(false);
   if (opener) { opener.focus(); opener = null; }
@@ -661,65 +609,18 @@ function wire() {
       $('#mailCode').select();
     }
   };
-  const phoneSay = (msg, bad) => {
-    const el = $('#phoneSay');
-    if (!el) return;
-    el.textContent = msg || '';
-    el.classList.toggle('bad', !!bad);
-  };
-  const phoneForm = $('#phoneForm');
-  if (phoneForm) phoneForm.onsubmit = async e => {
-    e.preventDefault();
-    phoneSay(t('twoSending'));
-    try {
-      await ask('/auth/phone', { phone: $('#phoneIn').value.trim() });
-      $('#phoneIn').value = '';
-      $('#phoneConfirm').hidden = false;
-      $('#phoneCode').focus();
-      phoneSay(t('phoneCodeSent'));
-    } catch (err) {
-      phoneSay(err.status === 503 ? (t('phoneFail') || err.message)
-        : err.status === 429 ? (t('twoBusy') || err.message)
-        : (err.message || t('signinFail')), true);
-    }
-  };
-  const phoneConfirm = $('#phoneConfirm');
-  if (phoneConfirm) phoneConfirm.onsubmit = async e => {
-    e.preventDefault();
-    const code = otpOf($('#phoneCode'));
-    if (!code) return phoneSay(t('twoOtpBad'), true);
-    phoneSay(t('twoChecking'));
-    try {
-      const d = await ask('/auth/phone/confirm', { code });
-      $('#phoneCode').value = '';
-      phoneConfirm.hidden = true;
-      phoneSay(t('phoneOk'));
-      dispatchEvent(new Event('rt-acct'));
-      /* 복구 코드가 처음 만들어졌으면 설정 쪽 코드 판이 받아 연다(settings.js) — 이 판을 닫으면 다시 못 본다 */
-      if (Array.isArray(d.codes) && d.codes.length) dispatchEvent(new CustomEvent('rt-codes', { detail: d.codes }));
-    } catch (err) {
-      phoneSay(err.status === 401 ? t('twoOtpWrong') : (err.message || t('signinFail')), true);
-      $('#phoneCode').select();
-    }
-  };
-
-  $('#twoGo').onclick = () => tryAuth(passkeyTwo, t('askingDevice'),
-    [$('#twoGo'), $('#twoCode'), $('#twoMail'), $('#twoPhone')]);
-  /* 메일·문자 코드 보내기. 같은 길로 다시 보내면 중계기가 앞 코드를 버린다(마지막 것만 유효) */
-  async function sendTwo(via, phone) {
+  /* 메일 코드 보내기. 다시 보내면 중계기가 앞 코드를 버린다(마지막 것만 유효) */
+  async function sendTwo(via) {
     const generation = modalGeneration;
     const two = TWO;
     if (!two) return;
-    const btns = [$('#twoMail'), $('#twoPhone'), $('#twoPhoneSend'), $('#twoResend')];
+    const btns = [$('#twoMail'), $('#twoResend')];
     btns.forEach(b => { b.disabled = true; });
     say(t('twoSending'));
     try {
-      const d = await ask('/auth/two/send', via === 'phone' ? { b: two.bind, t: two.tag, via, phone } : { b: two.bind, t: two.tag, via });
+      const d = await ask('/auth/two/send', { b: two.bind, t: two.tag, via });
       if (!current(generation)) return;
       two.sent = via;
-      if (phone) two.phone = phone;
-      $('#twoPhoneIn').value = '';
-      $('#twoPhoneForm').hidden = true;
       $('#twoOtpForm').hidden = false;
       $('#twoOtpIn').value = '';
       $('#twoOtpIn').focus();
@@ -727,30 +628,15 @@ function wire() {
     } catch (err) {
       if (!current(generation)) return;
       say(err.status === 429 ? t('twoTooMany')
-        : err.status === 503 ? (via === 'phone' ? t('phoneFail') : t('mailFail'))
-        : err.status === 400 && via === 'phone' ? t('twoPhoneWrong')
+        : err.status === 503 ? t('mailFail')
         : t('twoSendFail'), true);
-      if (via === 'phone' && !$('#twoPhoneForm').hidden) $('#twoPhoneIn').select();
     }
     if (current(generation)) btns.forEach(b => { b.disabled = false; });
   }
-  $('#twoMail').onclick = () => {
-    $('#twoPhoneForm').hidden = true;
-    sendTwo('mail');
-  };
-  $('#twoPhone').onclick = () => {
-    $('#twoOtpForm').hidden = true;
-    $('#twoPhoneForm').hidden = false;
-    $('#twoPhoneIn').focus();
-  };
-  $('#twoPhoneForm').onsubmit = e => {
-    e.preventDefault();
-    const phone = $('#twoPhoneIn').value.trim();
-    if (phone) sendTwo('phone', phone);
-  };
+  $('#twoMail').onclick = () => sendTwo('mail');
   $('#twoResend').onclick = () => {
     const two = TWO;
-    if (two && two.sent) sendTwo(two.sent, two.phone);
+    if (two && two.sent) sendTwo(two.sent);
   };
   $('#twoOtpForm').onsubmit = async e => {
     e.preventDefault();
@@ -765,7 +651,7 @@ function wire() {
       const d = await ask('/auth/two/check', { b: two.bind, t: two.tag, code });
       if (!current(generation)) return;
       $('#twoOtpIn').value = '';        // 쓴 코드를 칸에 남겨 두지 않는다
-      return done(d.token, generation);
+      return done(d.token, generation, two.isNew);
     } catch (err) {
       if (!current(generation)) return;
       if (err.status === 400) {       // 요청이 만료됐다 — 처음부터
@@ -784,31 +670,8 @@ function wire() {
     $('#twoOtpGo').disabled = false;
   };
   $('#twoRescueMail').onclick = () => {
-    $('#phoneAuthForm').hidden = true;
     $('#rescueForm').hidden = false;
     $('#rescueIn').focus();
-  };
-  $('#twoRescuePhone').onclick = () => {
-    $('#rescueForm').hidden = true;
-    $('#phoneAuthForm').hidden = false;
-    $('#phoneAuthIn').focus();
-  };
-  const phoneAuth = $('#phoneAuthForm');
-  if (phoneAuth) phoneAuth.onsubmit = async e => {
-    e.preventDefault();
-    const generation = modalGeneration;
-    say(t('twoSending'));
-    try {
-      await ask('/auth/phone/rescue', { phone: $('#phoneAuthIn').value.trim() });
-      if (!current(generation)) return;
-      $('#phoneAuthIn').value = '';
-      say(t('phoneRescueSent'));
-      $('#codeForm').hidden = false;
-      $('#codeIn').focus();
-    } catch (err) {
-      if (!current(generation)) return;
-      say(err.status === 503 ? (t('phoneFail') || err.message) : (err.message || t('signinFail')), true);
-    }
   };
   $('#twoCode').onclick = () => {
     $('#codeForm').hidden = false;
@@ -820,12 +683,12 @@ function wire() {
     const two = TWO;
     if (!two) return;
     const code = $('#codeIn').value.trim().toLowerCase();
-    say(t('askingDevice'));
+    say(t('twoChecking'));
     try {
       const d = await ask('/auth/code', { b: two.bind, t: two.tag, code });
       if (!current(generation)) return;
       $('#codeIn').value = '';        // 쓴 코드를 칸에 남겨 두지 않는다
-      done(d.token, generation);
+      done(d.token, generation, two.isNew);
     } catch {
       if (!current(generation)) return;
       say(t('loginFail'), true);
