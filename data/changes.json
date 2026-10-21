@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.466",
+    "date": "2026-10-21",
+    "ko": "설정 › 보안을 둥근 카드로 다시 묶었습니다. 단추는 알약 모양, 입력칸은 둥글게, 2단계 인증은 ‘사용 중’ 표시로 보입니다.",
+    "en": "Settings › Security is regrouped into rounded cards, with pill buttons, rounded fields and an ‘On’ chip for two-step verification."
+  },
+  {
     "v": "0.11.465",
     "date": "2026-10-21",
     "ko": "로그인·보조 메일·복구 코드 메일이 regiontype 심볼과 사이트 색을 입은 HTML 메일로 옵니다. 코드는 크게, 밝은·어두운 화면 모두 맞춥니다.",

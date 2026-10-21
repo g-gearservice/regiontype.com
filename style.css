@@ -1884,6 +1884,40 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #secOut{padding-top:14px}
 #secOut .profile-button{margin-top:12px}
 
+/* 보안 판은 묶음마다 둥근 카드 한 장이다(설정 앱의 그룹 목록처럼). 묶음 사이는 선이 아니라
+   틈이 가르고, 한 카드 안의 줄 사이만 옅은 선을 둔다. 단추는 알약, 칸은 둥근 사각.
+   계정 화면도 .profile-* 를 쓰므로 여기서만 #optsSecurity 로 좁힌다 */
+#optsSecurity{--sec-r:20px;--sec-pad:16px 18px}
+#optsSecurity .profile-card{border:0;border-radius:var(--sec-r)}
+#optsSecurity .security-health{padding:0 12px 12px}
+#optsSecurity .security-health .profile-button{margin-top:12px}
+#optsSecurity .device-current{border:0;border-radius:999px;background:var(--bg);padding:8px 12px}
+#optsSecurity :is(.profile-section,#secOut,details.security-recovery){
+  background:var(--profile-panel);border:0;border-radius:var(--sec-r);padding:var(--sec-pad);margin-top:12px;
+}
+#optsSecurity .profile-section:first-child{padding-top:16px}
+#optsSecurity .profile-label{margin-bottom:8px}
+#optsSecurity .profile-row strong{font-weight:600}
+#optsSecurity .profile-row + .profile-row{border-top:1px solid var(--profile-border);padding-top:10px}
+/* 켜짐은 색만이 아니라 테두리와 글로도 말한다 */
+#optsSecurity .security-flag{
+  display:inline-flex;align-items:center;min-width:0;padding:5px 10px;border-radius:999px;
+  border:1px solid var(--block-hi);background:color-mix(in srgb,var(--block-hi) 16%,transparent);
+  color:var(--ink);font-weight:600;white-space:nowrap;
+}
+#optsSecurity .si-notice{border:0;border-radius:12px;background:var(--bg);padding:10px 12px;margin-top:10px}
+#optsSecurity .si-code input{border-radius:12px;background:var(--bg);padding:9px 12px}
+#optsSecurity .si-code > div{gap:8px}
+#optsSecurity .si-code button{border-radius:999px;padding:9px 18px}
+#optsSecurity .si-code button:focus-visible{outline-offset:2px}
+#optsSecurity .security-session-actions{padding:12px 0 0}
+#optsSecurity details.security-recovery{font-size:12px}
+#optsSecurity details.security-recovery > summary{cursor:pointer;color:var(--ink);font-size:13px;font-weight:600;padding:2px 0}
+#optsSecurity details.security-recovery[open] > summary{margin-bottom:6px}
+/* 펼친 카드 안의 접힘은 카드를 한 겹 더 두르지 않는다 */
+#optsSecurity details.security-recovery details.security-recovery{background:none;padding:0;border-radius:0;margin-top:10px}
+#optsSecurity details.security-recovery details.security-recovery > summary{font-weight:400;font-size:12px;color:var(--ink-soft)}
+
 /* ── 내 계정 ── */
 /* 덮개 틀(.pg-over)은 가운데 모으는 flex 라 여기서는 그냥 흐르는 통으로 쓴다 */
 #account:not([hidden]){display:block;padding:0}
