@@ -1070,16 +1070,58 @@ export function normMail(s) {
 }
 
 /* rt-mail 서비스 바인딩만 부른다. 주소는 로그에 남기지 않는다. */
-async function deliver(env, to, subject, text) {
+async function deliver(env, to, subject, text, html) {
   if (!env.MAIL?.fetch || !env.MAIL_KEY) return false;
   try {
     const r = await env.MAIL.fetch('https://rt-mail/send', {
       method: 'POST',
       headers: { authorization: 'Bearer ' + env.MAIL_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ to, subject, text }),
+      body: JSON.stringify(html ? { to, subject, text, html } : { to, subject, text }),
     });
     return r.ok === true;
   } catch { return false; }
+}
+
+/* 메일 본문(HTML). 사이트의 어두운 테마 색을 바탕으로 한다 — 어두운 화면에서 눈부시지 않고,
+   밝은 메일함에서도 그대로 읽힌다. 머리에는 글자 로고(region·type·점)만 둔다. 심볼은 보낸 사람
+   그림(BIMI) 자리 몫이다. 평문(text)이 원본이고 이건 그 옷이다 — HTML 을 못 그리는 메일함은 평문을
+   본다. 메일 클라이언트는 <style> 을 자주 버리므로 모양은 전부 인라인이고, 틀은 표다.
+   값은 전부 esc() 를 지난다(지금은 숫자·영숫자뿐이어도). */
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+const MAIL = { bg: '#232c31', card: '#2b353b', box: '#232c31', line: '#3a464d', ink: '#e7eef1', soft: '#9dadb5', accent: '#f0a03c' };
+function mailHtml({ preheader, title, lead, codes, note }) {
+  const c = MAIL;
+  const mono = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace";
+  const sans = "-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif";
+  const one = codes.length === 1;
+  const codeCells = one
+    ? `<td align="center" style="padding:22px 12px;font:700 36px/1.2 ${mono};letter-spacing:10px;color:${c.accent};">${esc(codes[0])}</td>`
+    : `<td style="padding:14px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${
+        codes.map(x => `<tr><td align="center" style="padding:5px 0;font:600 18px/1.4 ${mono};letter-spacing:3px;color:${c.accent};">${esc(x)}</td></tr>`).join('')
+      }</table></td>`;
+  return `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
+<title>${esc(title)}</title>
+</head>
+<body style="margin:0;padding:0;background:${c.bg};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${c.bg}" style="background:${c.bg};">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+<tr><td style="padding:0 4px 20px;font:800 24px/1 ${sans};letter-spacing:-0.7px;color:${c.ink};">region<span style="font-weight:400;">type</span><span style="display:inline-block;width:6px;height:6px;margin-left:2px;border-radius:3px;background:${c.accent};vertical-align:14px;"></span></td></tr>
+<tr><td bgcolor="${c.card}" style="background:${c.card};border-radius:16px;padding:32px 28px;">
+<p style="margin:0 0 8px;font:700 22px/1.35 ${sans};letter-spacing:-0.3px;color:${c.ink};">${esc(title)}</p>
+<p style="margin:0 0 24px;font:400 15px/1.6 ${sans};color:${c.soft};">${esc(lead)}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${c.box}" style="background:${c.box};border:1px solid ${c.line};border-radius:12px;"><tr>${codeCells}</tr></table>
+<p style="margin:24px 0 0;font:400 13px/1.6 ${sans};color:${c.soft};">${esc(note)}</p>
+</td></tr>
+<tr><td align="center" style="padding:20px 8px 0;font:400 12px/1.6 ${sans};color:${c.soft};">
+<a href="https://regiontype.com" style="color:${c.accent};text-decoration:none;">regiontype.com</a> · 이 주소로 보낸 답장은 읽지 않습니다.
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
 }
 
 
@@ -1110,7 +1152,14 @@ async function authTwoSend(req, env, o) {
     ).bind(toHex(await sha(code)), via, Date.now() + LIVE, id, 'two').run();
     const sent = await deliver(env, dest, `regiontype 로그인 확인 코드 ${code}`,
       `regiontype 로그인 확인 코드입니다.\n\n${code}\n\n5분 안에 로그인 화면에 입력하세요.\n` +
-      `직접 로그인하지 않았다면 이 메일은 무시해도 됩니다. 코드가 없으면 계정에 들어올 수 없습니다.\n\nregiontype.com\n`);
+      `직접 로그인하지 않았다면 이 메일은 무시해도 됩니다. 코드가 없으면 계정에 들어올 수 없습니다.\n\nregiontype.com\n`,
+      mailHtml({
+        preheader: `로그인 확인 코드 ${code}`,
+        title: '로그인 확인 코드',
+        lead: '아래 숫자 6자리를 5분 안에 로그인 화면에 입력하세요.',
+        codes: [code],
+        note: '직접 로그인하지 않았다면 이 메일은 무시해도 됩니다. 코드가 없으면 계정에 들어올 수 없습니다.',
+      }));
     if (!sent) {
       await env.DB.prepare('update pending set sub = null where id = ?').bind(id).run();
       return reply(503, '메일을 보내지 못했습니다.', o);
@@ -1156,7 +1205,13 @@ async function authMail(req, env, o) {
     await challenge(env, 'mail', me, { id, sub: hash });
     const text = `regiontype 보조 메일 확인 코드입니다.\n\n${code}\n\n5분 안에 설정 화면에 입력하세요.\n` +
       `직접 요청하지 않았다면 이 메일은 무시해도 됩니다.\n\nregiontype.com\n`;
-    const sent = await deliver(env, email, `regiontype 보조 메일 확인 코드 ${code}`, text);
+    const sent = await deliver(env, email, `regiontype 보조 메일 확인 코드 ${code}`, text, mailHtml({
+      preheader: `보조 메일 확인 코드 ${code}`,
+      title: '보조 메일 확인 코드',
+      lead: '아래 숫자 6자리를 5분 안에 설정 화면에 입력하세요.',
+      codes: [code],
+      note: '직접 요청하지 않았다면 이 메일은 무시해도 됩니다.',
+    }));
     if (!sent) {
       await env.DB.prepare('delete from pending where id = ?').bind(id).run();
       return reply(503, '메일을 보내지 못했습니다.', o);
@@ -1197,7 +1252,13 @@ async function authRescue(req, env, o) {
     if (row?.who) {
       const codes = newCodes();
       const text = `복구 코드입니다. 각각 한 번만 쓸 수 있습니다.\n\n${codes.join('\n')}\n`;
-      if (await deliver(env, email, 'regiontype 복구 코드', text))
+      if (await deliver(env, email, 'regiontype 복구 코드', text, mailHtml({
+        preheader: '새 복구 코드 8개',
+        title: '새 복구 코드',
+        lead: '로그인 2단계에서 메일 코드 대신 쓸 수 있습니다. 각 코드는 한 번만 쓸 수 있습니다.',
+        codes,
+        note: '이 코드를 안전한 곳에 적어 두세요. 이전에 받은 복구 코드는 이제 쓸 수 없습니다.',
+      })))
         await storeRecoveryCodes(env, row.who, codes);
     }
     return send(200, RESCUE, o);

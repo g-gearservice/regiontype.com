@@ -46,7 +46,8 @@ async function sameSecret(got, want) {
   return v === 0;
 }
 
-/* 유료 Email Service 의 구조화 send(). html 은 받지 않는다. 주소는 응답에 싣지 않는다. */
+/* 유료 Email Service 의 구조화 send(). 평문은 늘 싣고, html 은 중계기가 지은 본문만 곁들인다
+   (부르는 쪽은 MAIL_KEY 를 쥔 중계기뿐이다). 첨부는 받지 않는다. 주소는 응답에 싣지 않는다. */
 export async function handle(req, env) {
   let path = '';
   try { path = new URL(req.url).pathname; } catch { return json(404); }
@@ -55,7 +56,9 @@ export async function handle(req, env) {
   if (!await sameSecret(req.headers.get('authorization') || '', env.MAIL_KEY)) return json(401);
   let c;
   try { c = await req.json(); } catch { return json(400); }
-  if (c?.html != null || c?.attachments != null) return json(400);
+  if (c?.attachments != null) return json(400);
+  const html = c?.html == null ? '' : String(c.html);
+  if (html.length > 20000 || html.includes('\0')) return json(400);
   const from = normMail(env.MAIL_FROM);
   const to = normMail(c?.to);
   const subject = String(c?.subject ?? '').trim();
@@ -65,6 +68,6 @@ export async function handle(req, env) {
   /* 받는 쪽 메일함에 주소 대신 이름(regiontype)이 보이게 한다. 줄바꿈 낀 이름은 버린다 */
   const name = String(env.MAIL_NAME ?? '').trim();
   const sender = name && name.length <= 40 && !/[\r\n<>"]/.test(name) ? { email: from, name } : from;
-  await env.EMAIL.send({ to, from: sender, subject, text });
+  await env.EMAIL.send(html ? { to, from: sender, subject, text, html } : { to, from: sender, subject, text });
   return json(200);
 }
