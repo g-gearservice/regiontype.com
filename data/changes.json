@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.461",
+    "date": "2026-10-21",
+    "ko": "가입 안내 뒤의 구 이름 위치가 스타일 정책에 막히지 않습니다.",
+    "en": "The district names behind the welcome steps are no longer blocked by the style policy."
+  },
+  {
     "v": "0.11.460",
     "date": "2026-10-21",
     "ko": "가입 안내를 끝내지 않았으면 다시 로그인해도 안내로 돌아갑니다. 안내를 마치기 전에는 패스키를 요구하지 않습니다.",
