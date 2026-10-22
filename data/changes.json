@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.467",
+    "date": "2026-10-22",
+    "ko": "설정 › 보안의 접힌 칸이 열고 닫힐 때 부드럽게 펼쳐지고, 꺾쇠가 따라 돕니다. 동작 줄이기를 켜면 바로 열립니다.",
+    "en": "Collapsed sections in Settings › Security now unfold and fold smoothly, with a turning chevron. With reduced motion on they open instantly."
+  },
+  {
     "v": "0.11.466",
     "date": "2026-10-21",
     "ko": "설정 › 보안을 둥근 카드로 다시 묶었습니다. 단추는 알약 모양, 입력칸은 둥글게, 2단계 인증은 ‘사용 중’ 표시로 보입니다.",
