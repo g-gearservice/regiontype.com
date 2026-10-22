@@ -729,14 +729,62 @@ function botCourses() {
   }
   return list;
 }
-/* 봇이 지금 형편을 알고 답하게 — 화면·설정·로그인. 설정은 settings.js 가 막 고쳤을 수 있어 통에서 새로 읽는다 */
+/* 봇이 지금 형편을 알고 답하게 — 화면·설정·로그인·내 전적. 설정은 settings.js 가 막 고쳤을 수 있어 통에서 새로 읽는다 */
 function botNow() {
   let o = {};
   try { o = JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch {}
-  return { opt: { ...DEF, ...o }, page: page || 'home', signed: !!token(), named: !!readName(), dev: DEV };
+  return { opt: { ...DEF, ...o }, page: page || 'home', signed: !!token(), named: !!readName(), dev: DEV,
+           rec: token() ? botRec.v : null };
+}
+/* 내 전적 — 기록 화면과 같은 /games 를 대화 한 번에 많아야 1분에 한 번 읽는다. 못 읽으면 없이 묻는다 */
+async function botRec() {
+  if (!token() || Date.now() - botRec.at < 60000) return;
+  botRec.at = Date.now();
+  try {
+    const d = await ask(`/games?dev=${DEV}`), lad = d.ladder;
+    botRec.v = { tier: lad ? tierName(lad.lp, lad.games) : '', lp: lad?.lp || 0, games: lad?.games || 0,
+                 wins: lad?.wins || 0, rank: lad?.rank || 0,
+                 last: d.games.slice(0, 5).map(g => ({ mode: g.mode, where: placeOf(g.slug), secs: g.secs, cpm: g.cpm, acc: g.acc, delta: g.delta })) };
+  } catch {}
+}
+botRec.at = 0; botRec.v = null;
+/* 스타일 베타 — 봇이 고른 두 색(rt.theme)을 :root 에 얹는다. 첫 그림 전엔 index.html 의 머리 스크립트가 같은 일을 한다.
+   대비는 중계기(botTheme)가 이미 쟀다 */
+function paintTheme() {
+  let th = null;
+  try { th = JSON.parse(localStorage.getItem('rt.theme') || 'null'); } catch {}
+  const hex = v => /^#[0-9a-f]{6}$/.test(v) ? v : '';
+  th = { accent: hex(th?.accent), block: hex(th?.block) };
+  const st = document.documentElement.style;
+  for (const [k, v] of [['--accent', th?.accent], ['--accent-deep', th?.accent && `color-mix(in srgb,${th.accent} 82%,#000)`],
+                        ['--block', th?.block], ['--block-hi', th?.block && `color-mix(in srgb,${th.block} 88%,#000)`]]) {
+    if (v) st.setProperty(k, v); else st.removeProperty(k);
+  }
 }
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
 function act(a) {
+  if (a.act === 'duel' && botCourses().some(x => x.slug === a.course)) { go(a.course, true); return; }
+  if (a.act === 'post') {
+    /* 초안만 — 커뮤니티 화면이 받아 글쓰기 칸에 채워 열고, 올리기는 사람이 누른다 */
+    try { sessionStorage.setItem('rt.cmDraft', JSON.stringify({ tag: a.tag, title: a.title, body: a.body })); } catch { return; }
+    act({ act: 'open', page: 'community' });
+    return;
+  }
+  if (a.act === 'look') {
+    const face = readFace();
+    for (const k of ['shape', 'expression', 'colour']) if (a[k]) face[k] = a[k];
+    try { localStorage.setItem('rt.character', JSON.stringify(face)); } catch { return; }
+    leftAccount();
+    return;
+  }
+  if (a.act === 'theme') {
+    try {
+      if (a.reset) localStorage.removeItem('rt.theme');
+      else localStorage.setItem('rt.theme', JSON.stringify({ ...JSON.parse(localStorage.getItem('rt.theme') || '{}'), ...a, act: undefined }));
+    } catch { return; }
+    paintTheme();
+    return;
+  }
   if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
     /* 경쟁전은 꾹 누른 시작하기와 같은 길(go) — 로그인·이름이 없으면 봇이 그걸 조른다 */
     if (a.ranked) { go(a.course); return; }
@@ -761,6 +809,7 @@ async function send(text) {
   const my = ++talkReq;
   setTalkUI('thinking');
   speak(t('botThink'));
+  await botRec();
   let d;
   try {
     d = await ask('/bot/chat', { msgs: talk.slice(-12), courses: botCourses(), lang: document.documentElement.lang, name: botName(), now: botNow() }, true);
@@ -1209,18 +1258,18 @@ function matchPaired(m, d) {
   }, 200);
   show();
 }
-function matchOpen(slug, name) {
+function matchOpen(slug, name, bot) {
   setRanked(false);
   if (!touring) hide();
-  mm = { slug, name, t0: Date.now(), n: 1, bot: false, busy: false, first: true, fails: 0, paired: false,
+  mm = { slug, name, t0: Date.now(), n: 1, bot: !!bot, busy: false, first: true, fails: 0, paired: false,
     opener: document.activeElement };
   $('#rkMatchOpp').hidden = true;
   $('#rkMatchCount').hidden = true;
   $('#rkMatchBtns').hidden = false;
   $('#rkMatchBot').hidden = false;
   $('#rkMatch').hidden = false;
-  $('#rkMatchBot').focus();
   matchStep();
+  $(mm.bot ? '#rkMatchCancel' : '#rkMatchBot').focus();
   mm.timer = setInterval(matchStep, 1000);
 }
 function wireMatch() {
@@ -1249,7 +1298,8 @@ function wireMatch() {
   /* 짝이 지어지기 전에 탭을 닫으면 줄에서 내린다 */
   addEventListener('pagehide', () => { if (mm && !mm.paired) lastLeave(); });
 }
-async function go(slug) {
+/* vsBot — 봇에게 '나랑 붙자' 하면 사람을 기다리지 않고 곧장 봇과 짝한다(봇과 붙기 단추와 같은 길) */
+async function go(slug, vsBot) {
   if (!token()) { say('rkNeedLogin'); $('#signinLink').click(); return; }
   const name = readName();
   if (!name) {
@@ -1258,7 +1308,7 @@ async function go(slug) {
     return;
   }
   if (mm) return;
-  matchOpen(slug, name);
+  matchOpen(slug, name, vsBot);
 }
 /* 상대 미니맵 — 중계기가 주는 맞힌 곳 지도(set: 코스 칸 순서대로 '0'/'1')를 지도 모양 그대로 그린다.
    안 맞힌 칸은 옅은 고리, 맞힌 칸은 속이 찬 점, 막 늘어난 칸은 더 크고 테두리가 진하다(색만으로 가르지 않는다) */

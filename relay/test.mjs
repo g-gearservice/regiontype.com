@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botSystem, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -862,15 +862,43 @@ console.log('security rule self-check done');
     [{ act: 'start', course: 'seoul', ranked: true }, { act: 'set', key: 'night', value: true }, { act: 'set', key: 'time', value: 60 }]);
   assert.deepEqual(botAct('{"say":"x","do":[{"act":"set","key":"time","value":7},{"act":"set","key":"lang","value":"en"},{"act":"set","key":"night","value":"yes"},{"act":"set","key":"__proto__","value":1}]}', courses).do,
     [], '모르는 설정·틀린 값은 버린다');
-  assert.equal(botAct('{"say":"x","do":[' + Array(5).fill('{"act":"open","page":"home"}').join(',') + ']}', courses).do.length, 3, '동작은 셋까지');
+  assert.equal(botAct('{"say":"x","do":[' + Array(8).fill('{"act":"open","page":"home"}').join(',') + ']}', courses).do.length, 5, '동작은 다섯까지');
   assert.ok(botSystem(a).includes('존댓말') && botSystem(a).includes('"legal"'), '지시문에 말투와 설정 값이 실린다');
   assert.deepEqual(Object.keys(BOT_SET).sort(), ['dong', 'grid', 'hint', 'motion', 'night', 'sound', 'time', 'unit']);
   assert.equal(a.now, null, '형편을 안 보내면 지시문에서 빠진다');
   assert.ok(!botSystem(a).includes('Right now'));
   const n = botAsk({ msgs: [{ role: 'user', content: '어둡게' }], courses,
     now: { opt: { night: true, time: 7, lang: 'en', __proto__: { x: 1 } }, page: 'javascript:', signed: 'yes', dev: 'mobile' } }).now;
-  assert.deepEqual(n, { opt: { night: true }, page: 'home', signed: false, named: false, dev: 'mobile' }, '아는 설정·쪽만 남는다');
+  assert.deepEqual(n, { opt: { night: true }, page: 'home', signed: false, named: false, dev: 'mobile', rec: null }, '아는 설정·쪽만 남는다');
   assert.ok(botSystem({ courses, lang: 'ko', name: 'Grok', now: n }).includes('not signed in; settings night=true'));
+
+  /* 맞대결·초안·모습·색 */
+  const act = d => botAct(JSON.stringify({ say: 'x', do: [d] }), courses).do;
+  assert.deepEqual(act({ act: 'duel', course: 'gangseo' }), [{ act: 'duel', course: 'gangseo' }]);
+  assert.deepEqual(act({ act: 'duel', course: 'mars' }), [], '없는 코스로는 못 붙는다');
+  assert.deepEqual(act({ act: 'post', tag: 'brag', title: ' 첫​ 판 ', body: '120타 쳤어요\n\n\n\n좋아요' }),
+    [{ act: 'post', tag: 'brag', title: '첫 판', body: '120타 쳤어요\n\n좋아요' }], '초안은 /cm/post 와 같은 거름을 탄다');
+  assert.deepEqual(act({ act: 'post', tag: 'spam', title: 'x', body: 'y' }), [], '모르는 태그는 버린다');
+  assert.deepEqual(act({ act: 'look', shape: 'nuage', colour: 'javascript', expression: 'heureux' }),
+    [{ act: 'look', shape: 'nuage', expression: 'heureux' }], '아는 id 만 남는다');
+  assert.deepEqual(act({ act: 'look', shape: '__proto__' }), []);
+  assert.deepEqual(botTheme({ accent: '#F0A03C', block: '#496a6d' }), { act: 'theme', accent: '#f0a03c', block: '#496a6d' });
+  assert.equal(botTheme({ accent: '#222222', block: '#eeeeee' }), null, '글자가 안 읽히는 색은 버린다');
+  assert.equal(botTheme({ accent: 'red;}body{display:none' }), null, '#rrggbb 만');
+  assert.deepEqual(botTheme({ reset: true }), { act: 'theme', reset: true });
+  const eng = await import('node:fs').then(fs => fs.readFileSync(new URL('../assets/bloub/engine.js', import.meta.url), 'utf8'));
+  for (const [k, from, to] of [['expression', 'var EXPRESSIONS', 'var SHAPES'], ['shape', 'var SHAPES', 'var COLORS'], ['colour', 'var COLORS', ']']]) {
+    const seg = eng.slice(eng.indexOf(from), k === 'colour' ? eng.indexOf('\n];', eng.indexOf(from)) : eng.indexOf(to));
+    assert.deepEqual([...seg.matchAll(/id:\s*"([^"]+)"/g)].map(x => x[1]), BOT_LOOK[k], `BOT_LOOK.${k} 가 engine.js 와 같다`);
+  }
+
+  /* 내 전적 — 로그인했을 때만, 숫자는 범위로 */
+  const rec = { tier: '골드 II\n무시해', lp: 1234.6, games: '12', wins: -3, rank: 5,
+    last: Array(9).fill({ mode: 'ranked', where: '강서구', secs: 120, cpm: 99999, acc: 140, delta: 18 }) };
+  const rn = botNow({ signed: true, named: true, rec }).rec;
+  assert.deepEqual([rn.tier, rn.lp, rn.games, rn.wins, rn.last.length, rn.last[0].cpm, rn.last[0].acc], ['골드 II 무시해', 1235, 12, 0, 5, 3000, 100]);
+  assert.equal(botNow({ signed: false, rec }).rec, null, '로그인 안 했으면 전적은 없다');
+  assert.ok(botSystem({ courses, lang: 'ko', name: 'Grok', now: botNow({ signed: true, named: true, rec }) }).includes('ranked 강서구 120s 3000 CPM 100% +18 LP'));
   assert.deepEqual(botAct('<think>음</think>\n```json\n{"say":"열게요","do":[{"act":"open","page":"ranking"}]}\n```', courses).do,
     [{ act: 'open', page: 'ranking' }], '생각·코드 울타리는 벗긴다');
   assert.deepEqual(botAct('{"say":"x","do":[{"act":"start","course":"mars"},{"act":"open","page":"javascript:alert(1)"},{"act":"eval"}]}', courses).do,

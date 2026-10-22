@@ -208,6 +208,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     dlg.showModal();
   };
   $('#cancel').onclick = () => dlg.close();
+  /* 홈 봇이 써 둔 초안(ranked.js 의 act post) — 칸만 채워 열고, 올리기는 사람이 누른다. 한 번 읽으면 지운다 */
+  let draft = null;
+  try { draft = JSON.parse(sessionStorage.getItem('rt.cmDraft') || 'null'); sessionStorage.removeItem('rt.cmDraft'); } catch {}
+  if (draft && token()) {
+    const r = document.querySelector(`#postForm input[name="tag"][value="${CSS.escape(String(draft.tag))}"]`);
+    if (r) r.checked = true;
+    $('#postTitle').value = String(draft.title || '');
+    $('#postBody').value = String(draft.body || '');
+    $('#postBody').dispatchEvent(new Event('input'));
+    $('#composeSay').replaceChildren();
+    dlg.showModal();
+  }
   $('#postForm').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target, go = f.querySelector('.cm-go');
