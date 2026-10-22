@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.469",
+    "date": "2026-10-22",
+    "ko": "동네버스 베타의 빠르기·멈춤 단추는 이제 시계를 누를 때만 내려옵니다. 지금 고른 단추는 누른 색에 밑줄이 붙고, 나머지는 밤엔 흰색, 낮엔 검은색으로 보입니다. 시계 옆에는 요일과 함께 며칠째인지도 나옵니다(1일 월).",
+    "en": "In the Neighborhood Bus beta, the speed and pause buttons now drop down only when you click the clock. The current choice shows in the pressed color with an underline; the others are white at night and black by day. The clock now also shows which day of the run it is, next to the weekday."
+  },
+  {
     "v": "0.11.468",
     "date": "2026-10-22",
     "ko": "한국어가 아닌 화면 말에서 생기던 문제를 고쳤습니다. 가입 안내와 커뮤니티가 모든 언어로 보이고(보조 메일 장 제목·요약 포함), 그리스어 대문자·악센트, 아랍어·태국어 숫자, 베트남어 Telex·VNI 입력이 맞게 판정되며, 순서대로 치는 코스는 목표 이름을 먼저 견줍니다. 결과 카드 제목이 화면 말을 따르고, 휴대폰 아래 탭 이름과 불러오는 중 문구가 잘리지 않으며, 아랍어 문장 부호가 제자리에 붙습니다.",
