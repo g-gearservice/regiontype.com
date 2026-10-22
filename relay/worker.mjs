@@ -1808,7 +1808,7 @@ const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
    deepseek-v4.1-flash 22~25초. kimi-k2.6·gemma-3-12b·mistral-large-2·llama-3.1-nemotron-70b 는
    목록에 있어도 이 키엔 404, gemma-4-31b·nemotron-3.5-lightning·gpt-oss-20b 는 25초를 넘겨 뺐다 */
 const NV_MODELS = ['nvidia/nemotron-3-super-120b-a12b', 'z-ai/glm-5.3-flash', 'deepseek-ai/deepseek-v4.1-flash'];
-const NV_DAY = 200000, BOT_OUT = 400, BOT_TRIES = 2;
+const NV_DAY = 200000, BOT_OUT = 800, BOT_TRIES = 2;   // 커뮤니티 초안 본문이 들어갈 만큼
 const DAY_MS = 86400000;
 const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
 /* 봇이 바꿀 수 있는 설정과 그 값. app.js·settings.js 의 DEF 와 같은 키다(lang·country 는
@@ -1816,7 +1816,14 @@ const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about
 const ONOFF = [true, false];
 export const BOT_SET = { night: ONOFF, sound: ONOFF, motion: ONOFF, grid: ONOFF, hint: ONOFF,
                          unit: ['auto', 'cpm', 'wpm'], dong: ['admin', 'legal'], time: TIMES };
-const BOT_TURNS = 12, BOT_LINE = 400, BOT_COURSES = 80;
+/* 봇 모습. assets/bloub/engine.js 의 SHAPES·EXPRESSIONS·COLORS id 와 같다 — test.mjs 가 맞춰 본다 */
+export const BOT_LOOK = {
+  shape: ['cercle', 'galet', 'squircle', 'capsule', 'triangle', 'hexagone', 'nuage', 'goutte'],
+  expression: ['neutre', 'attentif', 'surpris', 'excite', 'heureux', 'hilare', 'colere', 'triste', 'effraye',
+               'mefiant', 'confus', 'curieux', 'fier', 'timide', 'blase', 'somnolent'],
+  colour: ['encre', 'brun', 'rouge', 'orange', 'ambre', 'vert', 'turquoise', 'bleu', 'violet', 'rose', 'gris', 'creme'],
+};
+const BOT_TURNS = 12, BOT_LINE = 400, BOT_COURSES = 80, BOT_ACTS = 5, BOT_REC = 5;
 
 /* 브라우저가 보낸 몸통을 다듬는다. system 은 받지 않는다 — 역할은 user·assistant 둘뿐 */
 export function botAsk(c) {
@@ -1831,17 +1838,45 @@ export function botAsk(c) {
            now: botNow(c?.now), ok: msgs.length > 0 && msgs[msgs.length - 1].role === 'user' };
 }
 
+const int = (x, lo, hi) => Number.isFinite(+x) ? Math.min(hi, Math.max(lo, Math.round(+x))) : lo;
 /* 지금 사용자 쪽 형편 — 봇이 켜진 걸 또 켜거나, 로그인 안 한 사람을 경쟁전에 보내지 않게.
-   아는 설정 키·값과 쪽만 남긴다. 옛 브라우저가 안 보내면 null 이고 지시문에서 빠진다 */
+   아는 설정 키·값과 쪽만 남긴다. 옛 브라우저가 안 보내면 null 이고 지시문에서 빠진다.
+   rec 은 로그인한 사람의 내 전적(경쟁전 사다리와 최근 판) — 숫자는 범위로, 글은 짧게 자른다 */
 export function botNow(n) {
   if (!n || typeof n !== 'object') return null;
   const o = n.opt && typeof n.opt === 'object' ? n.opt : {};
+  const r = n.rec && typeof n.rec === 'object' && !Array.isArray(n.rec) ? n.rec : null;
   return { opt: Object.fromEntries(Object.entries(BOT_SET).filter(([k, v]) => v.includes(o[k])).map(([k]) => [k, o[k]])),
            page: BOT_PAGES.includes(n.page) ? n.page : 'home', signed: n.signed === true, named: n.named === true,
-           dev: n.dev === 'mobile' ? 'mobile' : 'pc' };
+           dev: n.dev === 'mobile' ? 'mobile' : 'pc',
+           rec: r && n.signed === true ? {
+             tier: plain(r.tier, 24), lp: int(r.lp, 0, 99999), games: int(r.games, 0, 999999),
+             wins: int(r.wins, 0, 999999), rank: int(r.rank, 0, 999999),
+             last: (Array.isArray(r.last) ? r.last : []).slice(0, BOT_REC).map(g => ({
+               mode: g?.mode === 'ranked' ? 'ranked' : 'normal', where: plain(g?.where, 40), secs: int(g?.secs, 0, 600),
+               cpm: int(g?.cpm, 0, 3000), acc: int(g?.acc, 0, 100), delta: g?.delta == null ? null : int(g.delta, -999, 999) })),
+           } : null };
+}
+
+/* 스타일 베타. 그 색 위에 얹히는 글자와 대비를 맞춘다 — --accent 위엔 --on-accent(#232c31) 4.5:1,
+   --block 위엔 흰 큰 글자 3:1. 못 미치는 색은 버린다 */
+const lum = hex => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
+  return .2126 * r + .7152 * g + .0722 * b;
+};
+const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+const HEX = /^#[0-9a-f]{6}$/i;
+export function botTheme(a) {
+  if (a?.reset === true) return { act: 'theme', reset: true };
+  const t = { act: 'theme' };
+  if (HEX.test(a?.accent) && contrast(a.accent, '#232c31') >= 4.5) t.accent = a.accent.toLowerCase();
+  if (HEX.test(a?.block) && contrast(a.block, '#ffffff') >= 3) t.block = a.block.toLowerCase();
+  return t.accent || t.block ? t : null;
 }
 
 export function botSystem({ courses, lang, name, now }) {
+  const rec = now?.rec;
   return `You are ${name}, a small round mascot bot living on the home screen of regiontype.com, ` +
     'a typing game where players type place names (districts, provinces) on a map as fast as they can. ' +
     `Reply in the user's language (site language: ${lang}), always politely (in Korean use 존댓말, never 반말). ` +
@@ -1852,14 +1887,30 @@ export function botSystem({ courses, lang, name, now }) {
     'and PC and phone players have separate leaderboards and ranked ladders. ' +
     'Seoul dongs can be administrative (admin) or legal (legal).\n' +
     'Answer ONLY with one JSON object, no code fence: {"say":"what you say","do":[actions]}. ' +
-    'Actions (do may be empty, at most 3):\n' +
+    `Actions (do may be empty, at most ${BOT_ACTS}):\n` +
     '{"act":"start","course":"<slug>"} starts a normal game on that course.\n' +
-    '{"act":"start","course":"<slug>","ranked":true} starts a ranked game on that course.\n' +
-    `{"act":"open","page":"<${BOT_PAGES.join('|')}>"} opens that screen (feedback = the feedback form).\n` +
+    '{"act":"start","course":"<slug>","ranked":true} finds a ranked match (a real player) on that course.\n' +
+    '{"act":"duel","course":"<slug>"} starts a ranked 1v1 against you, the bot. Use it when the user wants to ' +
+    'fight, race or play against you. It is ranked and costs LP if they leave, so only when they clearly ask to ' +
+    'play now; if it is unclear (a question, a joke), ask first. If no course is named, use the first course.\n' +
+    `{"act":"open","page":"<${BOT_PAGES.join('|')}>"} opens that screen (feedback = the feedback form, ` +
+    'records = my match history).\n' +
     '{"act":"set","key":"<key>","value":<value>} changes a setting: ' +
     Object.entries(BOT_SET).map(([k, v]) => `${k} ${v.map(x => JSON.stringify(x)).join('|')}`).join('; ') +
     ' (night = dark mode, motion = animations, grid = background grid, hint = show the place name, ' +
     'unit = speed unit, dong = Seoul dong kind, time = seconds per game).\n' +
+    `{"act":"post","tag":"<${TAGS.join('|')}>","title":"<up to ${CM.title} chars>","body":"<up to ${CM.body} chars>"} ` +
+    'drafts a community post (brag, ask = question, idea, chat). It only fills the form; the user reviews and ' +
+    'presses post. Write it in the user\'s voice from what they told you; never invent scores or facts.\n' +
+    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>"} changes how you look (any of the three): ' +
+    Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (ids are French words).\n' +
+    '{"act":"theme","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site: accent = highlight colour ' +
+    '(must be light enough for dark text), block = main tile colour (must be dark enough for white text). ' +
+    '{"act":"theme","reset":true} goes back to the default colours.\n' +
+    'Style from a reference: when the user names a reference (a brand, artwork, season, mood, place, game...) ' +
+    'and wants that style, pick its key traits (main colours, light or dark, calm or lively) and in one reply ' +
+    'combine theme + look + set night (and motion if it fits). Say in one sentence which traits you took. ' +
+    'This is a beta: you cannot see images, only names and descriptions.\n' +
     'Only act when the user asks. If you cannot do exactly what was asked, say so and ask — never swap in ' +
     'a different action. Never invent a slug. If you do not know a fact about the site, say so and offer ' +
     'the feedback form — never make one up.\n' +
@@ -1867,7 +1918,12 @@ export function botSystem({ courses, lang, name, now }) {
       (now.signed ? (now.named ? 'signed in' : 'signed in but no leaderboard name yet') : 'not signed in') +
       '; settings ' + Object.entries(now.opt).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ') + '.\n' +
       'Use this: if a setting already has the asked value, just say so; "toggle" or "turn it off" means the ' +
-      'opposite of the current value; ranked needs sign-in, so if not signed in offer to open signin first.\n' : '') +
+      'opposite of the current value; ranked and duel need sign-in, so if not signed in offer to open signin first.\n' : '') +
+    (rec ? `My records (${now.dev}): ranked ${rec.tier || 'unranked'}, ${rec.lp} LP, ${rec.games} games, ` +
+      `${rec.wins} wins${rec.rank ? `, rank #${rec.rank}` : ''}. Recent games, newest first: ` +
+      (rec.last.map(g => `${g.mode} ${g.where} ${g.secs}s ${g.cpm} CPM ${g.acc}%` +
+        (g.delta == null ? '' : ` ${g.delta > 0 ? '+' : ''}${g.delta} LP`)).join('; ') || 'none') + '.\n' +
+      'When asked about my records, open records and summarise these numbers; only use these numbers.\n' : '') +
     'Courses (slug: name):\n' +
     courses.map(x => `${x.slug}: ${x.label}`).join('\n');
 }
@@ -1880,12 +1936,22 @@ export function botAct(text, courses) {
   if (m) try { j = JSON.parse(m[0]); } catch {}
   if (!j || typeof j !== 'object') return { say: cut(raw, BOT_LINE), do: [] };
   const slugs = new Set(courses.map(x => x.slug));
-  const acts = (Array.isArray(j.do) ? j.do : []).slice(0, 3).map(a => {
+  const acts = (Array.isArray(j.do) ? j.do : []).slice(0, BOT_ACTS).map(a => {
     if (a?.act === 'start' && slugs.has(a.course)) return { act: 'start', course: a.course, ranked: a.ranked === true };
+    if (a?.act === 'duel' && slugs.has(a.course)) return { act: 'duel', course: a.course };
     if (a?.act === 'open' && BOT_PAGES.includes(a.page)) return { act: 'open', page: a.page };
     if (a?.act === 'set' && Object.hasOwn(BOT_SET, a.key) && BOT_SET[a.key].includes(a.value)) {
       return { act: 'set', key: a.key, value: a.value };
     }
+    if (a?.act === 'post') {
+      const p = cmPost(a);
+      return p.ok ? { act: 'post', tag: p.tag, title: p.title, body: p.body } : null;
+    }
+    if (a?.act === 'look') {
+      const l = Object.fromEntries(Object.entries(BOT_LOOK).filter(([k, v]) => v.includes(a[k])).map(([k]) => [k, a[k]]));
+      return Object.keys(l).length ? { act: 'look', ...l } : null;
+    }
+    if (a?.act === 'theme') return botTheme(a);
     return null;
   }).filter(Boolean);
   return { say: cut(j.say, BOT_LINE), do: acts };

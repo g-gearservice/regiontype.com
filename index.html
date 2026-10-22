@@ -68,6 +68,10 @@
     d.toggleAttribute('data-night', !!o.night);
     d.dataset.motion = o.motion === false ? 'off' : 'on';
     d.toggleAttribute('data-no-grid', o.grid === false);
+    /* 봇이 고른 색(스타일 베타) — ranked.js 의 paintTheme 과 같은 결 */
+    const th = JSON.parse(localStorage.getItem('rt.theme') || 'null');
+    if (th && /^#[0-9a-f]{6}$/.test(th.accent)) { d.style.setProperty('--accent', th.accent); d.style.setProperty('--accent-deep', `color-mix(in srgb,${th.accent} 82%,#000)`); }
+    if (th && /^#[0-9a-f]{6}$/.test(th.block)) { d.style.setProperty('--block', th.block); d.style.setProperty('--block-hi', `color-mix(in srgb,${th.block} 88%,#000)`); }
     const ui = JSON.parse(localStorage.getItem('rt.ui') || 'null');
     if (ui && ui.pack && (ui.auto ? (o.lang || 'auto') === 'auto' : o.lang === ui.lang)) {
       window.RT_UI = ui; d.lang = ui.lang;
@@ -676,6 +680,6 @@
 <script src="app.js?v=4.71"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
-<script src="ranked.js?v=4.73"></script>
+<script src="ranked.js?v=4.74"></script>
 </body>
 </html>
