@@ -11,7 +11,7 @@ workers_dev = false
 #   NV_KEY
 # 모델 차례·하루 토큰 예산. 비우면 worker.mjs 의 NV_MODELS·NV_DAY
 # [vars]
-# NV_MODELS = "nvidia/nemotron-3-super-120b-a12b,z-ai/glm-5.3-flash"
+# NV_MODELS = "deepseek-ai/deepseek-v4.1-flash,nvidia/nemotron-3-ultra-550b-a55b"
 # NV_BUDGET = "200000"
 # 하루 토큰 장부(botuse 표)를 D1 에 적는다
 

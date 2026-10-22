@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.476",
+    "date": "2026-10-23",
+    "ko": "홈 봇이 더 빨리 답합니다. 더 빠른 모델로 바꿔, 스타일 바꾸기처럼 긴 답도 10초 안쪽에 옵니다.",
+    "en": "The home bot answers faster. It now uses a quicker model, so even long answers like restyling arrive in under ten seconds."
+  },
+  {
     "v": "0.11.475",
     "date": "2026-10-22",
     "ko": "홈 봇이 답하지 못하는 일이 줄었습니다. 쓸 수 없는 모델은 건너뛰고 다음 모델에 묻고, 긴 답이 중간에 끊겨도 말풍선에 코드 조각 대신 할 말만 보입니다.",
