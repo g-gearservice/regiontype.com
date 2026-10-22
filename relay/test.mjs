@@ -792,6 +792,13 @@ console.log('security rule self-check done');
   const sum = await call('/top');
   assert.deepEqual(sum.bests, [{ slug: 'seoul-gu', secs: 120, n: 2, cpm: 130, name: '등촌' }], 'c 가 없으면 코스마다 1위');
   assert.deepEqual((await call('/top?mode=ranked')).bests, [], '경쟁전은 따로 센다');
+  /* 화면 말마다 따로 선다. 말이 없거나 이상하면 한국어다 */
+  const ja = await call('/played', { ...run, cpm: 500, lang: 'ja' }, A);
+  assert.deepEqual([ja.rank, ja.top.map(r => r.cpm)], [1, [500]], '일본어 판은 일본어 순위표가 돌아온다');
+  assert.deepEqual((await call('/top?c=seoul-gu&t=120')).top.map(r => r.cpm), [130, 120], '한국어 순위표에 일본어 기록이 섞이지 않는다');
+  assert.deepEqual((await call('/top?c=seoul-gu&t=120&lang=x1')).top.map(r => r.cpm), [130, 120]);
+  assert.deepEqual((await call('/top?lang=ja')).bests.map(b => b.cpm), [500], '코스마다 1위도 말마다');
+  db.prepare("delete from best where lang = 'ja'").run();
 
   /* /score 는 빠졌다. 이름 없는 로그인 판은 /played 가 올리고, 로그인 안 한 판은 막힌다 */
   const { name: _n, ...noName } = run;

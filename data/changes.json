@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.471",
+    "date": "2026-10-22",
+    "ko": "순위표가 화면 언어마다 따로 섭니다. 한국어로 친 기록은 한국어 순위에, 일본어로 친 기록은 일본어 순위에 오르고, 1대1 경쟁전도 같은 언어끼리 짝지어집니다. 지금까지의 기록은 한국어 순위로 옮겼습니다.",
+    "en": "Leaderboards are now kept separately for each display language — a run typed in Japanese ranks on the Japanese board, and 1v1 ranked matches pair players of the same language. Earlier records moved to the Korean board."
+  },
+  {
     "v": "0.11.470",
     "date": "2026-10-22",
     "ko": "처음 봇이 나오려 할 때 넵바까지 어두워집니다. 그동안 로고 말고는 넵바 칸을 누를 수도, 호버할 수도 없어 봇만 꺼낼 수 있습니다.",

@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.70';
+const VER = '4.71';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -3517,6 +3517,8 @@ const NAME_KEY = 'rt.name';
 const TOKEN_KEY = 'rt.token';
 const token = () => { try { return localStorage.getItem(TOKEN_KEY) || '' } catch { return '' } };
 
+/* 순위표는 화면 말마다 따로 선다 — 치는 이름이 말마다 달라서다. 어느 말의 표인지 이름으로 붙인다 */
+const langName = () => { try { return new Intl.DisplayNames([LANG], { type: 'language' }).of(LANG) || LANG; } catch { return LANG; } };
 const boardSay = (t, bad) => {
   const p = $('#boardSay'); p.textContent = t; p.classList.toggle('bad', !!bad);
 };
@@ -3566,10 +3568,10 @@ async function board() {
   if (up) G.sent = true;
   try {
     const d = up
-      ? await boardAsk('/played', { ...play, dev: DEV, name: localStorage.getItem(NAME_KEY) || '',
+      ? await boardAsk('/played', { ...play, dev: DEV, lang: LANG, name: localStorage.getItem(NAME_KEY) || '',
           score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
-      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}&mode=${G.ranked ? 'ranked' : 'normal'}`);
-    $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)}`;
+      : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}&lang=${LANG}&mode=${G.ranked ? 'ranked' : 'normal'}`);
+    $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)} · ${langName()}`;
     boardSay(d.rank ? t('nth', { n: d.rank })
       : G.score && !inn ? t('notOnBoard', { n: showSpeed(G.cpm) })
       : '');

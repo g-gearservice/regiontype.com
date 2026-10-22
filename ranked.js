@@ -171,7 +171,7 @@ async function fillRanking() {
   const n = ++rankReq;
   const lad = $('#ladderList'), say = $('#ladderSay');
   lad.replaceChildren(); say.textContent = t('reading');
-  $('#rkDev').textContent = t(DEV === 'mobile' ? 'devMobile' : 'devPc');
+  $('#rkDev').textContent = `${t(DEV === 'mobile' ? 'devMobile' : 'devPc')} · ${langName()}`;
   try {
     const d = await ask(`/ladder?dev=${DEV}`);
     if (n !== rankReq) return;
@@ -187,7 +187,7 @@ async function fillBests(n, mode) {
   const box = $(`#${mode}Bests`), say = $(`#${mode}BestsSay`);
   box.replaceChildren(); say.textContent = t('reading');
   let d;
-  try { d = await ask(`/top?mode=${mode}&dev=${DEV}`); } catch { if (n === rankReq) say.textContent = t('boardFail'); return; }
+  try { d = await ask(`/top?mode=${mode}&dev=${DEV}&lang=${LANG}`); } catch { if (n === rankReq) say.textContent = t('boardFail'); return; }
   if (n !== rankReq) return;
   const here = PICK ? PICK.slug : COURSE.root;
   const known = s => s === COURSE.root || COURSE.tiles.some(x => x.slug === s);
@@ -207,7 +207,7 @@ async function fillBests(n, mode) {
       const ol = det.querySelector('ol'), p = det.querySelector('p');
       p.textContent = t('reading');
       try {
-        const r = await ask(`/top?c=${encodeURIComponent(b.slug)}&t=${b.secs}&mode=${mode}&dev=${DEV}`);
+        const r = await ask(`/top?c=${encodeURIComponent(b.slug)}&t=${b.secs}&mode=${mode}&dev=${DEV}&lang=${LANG}`);
         ol.replaceChildren(...r.top.map((x, i) => rankRow(i, x.name, showSpeed(x.cpm), x.me)));
         /* 상위 줄 밖이어도 내 자리는 보인다 */
         p.textContent = r.rank && !r.top.some(x => x.me) ? `${t('me')} · ${t('nth', { n: r.rank })}` : '';
@@ -1155,7 +1155,7 @@ async function matchFind() {
   const m = mm;
   m.busy = true;
   let d;
-  try { d = await ask('/match/find', { c: m.slug, name: m.name, dev: DEV, ...(m.bot ? { bot: true } : {}) }); }
+  try { d = await ask('/match/find', { c: m.slug, name: m.name, dev: DEV, lang: LANG, ...(m.bot ? { bot: true } : {}) }); }
   catch (e) {
     if (mm !== m) return;
     m.busy = false;
