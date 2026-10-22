@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botCutSay, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -904,6 +904,13 @@ console.log('security rule self-check done');
   assert.deepEqual(botAct('{"say":"x","do":[{"act":"start","course":"mars"},{"act":"open","page":"javascript:alert(1)"},{"act":"eval"}]}', courses).do,
     [], '없는 코스·모르는 쪽·모르는 동작은 버린다');
   assert.deepEqual(botAct('그냥 말만 해요', courses), { say: '그냥 말만 해요', do: [] }, 'JSON 이 아니면 말로만');
+  /* 길이 한도에 끊긴 답 — 날것의 JSON 대신 말 앞부분만 */
+  assert.deepEqual(botAct('{"say":"벚꽃다운 분홍과 \\"자주\\" 타일로","do":[{"act":"theme","acc', courses),
+    { say: '벚꽃다운 분홍과 "자주" 타일로', do: [] }, '끊긴 JSON 은 say 만 살린다');
+  assert.equal(botCutSay('{"say":"반쪽 \\u00'), '반쪽', '끊긴 이스케이프는 버린다');
+  assert.equal(botCutSay('```json\n{"say":"울타리 안'), '울타리 안');
+  assert.equal(botCutSay('{"do":[{"act":"open"'), '', '말이 없으면 빈 말(502)');
+  assert.equal(botCutSay('좋아요 {웃음}'), '좋아요 {웃음}', 'JSON 꼴이 아닌 글은 그대로');
 
   const open = { limit: async () => ({ success: true }) };
   const chat = (body, env) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/bot/chat', {
@@ -968,6 +975,16 @@ console.log('security rule self-check done');
   };
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'fast,slow' })).status, 200);
   assert.deepEqual(order, ['fast', 'fast'], '맨 앞 모델이 곧바로 503 이면 느린 예비보다 먼저 한 번 더 묻는다');
+  order.length = 0;
+  globalThis.fetch = async (url, init) => {
+    const m = JSON.parse(init.body).model;
+    order.push(m);
+    if (m === 'gone') return new Response('{"detail":"Not found for account"}', { status: 404 });
+    if (m === 'slow') return new Response('busy', { status: 500 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"네","do":[]}' } }] }));
+  };
+  assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'gone,slow,third' })).status, 200);
+  assert.deepEqual(order, ['gone', 'slow', 'third'], '404 모델은 시도로 치지 않고 다음 모델이 그 자리를 잇는다');
   let calls = 0;
   globalThis.fetch = async () => (calls++, new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"","do":[]}' } }] })));
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);
