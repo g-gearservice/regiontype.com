@@ -1804,10 +1804,13 @@ const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
    받았으면 답이 비었어도 거기서 끝낸다 — 빈 답을 유도해 모델마다 예산을 깎게 두지 않는다.
    ponytail: 어림은 글자 수로 한다(한글·한자 한 글자 = 1, 그 밖 4글자 = 1). 모델마다
    토크나이저가 달라 정확히 못 맞추니 예산을 넉넉히 밑돌게 잡는다 */
-/* 차례는 잰 속도순이다(2026-09-29, 이 키로): nemotron-3-super 1.6초, glm-5.3-flash 20초,
-   deepseek-v4.1-flash 22~25초. kimi-k2.6·gemma-3-12b·mistral-large-2·llama-3.1-nemotron-70b 는
-   목록에 있어도 이 키엔 404, gemma-4-31b·nemotron-3.5-lightning·gpt-oss-20b 는 25초를 넘겨 뺐다 */
-const NV_MODELS = ['nvidia/nemotron-3-super-120b-a12b', 'z-ai/glm-5.3-flash', 'deepseek-ai/deepseek-v4.1-flash'];
+/* 차례는 잰 속도순이다(2026-10-23, 이 계정으로, 실제 지시문과 스타일·인사·맞대결 물음을 하나씩 세 번):
+   deepseek-v4.1-flash 스타일 6.8~9.5초·인사 2~5초, nemotron-3-ultra 스타일 8.6~13.5초, glm-5.3-flash 스타일
+   25초 안팎에 세 번 중 두 번 30초 초과. nemotron-3-super 는 이 계정에 없어 404('Function … Not found for
+   account'), nemotron-3.5-lightning 은 생각에 토큰을 다 써 스타일 답이 늘 끊긴다(length).
+   kimi-k2.6·gemma-3-12b·mistral-large-2·llama-3.1-nemotron-70b·mistral-nemo-12b·nemotron-nano-3 은 404,
+   gemma-4-31b·gpt-oss-20b·glm-5.3·step-5-preview 는 30초를 넘긴다 */
+const NV_MODELS = ['deepseek-ai/deepseek-v4.1-flash', 'nvidia/nemotron-3-ultra-550b-a55b', 'z-ai/glm-5.3-flash'];
 const NV_DAY = 200000, BOT_OUT = 1200, BOT_TRIES = 2;   // 초안 본문과 스타일(동작 넷)이 끊기지 않을 만큼
 const DAY_MS = 86400000;
 const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
@@ -2020,7 +2023,7 @@ async function botChat(req, env, o) {
   if (!route.length) return reply(429, '오늘 봇이 쓸 수 있는 몫을 다 썼습니다.', o);
   let busy = false;
   /* 맨 앞 모델이 곧바로(2초 안) 5xx 를 주면 느린 예비로 넘기 전에 그 모델에 한 번 더 묻는다 —
-     nemotron 은 가끔 0.1초 만에 503 을 주고 다음 번엔 멀쩡히 답한다 */
+     예전 맨 앞이던 nemotron-3-super 는 가끔 0.1초 만에 503 을 주고 다음 번엔 멀쩡히 답했다 */
   const tries = [...route];
   for (let i = 0; i < tries.length; i++) {
     const model = tries[i];
@@ -2031,9 +2034,9 @@ async function botChat(req, env, o) {
         method: 'POST',
         headers: { authorization: `Bearer ${env.NV_KEY}`, 'content-type': 'application/json' },
         body: JSON.stringify({ model, max_tokens: BOT_OUT, temperature: 0.6, messages }),
-        /* 맨 앞 모델은 평소 3초 안에 답한다 — 가끔 멈출 때 25초를 다 기다리지 않게 8초에 끊는다.
-           NV_MODELS 로 느린 모델을 맨 앞에 두면 이 8초에 걸린다 */
-        signal: AbortSignal.timeout(model === route[0] ? 8000 : 25000),
+        /* 맨 앞 모델은 인사에 2~5초, 스타일(동작 넷)에 10초 안쪽이다 — 가끔 멈출 때 25초를 다 기다리지
+           않게 15초에 끊는다. NV_MODELS 로 느린 모델을 맨 앞에 두면 이 15초에 걸린다 */
+        signal: AbortSignal.timeout(model === route[0] ? 15000 : 25000),
       });
     } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); continue; }
     console.log('bot', model, r.status, Date.now() - t0);
