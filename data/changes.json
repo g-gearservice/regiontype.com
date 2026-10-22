@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.473",
+    "date": "2026-10-22",
+    "ko": "홈 봇이 지금 화면·설정·로그인 상태를 알고 답합니다. 이미 켜진 설정은 켜져 있다고 말하고, 로그인 전엔 경쟁전 대신 로그인부터 권합니다.",
+    "en": "The home bot now knows your current screen, settings and sign-in state. It tells you when a setting is already on and suggests signing in before ranked."
+  },
+  {
     "v": "0.11.472",
     "date": "2026-10-22",
     "ko": "기록 페이지의 티어 카드와 판 카드가 설정 › 보안과 같은 둥근 카드 모양을 따릅니다. 큰 LP 변동 알약도 더는 줄바꿈되지 않습니다.",
