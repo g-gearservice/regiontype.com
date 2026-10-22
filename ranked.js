@@ -817,11 +817,12 @@ function wireChat() {
 }
 
 /* ── 처음 온 사람 ──
-   넵바만 밝게 두고 나머지는 .rk-dim 이 덮는다. 로고 점이 로고를 채우고, 봇은 그 바로
-   아래에 반쯤 숨어(넵바가 봇 층보다 위로 올라간다) 들썩이며 조른다 */
+   로고만 밝게 두고 나머지는 .rk-dim 이 덮는다 — 넵바의 다른 칸도 어둡게 잠가(inert)
+   누르지도 호버하지도 못한다. 로고 점이 로고를 채우고, 봇은 그 바로 아래에 반쯤
+   숨어(넵바가 봇 층보다 위로 올라간다) 들썩이며 조른다 */
 /* 폰은 봇이 시트에 살고 시작하기도 거기 있다 — 시트는 막 위로 올려(style.css) 잠그지
    않는다. 처음 온 사람이 안내를 안 보고도 바로 시작할 수 있다 */
-const INTRO_LOCK = () => [$('#courseBtns'), fingers() ? null : $('#regions .nav-bot'), $('#regions .screen-head'), $('#courseName')];
+const INTRO_LOCK = () => [...document.querySelectorAll('#regions .navbar .nav-side'), $('#sheetGrab'), $('#courseBtns'), fingers() ? null : $('#regions .nav-bot'), $('#regions .screen-head'), $('#courseName')];
 function peekAt() {
   const r = logo().getBoundingClientRect();
   /* 폰은 얼굴(눈)이 로고 아랫변에 걸려 잘리지 않게 덜 숨는다 */
@@ -850,11 +851,9 @@ async function beginIntro() {
   requestAnimationFrame(peekFrame);
 }
 /* 넵바는 글꼴이 늦게 오거나 창이 바뀌면 자리를 옮긴다 — 조르는 동안 매 프레임 로고를
-   따라가고, 막의 윗변도 넵바 아랫변에 맞춘다 */
+   따라간다 */
 function peekFrame() {
   if (!intro) return;
-  /* 폰 넵바는 떠 있는 로고뿐이라 막은 맨 위(상태바 칸)부터 덮는다 */
-  dim.style.top = fingers() ? '0px' : $('#regions .navbar').getBoundingClientRect().bottom + 'px';
   const [x, y] = peekAt();
   if (x !== bot.x || y !== bot.y) place(x, y);
   requestAnimationFrame(peekFrame);

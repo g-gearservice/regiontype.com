@@ -2649,11 +2649,13 @@ body:is(.signing,.setting,.paging) .rk-live{translate:-100% 100%}
 .rk-layer[hidden]{display:none}
 /* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */
 body:is(.signing,.setting,.paging) .rk-layer{opacity:0;visibility:hidden}
-/* 처음 온 사람: 넵바 줄만 남기고 홈을 덮는다 — 막의 윗변은 ranked.js 가 넵바 아래에
-   맞춘다. 넵바를 봇 층보다 올려 봇이 로고 알약 뒤에 반쯤 숨는다 */
+/* 처음 온 사람: 로고만 남기고 넵바까지 덮는다. 넵바를 봇 층보다 올려 봇이 로고 알약
+   뒤에 반쯤 숨고, 막 위로 올라온 넵바의 다른 칸은 막만큼 어둡게 눌러 둔다(잠금은
+   ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
 .rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
 .rk-dim[hidden]{display:none}
 body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:6}
+body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 @keyframes rk-peek{
   0%,100%{transform:translateY(0) rotate(0)}

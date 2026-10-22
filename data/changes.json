@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.470",
+    "date": "2026-10-22",
+    "ko": "처음 봇이 나오려 할 때 넵바까지 어두워집니다. 그동안 로고 말고는 넵바 칸을 누를 수도, 호버할 수도 없어 봇만 꺼낼 수 있습니다.",
+    "en": "When the bot first asks to come out, the navbar dims too. Until it is out, only the logo responds; the other navbar items can't be clicked or hovered."
+  },
+  {
     "v": "0.11.469",
     "date": "2026-10-22",
     "ko": "동네버스 베타의 빠르기·멈춤 단추는 이제 시계를 누를 때만 내려옵니다. 지금 고른 단추는 누른 색에 밑줄이 붙고, 나머지는 밤엔 흰색, 낮엔 검은색으로 보입니다. 시계 옆에는 요일과 함께 며칠째인지도 나옵니다(1일 월).",
