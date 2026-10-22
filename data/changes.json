@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.472",
+    "date": "2026-10-22",
+    "ko": "기록 페이지의 티어 카드와 판 카드가 설정 › 보안과 같은 둥근 카드 모양을 따릅니다. 큰 LP 변동 알약도 더는 줄바꿈되지 않습니다.",
+    "en": "The Records page tier card and match cards now share the rounded card style used in Settings › Security, and large LP change pills no longer wrap."
+  },
+  {
     "v": "0.11.471",
     "date": "2026-10-22",
     "ko": "순위표가 화면 언어마다 따로 섭니다. 한국어로 친 기록은 한국어 순위에, 일본어로 친 기록은 일본어 순위에 오르고, 1대1 경쟁전도 같은 언어끼리 짝지어집니다. 지금까지의 기록은 한국어 순위로 옮겼습니다.",
