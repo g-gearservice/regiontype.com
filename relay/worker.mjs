@@ -1808,7 +1808,7 @@ const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
    deepseek-v4.1-flash 22~25초. kimi-k2.6·gemma-3-12b·mistral-large-2·llama-3.1-nemotron-70b 는
    목록에 있어도 이 키엔 404, gemma-4-31b·nemotron-3.5-lightning·gpt-oss-20b 는 25초를 넘겨 뺐다 */
 const NV_MODELS = ['nvidia/nemotron-3-super-120b-a12b', 'z-ai/glm-5.3-flash', 'deepseek-ai/deepseek-v4.1-flash'];
-const NV_DAY = 200000, BOT_OUT = 800, BOT_TRIES = 2;   // 커뮤니티 초안 본문이 들어갈 만큼
+const NV_DAY = 200000, BOT_OUT = 1200, BOT_TRIES = 2;   // 초안 본문과 스타일(동작 넷)이 끊기지 않을 만큼
 const DAY_MS = 86400000;
 const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
 /* 봇이 바꿀 수 있는 설정과 그 값. app.js·settings.js 의 DEF 와 같은 키다(lang·country 는
@@ -1928,13 +1928,24 @@ export function botSystem({ courses, lang, name, now }) {
     courses.map(x => `${x.slug}: ${x.label}`).join('\n');
 }
 
+/* JSON 으로 못 읽은 답. 길이 한도(BOT_OUT)에 걸려 중간에 끊긴 JSON 이면 "say" 의 앞부분만 살린다 —
+   날것의 JSON 을 말풍선에 띄우지 않는다. 말이 안 보이면 빈 말(→ 502)이고, JSON 꼴이 아닌 글은 그대로 말이다 */
+export function botCutSay(raw) {
+  const s = raw.replace(/^```(?:json)?\s*/, '');
+  if (!s.startsWith('{') && !s.includes('"say"')) return raw;
+  const m = s.match(/"say"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  if (!m) return '';
+  const body = m[1].replace(/\\(u[0-9a-fA-F]{0,3})?$/, '');   // 끊긴 자리의 반쪽 이스케이프
+  try { return JSON.parse(`"${body}"`).trim(); } catch { return body.replace(/\\(.)/g, '$1').trim(); }
+}
+
 /* 모델의 답을 말과 동작으로 가른다. 모르는 동작·없는 코스는 버린다 */
 export function botAct(text, courses) {
   const raw = String(text ?? '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
   let j = null;
   const m = raw.match(/\{[\s\S]*\}/);
   if (m) try { j = JSON.parse(m[0]); } catch {}
-  if (!j || typeof j !== 'object') return { say: cut(raw, BOT_LINE), do: [] };
+  if (!j || typeof j !== 'object') return { say: cut(botCutSay(raw), BOT_LINE), do: [] };
   const slugs = new Set(courses.map(x => x.slug));
   const acts = (Array.isArray(j.do) ? j.do : []).slice(0, BOT_ACTS).map(a => {
     if (a?.act === 'start' && slugs.has(a.course)) return { act: 'start', course: a.course, ranked: a.ranked === true };
@@ -2004,8 +2015,8 @@ async function botChat(req, env, o) {
   const models = String(env.NV_MODELS || env.NV_MODEL || '').split(',').map(x => x.trim()).filter(Boolean);
   const day = Math.floor(Date.now() / DAY_MS);
   const need = botTokens(messages) + BOT_OUT;
-  const route = botRoute(models.length ? models : NV_MODELS, await botUsed(env, day), need,
-                         Number(env.NV_BUDGET) || NV_DAY).slice(0, BOT_TRIES);
+  const ready = botRoute(models.length ? models : NV_MODELS, await botUsed(env, day), need,
+                       Number(env.NV_BUDGET) || NV_DAY), route = ready.slice(0, BOT_TRIES);
   if (!route.length) return reply(429, '오늘 봇이 쓸 수 있는 몫을 다 썼습니다.', o);
   let busy = false;
   /* 맨 앞 모델이 곧바로(2초 안) 5xx 를 주면 느린 예비로 넘기 전에 그 모델에 한 번 더 묻는다 —
@@ -2027,12 +2038,21 @@ async function botChat(req, env, o) {
     } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); continue; }
     console.log('bot', model, r.status, Date.now() - t0);
     if (!r.ok) {
+      /* 404 는 이 키로 그 모델을 못 쓴다는 뜻이다(2026-10-22, nemotron-3-super 가 키를 바꿔도 404).
+         묻지도 못한 셈이라 시도로 치지 않고 아직 안 물은 다음 모델을 뒤에 붙인다. 까닭은 로그에 남긴다 */
+      if (r.status === 404) {
+        console.warn('bot', model, 404, (await r.text().catch(() => '')).slice(0, 300));
+        const next = ready.find(m => !tries.includes(m));
+        if (next) tries.push(next);
+        continue;
+      }
       busy ||= r.status === 429;
       if (i === 0 && r.status >= 500 && Date.now() - t0 < 2000) tries.splice(1, 0, model);
       continue;
     }
     const d = await r.json().catch(() => null);
     const text = d?.choices?.[0]?.message?.content;
+    if (d?.choices?.[0]?.finish_reason === 'length') console.warn('bot', model, 'cut at max_tokens');
     await botSpend(env, day, model, d?.usage?.total_tokens || need - BOT_OUT + botTokens([{ content: text }]));
     const out = botAct(text, a.courses);
     return out.say || out.do.length ? send(200, out, o) : reply(502, '봇이 대답하지 못했습니다.', o);

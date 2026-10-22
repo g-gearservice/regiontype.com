@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.475",
+    "date": "2026-10-22",
+    "ko": "홈 봇이 답하지 못하는 일이 줄었습니다. 쓸 수 없는 모델은 건너뛰고 다음 모델에 묻고, 긴 답이 중간에 끊겨도 말풍선에 코드 조각 대신 할 말만 보입니다.",
+    "en": "The home bot fails less often. It skips models it can't use and asks the next one, and a long answer that gets cut off now shows only what the bot meant to say instead of raw code."
+  },
+  {
     "v": "0.11.474",
     "date": "2026-10-22",
     "ko": "홈 봇이 더 많은 일을 합니다. \"나랑 붙자\"고 하면 경쟁전 1대1로 맞붙고, 커뮤니티 글 초안을 채워 주고(올리기는 직접), 내 전적을 읽고 요약하고, 봇 모습을 바꿉니다. 베타: 좋아하는 브랜드·작품·분위기를 말하면 그 스타일로 사이트 색과 봇을 꾸밉니다.",
