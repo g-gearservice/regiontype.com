@@ -22,6 +22,8 @@
      GET  /ladder   경쟁전 상위 50
      순위표·사다리는 기기(dev)마다 따로 선다 — 'pc' | 'mobile'. 쓰기는 몸통의 dev,
      읽기(/top·/ladder·/games)는 ?dev= 로 받는다. 'mobile' 이 아니면 전부 'pc' 다
+     순위표(/top)는 화면 말(lang)마다도 따로 선다 — 몸통·?lang= 의 두 글자, 없으면 'ko'.
+     1대1 은 같은 말끼리만 짝짓는다. 사다리(lp)는 말과 상관없이 하나다
 
      1차 인증은 Google·Apple(SSO) 이 하고, 2단계는 늘 로그인 Google 메일로 가는 숫자 6자리다.
      POST /auth/sso    SSO 시작 {p,s}                    → 공급자 URL
@@ -128,12 +130,15 @@ export function compose(c) {
    값이라 'mobile' 이 아니면 전부 'pc' 로 떨어뜨린다 — 옛 앱도 쓰레기 값도 pc 다.
    줄을 가르는 데만 쓰고 그 밖의 무엇도 이 값을 믿지 않는다 */
 export const devOf = d => d === 'mobile' ? 'mobile' : 'pc';
+/* 언어 갈래. 화면 말마다 치는 이름이 달라(한글 자모·가나·로마자) 속도를 견줄 수 없다 —
+   순위표(best)를 말마다 가른다. 두 글자 소문자가 아니면 'ko' 다 — 옛 앱과 옛 줄은 한국어다 */
+export const langOf = l => /^[a-z]{2}$/.test(l) ? l : 'ko';
 
 /* 어느 판인지. 코스 이름과 제한 시간이 둘 다 맞아야 한 줄에 세운다.
    mode 는 읽을 때만 쓴다 — 쓰는 쪽(logPlay)은 부른 경로가 정한 값을 쓴다 */
 export function where(c) {
   const slug = cut(c.c, 40), secs = Number(c.t);
-  return { slug, secs, dev: devOf(c.dev), mode: c.mode === 'ranked' ? 'ranked' : 'normal', size: SIZE[slug] || 0,
+  return { slug, secs, dev: devOf(c.dev), lang: langOf(c.lang), mode: c.mode === 'ranked' ? 'ranked' : 'normal', size: SIZE[slug] || 0,
            ok: Object.hasOwn(SIZE, slug) && TIMES.includes(secs) };
 }
 
@@ -233,29 +238,29 @@ const board = (env, w) => env.DB.prepare(
   `select b.who as who, ${SHOWN} as name,
           b.cpm as cpm, b.score as score, b.hits as hits, b.acc as acc
      from best b left join profile p on p.who = b.who
-    where b.mode = ? and b.slug = ? and b.secs = ? and b.dev = ? order by b.cpm desc, b.at asc limit ?`
-).bind(w.mode, w.slug, w.secs, w.dev, TOP);
+    where b.mode = ? and b.slug = ? and b.secs = ? and b.dev = ? and b.lang = ? order by b.cpm desc, b.at asc limit ?`
+).bind(w.mode, w.slug, w.secs, w.dev, w.lang, TOP);
 /* 그 판의 상위 줄과 내 자리. 내 줄이 없으면 rank 는 null 이다 */
 async function standing(env, w, me) {
   const [list, rank] = await env.DB.batch([
     board(env, w),
     env.DB.prepare(
       `select count(b.who) + 1 as n from best m left join best b
-          on b.mode = m.mode and b.slug = m.slug and b.secs = m.secs and b.dev = m.dev and b.cpm > m.cpm
-        where m.mode = ? and m.slug = ? and m.secs = ? and m.dev = ? and m.who = ? group by m.who`
-    ).bind(w.mode, w.slug, w.secs, w.dev, me ?? ''),
+          on b.mode = m.mode and b.slug = m.slug and b.secs = m.secs and b.dev = m.dev and b.lang = m.lang and b.cpm > m.cpm
+        where m.mode = ? and m.slug = ? and m.secs = ? and m.dev = ? and m.lang = ? and m.who = ? group by m.who`
+    ).bind(w.mode, w.slug, w.secs, w.dev, w.lang, me ?? ''),
   ]);
   return { top: seen(list.results, me), rank: rank.results[0]?.n ?? null };
 }
 /* 코스마다 1위 한 줄과 올린 사람 수. 줄 수는 코스 × 제한 시간을 못 넘는다(수백 줄).
    ponytail: 같은 속도 1위가 둘이면 sqlite 가 아무나 고른다 — 순위표(board)는 먼저 올린 쪽이다 */
-const bests = (env, mode, dev) => env.DB.prepare(
+const bests = (env, mode, dev, lang) => env.DB.prepare(
   `select b.slug as slug, b.secs as secs, b.n as n, b.cpm as cpm, ${SHOWN} as name
      from (select slug, secs, count(*) as n, max(cpm) as cpm, who, name from best
-            where mode = ? and dev = ? group by slug, secs) b
+            where mode = ? and dev = ? and lang = ? group by slug, secs) b
      left join profile p on p.who = b.who
     order by b.n desc, b.cpm desc`
-).bind(mode, dev);
+).bind(mode, dev, lang);
 /* 이름은 서버가 다듬어 저장하므로 브라우저가 자기 줄을 이름으로 찾으면 어긋난다.
    난수 id 는 남에게 보일 값이 아니니 여기서 떼고 '나' 표시만 붙여 보낸다. */
 const seen = (rows, who) => rows.map(({ who: w, ...r }) => who ? { ...r, me: w === who } : r);
@@ -335,15 +340,15 @@ async function dist(req, env, o) {
   });
 }
 
-/* GET /top?c=&t=&mode=&dev= 그 판의 상위 줄과 내 자리. c 가 없으면 코스마다 1위 */
+/* GET /top?c=&t=&mode=&dev=&lang= 그 판의 상위 줄과 내 자리. c 가 없으면 코스마다 1위 */
 async function top(req, env, o) {
   const u = new URL(req.url), q = k => u.searchParams.get(k);
   const me = await sessionWho(env, req);
   if (!q('c')) {
-    const w = where({ mode: q('mode'), dev: q('dev') });
-    return safely(o, async () => send(200, { bests: (await bests(env, w.mode, w.dev).all()).results }, o));
+    const w = where({ mode: q('mode'), dev: q('dev'), lang: q('lang') });
+    return safely(o, async () => send(200, { bests: (await bests(env, w.mode, w.dev, w.lang).all()).results }, o));
   }
-  const w = where({ c: q('c'), t: q('t'), dev: q('dev'), mode: q('mode') });
+  const w = where({ c: q('c'), t: q('t'), dev: q('dev'), mode: q('mode'), lang: q('lang') });
   if (!w.ok) return reply(400, '없는 판입니다.', o);
   return safely(o, async () => send(200, await standing(env, w, me), o));
 }
@@ -426,17 +431,17 @@ export function rankedCheck(c, tk, now, who) {
 /* 판 한 줄을 적고 그 사람의 옛 줄을 50 판에서 자른다. 일반전·경쟁전·1대1 이 전부 여기를
    지나므로 코스별 최고 기록(best)도 여기서만 쓴다 — 더 빠를 때만 갈아 끼운다.
    탈주·앞뒤 안 맞는 판은 cpm 0 으로 오니 올리지 않는다 */
-const logPlay = (env, who, mode, dev, slug, secs, e, delta, at, win = null) => [
+const logPlay = (env, who, mode, dev, lang, slug, secs, e, delta, at, win = null) => [
   env.DB.prepare('insert into played (who, mode, dev, slug, secs, cpm, score, hits, acc, delta, win, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .bind(who, mode, dev, slug, secs, e.cpm, e.score, e.hits, e.acc, delta, win, at),
   env.DB.prepare('delete from played where who = ? and rowid not in (select rowid from played where who = ? order by at desc limit ?)')
     .bind(who, who, KEEP),
   ...(e.cpm > 0 ? [env.DB.prepare(
-    `insert into best (mode, slug, secs, dev, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     on conflict (mode, slug, secs, dev, who) do update set name = excluded.name, cpm = excluded.cpm,
+    `insert into best (mode, slug, secs, dev, lang, who, name, cpm, score, hits, acc, at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     on conflict (mode, slug, secs, dev, lang, who) do update set name = excluded.name, cpm = excluded.cpm,
        score = excluded.score, hits = excluded.hits, acc = excluded.acc, at = excluded.at
      where excluded.cpm > best.cpm`
-  ).bind(mode, slug, secs, dev, who, e.name || '', e.cpm, e.score, e.hits, e.acc, at)] : []),
+  ).bind(mode, slug, secs, dev, lang, who, e.name || '', e.cpm, e.score, e.hits, e.acc, at)] : []),
 ];
 
 /* 끝내지 않은 옛 표를 탈주로 셈하는 문장들 — rankedStart 와 matchFind 가 같이 쓴다.
@@ -444,7 +449,7 @@ const logPlay = (env, who, mode, dev, slug, secs, e, delta, at, win = null) => [
    또 깎지 않는다. 부른 쪽은 batch 뒤에 tk.duel 이 있으면 settle 을 불러 준다 */
 const forfeit = (env, me, tk, quit, now) => [
   env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, at = ? where who = ? and dev = ?').bind(quit, now, me, tk.dev),
-  ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now, 0),
+  ...logPlay(env, me, 'ranked', tk.dev, tk.lang, tk.slug, RANKED_SECS, { cpm: 0, score: 0, hits: 0, acc: 0 }, quit, now, 0),
   env.DB.prepare('delete from ticket where who = ?').bind(me),
   ...(tk.duel ? [env.DB.prepare(`update duel set a_cpm = case when a = ? and a_cpm is null then -2 else a_cpm end,
                                                    b_cpm = case when b = ? and b_cpm is null then -2 else b_cpm end
@@ -456,14 +461,14 @@ async function rankedStart(req, env, o) {
   if (!me) return reply(401, '경쟁전은 로그인이 필요합니다.', o);
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const slug = cut(c.c, 40), name = plain(c.name, CAP.name), dev = devOf(c.dev);
+  const slug = cut(c.c, 40), name = plain(c.name, CAP.name), dev = devOf(c.dev), lang = langOf(c.lang);
   if (!Object.hasOwn(SIZE, slug) || !name) return reply(400, '시작할 수 없는 판입니다.', o);
   const ok = await pass(env.RL_RK, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
     const now = Date.now(), id = rand(18);
     const [old, row] = await env.DB.batch([
-      env.DB.prepare('select slug, dev, duel from ticket where who = ?').bind(me),
+      env.DB.prepare('select slug, dev, lang, duel from ticket where who = ?').bind(me),
       /* 탈주는 옛 표를 낸 기기의 사다리에서 깎는다 */
       env.DB.prepare('select lp, games, mmr from ladder where who = ? and dev = (select dev from ticket where who = ?)').bind(me, me),
     ]);
@@ -473,9 +478,9 @@ async function rankedStart(req, env, o) {
       env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
                       on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
       ...(tk ? forfeit(env, me, tk, quit, now) : []),
-      env.DB.prepare(`insert into ticket (who, id, slug, dev, at) values (?, ?, ?, ?, ?)
-                      on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, at = excluded.at`)
-        .bind(me, id, slug, dev, now),
+      env.DB.prepare(`insert into ticket (who, id, slug, dev, lang, at) values (?, ?, ?, ?, ?, ?)
+                      on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, lang = excluded.lang, at = excluded.at`)
+        .bind(me, id, slug, dev, lang, now),
     ]);
     if (tk?.duel) await settle(env, tk.duel, now);
     return send(201, { id, secs: RANKED_SECS, quit }, o);
@@ -493,7 +498,7 @@ async function rankedEnd(req, env, o) {
     const now = Date.now();
     /* 표를 먼저 태운다 — 한 줄을 돌려받은 요청만 이어 간다. 같은 표로 두 번
        동시에 끝내도 한 번만 셈된다 */
-    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, dev, at, duel')
+    const tk = await env.DB.prepare('delete from ticket where who = ? and id = ? returning slug, dev, lang, at, duel')
       .bind(me, cut(c.id, 40)).first();
     if (!tk) return reply(409, '끝낼 경쟁전이 없습니다.', o);
     if (tk.duel) return duelEnd(env, me, tk, c, now, o);
@@ -517,7 +522,7 @@ async function rankedEnd(req, env, o) {
     await env.DB.batch([
       env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, mmr = ?, at = ? where who = ? and dev = ?')
         .bind(d, S === 1 ? 1 : 0, r.mmr ?? null, now, me, tk.dev),
-      ...logPlay(env, me, 'ranked', tk.dev, tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now, S),
+      ...logPlay(env, me, 'ranked', tk.dev, tk.lang, tk.slug, RANKED_SECS, e.ok ? e : { cpm: 0, score: 0, hits: 0, acc: 0 }, d, now, S),
     ]);
     if (!e.ok) return reply(400, '올릴 수 없는 기록입니다.', o);
     return send(200, { delta: d, lp: lad.lp + d, games: lad.games + 1, dev: tk.dev, win: S, placed: !!r.placed }, o);
@@ -567,7 +572,7 @@ async function matchFind(req, env, o) {
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
   if (!c || typeof c !== 'object') return reply(400, '읽을 수 없는 내용입니다.', o);
-  const slug = cut(c.c, 40), name = plain(c.name, CAP.name), dev = devOf(c.dev);
+  const slug = cut(c.c, 40), name = plain(c.name, CAP.name), dev = devOf(c.dev), lang = langOf(c.lang);
   if (!Object.hasOwn(SIZE, slug) || !name) return reply(400, '시작할 수 없는 판입니다.', o);
   const ok = await pass(env.RL_MT, ip(req));
   if (ok !== true) return shut(ok, o);
@@ -577,7 +582,7 @@ async function matchFind(req, env, o) {
       env.DB.prepare(`insert into ladder (who, dev, name, lp, games, wins, at) values (?, ?, ?, 0, 0, 0, ?)
                       on conflict (who, dev) do update set name = excluded.name`).bind(me, dev, name, now),
       env.DB.prepare('select lp, mmr from ladder where who = ? and dev = ?').bind(me, dev),
-      env.DB.prepare('select id, slug, dev, duel, at from ticket where who = ?').bind(me),
+      env.DB.prepare('select id, slug, dev, lang, duel, at from ticket where who = ?').bind(me),
       env.DB.prepare('select at from queue where who = ?').bind(me),
     ]);
     const tk = old.results[0], q = que.results[0], lp = lad.results[0]?.lp ?? 0, mmr = lad.results[0]?.mmr ?? null;
@@ -597,14 +602,14 @@ async function matchFind(req, env, o) {
     const mk = (a, b, extra) => {
       const id = rand(18), at = now + DUEL_LEAD;
       return { id, tid: rand(18), at, slug: extra.slug,
-        duel: env.DB.prepare(`insert into duel (id, dev, slug, at, a, b, a_name, b_name, a_lp, b_lp, bot_cpm, b_cpm, b_acc)
-                              values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-          .bind(id, dev, extra.slug, at, a.who, b.who, a.name, b.name, a.lp, b.lp,
+        duel: env.DB.prepare(`insert into duel (id, dev, lang, slug, at, a, b, a_name, b_name, a_lp, b_lp, bot_cpm, b_cpm, b_acc)
+                              values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .bind(id, dev, lang, extra.slug, at, a.who, b.who, a.name, b.name, a.lp, b.lp,
                 extra.botCpm ?? null, extra.botCpm ?? null, extra.botCpm ? DUEL_ACC : null) };
     };
-    const tkt = (who, m, tid) => env.DB.prepare(`insert into ticket (who, id, slug, dev, at, duel) values (?, ?, ?, ?, ?, ?)
-      on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, at = excluded.at, duel = excluded.duel`)
-      .bind(who, tid, m.slug, dev, m.at, m.id);
+    const tkt = (who, m, tid) => env.DB.prepare(`insert into ticket (who, id, slug, dev, lang, at, duel) values (?, ?, ?, ?, ?, ?, ?)
+      on conflict (who) do update set id = excluded.id, slug = excluded.slug, dev = excluded.dev, lang = excluded.lang, at = excluded.at, duel = excluded.duel`)
+      .bind(who, tid, m.slug, dev, lang, m.at, m.id);
     const meRow = { who: me, name, lp };
 
     if (c.bot === true) {
@@ -621,10 +626,10 @@ async function matchFind(req, env, o) {
       return pair(env, me, m.tid, m.id, now, o);
     }
 
-    /* 사람 짝: 20초 넘은 줄은 걷고, 같은 기기의 가장 오래된 다른 줄을 한 문장으로 집는다 */
+    /* 사람 짝: 20초 넘은 줄은 걷고, 같은 기기·같은 말의 가장 오래된 다른 줄을 한 문장으로 집는다 */
     await env.DB.prepare('delete from queue where at < ?').bind(now - DUEL_WAIT).run();
-    const p = await env.DB.prepare(`delete from queue where who = (select who from queue where dev = ? and who <> ? order by at limit 1)
-                                    returning who, name, slug, lp`).bind(dev, me).first();
+    const p = await env.DB.prepare(`delete from queue where who = (select who from queue where dev = ? and lang = ? and who <> ? order by at limit 1)
+                                    returning who, name, slug, lp`).bind(dev, lang, me).first();
     if (p) {
       const m = mk(p, meRow, { slug: p.slug });
       /* 옛 판은 하루면 걷는다 — 표가 커지지 않게, 남의 이름이 오래 남지 않게 */
@@ -634,10 +639,10 @@ async function matchFind(req, env, o) {
         m.duel, tkt(p.who, m, rand(18)), tkt(me, m, m.tid)]);
       return pair(env, me, m.tid, m.id, now, o);
     }
-    await env.DB.prepare(`insert into queue (who, dev, slug, name, lp, at) values (?, ?, ?, ?, ?, ?)
-                          on conflict (who) do update set name = excluded.name, slug = excluded.slug, lp = excluded.lp`)
-      .bind(me, dev, slug, name, lp, now).run();
-    const n = await env.DB.prepare('select count(*) as n from queue where dev = ?').bind(dev).first('n');
+    await env.DB.prepare(`insert into queue (who, dev, lang, slug, name, lp, at) values (?, ?, ?, ?, ?, ?, ?)
+                          on conflict (who) do update set lang = excluded.lang, name = excluded.name, slug = excluded.slug, lp = excluded.lp`)
+      .bind(me, dev, lang, slug, name, lp, now).run();
+    const n = await env.DB.prepare('select count(*) as n from queue where dev = ? and lang = ?').bind(dev, lang).first('n');
     return send(200, { wait: true, n }, o);
   });
 }
@@ -688,7 +693,7 @@ async function settle(env, id, now, force = false) {
     if (!paid) st.push(
       env.DB.prepare('update ladder set lp = lp + ?, games = games + 1, wins = wins + ?, mmr = ?, at = ? where who = ? and dev = ?')
         .bind(dl, S === 1 ? 1 : 0, r.mmr ?? null, now, d[s], d.dev),
-      ...logPlay(env, d[s], 'ranked', d.dev, d.slug, RANKED_SECS,
+      ...logPlay(env, d[s], 'ranked', d.dev, d.lang, d.slug, RANKED_SECS,
         { cpm: Math.max(0, cpm ?? 0), score: 0, hits: d[s + '_hits'] ?? 0, acc: Math.max(0, d[s + '_acc'] ?? 0), name: d[s + '_name'] }, dl, now, S));
     /* 안 나타난 사람의 표도 태운다 — 다음 시작에서 또 깎이지 않게 */
     if (quit) st.push(env.DB.prepare('delete from ticket where who = ? and duel = ?').bind(d[s], id));
@@ -779,7 +784,7 @@ async function playedNormal(req, env, o) {
   const ok = await pass(env.RL_SC, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
-    await env.DB.batch(logPlay(env, me, 'normal', e.dev, e.slug, e.secs, { ...e, name }, null, Date.now()));
+    await env.DB.batch(logPlay(env, me, 'normal', e.dev, e.lang, e.slug, e.secs, { ...e, name }, null, Date.now()));
     return send(201, await standing(env, { ...e, mode: 'normal' }, me), o);
   });
 }

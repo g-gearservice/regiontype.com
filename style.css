@@ -114,6 +114,9 @@ body{
   font:500 16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
   -webkit-font-smoothing:antialiased;
 }
+/* 아랍어 화면도 판은 왼→오 그대로다(dir=rtl 이면 치는 줄·알약·화살표가 뒤집힌다). 대신 글
+   한 덩이마다 제 글자로 방향을 정해 '!'·'.' 이 아랍어 문장 반대쪽 끝에 붙지 않게 한다 */
+:root:lang(ar) body :not(:has(*)){unicode-bidi:plaintext}
 .grid-bg{
   position:fixed; inset:0; width:100%; height:100%; z-index:-3; pointer-events:none;
   display:block;
@@ -178,8 +181,12 @@ body > #regions{transition:opacity var(--slow) var(--ease-out)}
   width:100%; display:flex; align-items:baseline; justify-content:space-between; gap:12px;
   font-size:14px; line-height:1.4; color:var(--ink-soft); font-weight:600;
 }
+/* 긴 말(de·el·ar·uk 의 경쟁전 단계)은 한 줄에 안 든다 — 두 줄까지 펴고, 자리는 처음부터 두 줄로
+   잡아 단계가 바뀔 때 카드가 들썩이지 않게 한다 */
+.boot-meta{min-height:2.8em}
 .boot-step{
-  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  min-width:0; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
 }
 .boot-pct{
   flex:none; font-variant-numeric:tabular-nums; font-weight:800; color:var(--ink);
@@ -2325,6 +2332,8 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
     flex:none;width:var(--tab);height:100%;padding:0;gap:3px;
     flex-direction:column;justify-content:center;
     font-size:11px;font-weight:700;color:var(--ink-soft);
+    /* 칸 폭이 못 박혀 있다 — 긴 말(Einstellungen·Налаштування)은 칸 밖으로 넘치지 않고 두 줄로 끊는다 */
+    white-space:normal;text-align:center;line-height:1.05;hyphens:auto;overflow-wrap:anywhere;
     transition:opacity var(--fast) var(--ease-out),width var(--dur) var(--ease-out),visibility 0s;
   }
   /* 지금 탭 — 주황 판 하나(.tab-ind)가 칸 사이를 옮겨 다닌다. 아이콘·글자는 판 위 단색.
@@ -2640,11 +2649,13 @@ body:is(.signing,.setting,.paging) .rk-live{translate:-100% 100%}
 .rk-layer[hidden]{display:none}
 /* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */
 body:is(.signing,.setting,.paging) .rk-layer{opacity:0;visibility:hidden}
-/* 처음 온 사람: 넵바 줄만 남기고 홈을 덮는다 — 막의 윗변은 ranked.js 가 넵바 아래에
-   맞춘다. 넵바를 봇 층보다 올려 봇이 로고 알약 뒤에 반쯤 숨는다 */
+/* 처음 온 사람: 로고만 남기고 넵바까지 덮는다. 넵바를 봇 층보다 올려 봇이 로고 알약
+   뒤에 반쯤 숨고, 막 위로 올라온 넵바의 다른 칸은 막만큼 어둡게 눌러 둔다(잠금은
+   ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
 .rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
 .rk-dim[hidden]{display:none}
 body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:6}
+body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 @keyframes rk-peek{
   0%,100%{transform:translateY(0) rotate(0)}

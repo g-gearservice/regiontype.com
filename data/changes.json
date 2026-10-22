@@ -1,5 +1,29 @@
 [
   {
+    "v": "0.11.471",
+    "date": "2026-10-22",
+    "ko": "순위표가 화면 언어마다 따로 섭니다. 한국어로 친 기록은 한국어 순위에, 일본어로 친 기록은 일본어 순위에 오르고, 1대1 경쟁전도 같은 언어끼리 짝지어집니다. 지금까지의 기록은 한국어 순위로 옮겼습니다.",
+    "en": "Leaderboards are now kept separately for each display language — a run typed in Japanese ranks on the Japanese board, and 1v1 ranked matches pair players of the same language. Earlier records moved to the Korean board."
+  },
+  {
+    "v": "0.11.470",
+    "date": "2026-10-22",
+    "ko": "처음 봇이 나오려 할 때 넵바까지 어두워집니다. 그동안 로고 말고는 넵바 칸을 누를 수도, 호버할 수도 없어 봇만 꺼낼 수 있습니다.",
+    "en": "When the bot first asks to come out, the navbar dims too. Until it is out, only the logo responds; the other navbar items can't be clicked or hovered."
+  },
+  {
+    "v": "0.11.469",
+    "date": "2026-10-22",
+    "ko": "동네버스 베타의 빠르기·멈춤 단추는 이제 시계를 누를 때만 내려옵니다. 지금 고른 단추는 누른 색에 밑줄이 붙고, 나머지는 밤엔 흰색, 낮엔 검은색으로 보입니다. 시계 옆에는 요일과 함께 며칠째인지도 나옵니다(1일 월).",
+    "en": "In the Neighborhood Bus beta, the speed and pause buttons now drop down only when you click the clock. The current choice shows in the pressed color with an underline; the others are white at night and black by day. The clock now also shows which day of the run it is, next to the weekday."
+  },
+  {
+    "v": "0.11.468",
+    "date": "2026-10-22",
+    "ko": "한국어가 아닌 화면 말에서 생기던 문제를 고쳤습니다. 가입 안내와 커뮤니티가 모든 언어로 보이고(보조 메일 장 제목·요약 포함), 그리스어 대문자·악센트, 아랍어·태국어 숫자, 베트남어 Telex·VNI 입력이 맞게 판정되며, 순서대로 치는 코스는 목표 이름을 먼저 견줍니다. 결과 카드 제목이 화면 말을 따르고, 휴대폰 아래 탭 이름과 불러오는 중 문구가 잘리지 않으며, 아랍어 문장 부호가 제자리에 붙습니다.",
+    "en": "Fixed problems in interface languages other than Korean. The sign-up guide (including the backup-email step title and summary) and the community page now appear in every language; Greek capitals and accents, Arabic and Thai digits, and Vietnamese Telex/VNI input are judged correctly, and in-order courses check the target name first. The result card title follows your language, phone tab labels and loading text no longer get cut off, and Arabic punctuation sits on the right side."
+  },
+  {
     "v": "0.11.467",
     "date": "2026-10-22",
     "ko": "설정 › 보안의 접힌 칸이 열고 닫힐 때 부드럽게 펼쳐지고, 꺾쇠가 따라 돕니다. 동작 줄이기를 켜면 바로 열립니다.",

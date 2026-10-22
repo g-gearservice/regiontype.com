@@ -15,11 +15,11 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=3.48">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=3.48">
 <link rel="stylesheet" href="../style.css?v=3.79">
-<link rel="stylesheet" href="community.css?v=3.65">
+<link rel="stylesheet" href="community.css?v=4.68">
 <!-- 읽는 글이 아니라 쓰는 곳이라 about/ 과 달리 제 스크립트를 둔다. 서버는 relay/ 의
      /cm/* 다. 글은 평문이고 화면은 textContent 로만 그린다 — innerHTML 을 쓰지 않는다 -->
 <script src="../relay.js?v=3.80"></script>
-<script src="community.js?v=3.80"></script>
+<script src="community.js?v=4.68"></script>
 </head>
 <body>
 
@@ -37,53 +37,53 @@
 
 <header class="cm-top">
   <a class="logo" href="/">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
-  <a class="cm-me" id="me" href="/#signin">로그인</a>
+  <a class="cm-me" id="me" href="/#signin" data-i18n="signinBtn">로그인</a>
 </header>
 
 <main class="cm" id="main">
   <!-- 목록 -->
   <section id="listView" aria-labelledby="cmTitle">
-    <h1 id="cmTitle">커뮤니티</h1>
-    <p class="cm-lead">기록을 자랑하고, 막힌 지명을 묻고, 다음 코스를 제안하는 곳.</p>
+    <h1 id="cmTitle" data-i18n="community">커뮤니티</h1>
+    <p class="cm-lead" data-i18n="cmLead">기록을 자랑하고, 막힌 지명을 묻고, 다음 코스를 제안하는 곳.</p>
 
     <div class="cm-bar">
-      <div class="cm-tags" role="group" aria-label="주제로 거르기" id="tags">
-        <button type="button" data-tag="" aria-pressed="true">전체</button>
-        <button type="button" data-tag="brag" aria-pressed="false"><b aria-hidden="true">★</b>자랑</button>
-        <button type="button" data-tag="ask" aria-pressed="false"><b aria-hidden="true">?</b>질문</button>
-        <button type="button" data-tag="idea" aria-pressed="false"><b aria-hidden="true">+</b>제안</button>
-        <button type="button" data-tag="chat" aria-pressed="false"><b aria-hidden="true">~</b>잡담</button>
+      <div class="cm-tags" role="group" aria-label="주제로 거르기" data-i18n-aria="cmFilter" id="tags">
+        <button type="button" data-tag="" aria-pressed="true" data-i18n="cmAll">전체</button>
+        <button type="button" data-tag="brag" aria-pressed="false"><b aria-hidden="true">★</b><bdi data-i18n="cmBrag">자랑</bdi></button>
+        <button type="button" data-tag="ask" aria-pressed="false"><b aria-hidden="true">?</b><bdi data-i18n="cmAsk">질문</bdi></button>
+        <button type="button" data-tag="idea" aria-pressed="false"><b aria-hidden="true">+</b><bdi data-i18n="kindIdea">제안</bdi></button>
+        <button type="button" data-tag="chat" aria-pressed="false"><b aria-hidden="true">~</b><bdi data-i18n="cmChat">잡담</bdi></button>
       </div>
-      <button type="button" class="profile-button cm-write" id="write">글 쓰기</button>
+      <button type="button" class="profile-button cm-write" id="write" data-i18n="cmWrite">글 쓰기</button>
     </div>
 
     <ol class="cm-list" id="list" aria-live="polite"></ol>
     <p class="cm-say" id="listSay" role="status"></p>
-    <button type="button" class="profile-button cm-more" id="more" hidden>더 보기</button>
+    <button type="button" class="profile-button cm-more" id="more" hidden data-i18n="cmMore">더 보기</button>
   </section>
 
   <!-- 글 하나. 주소는 #p12 -->
   <article id="postView" hidden>
-    <a class="cm-back" href="#">← 목록</a>
+    <a class="cm-back" href="#"><span aria-hidden="true">← </span><span data-i18n="cmList">목록</span></a>
     <p class="cm-tag" id="pTag"></p>
     <h1 id="pTitle" tabindex="-1"></h1>
     <p class="cm-meta" id="pMeta"></p>
     <div class="cm-body" id="pBody"></div>
     <div class="cm-acts">
-      <button type="button" class="profile-button cm-up" id="pUp" aria-pressed="false">♥ 공감 <span id="pUps">0</span></button>
-      <button type="button" class="profile-button" id="pFlag">신고</button>
-      <button type="button" class="profile-button destructive" id="pDel" hidden>지우기</button>
+      <button type="button" class="profile-button cm-up" id="pUp" aria-pressed="false">♥ <span data-i18n="cmLike">공감</span> <span id="pUps">0</span></button>
+      <button type="button" class="profile-button" id="pFlag" data-i18n="cmFlag">신고</button>
+      <button type="button" class="profile-button destructive" id="pDel" hidden data-i18n="cmDelete">지우기</button>
     </div>
 
     <section class="cm-replies" aria-labelledby="rTitle">
-      <h2 id="rTitle">댓글 <span id="rCount">0</span></h2>
+      <h2 id="rTitle"><span data-i18n="cmComments">댓글</span> <span id="rCount">0</span></h2>
       <ol id="replies"></ol>
       <form id="replyForm" class="cm-form">
-        <label class="cm-label" for="replyBody">댓글 달기</label>
+        <label class="cm-label" for="replyBody" data-i18n="cmReply">댓글 달기</label>
         <textarea id="replyBody" rows="3" maxlength="500" required></textarea>
         <div class="cm-send">
           <span class="cm-count" id="replyCount">0 / 500</span>
-          <button type="submit" class="profile-button cm-go">댓글 달기</button>
+          <button type="submit" class="profile-button cm-go" data-i18n="cmReply">댓글 달기</button>
         </div>
       </form>
     </section>
@@ -94,24 +94,24 @@
 <!-- 글 쓰기. <dialog> 가 초점 가두기와 Esc 닫기를 맡는다 -->
 <dialog id="composer" aria-labelledby="cTitle">
   <form id="postForm" class="cm-form" method="dialog">
-    <h2 id="cTitle">글 쓰기</h2>
+    <h2 id="cTitle" data-i18n="cmWrite">글 쓰기</h2>
     <fieldset class="cm-pick">
-      <legend class="cm-label">주제</legend>
-      <label data-tag="brag"><input type="radio" name="tag" value="brag" required><span><b aria-hidden="true">★</b>자랑</span></label>
-      <label data-tag="ask"><input type="radio" name="tag" value="ask"><span><b aria-hidden="true">?</b>질문</span></label>
-      <label data-tag="idea"><input type="radio" name="tag" value="idea"><span><b aria-hidden="true">+</b>제안</span></label>
-      <label data-tag="chat"><input type="radio" name="tag" value="chat"><span><b aria-hidden="true">~</b>잡담</span></label>
+      <legend class="cm-label" data-i18n="cmTopic">주제</legend>
+      <label data-tag="brag"><input type="radio" name="tag" value="brag" required><span><b aria-hidden="true">★</b><bdi data-i18n="cmBrag">자랑</bdi></span></label>
+      <label data-tag="ask"><input type="radio" name="tag" value="ask"><span><b aria-hidden="true">?</b><bdi data-i18n="cmAsk">질문</bdi></span></label>
+      <label data-tag="idea"><input type="radio" name="tag" value="idea"><span><b aria-hidden="true">+</b><bdi data-i18n="kindIdea">제안</bdi></span></label>
+      <label data-tag="chat"><input type="radio" name="tag" value="chat"><span><b aria-hidden="true">~</b><bdi data-i18n="cmChat">잡담</bdi></span></label>
     </fieldset>
-    <label class="cm-label" for="postTitle">제목</label>
+    <label class="cm-label" for="postTitle" data-i18n="cmPostTitle">제목</label>
     <input id="postTitle" maxlength="60" required autocomplete="off">
-    <label class="cm-label" for="postBody">내용</label>
+    <label class="cm-label" for="postBody" data-i18n="fbBody">내용</label>
     <textarea id="postBody" rows="8" maxlength="2000" required></textarea>
-    <p class="cm-note">글은 누구나 읽습니다. 연락처·실명은 적지 마세요. 서로 다른 세 사람이 신고하면 가려집니다.</p>
+    <p class="cm-note" data-i18n="cmNote">글은 누구나 읽습니다. 연락처·실명은 적지 마세요. 서로 다른 세 사람이 신고하면 가려집니다.</p>
     <p class="cm-say" id="composeSay" role="status"></p>
     <div class="cm-send">
       <span class="cm-count" id="postCount">0 / 2000</span>
-      <button type="button" class="profile-button" id="cancel">닫기</button>
-      <button type="submit" class="profile-button cm-go" value="send">올리기</button>
+      <button type="button" class="profile-button" id="cancel" data-i18n="close">닫기</button>
+      <button type="submit" class="profile-button cm-go" value="send" data-i18n="cmPost">올리기</button>
     </div>
   </form>
 </dialog>
@@ -119,14 +119,14 @@
 <!-- 폰에서만: 홈과 같은 아래 탭 막대(style.css 의 .tab-dock). 홈은 app.js 가 요소를 옮겨 짓지만
      여기는 제 페이지라 링크를 그냥 적는다. 덮개들은 홈 주소 해시로 열린다 -->
 <div class="tab-dock" id="tabDock">
-  <nav class="tab-bar" id="tabBar" aria-label="놀이 메뉴">
+  <nav class="tab-bar" id="tabBar" aria-label="놀이 메뉴" data-i18n-aria="navDock">
     <span class="tab-ind" aria-hidden="true"></span>
-    <a class="nav-item" id="tabHome" href="/">지도</a>
-    <a class="nav-item" href="/#ranking">순위</a>
-    <a class="nav-item" href="/community/" aria-current="page">커뮤니티</a>
-    <a class="nav-item" href="/#settings">설정</a>
+    <a class="nav-item" id="tabHome" href="/" data-i18n="tabMap">지도</a>
+    <a class="nav-item" href="/#ranking" data-i18n="ranking">순위</a>
+    <a class="nav-item" href="/community/" aria-current="page" data-i18n="community">커뮤니티</a>
+    <a class="nav-item" href="/#settings" data-i18n="options">설정</a>
   </nav>
-  <a class="nav-item" id="signinLink" href="/#signin">로그인</a>
+  <a class="nav-item" id="signinLink" href="/#signin" data-i18n="signinBtn">로그인</a>
 </div>
 
 </body>

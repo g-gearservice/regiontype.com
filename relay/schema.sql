@@ -70,11 +70,19 @@ create index if not exists speed_top on speed (slug, secs, dev, cpm desc, at asc
 -- 이미 있는 DB 에는 표를 더하고 옛 speed 기록을 일반전으로 옮겨 담는다(사람이 실행한다):
 --   wrangler d1 execute rt-board --remote --file schema.sql
 --   wrangler d1 execute rt-board --remote --command "insert or ignore into best (mode, slug, secs, dev, who, name, cpm, score, hits, acc, at) select 'normal', slug, secs, dev, who, name, cpm, score, hits, acc, at from speed where cpm > 0"
+--
+-- ★ 언어 갈래. 화면 말마다 치는 이름이 달라(한글 자모·가나·로마자) 속도를 견줄 수 없어
+-- best 를 lang(두 글자, 옛 줄은 'ko')으로도 가른다. 1대1 은 같은 말끼리만 짝짓느라
+-- ticket·queue·duel 도 lang 을 든다. lang 이 기본 키에 들어가야 해 옮겨 담기는
+-- migrate-lang.sql 이 한 요청으로 한다(사람이 실행한다):
+--   wrangler d1 execute rt-board --remote --file migrate-lang.sql
+--   wrangler deploy
 create table if not exists best (
   mode  text    not null,         -- 'ranked' | 'normal'
   slug  text    not null,
   secs  integer not null,
   dev   text    not null,
+  lang  text    not null default 'ko',   -- 화면 말. 순위표가 말마다 따로 선다
   who   text    not null,
   name  text    not null default '',
   cpm   integer not null,
@@ -82,9 +90,9 @@ create table if not exists best (
   hits  integer not null,
   acc   integer not null,
   at    integer not null,
-  primary key (mode, slug, secs, dev, who)
+  primary key (mode, slug, secs, dev, lang, who)
 );
-create index if not exists best_top on best (mode, slug, secs, dev, cpm desc, at asc);
+create index if not exists best_top on best (mode, slug, secs, dev, lang, cpm desc, at asc);
 
 -- ── 로그인 ────────────────────────────────────────────────
 -- 순위표에 올릴 때만 필요하다. 게임은 로그인 없이 그대로 돈다.
@@ -268,6 +276,7 @@ create table if not exists ticket (
   slug text    not null,
   at   integer not null,
   dev  text    not null default 'pc',   -- 표를 낸 기기. 끝낼 때 몸통이 아니라 이 값으로 사다리를 고른다
+  lang text    not null default 'ko',   -- 표를 낸 화면 말. 끝낸 판의 최고 기록이 이 말의 순위표에 선다
   duel text                         -- 맞대결 판이면 duel.id. 없으면 옛 혼자 치기
 );
 
@@ -276,6 +285,7 @@ create table if not exists ticket (
 create table if not exists queue (
   who  text primary key,
   dev  text    not null,
+  lang text    not null default 'ko',   -- 같은 기기·같은 말끼리만 짝짓는다
   slug text    not null,
   name text    not null,
   lp   integer not null,
@@ -287,6 +297,7 @@ create table if not exists queue (
 create table if not exists duel (
   id    text primary key,
   dev   text    not null,
+  lang  text    not null default 'ko',
   slug  text    not null,
   at    integer not null,             -- 시작 시각(짝이 지어진 뒤 3초)
   a     text    not null,

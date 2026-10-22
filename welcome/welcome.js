@@ -57,70 +57,84 @@ const answer = {
   push: null, shut: null,
 };
 
-/* 캐릭터 말 이름. account.js 와 같은 표다 — 늘리는 자리가 둘이라 값이 갈리면
-   같은 캐릭터가 두 이름으로 보인다. 엔진이 쥔 id 는 프랑스어다. */
-const KO = {
-  cercle: '동그라미', galet: '조약돌', squircle: '둥근네모', capsule: '캡슐',
-  triangle: '세모', hexagone: '육각', nuage: '구름', goutte: '물방울',
-  neutre: '무표정', attentif: '집중', surpris: '놀람', excite: '신남',
-  heureux: '기쁨', hilare: '함박웃음', colere: '골남', triste: '시무룩',
-  effraye: '겁먹음', mefiant: '갸웃', confus: '어리둥절', curieux: '호기심',
-  fier: '뿌듯', timide: '수줍음', blase: '심드렁', somnolent: '졸림',
-  encre: '먹색', brun: '밤색', rouge: '빨강', orange: '주황', ambre: '호박',
-  vert: '초록', turquoise: '청록', bleu: '파랑', violet: '보라', rose: '분홍',
-  gris: '잿빛', creme: '크림',
+/* 캐릭터 말 이름은 account.js 와 같은 표(data/i18n.json 의 ch_<id>)에서 꺼낸다.
+   엔진이 쥔 id 는 프랑스어다. */
+const KO = id => (id && t('ch_' + id)) || id || '';
+
+/* ── 화면 말 ─────────────────────────────────────────────
+   auth.js 와 같은 결이다. 홈이 rt.ui 에 적어 둔 마지막 말 팩(app.js cacheUI)부터 쓰고,
+   그 팩에 이 페이지 말이 없으면(옛 팩·홈을 안 거친 첫 방문) data/i18n.json 을 받아 고른다.
+   그 말에 없는 키는 영어로, 아무 데도 없으면 빈 값 — HTML 에 적힌 말을 덮지 않게 */
+let I18N = { ko: {} }, LANG = 'ko';
+const t = (key, vars) => {
+  let s = (I18N[LANG] || {})[key] || (I18N.en || {})[key] || (I18N.ko || {})[key] || '';
+  if (s && vars) s = String(s).replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+  return s;
 };
+async function loadI18n() {
+  const ui = parse('rt.ui', null);
+  if (ui && ui.pack && ui.pack.introHello) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
+  else {
+    try { I18N = await (await fetch(asset('../data/i18n.json'))).json(); } catch {}
+    const langs = Object.keys(I18N), o = parse('rt.opt', {});
+    LANG = [o.lang, ...(navigator.languages || [navigator.language])]
+      .map(x => String(x || '').toLowerCase().replace(/^(no|nn)\b.*/, 'nb').slice(0, 2))
+      .find(x => langs.includes(x)) || (langs.includes('en') ? 'en' : 'ko');
+  }
+  document.documentElement.lang = LANG;
+  document.title = t('introTitle') + ' — regiontype';
+  document.querySelectorAll('[data-i18n]').forEach(el => { const s = t(el.dataset.i18n); if (s) el.textContent = s; });
+}
 
 /* ── 물을 것 ───────────────────────────────────────────────
    한 장이 한 항목이다. kind 가 어떤 몸을 그릴지 정하고, key 는 answer 의 칸이다.
    여기 순서를 바꾸면 화면 순서가 바뀐다 — 다른 곳에 번호를 적어 두지 않았다.
+   글은 i18n 키다 — kicker 는 [키, 몇째, 모두], 나머지는 키 하나. draw 가 t() 로 푼다.
 
    skip:true 인 장만 건너뛸 수 있다. 설문 셋이 그렇다 — 안 알려 주셔도 그만이다.
    프로필(캐릭터·이름·아이디·스위치 둘)은 계정에 남아 남 앞에 걸리는 값이라
    비워 둔 채 지나가지 못한다. 캐릭터는 늘 고른 모습이 있어 따로 막을 것이 없다. */
 const STEPS = [
   { kind: 'hello' },
-  { kind: 'pick', skip: true, key: 'platform', kicker: '설문 1/3',
-    ask: 'regiontype 을 어디에서 보셨나요?',
-    note: '',
+  { kind: 'pick', skip: true, key: 'platform', kicker: ['introSurvey', 1, 3],
+    ask: 'introWhere',
     list: [
-      ['search', '검색 (구글·네이버 등)'], ['youtube', '유튜브'],
-      ['instagram', '인스타그램'], ['x', 'X (트위터)'],
-      ['tiktok', '틱톡'], ['community', '커뮤니티·카페'],
-      ['friend', '친구·지인'], ['etc', '그 밖에'],
+      ['search', 'srcSearch'], ['youtube', 'srcYoutube'],
+      ['instagram', 'srcInstagram'], ['x', 'srcX'],
+      ['tiktok', 'srcTiktok'], ['community', 'srcCommunity'],
+      ['friend', 'srcFriend'], ['etc', 'srcEtc'],
     ] },
-  { kind: 'pick', skip: true, key: 'medium', kicker: '설문 2/3',
-    ask: '어떤 모습으로 만나셨나요?',
-    note: '',
+  { kind: 'pick', skip: true, key: 'medium', kicker: ['introSurvey', 2, 3],
+    ask: 'introHow',
     list: [
-      ['video', '영상'], ['post', '글·게시물'], ['comment', '댓글'],
-      ['result', '검색 결과'], ['ad', '광고'], ['etc', '그 밖에'],
+      ['video', 'medVideo'], ['post', 'medPost'], ['comment', 'medComment'],
+      ['result', 'medResult'], ['ad', 'medAd'], ['etc', 'srcEtc'],
     ] },
   /* 0 과 10 이 무슨 뜻인지는 자 양끝의 말이 한다(drawScale 의 .intro-ends) —
      설명을 한 줄 더 얹으면 같은 말을 두 번 하는 것이다 */
-  { kind: 'scale', skip: true, key: 'nps', kicker: '설문 3/3',
-    ask: '이곳을 친구에게 권하시겠어요?', note: '' },
-  { kind: 'face', kicker: '프로필 1/6',
-    ask: '함께 다닐 캐릭터를 고르세요.',
-    note: '여기서 고른 모습이 경쟁전에서도 그대로 나옵니다. 나중에 언제든 바꿉니다.' },
-  { kind: 'text', key: 'botname', kicker: '프로필 2/6',
-    ask: '캐릭터 이름을 지어 주세요.',
-    note: '최대 12자.', max: 12, hint: '예: 방울이' },
-  { kind: 'text', key: 'name', kicker: '프로필 3/6',
-    ask: '어떻게 불러 드릴까요?',
-    note: '순위표와 경쟁전에 걸리는 이름입니다. 최대 12자.', max: 12, hint: '닉네임' },
-  { kind: 'text', key: 'handle', kicker: '프로필 4/6',
-    ask: '아이디를 정해 주세요.',
-    note: '영문 소문자·숫자·밑줄 3~16자. 다른 사람과 겹칠 수 없습니다.',
+  { kind: 'scale', skip: true, key: 'nps', kicker: ['introSurvey', 3, 3],
+    ask: 'introNps' },
+  { kind: 'face', kicker: ['introProfile', 1, 6],
+    ask: 'introFace',
+    note: 'introFaceNote' },
+  { kind: 'text', key: 'botname', kicker: ['introProfile', 2, 6],
+    ask: 'introBot',
+    note: 'introMax12', max: 12, hint: 'introBotHint' },
+  { kind: 'text', key: 'name', kicker: ['introProfile', 3, 6],
+    ask: 'introName',
+    note: 'introNameNote', max: 12, hint: 'acctNick' },
+  { kind: 'text', key: 'handle', kicker: ['introProfile', 4, 6],
+    ask: 'introId',
+    note: 'introIdNote',
     max: 16, hint: 'gayang', prefix: '@' },
-  { kind: 'yesno', key: 'push', kicker: '프로필 5/6',
-    ask: '새소식을 알림으로 받으시겠어요?',
-    note: '새 코스와 바뀐 것을 이 기기의 알림으로 알려 드립니다. 예를 고르면 브라우저가 한 번 더 묻습니다.' },
-  { kind: 'yesno', key: 'shut', kicker: '프로필 6/6',
-    ask: '계정을 비공개로 둘까요?',
-      note: '비공개로 두면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.' },
+  { kind: 'yesno', key: 'push', kicker: ['introProfile', 5, 6],
+    ask: 'introPush',
+    note: 'introPushNote' },
+  { kind: 'yesno', key: 'shut', kicker: ['introProfile', 6, 6],
+    ask: 'introShut',
+    note: 'introShutNote' },
   /* 보안 장은 서버 응답이 답이다(sec). 보조 메일은 건너뛸 수 있다. */
-  { kind: 'mail', skip: true, kicker: '보안',
+  { kind: 'mail', skip: true, kicker: ['introSecurity'],
     ask: '보조 메일을 추가할까요?',
     note: '' },
   { kind: 'done' },
@@ -197,11 +211,11 @@ function draw() {
   $('#introStep').textContent = at + 1;
   /* 레일은 폭이 아니라 scaleX 다 — 매 장마다 레이아웃을 다시 재지 않는다 */
   $('#introBar').style.setProperty('--at', (at + 1) / STEPS.length);
-  $('#introKicker').textContent = s.kicker || '';
-  $('#introNote').textContent = s.note || '';
+  $('#introKicker').textContent = s.kicker ? t(s.kicker[0], { n: s.kicker[1], m: s.kicker[2] }) : '';
+  $('#introNote').textContent = s.note ? t(s.note) : '';
   $('#introBack').hidden = at === 0;
   $('#introSkip').hidden = !s.skip;
-  $('#introNext').textContent = s.kind === 'done' ? '시작하기' : s.kind === 'hello' ? '시작' : '다음';
+  $('#introNext').textContent = t(s.kind === 'done' ? 'start' : s.kind === 'hello' ? 'startPlay' : 'botNext');
   say('');
   body().replaceChildren();
   ({ hello: drawHello, pick: drawPick, scale: drawScale, face: drawFace,
@@ -226,18 +240,17 @@ function draw() {
 }
 
 function drawHello() {
-  $('#introAsk').textContent = '반갑습니다.';
+  $('#introAsk').textContent = t('introHello');
   const p = document.createElement('p');
   p.className = 'intro-lede';
-  p.textContent = '여기는 나라와 동네 이름을 받아쓰는 타자 연습입니다. '
-    + '시작하기 전에 몇 가지만 여쭙고 프로필을 맞춰 두겠습니다 — 1분이면 끝납니다.';
+  p.textContent = t('introLede');
   body().append(p);
 }
 
 /* 고르는 장. 숫자 키가 그대로 번호다(1‥9). 고르면 바로 다음 장으로 넘어간다 —
    'Enter 를 또 눌러야 하나' 를 사람이 고민하지 않게 한다. */
 function drawPick(s) {
-  $('#introAsk').textContent = s.ask;
+  $('#introAsk').textContent = t(s.ask);
   const box = document.createElement('div');
   box.className = 'intro-picks';
   s.list.forEach(([id, label], i) => {
@@ -249,7 +262,7 @@ function drawPick(s) {
     const key = document.createElement('kbd');
     key.textContent = i < 9 ? String(i + 1) : '·';
     const text = document.createElement('span');
-    text.textContent = label;
+    text.textContent = t(label);
     /* 체크는 색 말고 또 하나의 표시다 — 색만으로 고른 것을 나누지 않는다 */
     const tick = document.createElement('span');
     tick.className = 'tick';
@@ -264,7 +277,7 @@ function drawPick(s) {
 }
 
 function drawScale(s) {
-  $('#introAsk').textContent = s.ask;
+  $('#introAsk').textContent = t(s.ask);
   const box = document.createElement('div');
   box.className = 'intro-scale';
   for (let n = 0; n <= 10; n++) {
@@ -272,7 +285,7 @@ function drawScale(s) {
     b.type = 'button';
     b.className = 'intro-score';
     b.textContent = String(n);
-    b.setAttribute('aria-label', n + '점');
+    b.setAttribute('aria-label', t('npsPoint', { n }));
     b.setAttribute('aria-pressed', String(answer.nps === n));
     b.dataset.val = String(n);
     b.style.setProperty('--i', n);
@@ -281,17 +294,17 @@ function drawScale(s) {
   }
   const ends = document.createElement('p');
   ends.className = 'intro-ends';
-  const l = document.createElement('span'); l.textContent = '전혀 아니다';
-  const r = document.createElement('span'); r.textContent = '꼭 권한다';
+  const l = document.createElement('span'); l.textContent = t('npsLow');
+  const r = document.createElement('span'); r.textContent = t('npsHigh');
   ends.append(l, r);
   body().append(box, ends);
 }
 
 function drawYesno(s) {
-  $('#introAsk').textContent = s.ask;
+  $('#introAsk').textContent = t(s.ask);
   const box = document.createElement('div');
   box.className = 'intro-picks intro-yesno';
-  [[true, '예'], [false, '아니요']].forEach(([v, label], i) => {
+  [[true, t('yes')], [false, t('no')]].forEach(([v, label], i) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'intro-pick';
@@ -316,16 +329,16 @@ async function pickYesno(s, v) {
     if (!('Notification' in window)) {
       answer.push = false;
       repaint(s);
-      say('이 브라우저는 알림을 지원하지 않습니다. 이 항목은 꺼 둡니다.');
+      say(t('acctNoNotif'));
       return;
     }
-    say('브라우저에 알림 권한을 묻고 있습니다…');
+    say(t('introAskNotif'));
     let ok = 'denied';
     try { ok = await Notification.requestPermission(); } catch {}
     answer.push = ok === 'granted';
     if (!answer.push) {
       repaint(s);
-      say('알림이 허용되지 않았습니다. 나중에 설정에서 다시 켤 수 있습니다.');
+      say(t('introNotifDenied'));
       return;
     }
   }
@@ -333,7 +346,7 @@ async function pickYesno(s, v) {
 }
 
 function drawText(s) {
-  $('#introAsk').textContent = s.ask;
+  $('#introAsk').textContent = t(s.ask);
   const wrap = document.createElement('label');
   wrap.className = 'intro-field';
   if (s.prefix) {
@@ -345,17 +358,17 @@ function drawText(s) {
   const input = document.createElement('input');
   input.id = 'introInput';
   input.maxLength = s.max;
-  input.placeholder = s.hint || '';
+  input.placeholder = t(s.hint) || s.hint || '';   // gayang 은 키가 아니라 그대로 보인다
   input.value = answer[s.key];
   input.autocomplete = s.key === 'name' ? 'nickname' : 'off';
   if (s.key === 'handle') { input.spellcheck = false; input.autocapitalize = 'none'; }
-  input.setAttribute('aria-label', s.ask);
+  input.setAttribute('aria-label', t(s.ask));
   wrap.append(input);
   body().append(wrap);
 }
 
 function drawFace() {
-  $('#introAsk').textContent = STEPS[at].ask;
+  $('#introAsk').textContent = t(STEPS[at].ask);
   const stage = document.createElement('div');
   stage.className = 'intro-stage';
   const me = document.createElement('div');
@@ -366,11 +379,11 @@ function drawFace() {
 
   const controls = document.createElement('div');
   controls.className = 'character-controls intro-controls';
-  for (const [key, label] of [['shape', '모양'], ['expression', '표정'], ['colour', '색']]) {
+  for (const [key, label] of [['shape', 'acctShape'], ['expression', 'acctExpression'], ['colour', 'acctColour']]) {
     const set = document.createElement('fieldset');
     const leg = document.createElement('legend');
     leg.className = 'profile-label';
-    leg.textContent = label;
+    leg.textContent = t(label);
     const row = document.createElement('div');
     row.className = 'character-choices' + (key === 'colour' ? ' colour-choices' : '');
     row.id = 'intro' + key;
@@ -576,17 +589,17 @@ function pickMail(v) {
 }
 
 function drawDone() {
-  $('#introAsk').textContent = '다 됐습니다.';
+  $('#introAsk').textContent = t('introAllSet');
   const list = document.createElement('dl');
   list.className = 'intro-recap';
   const rows = [
-    ['캐릭터', `${KO[answer.face.colour] || ''} ${KO[answer.face.shape] || ''} · ${KO[answer.face.expression] || ''}`
+    [t('introCharacter'), `${KO(answer.face.colour)} ${KO(answer.face.shape)} · ${KO(answer.face.expression)}`
       + (answer.botname ? ` — ${answer.botname}` : '')],
-    ['닉네임', answer.name],
-    ['아이디', '@' + answer.handle],
-    ['알림', answer.push === true ? '받음' : '안 받음'],
-    ['계정', answer.shut === true ? '비공개' : '공개'],
-    ['보조 메일', sec.mail.done ? '추가함' : '추가 안 함'],
+    [t('acctNick'), answer.name],
+    [t('acctId'), '@' + answer.handle],
+    [t('introNotif'), t(answer.push === true ? 'introPushYes' : 'introPushNo')],
+    [t('acctSection'), t(answer.shut === true ? 'introPrivate' : 'introPublic')],
+    [t('introMail'), t(sec.mail.done ? 'introMailYes' : 'introMailNo')],
   ];
   for (const [k, v] of rows) {
     const dt = document.createElement('dt'); dt.textContent = k;
@@ -620,7 +633,7 @@ async function mountFace() {
   for (const key of ['shape', 'expression', 'colour']) {
     const row = $('#intro' + key);
     for (const id of lists[key]) {
-      const label = KO[id] || id;
+      const label = KO(id);
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'character-choice';
@@ -651,7 +664,7 @@ function paintFace() {
       b.setAttribute('aria-pressed', String(b.dataset.pickId === answer.face[key])));
   }
   $('#introFace')?.setAttribute('aria-label',
-    `${KO[answer.face.colour]} ${KO[answer.face.shape]} · ${KO[answer.face.expression]}`);
+    `${KO(answer.face.colour)} ${KO(answer.face.shape)} · ${KO(answer.face.expression)}`);
   if (!big) return;
   big.setShape(answer.face.shape);
   big.setExpression(answer.face.expression);
@@ -683,25 +696,24 @@ async function claimHandle() {
   const v = answer.handle;
   if (!v || v === claimed) return true;
   if (!/^[a-z0-9_]{3,16}$/.test(v)) {
-    say('영문 소문자·숫자·밑줄 3~16자로 지어 주세요.', true);
+    say(t('acctIdRule'), true);
     return false;
   }
-  say('아이디를 확인하고 있습니다…');
+  say(t('introIdChecking'));
   try {
     /* 서버가 다듬어 되돌려 준 값을 확인한다 — 모양은 맞지만 서버가 안 내주는
        말(예약어)이 있어서, 200 을 받았다고 저장된 것은 아니다. 되돌아온 값이
        친 것과 다르면 조용히 넘어가지 않는다 */
     const back = await save();
     if (back.handle !== v) {
-      say('그 아이디는 쓸 수 없습니다. 다른 아이디를 지어 주세요.', true);
+      say(t('introIdBad'), true);
       return false;
     }
     claimed = v;
     say('');
     return true;
   } catch (e) {
-    say(e.status === 409 ? '이미 쓰이고 있는 아이디입니다. 다른 아이디를 지어 주세요.'
-      : '아이디를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.', true);
+    say(t(e.status === 409 ? 'acctIdTaken' : 'introIdFail'), true);
     return false;
   }
 }
@@ -730,12 +742,12 @@ function missing(s) {
       ? '확인 코드를 입력하거나 "추가하지 않기"를 골라 주세요.' : '';
   }
   if (s.skip) return '';
-  if (s.kind === 'text' && !answer[s.key]) return {
-    botname: '캐릭터 이름을 지어 주세요.',
-    name: '닉네임을 적어 주세요.',
-    handle: '아이디를 정해 주세요.',
-  }[s.key] || '이 칸을 채워 주세요.';
-  if (s.kind === 'yesno' && answer[s.key] === null) return '둘 중 하나를 골라 주세요.';
+  if (s.kind === 'text' && !answer[s.key]) return t({
+    botname: 'introBot',
+    name: 'introNeedName',
+    handle: 'introId',
+  }[s.key] || 'introNeedField');
+  if (s.kind === 'yesno' && answer[s.key] === null) return t('introNeedPick');
   return '';
 }
 
@@ -802,7 +814,7 @@ async function finish() {
   if (finishing) return;
   finishing = true;
   $('#introNext').disabled = true;
-  say('저장하고 있습니다…');
+  say(t('introSaving'));
   mirror();
   try {
     /* 설문 먼저다 — 이 줄이 있어야 다음에 들어와도 안내를 다시 안 띄운다 */
@@ -811,7 +823,7 @@ async function finish() {
   } catch {
     finishing = false;
     $('#introNext').disabled = false;
-    say('저장하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요.', true);
+    say(t('introSaveFail'), true);
     return;
   }
   /* 마쳤다는 표를 이 브라우저에도 남긴다 — 뒤로 가기로 돌아오면 중계기에
@@ -874,6 +886,7 @@ addEventListener('keydown', e => {
      중계기에 묻기도 전에 비킨다 — 뒤로 가기로 돌아왔을 때 설문이 한 번 번쩍이지 않는다.
      옛 계정이 남긴 표('1' 이나 다른 토큰)는 새로 가입한 계정을 내쫓지 못한다. */
   if (read(DONE_KEY) === token()) { location.replace('../'); return; }
+  await loadI18n();
   draw();
   /* 표가 없으면(기기를 바꿨거나 저장소를 지웠거나) 서버에 묻는다. 그 사이에도
      첫 장은 이미 떠 있다 — 중계기가 느려도 빈 화면을 보이지 않는다 */
