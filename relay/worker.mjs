@@ -1828,10 +1828,20 @@ export function botAsk(c) {
     .map(x => ({ slug: cut(x?.slug, 40), label: plain(x?.label, 40) }))
     .filter(x => /^[\w-]+$/.test(x.slug) && x.label);
   return { msgs, courses, lang: plain(c?.lang, 8) || 'ko', name: plain(c?.name, CAP.botname) || 'Grok',
-           ok: msgs.length > 0 && msgs[msgs.length - 1].role === 'user' };
+           now: botNow(c?.now), ok: msgs.length > 0 && msgs[msgs.length - 1].role === 'user' };
 }
 
-export function botSystem({ courses, lang, name }) {
+/* 지금 사용자 쪽 형편 — 봇이 켜진 걸 또 켜거나, 로그인 안 한 사람을 경쟁전에 보내지 않게.
+   아는 설정 키·값과 쪽만 남긴다. 옛 브라우저가 안 보내면 null 이고 지시문에서 빠진다 */
+export function botNow(n) {
+  if (!n || typeof n !== 'object') return null;
+  const o = n.opt && typeof n.opt === 'object' ? n.opt : {};
+  return { opt: Object.fromEntries(Object.entries(BOT_SET).filter(([k, v]) => v.includes(o[k])).map(([k]) => [k, o[k]])),
+           page: BOT_PAGES.includes(n.page) ? n.page : 'home', signed: n.signed === true, named: n.named === true,
+           dev: n.dev === 'mobile' ? 'mobile' : 'pc' };
+}
+
+export function botSystem({ courses, lang, name, now }) {
   return `You are ${name}, a small round mascot bot living on the home screen of regiontype.com, ` +
     'a typing game where players type place names (districts, provinces) on a map as fast as they can. ' +
     `Reply in the user's language (site language: ${lang}), always politely (in Korean use 존댓말, never 반말). ` +
@@ -1851,7 +1861,14 @@ export function botSystem({ courses, lang, name }) {
     ' (night = dark mode, motion = animations, grid = background grid, hint = show the place name, ' +
     'unit = speed unit, dong = Seoul dong kind, time = seconds per game).\n' +
     'Only act when the user asks. If you cannot do exactly what was asked, say so and ask — never swap in ' +
-    'a different action. Never invent a slug. Courses (slug: name):\n' +
+    'a different action. Never invent a slug. If you do not know a fact about the site, say so and offer ' +
+    'the feedback form — never make one up.\n' +
+    (now ? `Right now: screen ${now.page}, on ${now.dev === 'mobile' ? 'a phone' : 'a PC'}, ` +
+      (now.signed ? (now.named ? 'signed in' : 'signed in but no leaderboard name yet') : 'not signed in') +
+      '; settings ' + Object.entries(now.opt).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ') + '.\n' +
+      'Use this: if a setting already has the asked value, just say so; "toggle" or "turn it off" means the ' +
+      'opposite of the current value; ranked needs sign-in, so if not signed in offer to open signin first.\n' : '') +
+    'Courses (slug: name):\n' +
     courses.map(x => `${x.slug}: ${x.label}`).join('\n');
 }
 

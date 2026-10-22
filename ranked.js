@@ -729,6 +729,12 @@ function botCourses() {
   }
   return list;
 }
+/* 봇이 지금 형편을 알고 답하게 — 화면·설정·로그인. 설정은 settings.js 가 막 고쳤을 수 있어 통에서 새로 읽는다 */
+function botNow() {
+  let o = {};
+  try { o = JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch {}
+  return { opt: { ...DEF, ...o }, page: page || 'home', signed: !!token(), named: !!readName(), dev: DEV };
+}
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
 function act(a) {
   if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
@@ -757,7 +763,7 @@ async function send(text) {
   speak(t('botThink'));
   let d;
   try {
-    d = await ask('/bot/chat', { msgs: talk.slice(-12), courses: botCourses(), lang: document.documentElement.lang, name: botName() }, true);
+    d = await ask('/bot/chat', { msgs: talk.slice(-12), courses: botCourses(), lang: document.documentElement.lang, name: botName(), now: botNow() }, true);
   } catch (e) {
     talk.pop();
     if (my === talkReq && chatting) {

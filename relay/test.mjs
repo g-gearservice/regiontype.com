@@ -865,6 +865,12 @@ console.log('security rule self-check done');
   assert.equal(botAct('{"say":"x","do":[' + Array(5).fill('{"act":"open","page":"home"}').join(',') + ']}', courses).do.length, 3, '동작은 셋까지');
   assert.ok(botSystem(a).includes('존댓말') && botSystem(a).includes('"legal"'), '지시문에 말투와 설정 값이 실린다');
   assert.deepEqual(Object.keys(BOT_SET).sort(), ['dong', 'grid', 'hint', 'motion', 'night', 'sound', 'time', 'unit']);
+  assert.equal(a.now, null, '형편을 안 보내면 지시문에서 빠진다');
+  assert.ok(!botSystem(a).includes('Right now'));
+  const n = botAsk({ msgs: [{ role: 'user', content: '어둡게' }], courses,
+    now: { opt: { night: true, time: 7, lang: 'en', __proto__: { x: 1 } }, page: 'javascript:', signed: 'yes', dev: 'mobile' } }).now;
+  assert.deepEqual(n, { opt: { night: true }, page: 'home', signed: false, named: false, dev: 'mobile' }, '아는 설정·쪽만 남는다');
+  assert.ok(botSystem({ courses, lang: 'ko', name: 'Grok', now: n }).includes('not signed in; settings night=true'));
   assert.deepEqual(botAct('<think>음</think>\n```json\n{"say":"열게요","do":[{"act":"open","page":"ranking"}]}\n```', courses).do,
     [{ act: 'open', page: 'ranking' }], '생각·코드 울타리는 벗긴다');
   assert.deepEqual(botAct('{"say":"x","do":[{"act":"start","course":"mars"},{"act":"open","page":"javascript:alert(1)"},{"act":"eval"}]}', courses).do,
