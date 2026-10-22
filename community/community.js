@@ -11,17 +11,45 @@ document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
 const RELAY = self.RT_RELAY;   // relay.js — 로컬에서는 로컬 중계기, ?relay=live 로 운영
 const token = () => { try { return localStorage.getItem('rt.token') || ''; } catch { return ''; } };
 
-const TAG = { brag: ['★', '자랑'], ask: ['?', '질문'], idea: ['+', '제안'], chat: ['~', '잡담'] };
+const VER = new URL(document.currentScript.src).searchParams.get('v') || '';
+
+/* ── 화면 말 ─────────────────────────────────────────────
+   auth.js 와 같은 결이다. 홈이 rt.ui 에 적어 둔 마지막 말 팩(app.js cacheUI)부터 쓰고,
+   그 팩에 이 페이지 말이 없으면(옛 팩·바로 들어온 첫 방문) data/i18n.json 을 받아 고른다.
+   그 말에 없는 키는 영어로, 아무 데도 없으면 빈 값 — HTML 에 적힌 말을 덮지 않게 */
+let I18N = { ko: {} }, LANG = 'ko';
+const t = (key, vars) => {
+  let s = (I18N[LANG] || {})[key] || (I18N.en || {})[key] || (I18N.ko || {})[key] || '';
+  if (s && vars) s = String(s).replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+  return s;
+};
+async function loadI18n() {
+  let ui = null;
+  try { ui = JSON.parse(localStorage.getItem('rt.ui') || 'null'); } catch {}
+  if (ui && ui.pack && ui.pack.cmLead) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
+  else {
+    try { I18N = await (await fetch('../data/i18n.json?v=' + VER)).json(); } catch {}
+    const langs = Object.keys(I18N);
+    LANG = [opt.lang, ...(navigator.languages || [navigator.language])]
+      .map(x => String(x || '').toLowerCase().replace(/^(no|nn)\b.*/, 'nb').slice(0, 2))
+      .find(x => langs.includes(x)) || (langs.includes('en') ? 'en' : 'ko');
+  }
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i18n]').forEach(e => { const s = t(e.dataset.i18n); if (s) e.textContent = s; });
+  document.querySelectorAll('[data-i18n-aria]').forEach(e => { const s = t(e.dataset.i18nAria); if (s) e.setAttribute('aria-label', s); });
+}
+
+const TAG = { brag: ['★', 'cmBrag'], ask: ['?', 'cmAsk'], idea: ['+', 'kindIdea'], chat: ['~', 'cmChat'] };
 const $ = s => document.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const rtf = new Intl.RelativeTimeFormat('ko', { numeric: 'auto' });
 function ago(at) {
+  const rtf = new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' });
   const s = (at - Date.now()) / 1000;
   for (const [u, n] of [['day', 86400], ['hour', 3600], ['minute', 60]])
-    if (Math.abs(s) >= n) return Math.abs(s) >= 86400 * 7 ? new Date(at).toLocaleDateString('ko') : rtf.format(Math.round(s / n), u);
-  return '방금';
+    if (Math.abs(s) >= n) return Math.abs(s) >= 86400 * 7 ? new Date(at).toLocaleDateString(LANG) : rtf.format(Math.round(s / n), u);
+  return rtf.format(0, 'second');   // '방금' — 말마다 Intl 이 안다
 }
-const who = x => x.name ? (x.handle ? `${x.name} @${x.handle}` : x.name) : '익명';
+const who = x => x.name ? (x.handle ? `${x.name} @${x.handle}` : x.name) : t('anon');
 
 async function call(path, body) {
   const head = body ? { 'content-type': 'application/json' } : {};
@@ -30,9 +58,9 @@ async function call(path, body) {
   try {
     r = await fetch(RELAY + path, { method: body ? 'POST' : 'GET', headers: head, body: body && JSON.stringify(body) });
     d = await r.json();
-  } catch { throw Object.assign(new Error('연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'), { status: 0 }); }
+  } catch { throw Object.assign(new Error(t('cmNet')), { status: 0 }); }
   if (!r.ok) {
-    const msg = r.status === 405 ? '커뮤니티가 아직 열리지 않았습니다.' : d.msg || '처리하지 못했습니다.';
+    const msg = r.status === 405 ? t('cmClosed') : d.msg || t('cmFail');
     throw Object.assign(new Error(msg), { status: r.status, data: d });
   }
   return d;
@@ -40,18 +68,18 @@ async function call(path, body) {
 /* 쓰다가 막히면 왜 막혔는지와 갈 곳을 같이 말한다 */
 function why(e, sayEl) {
   sayEl.textContent = e.message;
-  if (e.status === 401) sayEl.append(' ', link('/#signin', '로그인하기'));
-  if (e.data && e.data.noname) sayEl.append(' ', link('/#account', '닉네임 정하기'));
+  if (e.status === 401) sayEl.append(' ', link('/#signin', t('signinBtn')));
+  if (e.data && e.data.noname) sayEl.append(' ', link('/#account', t('cmSetName')));
 }
 const link = (href, text) => { const a = el('a', null, text); a.href = href; return a; };
 
 let me = null;          // { name, handle } — 로그인했고 닉네임이 있으면
 let tag = '', cursor = 0, current = null;
 
-function tagChip(t) {
-  const [mark, label] = TAG[t] || ['·', t];
-  const s = el('span', 'cm-chip'); s.dataset.tag = t;
-  s.append(el('b', null, mark), label);
+function tagChip(tg) {
+  const [mark, label] = TAG[tg] || ['·', tg];
+  const s = el('span', 'cm-chip'); s.dataset.tag = tg;
+  s.append(el('b', null, mark), t(label) || label);
   s.firstChild.setAttribute('aria-hidden', 'true');
   return s;
 }
@@ -60,14 +88,14 @@ function tagChip(t) {
 async function load(more) {
   const say = $('#listSay');
   if (!more) { $('#list').replaceChildren(); cursor = 0; }
-  say.textContent = '읽는 중…';
+  say.textContent = t('reading');
   $('#more').hidden = true;
   try {
     const d = await call(`/cm/list?tag=${tag}` + (cursor ? `&before=${cursor}` : ''));
     for (const p of d.posts) $('#list').append(row(p));
     cursor = d.posts.length ? d.posts[d.posts.length - 1].id : cursor;
     $('#more').hidden = !d.more;
-    say.textContent = $('#list').children.length ? '' : '아직 글이 없습니다. 첫 글을 남겨 보세요.';
+    say.textContent = $('#list').children.length ? '' : t('cmEmpty');
   } catch (e) { say.textContent = e.message; }
 }
 
@@ -77,8 +105,8 @@ function row(p) {
   const top = el('span', 'cm-card-top');
   top.append(tagChip(p.tag), el('span', 'cm-meta', `${who(p)} · ${ago(p.at)}`));
   const nums = el('span', 'cm-nums');
-  nums.append(el('span', null, `♥ ${p.ups}`), el('span', null, `댓글 ${p.replies}`));
-  nums.setAttribute('aria-label', `공감 ${p.ups}, 댓글 ${p.replies}`);
+  nums.append(el('span', null, `♥ ${p.ups}`), el('span', null, t('cmCommentsN', { n: p.replies })));
+  nums.setAttribute('aria-label', t('cmNumsAria', { u: p.ups, n: p.replies }));
   a.append(top, el('strong', 'cm-card-title', p.title), el('span', 'cm-card-lead', p.lead.replace(/\s+/g, ' ')), nums);
   li.append(a);
   return li;
@@ -87,12 +115,12 @@ function row(p) {
 /* ── 글 하나 ──────────────────────────────────────── */
 async function open(id) {
   $('#listView').hidden = true; $('#postView').hidden = false;
-  $('#postSay').textContent = '읽는 중…';
+  $('#postSay').textContent = t('reading');
   for (const s of ['#pTag', '#pTitle', '#pMeta', '#pBody', '#replies']) $(s).replaceChildren();
   try {
     const d = await call('/cm/read?id=' + id);
     current = d.post;
-    document.title = `${d.post.title} — regiontype 커뮤니티`;
+    document.title = `${d.post.title} — regiontype ${t('community')}`;
     $('#pTag').append(tagChip(d.post.tag));
     $('#pTitle').textContent = d.post.title;
     $('#pMeta').textContent = `${who(d.post)} · ${ago(d.post.at)}`;
@@ -101,7 +129,7 @@ async function open(id) {
     $('#pDel').hidden = !d.post.mine;
     $('#pFlag').hidden = d.post.mine;
     $('#pFlag').disabled = d.flagged.includes('p' + id);
-    $('#pFlag').textContent = $('#pFlag').disabled ? '신고함' : '신고';
+    $('#pFlag').textContent = t($('#pFlag').disabled ? 'cmFlagged' : 'cmFlag');
     for (const r of d.replies) $('#replies').append(replyRow(r, d.flagged));
     $('#rCount').textContent = d.replies.length;
     $('#postSay').textContent = '';
@@ -113,9 +141,9 @@ function replyRow(r, flagged) {
   const li = el('li', 'cm-reply');
   const meta = el('p', 'cm-meta', `${who(r)} · ${ago(r.at)}`);
   const acts = el('span', 'cm-reply-acts');
-  if (r.mine) acts.append(small('지우기', () => del('r' + r.id, li), 'destructive'));
+  if (r.mine) acts.append(small(t('cmDelete'), () => del('r' + r.id, li), 'destructive'));
   else {
-    const f = small(flagged.includes('r' + r.id) ? '신고함' : '신고', () => flag('r' + r.id, f));
+    const f = small(t(flagged.includes('r' + r.id) ? 'cmFlagged' : 'cmFlag'), () => flag('r' + r.id, f));
     f.disabled = flagged.includes('r' + r.id);
     acts.append(f);
   }
@@ -131,12 +159,12 @@ function upState(on, n) {
 }
 
 async function flag(target, btn) {
-  if (!confirm('이 글을 신고할까요? 서로 다른 세 사람이 신고하면 가려집니다.')) return;
-  try { await call('/cm/flag', { target }); btn.disabled = true; btn.textContent = '신고함'; }
+  if (!confirm(t('cmFlagAsk'))) return;
+  try { await call('/cm/flag', { target }); btn.disabled = true; btn.textContent = t('cmFlagged'); }
   catch (e) { why(e, $('#postSay')); }
 }
 async function del(target, li) {
-  if (!confirm(target[0] === 'p' ? '이 글과 달린 댓글을 모두 지울까요?' : '이 댓글을 지울까요?')) return;
+  if (!confirm(t(target[0] === 'p' ? 'cmDelPostAsk' : 'cmDelReplyAsk'))) return;
   try {
     await call('/cm/del', { target });
     if (target[0] === 'p') { location.hash = ''; return; }
@@ -150,17 +178,18 @@ function route() {
   const m = /^#p(\d+)$/.exec(location.hash);
   if (m) return open(Number(m[1]));
   current = null;
-  document.title = '커뮤니티 — regiontype';
+  document.title = `${t('community')} — regiontype`;
   $('#postView').hidden = true; $('#listView').hidden = false;
   load();   // 돌아올 때마다 새로 읽는다 — 방금 단 댓글·공감 수가 목록에 맞게
 }
 
 /* 쓰는 칸의 글자 수. 한도에 닿으면 숫자만이 아니라 글로도 알린다 */
 const counter = (input, out, cap) => input.addEventListener('input', () => {
-  out.textContent = `${input.value.length} / ${cap}` + (input.value.length >= cap ? ' — 한도' : '');
+  out.textContent = `${input.value.length} / ${cap}` + (input.value.length >= cap ? ' — ' + t('cmLimit') : '');
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await loadI18n();
   counter($('#postBody'), $('#postCount'), 2000);
   counter($('#replyBody'), $('#replyCount'), 500);
 
@@ -220,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* 머리의 로그인 자리. 닉네임이 있으면 이름을, 없으면 정하러 가는 길을 건다 */
   if (!token()) return;
-  Object.assign($('#signinLink'), { href: '/#account', textContent: '내 계정' });   // 폰 아래 막대의 계정 동그라미
+  Object.assign($('#signinLink'), { href: '/#account', textContent: t('accountBtn') });   // 폰 아래 막대의 계정 동그라미
   try {
     const d = await call('/auth/me');
     if (!d.intro && !d.profile?.name) {
@@ -233,15 +262,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const p = d.profile || {};
     me = p.name ? { name: p.name, handle: p.handle || '' } : null;
-    $('#me').textContent = me ? who(me) : '닉네임 정하기';
+    $('#me').textContent = me ? who(me) : t('cmSetName');
     $('#me').href = '/#account';
   } catch (e) {
     if (e.status === 401) {
       for (const k of ['rt.token', 'rt.name', 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsize', 'rt.intro', 'rt.rescue', 'rt.greet']) {
         try { localStorage.removeItem(k); } catch {}
       }
-      Object.assign($('#signinLink'), { href: '/#signin', textContent: '로그인' });
-      $('#me').textContent = '로그인';
+      Object.assign($('#signinLink'), { href: '/#signin', textContent: t('signinBtn') });
+      $('#me').textContent = t('signinBtn');
       $('#me').href = '/#signin';
     }
   }

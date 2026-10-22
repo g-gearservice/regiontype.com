@@ -71,7 +71,7 @@ body{overflow:auto}
 .cm-body p{white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:14px}
 .cm-acts{display:flex;flex-wrap:wrap;gap:10px;padding-bottom:28px;border-bottom:2px solid var(--land)}
 .cm-up[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.cm-up[aria-pressed="true"]::after{content:"· 눌렀음";font-weight:500}
+.cm-up[aria-pressed="true"]::after{content:"· ✓";font-weight:500}
 .cm-replies h2{font-size:20px;font-weight:800;margin:28px 0 8px}
 #replies{list-style:none}
 .cm-reply{padding:14px 0;border-bottom:1px solid var(--land)}
