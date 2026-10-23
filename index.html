@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.81">
+<link rel="stylesheet" href="style.css?v=4.87">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -68,10 +68,9 @@
     d.toggleAttribute('data-night', !!o.night);
     d.dataset.motion = o.motion === false ? 'off' : 'on';
     d.toggleAttribute('data-no-grid', o.grid === false);
-    /* 봇이 고른 색(스타일 베타) — ranked.js 의 paintTheme 과 같은 결 */
-    const th = JSON.parse(localStorage.getItem('rt.theme') || 'null');
-    if (th && /^#[0-9a-f]{6}$/.test(th.accent)) { d.style.setProperty('--accent', th.accent); d.style.setProperty('--accent-deep', `color-mix(in srgb,${th.accent} 82%,#000)`); }
-    if (th && /^#[0-9a-f]{6}$/.test(th.block)) { d.style.setProperty('--block', th.block); d.style.setProperty('--block-hi', `color-mix(in srgb,${th.block} 88%,#000)`); }
+    /* 고른 색(내 스타일) — ranked.js 의 paintTheme 이 THEME 표로 지어 둔 규칙을 그대로 붙인다 */
+    const css = localStorage.getItem('rt.themeCss');
+    if (css) { const st = document.createElement('style'); st.id = 'rtTheme'; st.textContent = css; document.head.append(st); }
     const ui = JSON.parse(localStorage.getItem('rt.ui') || 'null');
     if (ui && ui.pack && (ui.auto ? (o.lang || 'auto') === 'auto' : o.lang === ui.lang)) {
       window.RT_UI = ui; d.lang = ui.lang;
@@ -621,6 +620,13 @@
   </div>
   <div class="pg-shell">
     <p class="pg-help" data-i18n="stylesHelp">봇에게 "벚꽃 느낌으로 바꿔 줘"처럼 말하면 만든 스타일이 여기 쌓입니다. 이 기기에만 저장돼요.</p>
+    <!-- 색 직접 고르기(ranked.js 의 fillPick). 칸은 THEME 표에서 짓는다. 대비가 모자라면 글자로 알리고 저장하지 않는다 -->
+    <fieldset class="sty-edit">
+      <legend data-i18n="styleEdit">색 직접 고르기</legend>
+      <div class="sty-picks" id="styPick"></div>
+      <p class="sty-warn" id="styWarn" role="status"></p>
+      <button type="button" class="sty-save" id="stySave" data-i18n="styleSave">이 색으로 저장</button>
+    </fieldset>
     <ol class="sty-list" id="styList"></ol>
     <p class="pg-say" id="stySay" role="status"></p>
     <div class="sty-foot">
@@ -721,6 +727,6 @@
 <script src="app.js?v=4.81"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
-<script src="ranked.js?v=4.80"></script>
+<script src="ranked.js?v=4.87"></script>
 </body>
 </html>

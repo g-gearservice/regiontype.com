@@ -117,6 +117,7 @@ function closePage(now) {
   if (opener && opener.isConnected) opener.focus({ preventScroll: true });
   opener = null;
   if (was === 'account') leftAccount();
+  if (was === 'styles') paintTheme();   // 저장하지 않은 미리 보기를 거둔다
 }
 
 /* ── 내 계정 ──────────────────────────────────────────
@@ -299,19 +300,19 @@ const STYLE_KEY = 'rt.styles', STYLE_MAX = 24;
 const readStyles = () => { try { const v = JSON.parse(localStorage.getItem(STYLE_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
 const writeStyles = list => { try { localStorage.setItem(STYLE_KEY, JSON.stringify(list)); return true; } catch { return false; } };
 const curTheme = () => { try { return JSON.parse(localStorage.getItem('rt.theme') || 'null') || {}; } catch { return {}; } };
-const sameStyle = (a, b) => (a.accent || '') === (b.accent || '') && (a.block || '') === (b.block || '');
+const sameStyle = (a, b) => THEME.every(k => (a[k.key] || '') === (b[k.key] || ''));
 function keepStyle(acts) {
   const th = acts.find(a => a.act === 'theme' && !a.reset);
   if (!th) return;
   const look = acts.find(a => a.act === 'look');
-  const s = { id: Date.now().toString(36), name: th.name || '', at: Date.now(), accent: th.accent || '', block: th.block || '' };
+  const s = { id: Date.now().toString(36), name: th.name || '', at: Date.now(), ...pickTheme(th) };
   if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour };
   for (const a of acts) if (a.act === 'set' && (a.key === 'night' || a.key === 'motion')) s[a.key] = a.value;
   writeStyles([s, ...readStyles().filter(x => !sameStyle(x, s))].slice(0, STYLE_MAX));
   if (page === 'styles') fillStyles();
 }
 function wearStyle(s) {
-  try { localStorage.setItem('rt.theme', JSON.stringify({ accent: s.accent, block: s.block })); } catch { return; }
+  try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(s))); } catch { return; }
   paintTheme();
   if (s.face) act({ act: 'look', ...s.face });
   const o = {};
@@ -324,7 +325,7 @@ function fillStyles(focusId) {
   const list = readStyles(), cur = curTheme(), ul = $('#styList');
   const day = new Intl.DateTimeFormat(document.documentElement.lang || 'ko', { month: 'numeric', day: 'numeric' });
   ul.replaceChildren(...list.map(s => {
-    const li = document.createElement('li'), on = sameStyle(s, cur) && !!(cur.accent || cur.block);
+    const li = document.createElement('li'), on = sameStyle(s, cur) && THEME.some(k => cur[k.key]);
     const name = s.name || t('styleUntitled');
     li.dataset.id = s.id;
     li.toggleAttribute('data-on', on);
@@ -333,6 +334,7 @@ function fillStyles(focusId) {
     sw.setAttribute('aria-hidden', 'true');
     if (/^#[0-9a-f]{6}$/.test(s.block)) sw.style.setProperty('--sw-block', s.block);
     if (/^#[0-9a-f]{6}$/.test(s.accent)) sw.style.setProperty('--sw-accent', s.accent);
+    if (/^#[0-9a-f]{6}$/.test(s.bg) && s.night !== true) sw.style.setProperty('--sw-bg', s.bg);
     sw.toggleAttribute('data-night', s.night === true);
     for (let i = 0; i < 9; i++) sw.append(document.createElement('i'));
     const txt = document.createElement('span');
@@ -355,11 +357,56 @@ function fillStyles(focusId) {
     return li;
   }));
   $('#stySay').textContent = list.length ? '' : t('stylesEmpty');
-  $('#styReset').hidden = !(cur.accent || cur.block);
+  $('#styReset').hidden = !THEME.some(k => cur[k.key]);
+  fillPick();
   $('#styUndo').hidden = !styleGone;
   if (focusId) (ul.querySelector(`[data-id="${CSS.escape(focusId)}"] button:not([hidden])`) || $('#styHead')).focus({ preventScroll: true });
 }
+/* 색 직접 고르기 — THEME 한 줄마다 고르기 칸 하나. 고르는 동안 미리 보이되 대비가 모자란 짝은 미리 보기에서도
+   빠진다(이 화면부터 읽히게). 저장해야 rt.theme 에 담기고 목록에 쌓인다. 저장 없이 닫으면 저장된 색으로 돌아간다.
+   기본값과 같은 색은 담지 않는다 — 봇이 지은 두 색 스타일과 같은 꼴로 남는다 */
+const pickDraft = () => Object.fromEntries([...document.querySelectorAll('#styPick input')]
+  .filter(i => i.value !== THEME.find(k => k.key === i.name).def).map(i => [i.name, i.value]));
+function fillPick() {
+  const cur = curTheme();
+  $('#styPick').replaceChildren(...THEME.map(k => {
+    const row = document.createElement('label'), inp = document.createElement('input'),
+          name = document.createElement('span'), low = document.createElement('span');
+    row.className = 'sty-pick'; row.dataset.key = k.key;
+    inp.type = 'color'; inp.name = k.key; inp.value = HEX.test(cur[k.key]) ? cur[k.key] : k.def;
+    name.textContent = t('color_' + k.key);
+    low.className = 'sty-low';
+    row.append(inp, name, low);
+    return row;
+  }));
+  checkPick();
+  paintTheme();
+}
+function checkPick() {
+  const low = themeLow(pickDraft());
+  for (const row of $('#styPick').children) {
+    const x = low.find(l => l.key === row.dataset.key);
+    row.toggleAttribute('data-low', !!x);
+    row.lastChild.textContent = x ? t('styleLowTag', { r: x.r.toFixed(1), min: x.min }) : '';
+  }
+  $('#styWarn').textContent = low.length ? t('styleLow') : '';
+  return low;
+}
+function previewPick() {
+  const bad = new Set(checkPick().flatMap(x => [x.key, THEME.find(k => k.key === x.key).on]));
+  paintTheme(Object.fromEntries(Object.entries(pickDraft()).filter(([k]) => !bad.has(k))));
+}
+function savePick() {
+  if (checkPick().length) { $('#styNote').textContent = t('styleLow'); return; }
+  const d = pickDraft();
+  try { Object.keys(d).length ? localStorage.setItem('rt.theme', JSON.stringify(d)) : localStorage.removeItem('rt.theme'); } catch { return; }
+  if (Object.keys(d).length) keepStyle([{ act: 'theme', name: t('styleMine'), ...d }]);
+  fillStyles();
+  $('#styNote').textContent = t('styleSaved');
+}
 function wireStyles() {
+  $('#styPick').addEventListener('input', previewPick);
+  $('#stySave').addEventListener('click', savePick);
   $('#styles').addEventListener('click', e => {
     const use = e.target.closest('[data-sty-use]'), del = e.target.closest('[data-sty-del]');
     if (use) {
@@ -856,18 +903,48 @@ async function botRec() {
   } catch {}
 }
 botRec.at = 0; botRec.v = null;
-/* 스타일 베타 — 봇이 고른 두 색(rt.theme)을 :root 에 얹는다. 첫 그림 전엔 index.html 의 머리 스크립트가 같은 일을 한다.
-   대비는 중계기(botTheme)가 이미 쟀다 */
-function paintTheme() {
-  let th = null;
-  try { th = JSON.parse(localStorage.getItem('rt.theme') || 'null'); } catch {}
-  const hex = v => /^#[0-9a-f]{6}$/.test(v) ? v : '';
-  th = { accent: hex(th?.accent), block: hex(th?.block) };
-  const st = document.documentElement.style;
-  for (const [k, v] of [['--accent', th?.accent], ['--accent-deep', th?.accent && `color-mix(in srgb,${th.accent} 82%,#000)`],
-                        ['--block', th?.block], ['--block-hi', th?.block && `color-mix(in srgb,${th.block} 88%,#000)`]]) {
-    if (v) st.setProperty(k, v); else st.removeProperty(k);
+/* 스타일 — 고칠 수 있는 색은 이 표가 전부다. 사람이 고르든(내 스타일 › 색 직접 고르기) 봇이 고르든
+   (theme act) 같은 rt.theme 에 key 로 담기고, 여기 없는 것 — 초점 테두리·--on-accent·경쟁전 빨강·
+   --bad 처럼 상태를 알리는 색 — 은 누구도 못 바꾼다. 한 줄 더하면 새 색이 열린다(화면 말은 i18n 의 color_<key>).
+   def  style.css :root 의 낮 값(고르기 칸의 첫 값·대비 셈의 바탕). 거기를 고치면 같이 고친다
+   night  밤에도 입히나. false 면 밤엔 사이트의 밤 값을 둔다(낮 바탕을 밤에 깔지 않게)
+   on·min  그 색과 맞닿는 글자색(#값 또는 다른 key)과 지켜야 할 대비. 못 미치면 저장하지 않는다
+   also  그 색에서 따라 나오는 값들. 중계기(worker.mjs 의 botTheme)는 accent·block 만 받는다 */
+const THEME = [
+  { key: 'accent', def: '#f0a03c', night: true, on: '#232c31', min: 4.5, also: { '--accent-deep': v => `color-mix(in srgb,${v} 82%,#000)` } },
+  { key: 'block', def: '#6f9a9e', night: true, on: '#ffffff', min: 3, also: { '--block-hi': v => `color-mix(in srgb,${v} 88%,#000)` } },
+  { key: 'bg', def: '#e8edf0', night: false, on: 'ink', min: 4.5,
+    also: { '--grid': v => `color-mix(in srgb,${v} 92%,var(--ink))`, '--land': v => `color-mix(in srgb,${v} 86%,var(--ink))`,
+            '--land-line': v => v, '--card': v => `color-mix(in srgb,${v} 45%,#fff)` } },
+  { key: 'ink', def: '#3c464a', night: false, also: { '--ink-soft': v => `color-mix(in srgb,${v} 78%,var(--bg))` } },
+];
+const HEX = /^#[0-9a-f]{6}$/;
+const pickTheme = th => Object.fromEntries(THEME.filter(k => HEX.test(th?.[k.key])).map(k => [k.key, th[k.key]]));
+const lum = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+  .map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((a, c, i) => a + c * [.2126, .7152, .0722][i], 0);
+const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+/* 대비가 모자란 색들 — [{ key, r, min }]. 안 고른 색은 기본값으로 잰다 */
+const themeLow = th => {
+  const v = key => HEX.test(key) ? key : th[key] || THEME.find(k => k.key === key).def;
+  return THEME.filter(k => k.on).map(k => ({ key: k.key, r: contrast(v(k.key), v(k.on)), min: k.min })).filter(x => x.r < x.min);
+};
+/* rt.theme 을 규칙 한 장으로. 밤에도 입히는 것과 낮에만 입히는 것을 가른다 */
+const themeCss = th => {
+  const both = [], day = [];
+  for (const k of THEME) {
+    const v = th[k.key];
+    if (HEX.test(v)) (k.night ? both : day).push(`--${k.key}:${v}`, ...Object.entries(k.also || {}).map(([p, f]) => `${p}:${f(v)}`));
   }
+  return (both.length ? `:root,:root[data-night]{${both.join(';')}}` : '') + (day.length ? `:root:not([data-night]){${day.join(';')}}` : '');
+};
+/* :root 에 얹는다. 첫 그림 전엔 index.html 의 머리 스크립트가 rt.themeCss 를 그대로 붙인다.
+   draft 를 주면 저장하지 않고 미리 보기만 한다 */
+function paintTheme(draft) {
+  const css = themeCss(pickTheme(draft || curTheme()));
+  let el = $('#rtTheme');
+  if (!el) { el = document.createElement('style'); el.id = 'rtTheme'; document.head.append(el); }
+  el.textContent = css;
+  if (!draft) try { css ? localStorage.setItem('rt.themeCss', css) : localStorage.removeItem('rt.themeCss'); } catch {}
 }
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
 function act(a) {
@@ -1672,6 +1749,14 @@ wireStart();
 wireMatch();
 wireChat();
 wireStyles();
+paintTheme();   // 머리 스크립트가 붙일 rt.themeCss 를 지금 표로 다시 적는다
+if (location.search.includes('rt=1')) {
+  console.assert(THEME.every(k => HEX.test(k.def) && (!k.on || HEX.test(k.on) || THEME.some(x => x.key === k.on))), '스타일: 표의 기본값·짝');
+  console.assert(!themeLow({}).length, '스타일: 기본 색은 대비를 지킨다');
+  console.assert(themeLow({ ink: '#e8edf0' })[0]?.key === 'bg' && themeLow({ accent: '#232c31' })[0]?.key === 'accent', '스타일: 대비 부족을 잡는다');
+  console.assert(themeCss({ bg: '#ffffff' }).startsWith(':root:not([data-night]){--bg:#ffffff') && themeCss({}) === '', '스타일: 밤엔 낮 바탕을 깔지 않는다');
+  console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
+}
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
    지도 자리가 잡힌 뒤(RT_BOOT_PLACE) 귀퉁이 잠자리는 로딩 막 뒤에서 미리 세운다.
