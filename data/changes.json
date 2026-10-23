@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.478",
+    "date": "2026-10-23",
+    "ko": "홈 봇이 멈춘 모델을 몇 분 동안 건너뜁니다. 한 모델이 느려져도 대화마다 오래 기다리지 않아요.",
+    "en": "The home bot now skips a stalled model for a few minutes, so one slow model no longer makes every chat wait."
+  },
+  {
     "v": "0.11.477",
     "date": "2026-10-23",
     "ko": "'내 스타일' 페이지가 생겼습니다. 봇이 만든 스타일이 이름과 색 견본으로 쌓이고, 다시 적용하거나 지울 수 있습니다(지워도 되돌리기). 봇 대화 칩과 내 계정에서 열 수 있어요.",
