@@ -2008,11 +2008,31 @@ async function botSpend(env, day, model, tok) {
 /* 쉬는 모델 — 시간 초과·5xx·429·404 를 낸 모델은 BOT_COOL_MS 동안 차례에서 뺀다. 멈춘 맨 앞 모델 하나가
    모든 대화를 15초씩 늦추지 않게(2026-10-23, deepseek-v4.1-flash 가 인사에도 30초를 넘겼다). 답하면 곧 푼다.
    모두 쉬는 중이면 원래 차례대로 다시 묻는다.
-   ponytail: 격리(isolate)마다 따로 기억하고 격리가 바뀌면 잊는다 — 다른 격리는 한 번씩 더 부딪힌다.
-   모두가 같이 알아야 하면 KV 나 D1 에 둔다 */
+   격리(isolate)마다의 기억(botCool)만으로는 요청이 격리 여럿에 흩어져 다섯 번 중 한 번만 건너뛰었다 —
+   그래서 D1 의 botcool 표를 모두가 같이 본다. 읽기는 botUsed 와 나란히 한 번, 쓰기는 쉬게 할 때와 풀 때만.
+   표가 없거나 D1 이 넘어지면 이 격리의 기억만으로 돈다 */
 export const botCool = new Map();
 const BOT_COOL_MS = 300000;
-const cool = model => botCool.set(model, Date.now() + BOT_COOL_MS);
+async function botCooling(env, now) {
+  try {
+    const r = await env.DB.prepare('select model, until from botcool where until > ?').bind(now).all();
+    for (const x of r.results || []) if (!(botCool.get(x.model) >= x.until)) botCool.set(x.model, x.until);
+  } catch { console.warn('botcool: 읽지 못함 — 이 격리의 기억만 쓴다'); }
+}
+async function cool(env, model) {
+  const until = Date.now() + BOT_COOL_MS;
+  botCool.set(model, until);
+  try {
+    await env.DB.prepare('insert into botcool (model, until) values (?, ?) on conflict (model) do update set until = excluded.until')
+      .bind(model, until).run();
+  } catch { console.warn('botcool: 적지 못함'); }
+}
+async function warmUp(env, model) {
+  if (!botCool.has(model)) return;
+  botCool.delete(model);
+  try { await env.DB.prepare('delete from botcool where model = ?').bind(model).run(); }
+  catch { console.warn('botcool: 지우지 못함'); }
+}
 
 async function botChat(req, env, o) {
   if (!env.NV_KEY) return reply(503, '봇 대화는 아직 열리지 않았습니다.', o);
@@ -2030,8 +2050,8 @@ async function botChat(req, env, o) {
   const models = String(env.NV_MODELS || env.NV_MODEL || '').split(',').map(x => x.trim()).filter(Boolean);
   const day = Math.floor(Date.now() / DAY_MS);
   const need = botTokens(messages) + BOT_OUT;
-  const ready = botRoute(models.length ? models : NV_MODELS, await botUsed(env, day), need,
-                       Number(env.NV_BUDGET) || NV_DAY);
+  const [used] = await Promise.all([botUsed(env, day), botCooling(env, Date.now())]);
+  const ready = botRoute(models.length ? models : NV_MODELS, used, need, Number(env.NV_BUDGET) || NV_DAY);
   const warm = ready.filter(m => !(botCool.get(m) > Date.now())), pool = warm.length ? warm : ready;
   const route = pool.slice(0, BOT_TRIES);
   if (!route.length) return reply(429, '오늘 봇이 쓸 수 있는 몫을 다 썼습니다.', o);
@@ -2053,24 +2073,24 @@ async function botChat(req, env, o) {
            대신 나선 예비는 원래 제 몫(25초)을 받는다 */
         signal: AbortSignal.timeout(model === ready[0] ? 15000 : 25000),
       });
-    } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); cool(model); continue; }
+    } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); await cool(env, model); continue; }
     console.log('bot', model, r.status, Date.now() - t0);
     if (!r.ok) {
       /* 404 는 이 키로 그 모델을 못 쓴다는 뜻이다(2026-10-22, nemotron-3-super 가 키를 바꿔도 404).
          묻지도 못한 셈이라 시도로 치지 않고 아직 안 물은 다음 모델을 뒤에 붙인다. 까닭은 로그에 남긴다 */
       if (r.status === 404) {
         console.warn('bot', model, 404, (await r.text().catch(() => '')).slice(0, 300));
-        cool(model);
+        await cool(env, model);
         const next = pool.find(m => !tries.includes(m));
         if (next) tries.push(next);
         continue;
       }
       busy ||= r.status === 429;
       if (i === 0 && r.status >= 500 && Date.now() - t0 < 2000) tries.splice(1, 0, model);
-      else cool(model);
+      else await cool(env, model);
       continue;
     }
-    botCool.delete(model);
+    await warmUp(env, model);
     const d = await r.json().catch(() => null);
     const text = d?.choices?.[0]?.message?.content;
     if (d?.choices?.[0]?.finish_reason === 'length') console.warn('bot', model, 'cut at max_tokens');

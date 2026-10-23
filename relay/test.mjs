@@ -1018,6 +1018,45 @@ console.log('security rule self-check done');
   assert.equal(order[0], 'stall', '쉬는 시간이 지나면 돌아온다');
   AbortSignal.timeout = realTimeout;
   botCool.clear();
+
+  /* 격리끼리 나눠 보기 — 기억(botCool)이 빈 다른 격리도 D1 의 botcool 을 읽고 건너뛴다. 답하면 표에서 지운다 */
+  const rows = new Map();
+  const fakeDB = { prepare: sql => ({ bind: (...v) => ({
+    all: async () => {
+      if (/from botcool/.test(sql)) return { results: [...rows].filter(([, u]) => u > v[0]).map(([model, until]) => ({ model, until })) };
+      return { results: [] };
+    },
+    run: async () => {
+      if (/insert into botcool/.test(sql)) rows.set(v[0], v[1]);
+      else if (/delete from botcool/.test(sql)) rows.delete(v[0]);
+      return {};
+    },
+  }) }), batch: async () => [] };
+  let stalled = true;
+  globalThis.fetch = async (url, init) => {
+    const m = JSON.parse(init.body).model;
+    order.push(m);
+    if (m === 'stall' && stalled) throw new DOMException('stalled', 'TimeoutError');
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"네","do":[]}' } }] }));
+  };
+  const dbEnv = { ...coolEnv, DB: fakeDB };
+  order.length = 0;
+  await chat(ask, dbEnv);
+  assert.ok(rows.get('stall') > Date.now(), '쉬게 한 모델은 D1 에 적힌다');
+  botCool.clear();   // 다른 격리 — 제 기억은 비었다
+  order.length = 0;
+  await chat(ask, dbEnv);
+  assert.deepEqual(order, ['backup'], '다른 격리도 D1 을 읽고 쉬는 모델을 건너뛴다');
+  rows.set('backup', Date.now() + 60000); rows.set('spare', Date.now() + 60000);
+  botCool.clear(); stalled = false; order.length = 0;
+  await chat(ask, dbEnv);
+  assert.equal(order[0], 'stall', '모두 쉬면 원래 차례대로');
+  assert.ok(!rows.has('stall'), '다시 답한 모델은 D1 에서 지운다');
+  globalThis.fetch = async () => { throw new Error('down'); };
+  const brokenDB = { prepare: () => { throw new Error('no table'); }, batch: async () => { throw new Error('no table'); } };
+  botCool.clear();
+  assert.equal((await chat(ask, { ...coolEnv, DB: brokenDB })).status, 502, 'botcool 표가 없어도 대화 길은 넘어지지 않는다');
+  botCool.clear();
   let calls = 0;
   globalThis.fetch = async () => (calls++, new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"","do":[]}' } }] })));
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);
