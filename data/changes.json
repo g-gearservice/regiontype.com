@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.484",
+    "date": "2026-10-23",
+    "ko": "봇 말풍선이 옆에서 밀려 나오지 않고, 닫힐 때처럼 그 자리에서 흐림이 걷히며 나타납니다.",
+    "en": "The bot's speech bubble now fades in from a blur in place, like it does when closing, instead of wiping in from the side."
+  },
+  {
     "v": "0.11.483",
     "date": "2026-10-23",
     "ko": "봇 대화에서 연 피드백은 보낸 말이 첫 줄에 그대로 담겨, 이슈 제목이 그 말로 섭니다.",

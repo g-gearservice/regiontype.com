@@ -2875,15 +2875,9 @@ body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
 .rk-say[data-side="up"]{padding-bottom:34px}
 /* 폰 시트에 앉은 봇의 말풍선은 봇 위에 따로 뜬다 — 숨길 끝이 없어 여백도 고르다 */
 .rk-say[data-dock]{padding:12px 14px}
-.rk-say.is-open{animation:.42s var(--ease-out) both}
-.rk-say[data-side="right"].is-open{animation-name:rk-open-right}
-.rk-say[data-side="left"].is-open{animation-name:rk-open-left}
-.rk-say[data-side="down"].is-open{animation-name:rk-open-down}
-.rk-say[data-side="up"].is-open{animation-name:rk-open-up}
-@keyframes rk-open-right{from{clip-path:inset(0 100% 0 0 round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
-@keyframes rk-open-left{from{clip-path:inset(0 0 0 100% round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
-@keyframes rk-open-down{from{clip-path:inset(0 0 100% 0 round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
-@keyframes rk-open-up{from{clip-path:inset(100% 0 0 0 round 14px);filter:blur(10px);opacity:0}to{clip-path:inset(-40px round 14px);filter:none;opacity:1}}
+/* 펼침은 접힘(rk-blur-out)의 거꾸로 — 그 자리에서 흐림이 걷히며 나타난다 */
+.rk-say.is-open{animation:rk-blur-in .24s var(--ease-out) both}
+@keyframes rk-blur-in{from{filter:blur(10px);opacity:0}to{filter:none;opacity:1}}
 /* 접힘: 흐려지며 사라진다(ranked.js 의 hide). 그동안 누름은 받지 않는다 */
 .rk-say.is-closing{animation:rk-blur-out .24s var(--ease-out) both;pointer-events:none}
 @keyframes rk-blur-out{from{filter:none;opacity:1}to{filter:blur(10px);opacity:0}}
