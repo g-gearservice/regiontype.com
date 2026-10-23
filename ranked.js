@@ -421,6 +421,7 @@ const logo = () => $('#regions .navbar .nav-logo');
 const regionsOn = () => $('#regions').classList.contains('on');
 const botName = () => { try { return localStorage.getItem('rt.botname') || 'Grok'; } catch { return 'Grok'; } };
 let bot = null, making = null, out = false, intro = false, touring = false, corner = 0, hush = 0, nap = 0, chatting = false;
+let progT = 0, progAt = 0, progKind = '', progHide = 0;   // 말풍선 진행 막대(progStart)
 /* 폰 — 봇이 로고 안에 살고 불러야 나온다. 태블릿은 손가락 화면(fingers)이라도 데스크톱처럼
    봇이 제 발로 나와 귀퉁이에서 잔다. 창 폭이 아니라 기기 화면의 짧은 변으로 가른다 */
 const phone = () => fingers() && Math.min(screen.width, screen.height) < 600;
@@ -632,6 +633,8 @@ function hide() {
   chatting = false;
   greetSide = null;
   setTalkUI(null);
+  clearInterval(progT); clearTimeout(progHide);
+  $('#rkProg').hidden = true;
   const chips = $('#rkChips');
   if (chips) chips.hidden = true;
   clearTimeout(closing);
@@ -817,6 +820,7 @@ async function chat() {
 }
 function endChat() {
   if (!chatting) return;
+  progStop();
   /* 폰은 대화를 닫으면 곧바로 로고로 들어간다 */
   if (phone()) { tuck(); return; }
   hide();
@@ -908,17 +912,62 @@ function act(a) {
     if (link) link.click();
   }
 }
+/* ── 진행 막대 ── 봇이 답을 짓는 동안 말풍선 안에 둔다. 한 번 묻고 한 번 받는 길이라 참 진행률은 없다:
+   막대는 어림(PROG_MS 쯤에 80% — 90% 밑에서 멈추고 답이 오면 100%)이고, 옆의 초가 실제로 흐른 시간이다.
+   스타일 물음은 더 오래 걸리니 단계 글을 셋 돌리고, 답에 스타일이 실려 오면 '적용 → 저장됨' 까지 보인다 */
+const STYLE_ASK = /스타일|느낌|분위기|테마|색깔|색감|꾸며|컨셉|무드|style|theme|vibe|mood|aesthetic|colou?rs?\b/i;
+const PROG_MS = { style: 20000, talk: 8000 };
+function progPaint(v, step) {
+  const bar = $('#rkProgBar');
+  bar.setAttribute('aria-valuenow', String(Math.round(v)));
+  bar.firstElementChild.style.transform = `scaleX(${v / 100})`;
+  if (step && $('#rkProgStep').textContent !== step) $('#rkProgStep').textContent = step;
+}
+function progStart(text) {
+  clearInterval(progT); clearTimeout(progHide);
+  progKind = STYLE_ASK.test(text) ? 'style' : 'talk';
+  progAt = Date.now();
+  $('#rkProg').hidden = false;
+  $('#rkProg').classList.remove('is-done');
+  $('#rkProgSec').textContent = '';
+  progPaint(0, t(progKind === 'style' ? 'botProgRead' : 'botProgThink'));
+  if (bot) place(bot.x, bot.y);
+  progT = setInterval(() => {
+    const ms = Date.now() - progAt, v = 92 * (1 - Math.exp(-2 * ms / PROG_MS[progKind]));
+    const step = progKind !== 'style' ? null : t(v < 35 ? 'botProgRead' : v < 65 ? 'botProgColour' : 'botProgLook');
+    progPaint(v, step);
+    $('#rkProgSec').textContent = t('botProgSec', { n: Math.floor(ms / 1000) });
+  }, 250);
+}
+function progStop() {
+  clearInterval(progT); clearTimeout(progHide);
+  $('#rkProg').hidden = true;
+  if (bot && !bubble.hidden) place(bot.x, bot.y);
+}
+/* 답이 왔다. 스타일이 실려 왔으면 '적용하는 중' 으로 가득 채운 뒤 '저장됨' 을 잠깐 보이고 접는다 */
+function progDone(styled) {
+  clearInterval(progT);
+  if (!styled) { progPaint(100); progHide = setTimeout(progStop, 300); return; }
+  progPaint(100, t('botProgApply'));
+  progHide = setTimeout(() => {
+    $('#rkProg').classList.add('is-done');
+    $('#rkProgStep').textContent = t('botProgDone');
+    progHide = setTimeout(progStop, 2200);
+  }, 450);
+}
 async function send(text) {
   talk.push({ role: 'user', content: text });
   const my = ++talkReq;
   setTalkUI('thinking');
   speak(t('botThink'));
+  progStart(text);
   await botRec();
   let d;
   try {
     d = await ask('/bot/chat', { msgs: talk.slice(-12), courses: botCourses(), lang: document.documentElement.lang, name: botName(), now: botNow() }, true);
   } catch (e) {
     talk.pop();
+    if (my === talkReq) progStop();
     if (my === talkReq && chatting) {
       setTalkUI('busy');
       speak(t(e.status === 429 ? 'botBusy' : 'botChatFail'));
@@ -926,6 +975,7 @@ async function send(text) {
     return;
   }
   if (my !== talkReq) return;
+  progDone((d.do || []).some(a => a.act === 'theme' && !a.reset));
   const said = d.say || '👍';
   talk.push({ role: 'assistant', content: said });
   if (chatting) {

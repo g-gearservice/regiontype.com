@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.480",
+    "date": "2026-10-23",
+    "ko": "홈 봇이 답을 짓는 동안 말풍선 안에 진행 막대와 흐른 시간이 보입니다. 스타일을 만들 때는 단계가 차례로 바뀌고, 다 되면 적용과 저장까지 알려 줍니다.",
+    "en": "While the home bot works on a reply, its bubble now shows a progress bar and the time so far. For styles it steps through what it's doing and tells you once the style is applied and saved."
+  },
+  {
     "v": "0.11.479",
     "date": "2026-10-23",
     "ko": "멈춘 모델 건너뛰기가 이제 모든 대화에 함께 적용됩니다. 한 번 멈춘 모델은 누가 말을 걸든 몇 분 동안 건너뜁니다.",
