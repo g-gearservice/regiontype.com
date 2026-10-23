@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.481",
+    "date": "2026-10-23",
+    "ko": "결과 화면이 바뀌었습니다. 왼쪽에 이번 판 지도가 놓이고 친 순서와 박자대로 다시 물들어(다시 보기), 오른쪽에 점수와 순위표가 섭니다. 순위표의 내 줄은 하이라이트 색으로 채우고, 다시 하기는 점수 칸과 같은 판, 공유는 하이라이트 색입니다.",
+    "en": "The results screen is redesigned. This game's map sits on the left and replays in the order and rhythm you typed (Replay), with your score and the leaderboard on the right. Your leaderboard row is filled with the highlight colour, Play again matches the score cards, and Share uses the highlight colour."
+  },
+  {
     "v": "0.11.480",
     "date": "2026-10-23",
     "ko": "홈 봇이 답을 짓는 동안 말풍선 안에 진행 막대와 흐른 시간이 보입니다. 스타일을 만들 때는 단계가 차례로 바뀌고, 다 되면 적용과 저장까지 알려 줍니다.",

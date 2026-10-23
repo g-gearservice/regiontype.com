@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.80';
+const VER = '4.81';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2280,6 +2280,7 @@ let G = null, tick = null, pending = null;
 
 /* rk 는 경쟁전 표({id, secs}) — ranked.js 가 중계기에서 받아 넘긴다. 시간은 표가 정한다 */
 async function start(slug, only, rk) {
+  cancelAnimationFrame(replayRaf);
   /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
      기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
   /* 게임 자판이 켜져 있으면 기기 키보드가 올라오지 않게 먼저 막는다 — 코스를 못 치는
@@ -3196,6 +3197,7 @@ function miss() {
 
 function claim(it) {
   it.claimed = true;
+  it.hitAt = performance.now() - (G.t0 || performance.now());   // 결과 지도 다시 보기(replay)의 박자
   it.el.classList.add('got');
   if (it.label) it.label.classList.add('on');
   if (it.tile) it.tile.classList.add('built');
@@ -3270,8 +3272,56 @@ function finish() {
     $('#typein').blur();
     go('result');
     fitResult();
+    if (!fingers()) resMap();
   }, 1200);
 }
+
+/* ── 결과 지도 ── 끝난 판의 지도를 떠서(#map 복제, drawCard 와 같은 손) 결과 화면 왼쪽에 둔다.
+   다시 보기는 친 순서와 박자 그대로 칸을 물들인다 — 실제 걸린 시간(tEnd)을 REPLAY_MS 안팎으로
+   줄여 돌리고, 시계는 실제 시간을 보인다. 다 돌면 못 들른 곳을 칠한다.
+   움직임을 줄였으면 돌리지 않고 끝난 모습을 곧장 보인다 */
+let replayRaf = 0;
+const REPLAY_MS = [2500, 6000];
+const clockOf = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function resMap() {
+  cancelAnimationFrame(replayRaf);
+  const svg = $('#map').cloneNode(true);
+  svg.querySelector('.cam').removeAttribute('transform');
+  const groups = G.items.map(it => it.el ? svg.querySelector(`[id="${it.el.id}"]`) : null);
+  svg.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  svg.removeAttribute('id'); svg.removeAttribute('style');
+  svg.setAttribute('class', 'res-map-svg');
+  svg.setAttribute('aria-hidden', 'true');
+  $('#resMapBox').replaceChildren(svg);
+  $('#resMapBox').setAttribute('aria-label', t('resMapAria', { n: G.hits, of: G.items.length }));
+  $('#resGot').textContent = G.hits;
+  $('#resMiss').textContent = G.items.length - G.hits;
+  G.replay = { groups, tEnd: G.t0 ? Math.max(1000, G.t1 - G.t0) : G.total * 1000 };
+  $('#resMap').hidden = false;
+  replay();
+}
+function replay() {
+  const r = G && G.replay;
+  if (!r) return;
+  cancelAnimationFrame(replayRaf);
+  r.groups.forEach(g => g && g.classList.remove('got', 'miss'));
+  const paint = ms => {
+    G.items.forEach((it, i) => { if (it.claimed && it.hitAt <= ms && r.groups[i]) r.groups[i].classList.add('got'); });
+    $('#resClock').textContent = clockOf(ms);
+    $('#resTrack').style.transform = `scaleX(${Math.min(1, ms / r.tEnd)})`;
+  };
+  const end = () => { paint(r.tEnd); G.items.forEach((it, i) => { if (!it.claimed && r.groups[i]) r.groups[i].classList.add('miss'); }); };
+  if (calm()) return end();
+  const span = Math.min(REPLAY_MS[1], Math.max(REPLAY_MS[0], r.tEnd / 20)), t0 = performance.now();
+  const step = now => {
+    const k = Math.min(1, (now - t0) / span);
+    paint(k * r.tEnd);
+    if (k < 1) replayRaf = requestAnimationFrame(step); else end();
+  };
+  paint(0);
+  replayRaf = requestAnimationFrame(step);
+}
+$('#resReplay').onclick = replay;
 
 /* 결과 카드 — SVG를 그대로 이미지로 굽는다 (9:16, 스토리용).
    스토리는 위아래 UI 가 가리므로 글자는 위 250·아래 340 px 안쪽에 둔다 */
