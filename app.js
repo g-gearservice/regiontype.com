@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.85';
+const VER = '4.86';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1663,7 +1663,9 @@ function navBotTarget(el) {
 }
 function makeNavFollow(spec) {
   const SPR = { x: sp(0, .05), y: sp(0, .05), w: sp(8, .05), h: sp(8, .05) };
-  let aim = null, on = false, raf = 0, t0 = 0, base = null, pull = null;
+  let aim = null, on = false, raf = 0, t0 = 0, base = null, pull = null, at = null;
+  /* 손이 막대 위에 있으면 지금 그 아래 칸 — 칸이 빠져 줄이 밀려도(뒤로) 손 밑에 들어선 칸을 안다 */
+  const under = () => at && spec.target(document.elementFromPoint(at[0], at[1]));
   function paint() {
     const shape = spec.shape();
     if (!shape) return;
@@ -1793,7 +1795,9 @@ function makeNavFollow(spec) {
     if (!nav || nav.dataset.shapeOn) return;
     nav.dataset.shapeOn = '1';
     const fine = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
+    nav.addEventListener('pointermove', e => { if (fine()) at = [e.clientX, e.clientY]; });
     nav.addEventListener('pointerover', e => {
+      if (fine()) at = [e.clientX, e.clientY];
       const it = spec.target(e.target);
       if (!it) return;
       if (fine() || it === document.activeElement) aimTo(it);
@@ -1803,6 +1807,7 @@ function makeNavFollow(spec) {
     addEventListener('pointerup', e => drop(e, fine(), true));
     addEventListener('pointercancel', e => drop(e, false, false));
     nav.addEventListener('pointerleave', () => {
+      at = null;
       if (pull) return;
       const a = document.activeElement;
       const keep = nav.contains(a) && a.matches(':focus-visible') ? spec.target(a) : null;
@@ -1818,12 +1823,19 @@ function makeNavFollow(spec) {
       if (it) aimTo(e.target.matches(':focus-visible') || (fine() && it.matches(':hover')) ? it : null);
     });
     nav.addEventListener('focusout', e => {
-      if (!nav.contains(e.relatedTarget)) aimTo(null);
+      /* 초점이 나가도 손이 아직 막대 위면 그 칸에 남는다 — 뒤로를 누르면 초점은 구 칸으로 간다 */
+      if (!nav.contains(e.relatedTarget)) aimTo(under() || null);
     });
     addEventListener('resize', () => { on = false; aimTo(aim); });
     requestAnimationFrame(() => aimTo(null));
   }
-  function relayout() { on = false; aimTo(aim); }
+  /* 가리키던 칸이 빠졌으면(뒤로가 숨었다) 그 자리에 들어선 칸으로 곧장 선다 — 사라진 칸을 재면
+     알약이 엉뚱한 데서 날아온다 */
+  function relayout() {
+    on = false;
+    if (aim && !aim.getClientRects().length) aim = under() || null;
+    aimTo(aim);
+  }
   return { aim: aimTo, wire, relayout };
 }
 /* 로고 위 경기장 알약. 이만큼(px) 아래로 끌어 놓으면 스타일 판으로 간다.
