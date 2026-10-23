@@ -59,7 +59,7 @@ const placeOf = slug => slug === COURSE.root ? homeTitle()
 /* ── 덮개 여닫기 ─────────────────────────────────────────
    settings.js 와 같은 결: 뒤를 inert 로 잠그고, 탭은 안에서만 돌고, Esc·뒤로 가기로
    닫힌다. 닫을 때는 글자를 바로 접고 칸 위의 서리만 --si-dur 동안 걷는다 */
-const PAGES = ['ranking', 'records', 'account'];
+const PAGES = ['ranking', 'records', 'styles', 'account'];
 const over = name => document.getElementById(name);
 let page = null, opener = null, inertWas = [], leaveGen = 0;
 
@@ -96,6 +96,7 @@ function openPage(name) {
   (fingers() ? el.querySelector('h1, h2') : el.querySelector('[data-pg-close]')).focus({ preventScroll: true });
   if (name === 'ranking') fillRanking();
   else if (name === 'records') fillRecords();
+  else if (name === 'styles') { styleGone = null; $('#styNote').textContent = ''; fillStyles(); }
   else openAccount();
 }
 function closePage(now) {
@@ -288,6 +289,109 @@ async function fillRecords() {
     return li;
   }));
   say.textContent = d.games.length || lad ? '' : t('recordsEmpty');
+}
+
+/* ── 내 스타일 ─────────────────────────────────────────────
+   봇이 지은 스타일(theme 와 같은 답에 실린 look·night·motion)을 이 기기(rt.styles)에 쌓는다 — 지금 색(rt.theme)·
+   봇 모습(rt.character)처럼 계정이 아니라 기기 것이다. 같은 두 색은 하나로, 새것이 위로, STYLE_MAX 개까지.
+   지우기는 묻지 않고 곧장 지운 뒤 되돌리기를 준다 */
+const STYLE_KEY = 'rt.styles', STYLE_MAX = 24;
+const readStyles = () => { try { const v = JSON.parse(localStorage.getItem(STYLE_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+const writeStyles = list => { try { localStorage.setItem(STYLE_KEY, JSON.stringify(list)); return true; } catch { return false; } };
+const curTheme = () => { try { return JSON.parse(localStorage.getItem('rt.theme') || 'null') || {}; } catch { return {}; } };
+const sameStyle = (a, b) => (a.accent || '') === (b.accent || '') && (a.block || '') === (b.block || '');
+function keepStyle(acts) {
+  const th = acts.find(a => a.act === 'theme' && !a.reset);
+  if (!th) return;
+  const look = acts.find(a => a.act === 'look');
+  const s = { id: Date.now().toString(36), name: th.name || '', at: Date.now(), accent: th.accent || '', block: th.block || '' };
+  if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour };
+  for (const a of acts) if (a.act === 'set' && (a.key === 'night' || a.key === 'motion')) s[a.key] = a.value;
+  writeStyles([s, ...readStyles().filter(x => !sameStyle(x, s))].slice(0, STYLE_MAX));
+  if (page === 'styles') fillStyles();
+}
+function wearStyle(s) {
+  try { localStorage.setItem('rt.theme', JSON.stringify({ accent: s.accent, block: s.block })); } catch { return; }
+  paintTheme();
+  if (s.face) act({ act: 'look', ...s.face });
+  const o = {};
+  if (typeof s.night === 'boolean') o.night = s.night;
+  if (typeof s.motion === 'boolean') o.motion = s.motion;
+  if (Object.keys(o).length) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: o }));
+}
+let styleGone = null;
+function fillStyles(focusId) {
+  const list = readStyles(), cur = curTheme(), ul = $('#styList');
+  const day = new Intl.DateTimeFormat(document.documentElement.lang || 'ko', { month: 'numeric', day: 'numeric' });
+  ul.replaceChildren(...list.map(s => {
+    const li = document.createElement('li'), on = sameStyle(s, cur) && !!(cur.accent || cur.block);
+    const name = s.name || t('styleUntitled');
+    li.dataset.id = s.id;
+    li.toggleAttribute('data-on', on);
+    const sw = document.createElement('span');
+    sw.className = 'sty-swatch';
+    sw.setAttribute('aria-hidden', 'true');
+    if (/^#[0-9a-f]{6}$/.test(s.block)) sw.style.setProperty('--sw-block', s.block);
+    if (/^#[0-9a-f]{6}$/.test(s.accent)) sw.style.setProperty('--sw-accent', s.accent);
+    sw.toggleAttribute('data-night', s.night === true);
+    for (let i = 0; i < 9; i++) sw.append(document.createElement('i'));
+    const txt = document.createElement('span');
+    txt.className = 'sty-text';
+    const b = document.createElement('b'); b.textContent = name;
+    const meta = document.createElement('span');
+    meta.textContent = [day.format(new Date(s.at)), s.night === true ? t('botChipNight') : ''].filter(Boolean).join(' · ');
+    txt.append(b, meta);
+    const tag = document.createElement('span');
+    tag.className = 'sty-on'; tag.textContent = t('styleOn'); tag.hidden = !on;
+    const use = document.createElement('button');
+    use.type = 'button'; use.className = 'sty-use'; use.dataset.styUse = s.id;
+    use.textContent = t('styleApply'); use.hidden = on;
+    use.setAttribute('aria-label', t('styleApplyName', { name }));
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'sty-del'; del.dataset.styDel = s.id;
+    del.setAttribute('aria-label', t('styleDelName', { name }));
+    del.innerHTML = '<i class="i i-close" aria-hidden="true"></i>';
+    li.append(sw, txt, tag, use, del);
+    return li;
+  }));
+  $('#stySay').textContent = list.length ? '' : t('stylesEmpty');
+  $('#styReset').hidden = !(cur.accent || cur.block);
+  $('#styUndo').hidden = !styleGone;
+  if (focusId) (ul.querySelector(`[data-id="${CSS.escape(focusId)}"] button:not([hidden])`) || $('#styHead')).focus({ preventScroll: true });
+}
+function wireStyles() {
+  $('#styles').addEventListener('click', e => {
+    const use = e.target.closest('[data-sty-use]'), del = e.target.closest('[data-sty-del]');
+    if (use) {
+      const s = readStyles().find(x => x.id === use.dataset.styUse);
+      if (!s) return;
+      wearStyle(s);
+      fillStyles(s.id);
+      $('#styNote').textContent = t('styleWorn', { name: s.name || t('styleUntitled') });
+    } else if (del) {
+      const list = readStyles(), i = list.findIndex(x => x.id === del.dataset.styDel);
+      if (i < 0) return;
+      styleGone = { s: list[i], i };
+      list.splice(i, 1);
+      writeStyles(list);
+      fillStyles((list[i] || list[i - 1] || {}).id);
+      $('#styNote').textContent = t('styleGone', { name: styleGone.s.name || t('styleUntitled') });
+      if (!list.length) $('#styUndo').focus({ preventScroll: true });
+    } else if (e.target.closest('#styUndo') && styleGone) {
+      const list = readStyles();
+      list.splice(styleGone.i, 0, styleGone.s);
+      writeStyles(list.slice(0, STYLE_MAX));
+      const id = styleGone.s.id;
+      styleGone = null;
+      $('#styNote').textContent = '';
+      fillStyles(id);
+    } else if (e.target.closest('#styReset')) {
+      act({ act: 'theme', reset: true });
+      fillStyles();
+      $('#styNote').textContent = t('styleResetDone');
+      $('#styHead').focus({ preventScroll: true });
+    }
+  });
 }
 
 /* ── 도우미 봇 ───────────────────────────────────────────
@@ -830,6 +934,7 @@ async function send(text) {
   }
   /* 동작은 말을 보여 준 뒤에 — 무엇을 하려는지 먼저 읽힌다 */
   (d.do || []).forEach(act);
+  keepStyle(d.do || []);
 }
 function wireChat() {
   $('#rkChat').addEventListener('submit', e => {
@@ -864,6 +969,7 @@ function wireChat() {
       }
       return;
     }
+    if (chip === 'styles') { openPage('styles'); return; }
     if (chip === 'feedback') {
       const fb = document.querySelector('[data-fb-open]');
       if (fb) fb.click();
@@ -1507,6 +1613,7 @@ wirePlayHold();
 wireStart();
 wireMatch();
 wireChat();
+wireStyles();
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
    지도 자리가 잡힌 뒤(RT_BOOT_PLACE) 귀퉁이 잠자리는 로딩 막 뒤에서 미리 세운다.
