@@ -2778,6 +2778,20 @@ body:has(.rk-bot.is-held) .rk-say{transition:none}
 }
 .rk-chips button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .rk-say.is-busy{background:var(--ranked);color:#fff}
+/* 진행 막대 — 말풍선 제 빛깔(currentColor)로 그린다. 채움은 transform 으로만 움직이고(합성기 몫),
+   끝나면 ✓ 와 글로도 알린다 — 색만으로 가르지 않는다. 오른쪽에서 쓰는 말은 오른쪽부터 찬다 */
+.rk-prog{display:flex;flex-direction:column;gap:6px;margin:8px 0 2px}
+.rk-prog[hidden]{display:none}
+.rk-prog-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;line-height:1.3}
+.rk-prog-sec{font-variant-numeric:tabular-nums;opacity:.8}
+.rk-prog-track{height:6px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,currentColor 24%,transparent)}
+.rk-prog-track i{display:block;height:100%;border-radius:inherit;background:currentColor;
+  transform:scaleX(0);transform-origin:left;transition:transform .25s linear}
+.rk-prog-track i:dir(rtl){transform-origin:right}
+.rk-prog.is-done #rkProgStep::before{content:"✓ "}
+.rk-prog.is-done .rk-prog-sec{visibility:hidden}
+@media (prefers-reduced-motion:reduce){ .rk-prog-track i{transition:none} }
+:root[data-motion="off"] .rk-prog-track i{transition:none}
 .rk-say.is-busy input:disabled{
   opacity:.72;color:var(--rk-ink,#fff);
   background:color-mix(in srgb,var(--ranked) 70%,#000);

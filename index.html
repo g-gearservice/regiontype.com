@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.77">
+<link rel="stylesheet" href="style.css?v=4.80">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -220,6 +220,12 @@
           <button type="submit" data-i18n="rankedStart">경쟁전 시작</button>
         </div>
       </form>
+      <!-- 봇이 답을 짓는 동안의 진행 막대(ranked.js 의 progStart). 한 번 묻는 길이라 참 진행률은 없다 —
+           막대는 어림이고 옆의 초가 실제로 흐른 시간이다. 단계 글만 읽히고 초는 읽히지 않는다 -->
+      <div class="rk-prog" id="rkProg" hidden>
+        <div class="rk-prog-row"><span id="rkProgStep"></span><span class="rk-prog-sec" id="rkProgSec" aria-hidden="true"></span></div>
+        <div class="rk-prog-track" id="rkProgBar" role="progressbar" aria-labelledby="rkProgStep" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+      </div>
       <!-- 봇에게 말 걸기(ranked.js 의 chat). 중계기 /bot/chat 이 NVIDIA 모델에 묻는다 -->
       <div class="rk-chips" id="rkChips" hidden>
         <button type="button" data-chip="ranked" data-i18n="botChipRanked">경쟁전 시작</button>
@@ -703,6 +709,6 @@
 <script src="app.js?v=4.77"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
-<script src="ranked.js?v=4.77"></script>
+<script src="ranked.js?v=4.80"></script>
 </body>
 </html>
