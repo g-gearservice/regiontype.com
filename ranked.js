@@ -904,7 +904,7 @@ function act(a) {
     dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { [a.key]: a.value } }));
   } else if (a.act === 'open') {
     if (PAGES.includes(a.page)) { openPage(a.page); return; }
-    if (a.page === 'feedback') { $('[data-fb-open]').click(); return; }
+    if (a.page === 'feedback') { openFeedback(); return; }
     if (a.page === 'home') { closePage(); return; }
     if (a.page === 'signin') { $('#signinLink').click(); return; }
     /* 설정은 제 손(settings.js)이 링크 click 을 받아 덮개로 연다 */
@@ -986,6 +986,16 @@ async function send(text) {
   (d.do || []).forEach(act);
   keepStyle(d.do || []);
 }
+/* 대화에서 피드백 판을 열면 막 오간 두 마디(보낸 말, 봇이 못 한다고 한 답)를 담아 둔다 —
+   무엇이 안 됐는지 다시 적지 않게. 이미 적어 둔 글은 덮지 않는다 */
+function openFeedback() {
+  const box = $('#fbBody'), b = talk.at(-1), u = talk.at(-2);
+  if (box && !box.value.trim() && b?.role === 'assistant' && u?.role === 'user')
+    box.value = (`${t('me')}: ${u.content}\n${botName()}: ${b.content}\n\n`).slice(0, box.maxLength);
+  $('[data-fb-open]')?.click();
+  /* 커서는 담은 글 뒤 빈 줄에 — 거기서 바로 덧붙인다 */
+  if (box) box.setSelectionRange(box.value.length, box.value.length);
+}
 function wireChat() {
   $('#rkChat').addEventListener('submit', e => {
     e.preventDefault();
@@ -1020,10 +1030,7 @@ function wireChat() {
       return;
     }
     if (chip === 'styles') { openPage('styles'); return; }
-    if (chip === 'feedback') {
-      const fb = document.querySelector('[data-fb-open]');
-      if (fb) fb.click();
-    }
+    if (chip === 'feedback') openFeedback();
   });
 }
 
