@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.71">
+<link rel="stylesheet" href="style.css?v=4.77">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -224,6 +224,7 @@
       <div class="rk-chips" id="rkChips" hidden>
         <button type="button" data-chip="ranked" data-i18n="botChipRanked">경쟁전 시작</button>
         <button type="button" data-chip="night" data-i18n="botChipNight">야간 모드</button>
+        <button type="button" data-chip="styles" data-i18n="botChipStyles">내 스타일</button>
         <button type="button" data-chip="feedback" data-i18n="botChipFeedback">피드백</button>
       </div>
       <form id="rkChat" hidden>
@@ -591,6 +592,27 @@
   </div>
 </section>
 
+<!-- 내 스타일 — 봇이 지은 스타일을 모아 두는 덮개(ranked.js 의 fillStyles). 주소는 #styles.
+     카드마다 색 견본·이름·날짜, 적용/지우기. 쓰는 것은 '사용 중' 글자와 테두리로 가른다(색만이 아니다) -->
+<section id="styles" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="styHead" hidden>
+  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
+  <div class="screen-head">
+    <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
+    <h2 class="head" id="styHead" tabindex="-1" data-i18n="stylesHead">내 스타일</h2>
+  </div>
+  <div class="pg-shell">
+    <p class="pg-help" data-i18n="stylesHelp">봇에게 "벚꽃 느낌으로 바꿔 줘"처럼 말하면 만든 스타일이 여기 쌓입니다. 이 기기에만 저장돼요.</p>
+    <ol class="sty-list" id="styList"></ol>
+    <p class="pg-say" id="stySay" role="status"></p>
+    <div class="sty-foot">
+      <p class="sty-note" id="styNote" role="status" aria-live="polite"></p>
+      <button type="button" class="sty-undo" id="styUndo" data-i18n="styleUndo" hidden>되돌리기</button>
+      <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
+    </div>
+  </div>
+</section>
+
 <!-- 내 계정 — 설정·순위처럼 홈 위에 뜨는 덮개다. 여닫기는 ranked.js(순위·기록과 같은 손),
      알맹이는 account/account.js 가 처음 열 때 실려 채운다. 뒤의 홈이 그대로 남아 닫으면
      고른 칸·지도 자리가 떠날 때 그대로다. /account/ 는 #account 로 넘기는 착지대다.
@@ -610,6 +632,7 @@
           <figure class="pet-fig"><div id="character" class="character" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div><figcaption data-i18n="acctZoom">확대 크기</figcaption></figure>
         </div>
         <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" data-i18n-aria="acctBotSize" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
+        <a class="profile-button sty-link" href="#styles" data-i18n="stylesHead">내 스타일</a>
       </div>
       <div class="profile-card character-controls">
         <fieldset><legend class="profile-label"><span data-i18n="acctShape">모양</span> <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
@@ -677,9 +700,9 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=4.71"></script>
+<script src="app.js?v=4.77"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
-<script src="ranked.js?v=4.74"></script>
+<script src="ranked.js?v=4.77"></script>
 </body>
 </html>

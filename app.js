@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.76';
+const VER = '4.77';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1908,8 +1908,8 @@ function tabNow() {
   if (b.contains('signing')) return 'account';
   if (b.contains('setting')) return 'settings';
   if (b.contains('paging')) {
-    const p = ['ranking', 'records', 'account'].find(n => !$('#' + n).hidden && !$('#' + n).classList.contains('pg-exit'));
-    if (p) return p === 'records' ? 'account' : p;   // 기록은 계정 탭 안에 산다
+    const p = ['ranking', 'records', 'styles', 'account'].find(n => !$('#' + n).hidden && !$('#' + n).classList.contains('pg-exit'));
+    if (p) return p === 'records' || p === 'styles' ? 'account' : p;   // 기록·내 스타일은 계정 탭 안에 산다
   }
   return 'map';
 }
@@ -1934,7 +1934,7 @@ function tabSwap(sign, fn) {
 }
 function tabGo(to) {
   const from = tabNow();
-  if (from === to && !(to === 'account' && !$('#records').hidden)) {
+  if (from === to && !(to === 'account' && (!$('#records').hidden || !$('#styles').hidden))) {
     /* 지도 탭 — 접혀 있으면 펼치고, 펼친 채 다시 누르면 지도를 처음 자리로(탭을 두 번 누르면 맨 위로 가듯). 덮개 탭은 그대로 */
     if (to === 'map') { if ($('#tabDock').classList.contains('is-min')) dockMin(false); else $('#homeFit').click(); }
     return;
@@ -1949,7 +1949,7 @@ function tabGo(to) {
     } finally { TAB.swap = TAB.pass = false; }
     tabPaint();
     /* 포커스는 새 덮개의 제목으로, 지도면 지도 탭으로 */
-    const box = ['#ranking', '#records', '#account', '#options', '#signin'].map(s => $(s)).find(n => n && !n.hidden);
+    const box = ['#ranking', '#records', '#styles', '#account', '#options', '#signin'].map(s => $(s)).find(n => n && !n.hidden);
     if (!box) $('#tabHome').focus({ preventScroll: true });
     else if (!box.contains(document.activeElement)) (box.querySelector('h1, h2') || box).focus({ preventScroll: true });
   });
@@ -1966,7 +1966,7 @@ function tabDock() {
   /* #regions 안에 있으면 덮개가 뒤를 잠글 때(inert) 막대도 잠긴다 — body 직속으로 뺀다 */
   document.body.append($('#tabDock'));
   /* 덮개는 막대와 함께 열려 있으니 모달이 아니다. 제목은 프로그램으로 초점을 받는다 */
-  ['#signin', '#options', '#ranking', '#records', '#account'].forEach(s => {
+  ['#signin', '#options', '#ranking', '#records', '#styles', '#account'].forEach(s => {
     const box = $(s);
     box.setAttribute('aria-modal', 'false');
     const h = box.querySelector('h1, h2');
@@ -1994,7 +1994,7 @@ function tabDock() {
   const mo = new MutationObserver(tabPaint);
   mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   mo.observe($('#tabDock'), { attributes: true, attributeFilter: ['inert'] });
-  ['#ranking', '#records', '#account'].forEach(s => mo.observe($(s), { attributes: true, attributeFilter: ['hidden', 'class'] }));
+  ['#ranking', '#records', '#styles', '#account'].forEach(s => mo.observe($(s), { attributes: true, attributeFilter: ['hidden', 'class'] }));
   tabPaint();
 }
 if (fingers()) {

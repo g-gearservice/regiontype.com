@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.477",
+    "date": "2026-10-23",
+    "ko": "'내 스타일' 페이지가 생겼습니다. 봇이 만든 스타일이 이름과 색 견본으로 쌓이고, 다시 적용하거나 지울 수 있습니다(지워도 되돌리기). 봇 대화 칩과 내 계정에서 열 수 있어요.",
+    "en": "New My styles page. Every style the bot makes is kept with a name and a colour preview, and you can apply it again or delete it (with undo). Open it from the bot's chat chips or your account."
+  },
+  {
     "v": "0.11.476",
     "date": "2026-10-23",
     "ko": "홈 봇이 더 빨리 답합니다. 더 빠른 모델로 바꿔, 스타일 바꾸기처럼 긴 답도 10초 안쪽에 옵니다.",

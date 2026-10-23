@@ -886,6 +886,8 @@ console.log('security rule self-check done');
   assert.equal(botTheme({ accent: '#222222', block: '#eeeeee' }), null, '글자가 안 읽히는 색은 버린다');
   assert.equal(botTheme({ accent: 'red;}body{display:none' }), null, '#rrggbb 만');
   assert.deepEqual(botTheme({ reset: true }), { act: 'theme', reset: true });
+  assert.deepEqual(botTheme({ name: ' 벚꽃\n봄 ', accent: '#f0a03c' }), { act: 'theme', name: '벚꽃 봄', accent: '#f0a03c' }, '스타일 이름은 한 줄로 짧게');
+  assert.equal(botTheme({ name: '이름만' }), null, '색 없는 이름만으론 스타일이 아니다');
   const eng = await import('node:fs').then(fs => fs.readFileSync(new URL('../assets/bloub/engine.js', import.meta.url), 'utf8'));
   for (const [k, from, to] of [['expression', 'var EXPRESSIONS', 'var SHAPES'], ['shape', 'var SHAPES', 'var COLORS'], ['colour', 'var COLORS', ']']]) {
     const seg = eng.slice(eng.indexOf(from), k === 'colour' ? eng.indexOf('\n];', eng.indexOf(from)) : eng.indexOf(to));

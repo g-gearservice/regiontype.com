@@ -1813,7 +1813,7 @@ const NV = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const NV_MODELS = ['deepseek-ai/deepseek-v4.1-flash', 'nvidia/nemotron-3-ultra-550b-a55b', 'z-ai/glm-5.3-flash'];
 const NV_DAY = 200000, BOT_OUT = 1200, BOT_TRIES = 2;   // 초안 본문과 스타일(동작 넷)이 끊기지 않을 만큼
 const DAY_MS = 86400000;
-const BOT_PAGES = ['home', 'ranking', 'records', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
+const BOT_PAGES = ['home', 'ranking', 'records', 'styles', 'settings', 'community', 'about', 'signin', 'account', 'feedback'];
 /* 봇이 바꿀 수 있는 설정과 그 값. app.js·settings.js 의 DEF 와 같은 키다(lang·country 는
    개발 중이라 뺀다). time 은 순위표가 판마다 갈리는 그 값들이다 */
 const ONOFF = [true, false];
@@ -1873,6 +1873,8 @@ const HEX = /^#[0-9a-f]{6}$/i;
 export function botTheme(a) {
   if (a?.reset === true) return { act: 'theme', reset: true };
   const t = { act: 'theme' };
+  const name = plain(a?.name, 24);
+  if (name) t.name = name;
   if (HEX.test(a?.accent) && contrast(a.accent, '#232c31') >= 4.5) t.accent = a.accent.toLowerCase();
   if (HEX.test(a?.block) && contrast(a.block, '#ffffff') >= 3) t.block = a.block.toLowerCase();
   return t.accent || t.block ? t : null;
@@ -1897,7 +1899,7 @@ export function botSystem({ courses, lang, name, now }) {
     'fight, race or play against you. It is ranked and costs LP if they leave, so only when they clearly ask to ' +
     'play now; if it is unclear (a question, a joke), ask first. If no course is named, use the first course.\n' +
     `{"act":"open","page":"<${BOT_PAGES.join('|')}>"} opens that screen (feedback = the feedback form, ` +
-    'records = my match history).\n' +
+    'records = my match history, styles = my saved styles).\n' +
     '{"act":"set","key":"<key>","value":<value>} changes a setting: ' +
     Object.entries(BOT_SET).map(([k, v]) => `${k} ${v.map(x => JSON.stringify(x)).join('|')}`).join('; ') +
     ' (night = dark mode, motion = animations, grid = background grid, hint = show the place name, ' +
@@ -1907,7 +1909,8 @@ export function botSystem({ courses, lang, name, now }) {
     'presses post. Write it in the user\'s voice from what they told you; never invent scores or facts.\n' +
     '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>"} changes how you look (any of the three): ' +
     Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (ids are French words).\n' +
-    '{"act":"theme","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site: accent = highlight colour ' +
+    '{"act":"theme","name":"<short style name>","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site ' +
+    'and saves the style under that name (2–4 words in the user\'s language) to the styles page: accent = highlight colour ' +
     '(must be light enough for dark text), block = main tile colour (must be dark enough for white text). ' +
     '{"act":"theme","reset":true} goes back to the default colours.\n' +
     'Style from a reference: when the user names a reference (a brand, artwork, season, mood, place, game...) ' +
