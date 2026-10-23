@@ -705,12 +705,45 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .countdown.on{display:grid}
 
 /* ── 결과 ─────────────────────────────── */
-/* 데스크톱은 카드 | 점수 | 순위표 세 단. 폭이 모자라면 아래로 접힌다.
-   타/분이 주인공이다 — 크게 하나, 들른 곳·정확도는 그 밑의 두 칸 */
-.res-sheet{display:flex;flex-wrap:wrap;align-items:flex-start;gap:40px 56px}
-.result-wrap{flex:0 0 auto;max-width:100%;display:flex;gap:56px;align-items:flex-start;flex-wrap:wrap}
-#card{width:300px;max-width:100%;height:auto;box-shadow:0 12px 28px -18px rgba(40,60,70,.6)}
-.scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:start;width:400px;max-width:100%;padding-top:8px}
+/* 데스크톱은 지도 | 점수·순위표 두 단(결과 페이지 시안 B · 지도 회고). 왼쪽 큰 칸이 이번 판 지도이고
+   다시 보기로 친 순서대로 다시 물든다. 폭이 모자라면 한 단으로 접힌다.
+   공유 카드(#card)는 저장·공유용으로 계속 굽되 보이지 않는다 */
+.res-sheet{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:24px 40px;align-items:start;width:100%;max-width:1240px;margin:0 auto}
+.result-wrap{display:contents}
+#card{display:none}
+.res-map{grid-column:1;grid-row:1 / span 2;margin:0;min-width:0;display:flex;flex-direction:column;gap:16px;
+  background:var(--card);border-radius:8px;box-shadow:var(--shadow);padding:24px}
+.res-map[hidden]{display:none}
+.res-map-box svg{display:block;width:100%;height:auto;max-height:64vh}
+.res-map-svg circle{fill:var(--land);transition:fill .26s var(--ease-out)}
+.res-map-svg g.got circle{fill:var(--accent)}
+.res-map-svg g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land))}
+.res-map-svg text,.res-map-svg .tiles{display:none}
+.res-map-cap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;font-size:14px;font-weight:600;color:var(--ink-soft)}
+.res-replay{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 12px;border-radius:999px;
+  font:inherit;font-size:15px;font-weight:800;color:var(--ink);background:none;border:2px solid var(--block);cursor:pointer;
+  transition:background var(--fast) var(--ease-out),transform .1s ease-out}
+.res-replay svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.res-replay:active{transform:scale(.97)}
+.res-replay:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.res-clock{min-width:3.2em;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.res-track{flex:1 1 120px;height:6px;border-radius:999px;overflow:hidden;background:var(--land)}
+.res-track i{display:block;height:100%;background:var(--accent);transform:scaleX(0);transform-origin:left}
+.res-track i:dir(rtl){transform-origin:right}
+.res-key{display:inline-flex;align-items:center;gap:7px}
+.res-key b{color:var(--ink);font-variant-numeric:tabular-nums}
+.res-key i{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.res-key i.miss{background:color-mix(in srgb,var(--accent-text) 26%,var(--land));box-shadow:inset 0 0 0 2px var(--ink-soft)}
+@media (hover:hover) and (pointer:fine){ .res-replay:hover{background:var(--card-inset)} }
+@media (prefers-reduced-motion:reduce){ .res-map-svg circle{transition:none} .res-replay:active{transform:none} }
+:root[data-motion="off"] .res-map-svg circle{transition:none}
+:root[data-motion="off"] .res-replay:active{transform:none}
+@media (max-width:980px){
+  .res-sheet{grid-template-columns:minmax(0,1fr)}
+  .res-map{grid-row:auto}
+  .scores,#board{grid-column:1}
+}
+.scores{grid-column:2;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:start;width:auto;max-width:100%;padding-top:8px}
 .scores > *{grid-column:1 / -1;margin:0}
 .scores p{display:flex;flex-direction:column-reverse;gap:2px}
 .scores p span{color:var(--ink-soft);font-size:14px;font-weight:600}
@@ -725,13 +758,15 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 /* 기록 줄은 색만이 아니라 테두리로 띄운다 */
 #rBest{order:-1;justify-self:start;border:2px solid var(--accent);border-radius:999px;padding:5px 12px 6px}
 .scores .menu{flex-direction:row;width:auto;min-width:0;margin-top:12px;gap:10px}
-.scores .menu :is(#again,#save){min-height:52px;border-radius:10px;font-size:18px;padding:0 26px;display:flex;align-items:center;justify-content:center;gap:8px}
-#again{background:var(--accent);color:var(--on-accent);font-weight:800}
-#save{background:none;color:var(--ink);border:2px solid var(--block)}
+.scores .menu{display:grid;grid-template-columns:1fr 1fr}
+.scores .menu :is(#again,#save){min-height:56px;border-radius:8px;font-size:18px;padding:0 26px;display:flex;align-items:center;justify-content:center;gap:8px}
+/* 다시 하기는 들른 곳·정확도 칸과 같은 판(바탕·모서리·그림자), 공유는 순위표 내 줄과 같은 하이라이트로 채운다 */
+#again{background:var(--card);color:var(--ink);font-weight:800;box-shadow:var(--shadow)}
+#save{background:var(--block-deep);color:#fff;border:0}
 #save::before{content:"";width:1.1em;height:1.1em;flex:0 0 auto;background:currentColor;
   -webkit-mask:var(--i) center / 100% no-repeat;mask:var(--i) center / 100% no-repeat;
   --i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4v11M7 10l5 5 5-5M5 20h14'/></svg>")}
-#board{flex:1 1 320px;max-width:420px;padding-top:8px}
+#board{grid-column:2;max-width:none;padding-top:8px}
 /* 폰 결과는 끝난 지도(#play 의 .stage)를 뒤에 깔고, 점수·다시 하기/공유를 아래에서
    올라오는 유리 시트에 담는다. 공유는 굴리지 않아도 보여야 한다 — 타/분을 크게,
    두 칸을 그 밑에, 단추 둘을 그 밑에 편다. 순위표는 시트 안에서 굴린다 */
@@ -747,7 +782,7 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
   #result.on .res-sheet{animation:sheet-rise .42s var(--ease-out) backwards}
   /* 폰은 지도가 뒤에 깔려 있으니 카드 견본을 빼고 숫자를 바로 올린다. 카드는 저장용으로 계속 그린다 */
   .result-wrap{display:block}
-  #card{display:none}
+  .res-map{display:none}
   .scores{width:auto;gap:8px;padding-top:0}
   .scores p:first-child{grid-column:1}
   .scores p:first-child b{font-size:64px}
@@ -758,7 +793,8 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
   #rBest{grid-column:2;justify-self:end;align-self:end;margin-bottom:6px;font-size:13px;padding:4px 10px 5px}
   .scores .best{font-size:14px}
   .scores .menu{display:grid;grid-template-columns:1fr 1fr;margin-top:8px;gap:8px}
-  .scores .menu :is(#again,#save){min-height:50px;border-radius:14px;padding:10px 12px;white-space:nowrap}
+  .scores .menu :is(#again,#save){min-height:50px;border-radius:12px;padding:10px 12px;white-space:nowrap}
+  #again{background:var(--glass-fill);box-shadow:none}
   #board{margin-top:6px;max-width:none;padding-top:0}
   .res-head{margin:18px 0 10px}
   .ranks{max-width:none}
@@ -772,7 +808,7 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 
 /* 순위표 — 내 줄은 테두리와 '나' 라벨을 함께 붙인다:
    색 하나로만 갈라 두면 못 보는 사람이 생긴다 */
-.ranks{list-style:none;display:flex;flex-direction:column;gap:6px;max-width:420px}
+.ranks{list-style:none;display:flex;flex-direction:column;gap:6px;max-width:none}
 .ranks li{
   display:flex;align-items:baseline;gap:12px;background:var(--card);
   padding:10px 14px;border:2px solid transparent;font-size:15px;
@@ -780,11 +816,14 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .ranks b{min-width:26px;font-size:17px;font-weight:800;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 .ranks .who{flex:1;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ranks .pt{font-weight:700;font-variant-numeric:tabular-nums}
-.ranks li.me{border-color:var(--block)}
 .ranks .tag{
   align-self:center;font-size:12px;font-weight:700;line-height:1;
   color:#fff;background:var(--block-deep);padding:3px 6px 4px;border-radius:3px;
 }
+/* 내 줄은 테두리와 같은 빛깔로 채운다 — 흰 글자 5.89:1 이 낮·밤 모두 서는 --block-deep. '나' 라벨은 뒤집어 흰 바탕에 */
+.ranks li.me{background:var(--block-deep);border-color:var(--block-deep)}
+.ranks li.me :is(b,.who,.pt){color:#fff}
+.ranks li.me .tag{color:var(--block-deep);background:#fff}
 .board-say{margin:-6px 0 12px;min-height:22px;color:var(--accent-text);font-weight:700}
 .board-say.bad{color:var(--bad)}
 .board-in{margin-top:14px;max-width:460px;font-size:14px;color:var(--ink-soft);line-height:1.6}
@@ -902,8 +941,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 @media (hover:hover) and (pointer:fine){
   .menu button:hover, .menu a:hover, #save:hover{background:var(--accent)}
-  #again:hover{background:var(--accent-deep)}
-  #save:hover{color:var(--on-accent);border-color:var(--accent)}
+  #again:hover{background:color-mix(in srgb,var(--card) 86%,var(--ink))}
+  #save:hover{background:color-mix(in srgb,var(--block-deep) 84%,#000)}
   .step:hover{color:var(--accent)}
   .toggle:hover{border-color:var(--accent)}
 }

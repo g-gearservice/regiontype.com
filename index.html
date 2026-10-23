@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.80">
+<link rel="stylesheet" href="style.css?v=4.81">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -301,6 +301,18 @@
   <!-- 폰에서는 끝난 지도 위로 올라오는 유리 시트. 데스크톱은 display:contents -->
   <div class="res-sheet">
   <div class="result-wrap">
+    <!-- 이번 판 지도 — 끝나면 친 순서·박자대로 다시 물든다(app.js 의 replay). 폰은 끝난 지도가
+         시트 뒤에 깔려 있어 빼고, 공유 카드(#card)는 저장용으로 보이지 않게 계속 굽는다 -->
+    <figure class="res-map" id="resMap" hidden>
+      <div class="res-map-box" id="resMapBox" role="img"></div>
+      <figcaption class="res-map-cap">
+        <button type="button" class="res-replay" id="resReplay"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg><span data-i18n="replay">다시 보기</span></button>
+        <span class="res-clock" id="resClock" aria-hidden="true">0:00</span>
+        <span class="res-track" aria-hidden="true"><i id="resTrack"></i></span>
+        <span class="res-key"><i class="got" aria-hidden="true"></i><span data-i18n="visited">들른 곳</span> <b id="resGot">0</b></span>
+        <span class="res-key"><i class="miss" aria-hidden="true"></i><span data-i18n="missed">못 들른 곳</span> <b id="resMiss">0</b></span>
+      </figcaption>
+    </figure>
     <canvas id="card" width="1080" height="1920"></canvas>
     <div class="scores">
       <p><b id="rScore">0</b><span class="unit">타/분</span></p>
@@ -706,7 +718,7 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=4.77"></script>
+<script src="app.js?v=4.81"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
 <script src="ranked.js?v=4.80"></script>
