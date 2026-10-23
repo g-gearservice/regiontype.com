@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.479",
+    "date": "2026-10-23",
+    "ko": "멈춘 모델 건너뛰기가 이제 모든 대화에 함께 적용됩니다. 한 번 멈춘 모델은 누가 말을 걸든 몇 분 동안 건너뜁니다.",
+    "en": "Skipping a stalled model now applies across all chats: once a model stalls, everyone's bot skips it for a few minutes."
+  },
+  {
     "v": "0.11.478",
     "date": "2026-10-23",
     "ko": "홈 봇이 멈춘 모델을 몇 분 동안 건너뜁니다. 한 모델이 느려져도 대화마다 오래 기다리지 않아요.",

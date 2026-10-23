@@ -426,6 +426,14 @@ create table if not exists botuse (
   primary key (model, day)
 );
 
+-- 봇 대화에서 쉬는 모델(worker.mjs 의 botCool). 시간 초과·5xx·429·404 를 낸 모델이 until(ms)까지 차례에서
+-- 빠진다. 격리마다 따로 기억하면 요청이 흩어져 거의 소용이 없어(2026-10-23) 모두가 이 표를 같이 본다.
+-- 모델마다 한 줄이고, 그 모델이 다시 답하면 지운다
+create table if not exists botcool (
+  model text    primary key,
+  until integer not null
+);
+
 -- 경쟁전(실시간) 판. 판 DO(compete-do.mjs)가 끝날 때 한 번 적는다. slugs 는 세트를 뽑은 코스 목록(JSON).
 -- status: done · aborted(카운트다운 중 이탈 — 레이팅 없음). season_id 는 Phase 4 가 채운다
 create table if not exists matches (
