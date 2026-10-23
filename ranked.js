@@ -987,11 +987,12 @@ async function send(text) {
   keepStyle(d.do || []);
 }
 /* 대화에서 피드백 판을 열면 막 오간 두 마디(보낸 말, 봇이 못 한다고 한 답)를 담아 둔다 —
-   무엇이 안 됐는지 다시 적지 않게. 이미 적어 둔 글은 덮지 않는다 */
+   무엇이 안 됐는지 다시 적지 않게. 이미 적어 둔 글은 덮지 않는다.
+   첫 줄은 중계기가 이슈 제목으로 쓰니(compose) 보낸 말을 라벨 없이 그대로 둔다 */
 function openFeedback() {
   const box = $('#fbBody'), b = talk.at(-1), u = talk.at(-2);
   if (box && !box.value.trim() && b?.role === 'assistant' && u?.role === 'user')
-    box.value = (`${t('me')}: ${u.content}\n${botName()}: ${b.content}\n\n`).slice(0, box.maxLength);
+    box.value = (`${u.content}\n${botName()}: ${b.content}\n\n`).slice(0, box.maxLength);
   $('[data-fb-open]')?.click();
   /* 커서는 담은 글 뒤 빈 줄에 — 거기서 바로 덧붙인다 */
   if (box) box.setSelectionRange(box.value.length, box.value.length);
