@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.486",
+    "date": "2026-10-23",
+    "ko": "구를 펼친 뒤 아래 막대의 뒤로를 누르면, 주황 알약이 엉뚱한 데서 날아오지 않고 손 밑에 들어선 칸에 곧장 섭니다.",
+    "en": "Pressing Back in the bottom bar after opening a district no longer sends the orange pill flying in from elsewhere; it lands on the item now under the pointer."
+  },
+  {
     "v": "0.11.485",
     "date": "2026-10-23",
     "ko": "봇 말풍선이 나타나는 속도를 조금 늦췄습니다.",
