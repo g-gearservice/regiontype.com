@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.483",
+    "date": "2026-10-23",
+    "ko": "봇 대화에서 연 피드백은 보낸 말이 첫 줄에 그대로 담겨, 이슈 제목이 그 말로 섭니다.",
+    "en": "Feedback opened from the bot chat now puts your message on the first line, so it becomes the issue title."
+  },
+  {
     "v": "0.11.482",
     "date": "2026-10-23",
     "ko": "봇과 대화하다 피드백을 열면, 방금 보낸 말과 봇의 답이 내용 칸에 미리 담깁니다.",
