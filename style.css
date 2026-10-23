@@ -2876,7 +2876,7 @@ body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
 /* 폰 시트에 앉은 봇의 말풍선은 봇 위에 따로 뜬다 — 숨길 끝이 없어 여백도 고르다 */
 .rk-say[data-dock]{padding:12px 14px}
 /* 펼침은 접힘(rk-blur-out)의 거꾸로 — 그 자리에서 흐림이 걷히며 나타난다 */
-.rk-say.is-open{animation:rk-blur-in .24s var(--ease-out) both}
+.rk-say.is-open{animation:rk-blur-in .36s var(--ease-out) both}
 @keyframes rk-blur-in{from{filter:blur(10px);opacity:0}to{filter:none;opacity:1}}
 /* 접힘: 흐려지며 사라진다(ranked.js 의 hide). 그동안 누름은 받지 않는다 */
 .rk-say.is-closing{animation:rk-blur-out .24s var(--ease-out) both;pointer-events:none}
