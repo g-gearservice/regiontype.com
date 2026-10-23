@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botCutSay, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -987,6 +987,37 @@ console.log('security rule self-check done');
   };
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'gone,slow,third' })).status, 200);
   assert.deepEqual(order, ['gone', 'slow', 'third'], '404 모델은 시도로 치지 않고 다음 모델이 그 자리를 잇는다');
+
+  /* 쉬는 모델 — 멈춘 맨 앞 모델은 다음 물음부터 건너뛰고, 예비는 25초 몫을 받는다 */
+  botCool.clear();
+  order.length = 0;
+  const waits = [];
+  const realTimeout = AbortSignal.timeout;
+  AbortSignal.timeout = ms => (waits.push(ms), realTimeout.call(AbortSignal, ms));
+  globalThis.fetch = async (url, init) => {
+    const m = JSON.parse(init.body).model;
+    order.push(m);
+    if (m === 'stall') throw new DOMException('stalled', 'TimeoutError');
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"네","do":[]}' } }] }));
+  };
+  const coolEnv = { NV_KEY: 'k', RL_BT: open, RL_BA: open, NV_MODELS: 'stall,backup,spare' };
+  assert.equal((await chat(ask, coolEnv)).status, 200);
+  assert.deepEqual(order, ['stall', 'backup'], '첫 물음은 멈춘 모델을 기다렸다 넘긴다');
+  order.length = 0; waits.length = 0;
+  assert.equal((await chat(ask, coolEnv)).status, 200);
+  assert.deepEqual(order, ['backup'], '다음 물음은 쉬는 모델을 건너뛴다');
+  assert.deepEqual(waits, [25000], '대신 나선 예비는 25초 몫을 받는다');
+  botCool.set('backup', Date.now() + 60000); botCool.set('spare', Date.now() + 60000);
+  order.length = 0;
+  await chat(ask, coolEnv);
+  assert.equal(order[0], 'stall', '모두 쉬면 원래 차례대로 다시 묻는다');
+  botCool.set('stall', Date.now() - 1);
+  order.length = 0;
+  botCool.delete('backup'); botCool.delete('spare');
+  await chat(ask, coolEnv);
+  assert.equal(order[0], 'stall', '쉬는 시간이 지나면 돌아온다');
+  AbortSignal.timeout = realTimeout;
+  botCool.clear();
   let calls = 0;
   globalThis.fetch = async () => (calls++, new Response(JSON.stringify({ choices: [{ message: { content: '{"say":"","do":[]}' } }] })));
   assert.equal((await chat(ask, { NV_KEY: 'k', RL_BT: open, RL_BA: open })).status, 502);

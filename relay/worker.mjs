@@ -2005,6 +2005,15 @@ async function botSpend(env, day, model, tok) {
   } catch { console.warn('botuse: 적지 못함'); }
 }
 
+/* 쉬는 모델 — 시간 초과·5xx·429·404 를 낸 모델은 BOT_COOL_MS 동안 차례에서 뺀다. 멈춘 맨 앞 모델 하나가
+   모든 대화를 15초씩 늦추지 않게(2026-10-23, deepseek-v4.1-flash 가 인사에도 30초를 넘겼다). 답하면 곧 푼다.
+   모두 쉬는 중이면 원래 차례대로 다시 묻는다.
+   ponytail: 격리(isolate)마다 따로 기억하고 격리가 바뀌면 잊는다 — 다른 격리는 한 번씩 더 부딪힌다.
+   모두가 같이 알아야 하면 KV 나 D1 에 둔다 */
+export const botCool = new Map();
+const BOT_COOL_MS = 300000;
+const cool = model => botCool.set(model, Date.now() + BOT_COOL_MS);
+
 async function botChat(req, env, o) {
   if (!env.NV_KEY) return reply(503, '봇 대화는 아직 열리지 않았습니다.', o);
   /* IP 창에 더해 모두가 나눠 쓰는 창 하나 — IP 를 돌려 가며 무료 키 한도를 다 먹어
@@ -2022,7 +2031,9 @@ async function botChat(req, env, o) {
   const day = Math.floor(Date.now() / DAY_MS);
   const need = botTokens(messages) + BOT_OUT;
   const ready = botRoute(models.length ? models : NV_MODELS, await botUsed(env, day), need,
-                       Number(env.NV_BUDGET) || NV_DAY), route = ready.slice(0, BOT_TRIES);
+                       Number(env.NV_BUDGET) || NV_DAY);
+  const warm = ready.filter(m => !(botCool.get(m) > Date.now())), pool = warm.length ? warm : ready;
+  const route = pool.slice(0, BOT_TRIES);
   if (!route.length) return reply(429, '오늘 봇이 쓸 수 있는 몫을 다 썼습니다.', o);
   let busy = false;
   /* 맨 앞 모델이 곧바로(2초 안) 5xx 를 주면 느린 예비로 넘기 전에 그 모델에 한 번 더 묻는다 —
@@ -2038,24 +2049,28 @@ async function botChat(req, env, o) {
         headers: { authorization: `Bearer ${env.NV_KEY}`, 'content-type': 'application/json' },
         body: JSON.stringify({ model, max_tokens: BOT_OUT, temperature: 0.6, messages }),
         /* 맨 앞 모델은 인사에 2~5초, 스타일(동작 넷)에 10초 안쪽이다 — 가끔 멈출 때 25초를 다 기다리지
-           않게 15초에 끊는다. NV_MODELS 로 느린 모델을 맨 앞에 두면 이 15초에 걸린다 */
-        signal: AbortSignal.timeout(model === route[0] ? 15000 : 25000),
+           않게 15초에 끊는다. NV_MODELS 로 느린 모델을 맨 앞에 두면 이 15초에 걸린다. 맨 앞이 쉬는 동안
+           대신 나선 예비는 원래 제 몫(25초)을 받는다 */
+        signal: AbortSignal.timeout(model === ready[0] ? 15000 : 25000),
       });
-    } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); continue; }
+    } catch (e) { console.warn('bot', model, e?.name, Date.now() - t0); cool(model); continue; }
     console.log('bot', model, r.status, Date.now() - t0);
     if (!r.ok) {
       /* 404 는 이 키로 그 모델을 못 쓴다는 뜻이다(2026-10-22, nemotron-3-super 가 키를 바꿔도 404).
          묻지도 못한 셈이라 시도로 치지 않고 아직 안 물은 다음 모델을 뒤에 붙인다. 까닭은 로그에 남긴다 */
       if (r.status === 404) {
         console.warn('bot', model, 404, (await r.text().catch(() => '')).slice(0, 300));
-        const next = ready.find(m => !tries.includes(m));
+        cool(model);
+        const next = pool.find(m => !tries.includes(m));
         if (next) tries.push(next);
         continue;
       }
       busy ||= r.status === 429;
       if (i === 0 && r.status >= 500 && Date.now() - t0 < 2000) tries.splice(1, 0, model);
+      else cool(model);
       continue;
     }
+    botCool.delete(model);
     const d = await r.json().catch(() => null);
     const text = d?.choices?.[0]?.message?.content;
     if (d?.choices?.[0]?.finish_reason === 'length') console.warn('bot', model, 'cut at max_tokens');
