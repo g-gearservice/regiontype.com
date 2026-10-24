@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 지명을 치면, 지도가 남는다</title>
+<meta name="description" content="지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습. 서울 25개 자치구와 423개 행정동, 세계 46개 나라의 행정구역.">
+<link rel="canonical" href="https://regiontype.com/landing/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://regiontype.com/landing/">
+<meta property="og:title" content="regiontype — 지명을 치면, 지도가 남는다">
+<meta property="og:description" content="서울 25개 자치구부터 세계 46개 나라까지, 지명을 직접 치며 익히는 타자연습.">
+<meta property="og:image" content="https://regiontype.com/og.png">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="regiontype">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=4.94">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=4.94">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=4.94">
+<!-- 앱에서 고른 야간·모션 설정을 그대로 쓴다. 첫 그림 전에 붙여야 번쩍이지 않는다.
+     js 표시는 드러남 애니메이션이 스크립트 없이 글을 숨기지 않게 하려는 것이다 -->
+<script>document.documentElement.classList.add('js');try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');if(o.night)document.documentElement.setAttribute('data-night','');if(o.motion===false)document.documentElement.dataset.motion='off'}catch(e){}</script>
+<link rel="stylesheet" href="../style.css?v=4.94">
+<!-- 읽는 페이지라 앱의 고정 화면 규칙을 풀고, 토큰은 style.css 것을 물려받는다.
+     app.js 는 부르지 않는다 -->
+<style>
+  html,body{height:auto}
+  body{overflow:auto}
+  .lp{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* 머리 — 내용이 밑으로 흐르는 유리 막대. 가는 선 대신 비친 내용이 경계가 된다 */
+  .lp-top{position:sticky;top:0;z-index:5;background:var(--glass);
+    -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+    box-shadow:var(--glass-hi),0 1px 0 var(--glass-line)}
+  .lp-top .lp{display:flex;align-items:center;justify-content:space-between;height:56px}
+  .lp-logo{font-weight:800;font-size:19px;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
+  .lp-top nav{display:flex;gap:6px;align-items:center}
+  .lp-top nav a{color:var(--ink-soft);text-decoration:none;font-weight:700;font-size:15px;padding:6px 10px;border-radius:8px}
+  .lp-top nav a:focus-visible{outline:2px solid var(--accent-deep);outline-offset:2px}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:800;text-decoration:none;
+    border-radius:999px;cursor:pointer;border:0;
+    transition:transform var(--fast) var(--ease-out),background-color var(--fast) ease}
+  .btn:active{transform:scale(.97)}
+  .btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+  .btn-go{background:var(--accent);color:var(--on-accent);font-size:19px;padding:13px 26px}
+  .btn-sm{font-size:15px;padding:7px 16px}
+  .btn-ghost{background:var(--card);color:var(--ink);font-size:19px;padding:13px 26px;box-shadow:var(--shadow)}
+  @media (hover:hover) and (pointer:fine){
+    .btn-go:hover{background:var(--accent-deep)}
+    .lp-top nav a:hover{color:var(--ink)}
+  }
+
+  /* 첫 화면 */
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:56px;align-items:center;padding:72px 0 96px}
+  .kicker{font-weight:800;color:var(--accent-text);font-size:15px;letter-spacing:.02em;margin-bottom:14px}
+  .hero h1{font-size:clamp(40px,6.2vw,72px);font-weight:800;line-height:1.08;letter-spacing:-.035em;margin-bottom:22px}
+  .hero h1 em{font-style:normal;color:var(--accent-text)}
+  .lead{font-size:19px;line-height:1.7;color:var(--ink-soft);margin-bottom:32px;max-width:30em}
+  .ctas{display:flex;gap:12px;flex-wrap:wrap}
+
+  /* 써 보는 판 — 서울 25구를 8×7 격자 위에 앉힌다(welcome 의 배치 그대로) */
+  .try{background:var(--card);border-radius:var(--card-r);padding:22px;box-shadow:var(--shadow-lift)}
+  .seoul{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(7,minmax(0,1fr));gap:6px;aspect-ratio:8/7;margin-bottom:16px}
+  .gu{display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--land);
+    color:var(--ink-soft);font-size:clamp(10px,1.15vw,13px);font-weight:700;white-space:nowrap;overflow:hidden;
+    border:2px solid transparent;
+    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),border-color .2s var(--ease-out),transform .2s var(--ease-out)}
+  /* 칠해진 칸 — 색만이 아니라 테두리와 체크 표시를 함께 붙인다 */
+  .gu.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent-deep);transform:translateY(-2px)}
+  .gu.on::before{content:"✓";margin-right:2px;font-size:.9em}
+  .typer{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:var(--field-r);padding:6px 6px 6px 16px;
+    border:2px solid transparent;transition:border-color var(--fast) ease}
+  .typer:focus-within{border-color:var(--accent-deep)}
+  .typer input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:700;color:var(--ink);background:none;border:0;outline:0;padding:8px 0}
+  .typer input::placeholder{color:var(--ink-soft);font-weight:500}
+  .score{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-soft);padding:0 10px;white-space:nowrap}
+  .try-hint{font-size:14px;color:var(--ink-soft);margin-top:10px;min-height:1.5em}
+
+  /* 숫자 */
+  .lp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--card-gap);padding-bottom:96px}
+  .lp-stat{background:var(--card);border-radius:var(--card-r);padding:28px 24px;box-shadow:var(--shadow)}
+  .lp-stat b{display:block;font-size:clamp(40px,5vw,60px);font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+  .lp-stat span{display:block;margin-top:10px;color:var(--ink-soft);font-weight:700}
+
+  /* 단계 */
+  .sec{padding-bottom:104px}
+  .sec h2{font-size:clamp(30px,4vw,44px);font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:14px}
+  .sec > p{font-size:18px;line-height:1.75;color:var(--ink-soft);max-width:36em;margin-bottom:40px}
+  .lp-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--card-gap)}
+  .lp-step{background:var(--card);border-radius:var(--card-r);overflow:hidden;box-shadow:var(--shadow)}
+  .lp-step img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--land)}
+  .lp-step div{padding:20px 22px 24px}
+  .lp-step h3{font-size:20px;font-weight:800;margin-bottom:8px}
+  .lp-step h3 i{font-style:normal;color:var(--accent-text);margin-right:6px;font-variant-numeric:tabular-nums}
+  .lp-step p{line-height:1.7;color:var(--ink-soft)}
+
+  .why{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+  .why h3{font-size:20px;font-weight:800;margin-bottom:8px}
+  .why p{line-height:1.75;color:var(--ink-soft)}
+
+  .end{text-align:center;background:var(--block-deep);color:#fff;border-radius:28px;padding:72px 24px;margin-bottom:56px}
+  .end h2{font-size:clamp(30px,4.4vw,48px);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:14px}
+  .end p{font-size:18px;opacity:.85;margin-bottom:30px}
+  .lp-foot{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;padding:0 0 48px;color:var(--ink-soft);font-size:14px}
+  .lp-foot a{color:inherit}
+
+  /* 스크롤로 드러남 — 한 번만, 아래서 살짝 떠오른다. 처음 보는 자리라 시간을 조금 쓴다 */
+  .js .rv{opacity:0;transform:translateY(18px);
+    transition:opacity .6s var(--ease-out),transform .6s var(--ease-out);transition-delay:calc(var(--i,0) * 60ms)}
+  .js .rv.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    .js .rv{transform:none;transition:opacity .3s ease}
+    .gu{transition:background-color .2s ease,color .2s ease,border-color .2s ease}
+    .gu.on{transform:none}
+    .btn:active{transform:none}
+  }
+  :root[data-motion="off"].js .rv{opacity:1;transform:none;transition:none}
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding:44px 0 72px}
+    .lp-steps,.why{grid-template-columns:1fr}
+    .lp-stats{grid-template-columns:1fr;padding-bottom:72px}
+    .lp-top nav a:not(.btn){display:none}
+  }
+  @media (max-width:420px){ .gu{font-size:9px;border-radius:7px;letter-spacing:-.04em} .gu.on::before{content:none} .seoul{gap:4px} .try{padding:14px} }
+</style>
+</head>
+<body>
+
+<svg class="grid-bg" aria-hidden="true">
+  <defs><pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152"><path d="M152 0 V152 H0"/></pattern></defs>
+  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
+</svg>
+
+<header class="lp-top">
+  <div class="lp">
+    <a class="lp-logo" href="/">regiontype</a>
+    <nav>
+      <a href="#how">플레이 방법</a>
+      <a href="/about/">소개</a>
+      <a class="btn btn-go btn-sm" href="/">시작하기</a>
+    </nav>
+  </div>
+</header>
+
+<main class="lp">
+  <section class="hero">
+    <div>
+      <p class="kicker rv">지명 타자연습</p>
+      <h1 class="rv" style="--i:1">지명을 치면,<br><em>지도가 남는다.</em></h1>
+      <p class="lead rv" style="--i:2">지도에 뜬 지역 이름을 손으로 직접 칩니다. 눈으로 훑으면 "봤다"에서
+        끝나지만, 한 글자씩 옮겨 치면 이름과 자리가 같이 붙습니다.</p>
+      <div class="ctas rv" style="--i:3">
+        <a class="btn btn-go" href="/">지금 쳐 보기 <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href="#how">어떻게 하나요</a>
+      </div>
+    </div>
+
+    <!-- 써 보는 판. 그냥 두면 저절로 쳐 나가고, 칸을 누르면 직접 친다 -->
+    <div class="try rv" style="--i:2">
+      <div class="seoul" id="seoul" aria-hidden="true"></div>
+      <form class="typer" id="typer" autocomplete="off">
+        <label for="tryIn" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">서울 자치구 이름</label>
+        <input id="tryIn" placeholder="강남구" spellcheck="false" autocapitalize="off" enterkeyhint="done">
+        <span class="score" id="score" aria-live="polite">0 / 25</span>
+      </form>
+      <p class="try-hint" id="hint">칸을 눌러 서울 구 이름을 쳐 보세요. 스페이스나 Enter 로 확정합니다.</p>
+    </div>
+  </section>
+
+  <section class="lp-stats" aria-label="숫자로 보기">
+    <div class="lp-stat rv"><b>25</b><span>서울 자치구</span></div>
+    <div class="lp-stat rv" style="--i:1"><b>423</b><span>서울 행정동</span></div>
+    <div class="lp-stat rv" style="--i:2"><b>46</b><span>나라의 행정구역 코스</span></div>
+  </section>
+
+  <section class="sec" id="how">
+    <h2 class="rv">세 걸음이면 됩니다.</h2>
+    <p class="rv" style="--i:1">가입도, 설치도 없습니다. 지도에서 고르고, 치고, 결과를 봅니다.</p>
+    <div class="lp-steps">
+      <article class="lp-step rv">
+        <img src="../assets/howto/pick.png?v=4.94" alt="홈의 도트 서울 지도에서 구 하나가 주황으로 골라진 모습" loading="lazy">
+        <div><h3><i>1</i>코스 고르기</h3><p>도트로 그린 지도에서 구를 누르면 그곳이 코스가 됩니다. 구 안으로 들어가면 행정동까지.</p></div>
+      </article>
+      <article class="lp-step rv" style="--i:1">
+        <img src="../assets/howto/type.svg?v=4.94" alt="판 위에서 지명을 치는 화면" loading="lazy">
+        <div><h3><i>2</i>치기</h3><p>카운트다운이 끝나면 바로 칩니다. 연달아 맞히면 콤보가 붙고, 이웃한 곳을 따라 길이 이어집니다.</p></div>
+      </article>
+      <article class="lp-step rv" style="--i:2">
+        <img src="../assets/howto/result.svg?v=4.94" alt="속도·정확도와 들른 곳이 칠해진 결과 카드" loading="lazy">
+        <div><h3><i>3</i>결과 보기</h3><p>속도, 들른 곳, 정확도, 내 최고 기록. 놓친 곳은 카드에 따로 표시됩니다.</p></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2 class="rv">순서가 곧 지도입니다.</h2>
+    <p class="rv" style="--i:1">코스는 무작위가 아니라 이어진 길입니다. 자치구 코스는 서쪽 끝 강서구에서
+      시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다.</p>
+    <div class="why">
+      <div class="rv"><h3>손이 기억합니다</h3><p>철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 그래서 오래 남습니다.</p></div>
+      <div class="rv" style="--i:1"><h3>겨뤄 볼 수도</h3><p>로그인하고 시작하기를 꾹 누르면 경쟁전. 같은 코스를 다른 사람과 겨룹니다.</p></div>
+      <div class="rv" style="--i:2"><h3>키보드만으로</h3><p>모든 기능을 키보드로 다룹니다. 폰에서는 화면 아래 게임 자판으로 칩니다.</p></div>
+    </div>
+  </section>
+
+  <section class="end rv">
+    <h2>서울, 얼마나 아세요?</h2>
+    <p>강서구부터 성북구까지, 한 바퀴 돌아보세요.</p>
+    <a class="btn btn-go" href="/">시작하기 <span aria-hidden="true">→</span></a>
+  </section>
+
+  <footer class="lp-foot">
+    <span>regiontype</span>
+    <span><a href="/about/">소개</a> · <a href="/community/">커뮤니티</a> · <a href="/policy/">개인정보</a> · <a href="/terms/">약관</a></span>
+  </footer>
+</main>
+
+<script>
+// 서울 25구. 순서는 앱의 자치구 코스(강서구에서 시계 방향), 자리는 8×7 격자의 [열, 행]
+const GU = [
+  ['강서구',1,4],['양천구',2,5],['구로구',2,6],['금천구',3,7],['영등포구',3,5],
+  ['마포구',3,4],['서대문구',4,4],['은평구',3,2],['종로구',4,3],['중구',5,4],
+  ['용산구',4,5],['동작구',4,6],['관악구',4,7],['서초구',5,7],['강남구',6,6],
+  ['송파구',7,6],['강동구',8,4],['광진구',7,5],['성동구',6,5],['동대문구',6,4],
+  ['중랑구',7,3],['노원구',6,2],['도봉구',6,1],['강북구',5,2],['성북구',5,3],
+];
+const board = document.getElementById('seoul');
+const cells = new Map(GU.map(([n, c, r]) => {
+  const el = document.createElement('span');
+  el.className = 'gu'; el.textContent = n;
+  el.style.gridColumn = c; el.style.gridRow = r;
+  board.append(el);
+  return [n, el];
+}));
+const input = document.getElementById('tryIn');
+const score = document.getElementById('score');
+const hint = document.getElementById('hint');
+const done = new Set();
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+  || document.documentElement.dataset.motion === 'off';
+
+function claim(n) {
+  done.add(n); cells.get(n).classList.add('on');
+  score.textContent = done.size + ' / 25';
+}
+function reset() {
+  done.clear(); cells.forEach(el => el.classList.remove('on'));
+  score.textContent = '0 / 25';
+}
+
+// 저절로 치기 — 보는 사람이 판을 건드리기 전까지만. 글자를 한 자씩 placeholder 에 찍는다
+let auto = null;
+function demo() {
+  let i = 0, k = 0;
+  const tick = () => {
+    const n = GU[i][0];
+    if (k < n.length) { input.placeholder = n.slice(0, ++k); auto = setTimeout(tick, 110); return; }
+    claim(n); i++; k = 0;
+    if (i === GU.length) { auto = setTimeout(() => { reset(); i = 0; tick(); }, 2400); return; }
+    auto = setTimeout(tick, 380);
+  };
+  auto = setTimeout(tick, 900);
+}
+if (!still) demo();
+
+// 직접 치기 — 스페이스(또는 Enter)로 확정한다. 조합 중에 칸을 비우면 IME 가 깨지므로
+// 조합이 끝난 input 에서만 견준다
+input.addEventListener('focus', () => {
+  if (auto === null && done.size === 0) return;
+  clearTimeout(auto); auto = null; reset(); input.placeholder = '강남구';
+  hint.textContent = '스페이스나 Enter 로 확정합니다.';
+}, { once: true });
+function check() {
+  const v = input.value.trim();
+  if (!cells.has(v)) return false;
+  if (!done.has(v)) claim(v);
+  input.value = '';
+  hint.textContent = done.size === 25 ? '25구를 다 돌았습니다. 이제 행정동 423곳이 기다립니다.' : v + ' ✓';
+  return true;
+}
+input.addEventListener('input', e => { if (!e.isComposing && /\s$/.test(input.value)) check(); });
+document.getElementById('typer').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!check() && input.value.trim()) hint.textContent = '서울 구 이름이 아니에요 — 이름 끝의 "구"까지 칩니다.';
+});
+
+// 스크롤로 드러남 — 들어온 것은 한 번만 켜고 놓아 준다
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+}), { rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
