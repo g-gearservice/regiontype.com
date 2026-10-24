@@ -59,7 +59,7 @@ const placeOf = slug => slug === COURSE.root ? homeTitle()
 /* ── 덮개 여닫기 ─────────────────────────────────────────
    settings.js 와 같은 결: 뒤를 inert 로 잠그고, 탭은 안에서만 돌고, Esc·뒤로 가기로
    닫힌다. 닫을 때는 글자를 바로 접고 칸 위의 서리만 --si-dur 동안 걷는다 */
-const PAGES = ['ranking', 'records', 'styles', 'account'];
+const PAGES = ['ranking', 'records', 'account'];
 const over = name => document.getElementById(name);
 let page = null, opener = null, inertWas = [], leaveGen = 0;
 
@@ -70,7 +70,7 @@ function siDurMs() {
 function lockBack(on, el) {
   if (on) {
     inertWas = [...document.body.children]
-      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'tabDock'].includes(n.id))
+      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'styles', 'tabDock'].includes(n.id))
       .map(n => [n, n.inert]);
     inertWas.forEach(([n]) => { n.inert = true; });
   } else {
@@ -96,7 +96,6 @@ function openPage(name) {
   (fingers() ? el.querySelector('h1, h2') : el.querySelector('[data-pg-close]')).focus({ preventScroll: true });
   if (name === 'ranking') fillRanking();
   else if (name === 'records') fillRecords();
-  else if (name === 'styles') { styleGone = null; $('#styNote').textContent = ''; fillStyles(); }
   else openAccount();
 }
 function closePage(now) {
@@ -117,7 +116,32 @@ function closePage(now) {
   if (opener && opener.isConnected) opener.focus({ preventScroll: true });
   opener = null;
   if (was === 'account') leftAccount();
-  if (was === 'styles') paintTheme();   // 저장하지 않은 미리 보기를 거둔다
+}
+
+/* ── 내 스타일 ── 덮개가 아니라 연 단추 바로 아래 뜨는 popover 다. 계정에서 열어도 계정이 그대로 남는다.
+   Esc·바깥 누르기(popover 가 한다)·닫기 단추로 닫히고, 초점은 연 단추로 돌아간다.
+   아래 자리가 모자라면 단추 위로 뒤집고, 단추가 안 보이면(봇·주소로 열 때) 위 가운데에 띄운다 */
+let styOpener = null;
+const styOpen = () => $('#styles').matches(':popover-open');
+function placeStyles() {
+  const d = $('#styles'), PAD = 16, GAP = 8;
+  const a = styOpener && styOpener !== document.body && styOpener.isConnected && styOpener.getClientRects().length ? styOpener.getBoundingClientRect() : null;
+  const w = d.offsetWidth, h = d.firstElementChild.scrollHeight;
+  let top = a ? a.bottom + GAP : PAD + 56;
+  if (a && innerHeight - top - PAD < Math.min(h, 320) && a.top - GAP - PAD > innerHeight - top - PAD) top = Math.max(PAD, a.top - GAP - h);
+  d.style.left = Math.round(a ? Math.min(Math.max(PAD, a.left), innerWidth - w - PAD) : (innerWidth - w) / 2) + 'px';
+  d.style.top = Math.round(top) + 'px';
+  d.style.maxHeight = Math.round((a && top < a.top ? a.top - GAP : innerHeight - PAD) - top) + 'px';
+}
+function openStyles(from) {
+  const d = $('#styles');
+  if (styOpen()) return;
+  styOpener = from || document.activeElement;
+  styleGone = null; $('#styNote').textContent = '';
+  fillStyles();
+  d.showPopover();
+  placeStyles();
+  (fingers() ? $('#styHead') : $('#styClose')).focus({ preventScroll: true });
 }
 
 /* ── 내 계정 ──────────────────────────────────────────
@@ -309,7 +333,7 @@ function keepStyle(acts) {
   if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour };
   for (const a of acts) if (a.act === 'set' && (a.key === 'night' || a.key === 'motion')) s[a.key] = a.value;
   writeStyles([s, ...readStyles().filter(x => !sameStyle(x, s))].slice(0, STYLE_MAX));
-  if (page === 'styles') fillStyles();
+  if (styOpen()) fillStyles();
 }
 function wearStyle(s) {
   try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(s))); } catch { return; }
@@ -407,7 +431,22 @@ function savePick() {
 function wireStyles() {
   $('#styPick').addEventListener('input', previewPick);
   $('#stySave').addEventListener('click', savePick);
-  $('#styles').addEventListener('click', e => {
+  const d = $('#styles');
+  $('#styClose').addEventListener('click', () => d.hidePopover());
+  /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 dialog 의 기본 동작이라 그대로 산다 */
+  d.addEventListener('keydown', e => e.stopPropagation());
+  d.addEventListener('toggle', e => {
+    if (e.newState !== 'closed') return;
+    paintTheme();   // 저장하지 않은 미리 보기를 거둔다
+    /* 바깥의 다른 것을 눌러 닫혔으면 그 초점을 빼앗지 않는다 */
+    const back = document.activeElement === document.body || d.contains(document.activeElement);
+    if (back && styOpener && styOpener.isConnected) styOpener.focus({ preventScroll: true });
+    styOpener = null;
+  });
+  /* 뒤가 흐르거나 창이 바뀌면 단추를 따라간다 */
+  addEventListener('scroll', () => { if (styOpen()) placeStyles(); }, true);
+  addEventListener('resize', () => { if (styOpen()) placeStyles(); });
+  d.addEventListener('click', e => {
     const use = e.target.closest('[data-sty-use]'), del = e.target.closest('[data-sty-del]');
     if (use) {
       const s = readStyles().find(x => x.id === use.dataset.styUse);
@@ -982,6 +1021,7 @@ function act(a) {
     dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { [a.key]: a.value } }));
   } else if (a.act === 'open') {
     if (PAGES.includes(a.page)) { openPage(a.page); return; }
+    if (a.page === 'styles') { openStyles(document.body); return; }
     if (a.page === 'feedback') { openFeedback(); return; }
     if (a.page === 'home') { closePage(); return; }
     if (a.page === 'signin') { $('#signinLink').click(); return; }
@@ -1108,7 +1148,7 @@ function wireChat() {
       }
       return;
     }
-    if (chip === 'styles') { openPage('styles'); return; }
+    if (chip === 'styles') { openStyles(btn); return; }
     if (chip === 'feedback') openFeedback();
   });
 }
@@ -1719,6 +1759,7 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#"]');
   if (a && PAGES.includes(a.getAttribute('href').slice(1))) { e.preventDefault(); openPage(a.getAttribute('href').slice(1)); }
+  if (a && a.getAttribute('href') === '#styles') { e.preventDefault(); openStyles(a); }
   if (e.target.closest('[data-pg-close]')) closePage();
 });
 addEventListener('keydown', e => {
@@ -1792,6 +1833,7 @@ window.RT_BOOT_PLACE = async () => {
 BOOTED.then(() => {
   if (!pingedAtBoot) ping();
   if (PAGES.includes(location.hash.slice(1))) openPage(location.hash.slice(1));
+  if (location.hash === '#styles') { history.replaceState(null, '', location.pathname + location.search); openStyles(document.body); }
   if (!regionsOn()) return;
   if (bootAct === 'rescue') beginIntro();
   else if (bootAct === 'greet') greetIn();

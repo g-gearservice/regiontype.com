@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.493",
+    "date": "2026-10-24",
+    "ko": "'내 스타일'이 따로 넘어가는 화면이 아니라 누른 단추 바로 아래에 떠 있는 판으로 열립니다. Esc·닫기 단추·바깥을 눌러 닫으면 보던 화면(계정 등)이 그대로 있습니다.",
+    "en": "'My styles' now opens as a floating panel right under its button instead of replacing the screen. Close it with Esc, the close button or a click outside, and you are back where you were (such as your account)."
+  },
+  {
     "v": "0.11.492",
     "date": "2026-10-24",
     "ko": "홈에서 베타 스타일 판으로 가는 길을 뺐습니다. 아래 막대 오른쪽 끝의 '스타일' 글자와, 로고 알약을 아래로 끌어 들어가던 길이 모두 없어졌습니다.",
