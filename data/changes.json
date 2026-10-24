@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.491",
+    "date": "2026-10-24",
+    "ko": "홈 아래 막대 오른쪽 끝에 '스타일'이 생겼습니다. 계정 칸의 알약을 끌어 스타일 글자 한가운데까지 가져가면 알약이 끌려가며 베타 스타일 판이 열립니다. 키보드로는 Tab 으로 가서 Enter 를 누르면 됩니다.",
+    "en": "A 'Style' label now sits at the right end of the home screen's bottom bar. Drag the pill from the account button to the middle of the label and it snaps over to open the beta style page. With a keyboard, Tab to it and press Enter."
+  },
+  {
     "v": "0.11.490",
     "date": "2026-10-24",
     "ko": "봇 대화를 접을 때 추천 버튼이 먼저 사라져 말풍선이 깜빡이던 것을 고쳤습니다. 이제 버튼도 말풍선과 함께 흐려지며 사라집니다.",
