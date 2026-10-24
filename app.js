@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.88';
+const VER = '4.89';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -3634,9 +3634,7 @@ async function board() {
           score: G.score, cpm: G.cpm, acc: G.acc, hits: G.hits, tries: G.tries })
       : await boardAsk(`/top?c=${encodeURIComponent(play.c)}&t=${play.t}&dev=${DEV}&lang=${LANG}&mode=${G.ranked ? 'ranked' : 'normal'}`);
     $('#boardWhere').textContent = `${courseLabel(G.course)} · ${clock(G.total)} · ${langName()}`;
-    boardSay(d.rank ? t('nth', { n: d.rank })
-      : G.score && !inn ? t('notOnBoard', { n: showSpeed(G.cpm) })
-      : '');
+    boardSay(!d.rank && G.score && !inn ? t('notOnBoard', { n: showSpeed(G.cpm) }) : '');
     $('#boardIn').hidden = inn;
     drawRanks(d.top || []);
     sec.hidden = false;
