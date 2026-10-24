@@ -4,6 +4,8 @@
   /* 칸을 통째로 채울 때 쓰는 짙은 청록. 낮에도 밤에도 같은 값이다 —
      흰 글자를 얹어 5.89:1 이라 어느 쪽 바탕에서도 글이 읽힌다 */
   --block-deep:#496a6d;
+  /* 타이핑 줄 바탕. 위·아래 넵바 판도 이 색을 같이 입는다 */
+  --bar:#ccc;
   --accent-text:#a54f22;   /* 작은 글자용. --accent-deep 은 그래픽 전용 */
   /* 주황 바탕 위의 글자. 시안의 흰 글자는 대비 2.06:1 로 기준에 못 미친다 —
      어두운 먹으로 6.64:1 을 받는다. 야간에도 바탕이 그대로라 값도 그대로다 */
@@ -58,7 +60,7 @@
 }
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
-  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f;
+  --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --bar:#3a444a;
   --shadow:none;
   --shadow-lift:none; --land:#334047; --land-line:#232c31; --card:#2b353b;
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.08);
@@ -1055,9 +1057,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   display:flex; align-items:center; justify-content:space-between; gap:24px;
   width:fit-content; min-width:min(403px, 100%); max-width:100%;
   min-height:75px; padding:8px 0; margin:0 auto 6px;
-  background:#ccc; border-radius:31px; user-select:none;
+  background:var(--bar); border-radius:31px; user-select:none;
 }
-:root[data-night] .typing{background:#3a444a}
 .q-side{
   flex:0 0 auto; min-width:97px; display:flex; flex-direction:column; gap:0;
   padding:0 30px; pointer-events:none;
@@ -1767,17 +1768,16 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
    margin-left .03em = .25em) 알약 오른쪽만 그만큼 더 벌어 보인다 — 음수 마진으로
    그 자리만 걷는다. display:none 과 달리 글자 흐름은 그대로다 */
 #regions .navbar .nav-logo .dot{visibility:hidden;margin-right:-.25em}
-/* 설정·시작·계정. 알약은 불투명 — 라이트 #e7eef1, 야간 #232c31.
+/* 설정·시작·계정. 알약은 불투명 — 타이핑 줄과 같은 --bar.
    뒤 흐림은 플레이 타이핑 줄과 같은 .backdrop-blur.bot 이다 */
 /* 구역 이름 줄이 막대에서 8px 넘게 떨어지게 36px(글자 16px + 위아래 10px) */
 #regions{--dock-gap:36px}
 #regions .nav-bot{
   position:fixed; left:50%; bottom:var(--dock-gap); z-index:4; translate:-50% 0;
   display:flex; align-items:center; justify-content:center; gap:6px;
-  padding:8px 10px; background:#e7eef1; border-radius:999px;
+  padding:8px 10px; background:var(--bar); border-radius:999px;
   box-shadow:var(--shadow);
 }
-:root[data-night] #regions .nav-bot{background:#232c31}
 #regions .nav-bot .nav-item{padding:14px 18px}
 /* 시작하기 채움은 #navBotShape 가 그린다 — 호버 틴트를 두면 알약이 옮겨도 남는다 */
 #regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
@@ -2338,12 +2338,12 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   }
   .tab-dock > *{
     position:absolute;pointer-events:auto;box-sizing:border-box;
-    background:#e7eef1;border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);
+    background:var(--bar);border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);
     box-shadow:0 8px 22px -10px rgba(40,56,64,.32),0 1px 3px rgba(40,56,64,.1);
     transition:left var(--dur) var(--ease-out),right var(--dur) var(--ease-out),
       top var(--dur) var(--ease-out),width var(--dur) var(--ease-out);
   }
-  :root[data-night] .tab-dock > *{background:#2d383e;box-shadow:0 8px 22px -10px rgba(0,0,0,.6)}
+  :root[data-night] .tab-dock > *{box-shadow:0 8px 22px -10px rgba(0,0,0,.6)}
   /* 탭 알약·계정 동그라미는 덮개 위에도 남는다(body 직속이라 덮개 z 6 위 7). 미니 막대(코스 이름·시작)는
      시작하기가 홈 전용이라 덮개에서는 걷는다. 플레이·결과에서는 막대가 통째로 없다 */
   .tab-dock{--dock-gap:calc(16px + env(safe-area-inset-bottom));z-index:7}
@@ -3393,8 +3393,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
    위 넵바는 아래 알약(.nav-bot)과 같은 판이다 — 같은 색·둥근 끝·그림자, 화면 위에서 조금 떠 있다.
    폰은 위에 로고만 있으니 로고가 알약이다. 앞 규칙을 이겨야 해서 파일 맨 끝에 둔다 */
 .backdrop-blur{visibility:hidden}
-#regions .navbar{background:#e7eef1;border-radius:999px;box-shadow:var(--shadow)}
-:root[data-night] #regions .navbar{background:#232c31}
+#regions .navbar{background:var(--bar);border-radius:999px;box-shadow:var(--shadow)}
 @media (min-width:760px) and (not (pointer:coarse)){
   #regions .navbar{top:16px;left:50%;right:auto;translate:-50% 0;width:max-content;max-width:calc(100vw - 32px);padding:8px 10px}
 }
@@ -3403,6 +3402,5 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 }
 @media (pointer:coarse){
   #regions .navbar{background:none;border-radius:0;box-shadow:none}
-  #regions .navbar .nav-logo{background:#e7eef1;box-shadow:var(--shadow)}
-  :root[data-night] #regions .navbar .nav-logo{background:#232c31}
+  #regions .navbar .nav-logo{background:var(--bar);box-shadow:var(--shadow)}
 }
