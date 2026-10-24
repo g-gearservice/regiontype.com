@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.87';
+const VER = '4.88';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -3638,23 +3638,14 @@ async function board() {
       : G.score && !inn ? t('notOnBoard', { n: showSpeed(G.cpm) })
       : '');
     $('#boardIn').hidden = inn;
-    $('#boardDrop').hidden = !inn;
     drawRanks(d.top || []);
     sec.hidden = false;
   } catch { sec.hidden = true; }
 }
 
-/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이가 여기 있어야 한다 —
-   이 버튼이 사라지면 철회 불가가 된다. 로그인한 채 다음 판을 치면 그 판은 다시 오른다.
+/* 이름은 공개 목록에 걸린다. 올린 사람이 거둘 손잡이는 설정의 개인정보(#privForget)에 있다 —
+   이 화면에서는 뺐다. 그 손잡이가 사라지면 철회 불가가 된다. 로그인한 채 다음 판을 치면 그 판은 다시 오른다.
    이름만 가리려면 계정의 비공개(profile.shut)다 */
-$('#boardDrop').onclick = async () => {
-  if (!confirm(t('forgetAsk'))) return;
-  try {
-    const d = await boardAsk('/forget', {});
-    await board();
-    boardSay(d.gone ? t('forgot', { n: d.gone }) : t('forgotNone'));
-  } catch { boardSay(t('forgetFail'), true); }
-};
 
 
 
