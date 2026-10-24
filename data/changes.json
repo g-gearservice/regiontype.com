@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.494",
+    "date": "2026-10-24",
+    "ko": "regiontype 을 소개하는 첫 화면(/landing/)이 생겼습니다. 서울 25구 판에서 구 이름을 직접 쳐 볼 수 있고, 스페이스나 Enter 로 확정합니다.",
+    "en": "A new landing page (/landing/) introduces regiontype. You can try typing Seoul's 25 district names on a small map right there, confirming each with Space or Enter."
+  },
+  {
     "v": "0.11.493",
     "date": "2026-10-24",
     "ko": "'내 스타일'이 따로 넘어가는 화면이 아니라 누른 단추 바로 아래에 떠 있는 판으로 열립니다. Esc·닫기 단추·바깥을 눌러 닫으면 보던 화면(계정 등)이 그대로 있습니다.",

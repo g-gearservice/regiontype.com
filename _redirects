@@ -27,3 +27,5 @@
 /beta/bus  /beta/bus/           301
 /beta/style/ /beta/style/index.html 200
 /beta/style  /beta/style/           301
+/landing/  /landing/index.html  200
+/landing   /landing/           301
