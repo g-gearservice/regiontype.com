@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.495",
+    "date": "2026-10-24",
+    "ko": "게임 지도에서 맞힌 구가 칸색으로 물들고, 시간 막대는 강조색이 됩니다. '내 스타일' 판을 작게 줄이고 프리셋을 견본 단추로 모았습니다 — 누르면 입고, 꾹 누르면 빨간 X 가 떠 지울 수 있습니다. 강조색에 어울리는 칸색 추천과 '프리셋으로 저장'이 생겼습니다.",
+    "en": "On the game map, solved districts now fill with the tile colour, and the timer bar uses the accent. The 'My styles' panel is smaller and shows presets as swatch buttons: tap to wear one, press and hold to show a red X and delete. New tile-colour ideas that match your accent, and 'Save as preset'."
+  },
+  {
     "v": "0.11.494",
     "date": "2026-10-24",
     "ko": "regiontype 을 소개하는 첫 화면(/landing/)이 생겼습니다. 서울 25구 판에서 구 이름을 직접 쳐 볼 수 있고, 스페이스나 Enter 로 확정합니다.",

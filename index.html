@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.93">
+<link rel="stylesheet" href="style.css?v=4.95">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -608,27 +608,35 @@
   </div>
 </section>
 
-<!-- 내 스타일 — 봇이 지은 스타일을 모아 두는 판(ranked.js 의 fillStyles). popover 라 연 단추 바로 아래에
-     떠 있고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다. #styles 로 들어와도 연다.
-     카드마다 색 견본·이름·날짜, 적용/지우기. 쓰는 것은 '사용 중' 글자와 테두리로 가른다(색만이 아니다) -->
+<!-- 내 스타일 — 봇이 지은 스타일과 직접 고른 색을 프리셋으로 모아 두는 판(ranked.js 의 fillStyles). popover 라
+     연 단추 바로 아래에 떠 있고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다.
+     프리셋 견본을 누르면 입고, 꾹 누르면 빨간 X 가 떠 지울 수 있다(키보드는 Delete).
+     쓰는 것은 체크 표시와 테두리로 가른다(색만이 아니다). #styles 로 들어와도 연다 -->
 <div id="styles" popover role="dialog" aria-labelledby="styHead">
   <div id="stylesBox">
     <div class="fb-head">
       <h2 class="head" id="styHead" tabindex="-1" data-i18n="stylesHead">내 스타일</h2>
       <button type="button" class="back" id="styClose" data-i18n-aria="close" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
     </div>
-    <p class="pg-help" data-i18n="stylesHelp">봇에게 "벚꽃 느낌으로 바꿔 줘"처럼 말하면 만든 스타일이 여기 쌓입니다. 이 기기에만 저장돼요.</p>
-    <!-- 색 직접 고르기(ranked.js 의 fillPick). 칸은 THEME 표에서 짓는다. 대비가 모자라면 글자로 알리고 저장하지 않는다 -->
+    <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
+    <p class="pg-say" id="stySay" role="status"></p>
+    <p class="sty-hint" id="styHint" data-i18n="styleHold">누르면 입고, 꾹 누르면 지울 수 있어요</p>
+    <!-- 색 직접 고르기(ranked.js 의 fillPick). 칸은 THEME 표에서 짓는다. 대비가 모자라면 글자로 알리고 저장하지 않는다.
+         추천은 지금 강조색에서 대비를 지키는 칸색 짝을 짓는다(styleIdeas) -->
     <fieldset class="sty-edit">
       <legend data-i18n="styleEdit">색 직접 고르기</legend>
       <div class="sty-picks" id="styPick"></div>
+      <div class="sty-sug">
+        <span class="sty-sug-head" data-i18n="styleSuggest">추천</span>
+        <div class="sty-sug-list" id="stySug"></div>
+        <button type="button" class="sty-shuffle" id="styShuffle" data-i18n="styleShuffle">다른 추천</button>
+      </div>
       <p class="sty-warn" id="styWarn" role="status"></p>
-      <button type="button" class="sty-save" id="stySave" data-i18n="styleSave">이 색으로 저장</button>
+      <button type="button" class="sty-save" id="stySave" data-i18n="styleSave">프리셋으로 저장</button>
     </fieldset>
-    <ol class="sty-list" id="styList"></ol>
-    <p class="pg-say" id="stySay" role="status"></p>
     <div class="sty-foot">
       <p class="sty-note" id="styNote" role="status" aria-live="polite"></p>
+      <button type="button" class="sty-done" id="styDone" data-i18n="styleDone" hidden>완료</button>
       <button type="button" class="sty-undo" id="styUndo" data-i18n="styleUndo" hidden>되돌리기</button>
       <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
     </div>
@@ -722,9 +730,9 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=4.93"></script>
+<script src="app.js?v=4.95"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
-<script src="ranked.js?v=4.93"></script>
+<script src="ranked.js?v=4.95"></script>
 </body>
 </html>
