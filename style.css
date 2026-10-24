@@ -641,8 +641,8 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .hud{display:flex;align-items:center;gap:24px;margin-bottom:8px}
 #play .back{position:static;flex:0 0 auto}
 .gauge{flex:1;height:10px;background:var(--land);overflow:hidden}
-.gauge i{display:block;height:100%;width:100%;background:var(--block);transition:width 1s linear,background var(--slow)}
-.gauge.warn i{background:var(--accent-deep)}
+.gauge i{display:block;height:100%;width:100%;background:var(--accent);transition:width 1s linear,background var(--slow)}
+.gauge.warn i{background:var(--accent-text)}
 .stat b{font-size:28px;font-weight:800}
 .stat.time b{
   font:inherit;font-size:28px;font-weight:800;
@@ -662,7 +662,8 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
   transition:fill .24s var(--ease-out), r .24s var(--ease-out);
   transition-delay:calc(var(--i,0) * 7ms);
 }
-#map g.got circle{fill:var(--accent)}
+/* 게임 안에서는 강조색과 칸색을 맞바꿔 쓴다 — 맞힌 칸은 칸색, 시간 막대는 강조색 */
+#map g.got circle{fill:var(--block)}
 #map g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land))}
 #map text{
   font:700 calc(19px / var(--z,1)) system-ui,sans-serif;   /* 확대해도 화면상 같은 크기 */
@@ -716,23 +717,23 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .res-map[hidden]{display:none}
 .res-map-box svg{display:block;width:100%;height:auto;max-height:64vh}
 .res-map-svg circle{fill:var(--land);transition:fill .26s var(--ease-out)}
-.res-map-svg g.got circle{fill:var(--accent)}
+.res-map-svg g.got circle{fill:var(--block)}
 .res-map-svg g.miss circle{fill:color-mix(in srgb,var(--accent-text) 26%,var(--land))}
 .res-map-svg text,.res-map-svg .tiles{display:none}
 .res-map-cap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;font-size:14px;font-weight:600;color:var(--ink-soft)}
 .res-replay{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 12px;border-radius:999px;
-  font:inherit;font-size:15px;font-weight:800;color:var(--ink);background:none;border:2px solid var(--block);cursor:pointer;
+  font:inherit;font-size:15px;font-weight:800;color:var(--ink);background:none;border:2px solid var(--accent);cursor:pointer;
   transition:background var(--fast) var(--ease-out),transform .1s ease-out}
 .res-replay svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .res-replay:active{transform:scale(.97)}
 .res-replay:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .res-clock{min-width:3.2em;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
 .res-track{flex:1 1 120px;height:6px;border-radius:999px;overflow:hidden;background:var(--land)}
-.res-track i{display:block;height:100%;background:var(--accent);transform:scaleX(0);transform-origin:left}
+.res-track i{display:block;height:100%;background:var(--block);transform:scaleX(0);transform-origin:left}
 .res-track i:dir(rtl){transform-origin:right}
 .res-key{display:inline-flex;align-items:center;gap:7px}
 .res-key b{color:var(--ink);font-variant-numeric:tabular-nums}
-.res-key i{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.res-key i{width:12px;height:12px;border-radius:50%;background:var(--block)}
 .res-key i.miss{background:color-mix(in srgb,var(--accent-text) 26%,var(--land));box-shadow:inset 0 0 0 2px var(--ink-soft)}
 @media (hover:hover) and (pointer:fine){ .res-replay:hover{background:var(--card-inset)} }
 @media (prefers-reduced-motion:reduce){ .res-map-svg circle{transition:none} .res-replay:active{transform:none} }
@@ -1375,9 +1376,12 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 /* 내 스타일 — 연 단추 아래에 뜨는 판(popover). 자리·높이는 ranked.js 의 placeStyles 가 적는다.
    뒤를 가리지 않으니 고르는 색이 뒤에도 바로 비친다 */
 #styles{position:fixed;inset:auto;margin:0;border:0;padding:0;background:none;color:var(--ink);
-  width:min(calc(100vw - 32px),440px);overflow:visible}
+  width:min(calc(100vw - 32px),340px);overflow:visible}
 #styles:popover-open{display:flex;flex-direction:column}
-#stylesBox{max-height:none;min-height:0;padding:20px 20px 18px}
+#stylesBox{max-height:none;min-height:0;gap:12px;padding:16px 16px 14px}
+#stylesBox .fb-head h2{font-size:22px}
+#stylesBox .back{width:36px;height:36px}
+#stylesBox .pg-say:empty{display:none}
 #stylesBox .sty-list{overflow:visible}
 #styles:popover-open #stylesBox{animation:rise-fade var(--fast) var(--ease-out)}
 .fb-head h2{flex:1;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1}
@@ -2611,61 +2615,76 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .rec-list .lp[data-sign=""][data-res="win"]{box-shadow:inset 0 0 0 2px var(--block-deep)}
 .rec-list .lp[data-sign=""][data-res="loss"]{box-shadow:inset 0 0 0 2px var(--ranked)}
 .rec-list .at{grid-column:2;grid-row:2;font-size:12px;color:var(--ink-soft)}
-/* 내 스타일 — 기록과 같은 카드 묶음. 카드 하나 = 색 견본(지도 점 3×3, 가운데가 강조색) · 이름·날짜 · 적용 · 지우기.
-   쓰는 것은 진한 테두리와 '사용 중' 알약으로 — 색만으로 가르지 않는다. 단추는 누르는 순간 살짝 눌린다 */
-.sty-list{list-style:none;display:flex;flex-direction:column;gap:var(--card-gap);overflow:auto;min-height:0;padding:2px 2px 10px}
-.sty-list li{
-  display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px 14px;
-  background:var(--card-fill);padding:var(--card-pad);border-radius:var(--card-r);
-}
-.sty-list li[data-on]{box-shadow:inset 0 0 0 3px var(--block-deep)}
+/* 내 스타일 — 프리셋은 색 견본(지도 점 3×3, 가운데가 강조색) 단추를 늘어놓는다. 누르면 입고, 꾹 누르면
+   빨간 X 가 떠(지우기 모드) 누르는 것마다 지운다. 쓰는 것은 진한 테두리와 체크 표시로 — 색만으로 가르지 않는다 */
+.sty-list{list-style:none;display:flex;flex-wrap:wrap;gap:10px;padding:4px 2px 2px;margin:0}
+.sty-list:empty{display:none}
 .sty-swatch{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:48px;height:48px;padding:6px;box-sizing:border-box;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:48px;height:48px;padding:7px;box-sizing:border-box;
   border-radius:14px;background:var(--sw-bg,var(--card-inset));
 }
 .sty-swatch[data-night]{background:#1f2629}
-.sty-swatch i{border-radius:50%;background:var(--sw-block,var(--block))}
-.sty-swatch i:nth-child(5){background:var(--sw-accent,var(--accent));transform:scale(1.25)}
-.sty-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.sty-text b{font-size:17px;font-weight:800;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sty-text span{font-size:13px;color:var(--ink-soft)}
-.sty-on{padding:4px 12px 5px;border-radius:999px;font-size:13px;font-weight:800;color:#fff;background:var(--block-deep);white-space:nowrap}
-.sty-on[hidden],.sty-use[hidden]{display:none}
-.sty-list button,.sty-foot button{font:inherit;cursor:pointer;border:0;transition:transform .1s ease-out,background var(--fast)}
-.sty-list button:active,.sty-foot button:active{transform:scale(.96)}
-.sty-use{min-height:40px;padding:0 18px;border-radius:999px;font-weight:800;color:#fff;background:var(--block-hi)}
-.sty-del{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;color:var(--ink);background:var(--card-inset)}
-.sty-del .i{width:18px;height:18px}
-.sty-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.sty-swatch > i{border-radius:50%;background:var(--sw-block,var(--block))}
+.sty-swatch > i:nth-child(5){background:var(--sw-accent,var(--accent));transform:scale(1.25)}
+button.sty-swatch{position:relative;border:0;font:inherit;cursor:pointer;
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  transition:transform .1s ease-out}
+button.sty-swatch:active{transform:scale(.94)}
+.sty-list .sty-swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 5px var(--ink)}
+.sty-tick,.sty-x{position:absolute;top:-7px;right:-7px;display:none;place-items:center;width:20px;height:20px;border-radius:50%;
+  font-size:13px;font-weight:900;line-height:1}
+.sty-tick{background:var(--ink);color:var(--card)}
+.sty-swatch[aria-pressed="true"] .sty-tick{display:grid}
+.sty-x{background:var(--bad);color:#fff;box-shadow:0 0 0 2px var(--card)}
+.sty-x .i{width:14px;height:14px}
+.sty-list[data-edit] .sty-x{display:grid}
+.sty-list[data-edit] .sty-tick{display:none}
+.sty-list[data-edit] .sty-swatch{animation:sty-wiggle .26s ease-in-out infinite alternate}
+.sty-list[data-edit] li:nth-child(2n) .sty-swatch{animation-delay:-.13s}
+@keyframes sty-wiggle{from{transform:rotate(-2.5deg)}to{transform:rotate(2.5deg)}}
+.sty-hint{margin:-4px 0 0;font-size:12px;color:var(--ink-soft)}
+.sty-hint[hidden]{display:none}
+.sty-foot button,.sty-sug button{font:inherit;cursor:pointer;border:0;transition:transform .1s ease-out,background var(--fast)}
+.sty-foot button:active,.sty-sug button:active{transform:scale(.96)}
+.sty-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sty-foot:not(:has(:not([hidden]):not(:empty))){display:none}
 .sty-foot [hidden]{display:none}
-.sty-note{margin:0;flex:1 1 12em;font-weight:700}
+.sty-note{margin:0;flex:1 1 10em;font-size:14px;font-weight:700}
 .sty-note:empty{display:none}
-.sty-undo,.sty-reset{min-height:40px;padding:0 18px;border-radius:999px;font-weight:800;color:var(--ink);background:none;box-shadow:inset 0 0 0 2px var(--block)}
+.sty-undo,.sty-reset,.sty-done,.sty-shuffle{min-height:36px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:800;color:var(--ink);background:none;box-shadow:inset 0 0 0 2px var(--block)}
+.sty-done{color:#fff;background:var(--bad);box-shadow:none}
 .sty-list button:focus-visible,.sty-foot button:focus-visible,.sty-edit :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .sty-link{align-self:flex-start;margin-top:12px}
-/* 색 직접 고르기 — 카드 한 장에 고르기 칸 넷(ranked.js 의 THEME). 대비가 모자란 칸은 테두리와 '대비 부족' 글자로 — 색만이 아니다 */
-.sty-edit{border:0;display:flex;flex-direction:column;gap:10px;background:var(--card-fill);padding:var(--card-pad);border-radius:var(--card-r);margin-bottom:var(--card-gap)}
-.sty-edit legend{float:left;font-weight:800;font-size:17px}
-.sty-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(11em,1fr));gap:8px}
-.sty-pick{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:6px 10px 6px 6px;border-radius:var(--field-r);background:var(--card-inset);cursor:pointer}
+/* 색 직접 고르기 — 고르기 칸 넷(ranked.js 의 THEME)을 한 줄에. 대비가 모자란 칸은 테두리와 '대비 부족' 글자로 — 색만이 아니다 */
+.sty-edit{border:0;display:flex;flex-direction:column;gap:10px;background:var(--card-fill);padding:12px;border-radius:var(--card-r);margin:0}
+.sty-edit legend{float:left;font-weight:800;font-size:15px}
+.sty-picks{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sty-pick{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border-radius:var(--field-r);background:var(--card-inset);cursor:pointer;
+  font-size:12px;font-weight:700;line-height:1.2;text-align:center}
 .sty-pick[data-low]{box-shadow:inset 0 0 0 2px var(--bad)}
-.sty-pick input{width:40px;height:40px;padding:0;border:0;border-radius:10px;background:none;cursor:pointer}
+.sty-pick input{width:34px;height:34px;padding:0;border:0;border-radius:10px;background:none;cursor:pointer}
 .sty-pick input::-webkit-color-swatch-wrapper{padding:0}
 .sty-pick input::-webkit-color-swatch{border:2px solid var(--ink);border-radius:10px}
 .sty-pick input::-moz-color-swatch{border:2px solid var(--ink);border-radius:10px}
-.sty-low{flex-basis:100%;font-size:13px;font-weight:800}
+.sty-low{font-size:11px;font-weight:800}
 .sty-low:empty{display:none}
-.sty-warn{margin:0;font-weight:700}
+/* 추천 — 지금 강조색에 대비를 지키는 칸색 짝. 누르면 고르기 칸에 들어가 미리 보인다 */
+.sty-sug{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sty-sug-head{font-size:13px;font-weight:800}
+.sty-sug-list{display:flex;gap:6px}
+.sty-sug .sty-swatch{width:34px;height:34px;padding:5px;gap:2px;border-radius:10px}
+.sty-shuffle{margin-left:auto;min-height:34px}
+.sty-warn{margin:0;font-size:13px;font-weight:700}
 .sty-warn:empty{display:none}
-.sty-save{align-self:flex-start;min-height:40px;padding:0 18px;border:0;border-radius:999px;font:inherit;font-weight:800;color:#fff;background:var(--block-deep);cursor:pointer}
+.sty-save{align-self:stretch;min-height:40px;padding:0 18px;border:0;border-radius:999px;font:inherit;font-weight:800;color:#fff;background:var(--block-deep);cursor:pointer}
 @media (hover:hover){
-  .sty-use:hover{background:var(--block-deep)}
-  .sty-del:hover{background:color-mix(in srgb,var(--ranked) 16%,var(--card-inset))}
-  .sty-undo:hover,.sty-reset:hover{background:var(--card-inset)}
+  .sty-undo:hover,.sty-reset:hover,.sty-shuffle:hover{background:var(--card-inset)}
 }
 @media (prefers-reduced-motion:reduce){
-  .sty-list button:active,.sty-foot button:active{transform:none}
+  button.sty-swatch:active,.sty-foot button:active,.sty-sug button:active{transform:none}
+  .sty-list[data-edit] .sty-swatch{animation:none}
 }
+:root[data-motion="off"] .sty-list[data-edit] .sty-swatch{animation:none}
 :root[data-motion="off"] .sty-list button:active,:root[data-motion="off"] .sty-foot button:active{transform:none}
 
 @media (pointer:coarse){
