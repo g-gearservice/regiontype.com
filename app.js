@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.91';
+const VER = '4.92';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -525,20 +525,6 @@ function beep(freq, dur = .07, type = 'sine') {
 
 /* ── 화면 ───────────────────────────────────────────── */
 function go(id) {
-  /* 홈 로고의 경기장 알약을 아래로 끌어 놓거나, 계정 칸의 알약을 오른쪽 아래 스타일 글자까지
-     끌고 가면 베타 스타일 판으로 나간다.
-     같은 문서의 화면이 아니라 별도 문서라, 기록에 쌓고 검색·해시는 떼고 간다 */
-  if (id === 'style') {
-    const url = new URL('beta/style/', location.href);
-    url.search = '';
-    url.hash = '';
-    const href = url.href;
-    try {
-      if (window.navigation) navigation.navigate(href);
-      else location.assign(href);
-    } catch { location.assign(href); }
-    return;
-  }
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   if (id !== 'play') stop();
   /* 숨어 있던 동안에는 알약을 앉힐 자리를 잴 수 없었다 — 보이고 난 다음 프레임에 앉힌다 */
@@ -1665,8 +1651,6 @@ function navBotTarget(el) {
 function makeNavFollow(spec) {
   const SPR = { x: sp(0, .05), y: sp(0, .05), w: sp(8, .05), h: sp(8, .05) };
   let aim = null, on = false, raf = 0, t0 = 0, base = null, pull = null, at = null;
-  /* 스프링 결. 평소엔 RESPONSE·임계 감쇠, 스타일 글자로 뚝 건너갈 때만 짧고 살짝 넘친다(tugIn) */
-  let resp = RESPONSE, damp = 1;
   /* 손이 막대 위에 있으면 지금 그 아래 칸 — 칸이 빠져 줄이 밀려도(뒤로) 손 밑에 들어선 칸을 안다 */
   const under = () => at && spec.target(document.elementFromPoint(at[0], at[1]));
   function paint() {
@@ -1685,14 +1669,13 @@ function makeNavFollow(spec) {
     const dt = Math.max(0, Math.min(.034, (now - t0) / 1000));
     t0 = now;
     let busy = false;
-    for (const p of Object.values(SPR)) busy = spStep(p, dt, resp, damp) || busy;
+    for (const p of Object.values(SPR)) busy = spStep(p, dt) || busy;
     paint();
     raf = busy ? requestAnimationFrame(frame) : 0;
   }
   function aimTo(el) {
     const shape = spec.shape(), nav = spec.nav();
     if (!shape || !nav) return;
-    resp = RESPONSE; damp = 1;
     /* 로그인 덮개로 초점이 넘어가도 뒤의 알약은 로그인에 남는다. */
     const signin = $('#signinLink');
     if ($('#signin') && !$('#signin').hidden && nav.contains(signin)) el = signin;
@@ -1728,73 +1711,19 @@ function makeNavFollow(spec) {
   }
   /* 누른 채 끌면 알약이 손끝 쪽으로 늘어나며 끌려간다 — iOS 탭 막대의 결. 멀어질수록
      덜 따라오는 고무줄(Apple rubber band, c .55)이라 아무리 끌어도 칸을 벗어나지 않고,
-     끄는 쪽으로 늘어난 만큼 옆으로는 살짝 홀쭉해진다. 놓으면 같은 스프링으로 돌아온다.
-     로고를 감싼 경기장만 예외다 — 아래로 끌면 손가락을 그대로 따라 내려가고,
-     충분히 끌어 놓으면 스타일 판으로 간다(logoDrop) */
-  function logoDown(py) {
-    if (!pull || !spec.logoDrop || !pull.it.matches('.nav-logo')) return 0;
-    if (document.body.classList.contains('rk-intro')) return 0;
-    if (!$('#regions').classList.contains('on') || document.body.matches('.signing, .setting, .paging')) return 0;
-    const shape = spec.shape();
-    if (!shape || getComputedStyle(shape).display === 'none') return 0;
-    return Math.max(0, py - pull.y0);
-  }
-  /* 계정 칸에서 스타일 글자 쪽으로 끄는 줄다리기(spec.tug). 손이 칸 한가운데에서 글자
-     한가운데로 가는 길을 얼마나 왔는지(along)만 잰다. 알약 앞끝은 고무줄(Apple, c .55)로
-     따라와 손이 글자 가운데에 닿아도 길의 1/3 쯤에 머문다 — 무겁게 끌려오다가, 닿는 순간
-     나머지를 뚝 건너간다(tugIn). 길에서 옆으로 알약 높이만큼 벗어나면 닿은 것으로 치지 않는다 */
-  function tugOf() {
-    const tug = spec.tug, to = tug && tug.to();
-    if (!pull || pull.in || !to || pull.it !== tug.from() || !to.getClientRects().length) return null;
-    if (!$('#regions').classList.contains('on') || document.body.matches('.signing, .setting, .paging, .rk-intro')) return null;
-    const nr = spec.nav().getBoundingClientRect(), r = to.getBoundingClientRect();
-    const hx = base.x + base.w / 2, hy = base.y + base.h / 2;
-    const vx = r.left + r.width / 2 - nr.left - hx, vy = r.top + r.height / 2 - nr.top - hy;
-    const D = Math.hypot(vx, vy) || 1, ux = vx / D, uy = vy / D;
-    const px = pull.px - nr.left - pull.ox - hx, py = pull.py - nr.top - pull.oy - hy;
-    const along = px * ux + py * uy, side = py * ux - px * uy;
-    return { r, nr, ux, uy, D, along: Math.max(0, along), reach: along >= D && Math.abs(side) < r.height };
-  }
-  /* 손이 글자 한가운데에 닿았다 — 알약이 남은 길을 뚝 건너가 글자를 감싸고(서랍 결 스프링,
-     감쇠 .75·응답 .3 이라 살짝 넘쳤다 앉는다), 앉고 나면 스타일 판으로 간다.
-     움직임을 줄였으면 건너뛰는 모습 없이 바로 간다 */
-  function tugIn(tg) {
-    pull.in = true;
-    spec.nav().querySelectorAll('.nav-item').forEach(n => n.classList.remove('is-on'));
-    spec.tug.to().classList.add('is-on');
-    base = { x: tg.r.left - tg.nr.left, y: tg.r.top - tg.nr.top, w: tg.r.width, h: tg.r.height };
-    /* 놓을 때 따라오는 click 이 계정 칸을 누르지 않게 삼킨다 */
-    skipClick = true;
-    if (calm()) { place(true); spec.tug.go(); return; }
-    resp = .3; damp = .75;
-    place(false);
-    setTimeout(spec.tug.go, 300);
-  }
+     끄는 쪽으로 늘어난 만큼 옆으로는 살짝 홀쭉해진다. 놓으면 같은 스프링으로 돌아온다 */
   function place(still) {
     let { x, y, w, h } = base;
     let snap = still;
-    if (pull && !pull.in && !calm()) {
-      const down = logoDown(pull.py), tg = tugOf();
-      if (tg && tg.along > 0) {
-        /* 앞끝은 lead 만큼, 뒤끝은 그 1/10 만 — 늘어난 고무처럼 계정 칸에 붙은 채 길어지고 가늘어진다 */
-        const lead = tg.along * tg.D * .55 / (tg.D + .55 * tg.along);
-        const cx = x + w / 2 + tg.ux * lead * .55, cy = y + h / 2 + tg.uy * lead * .55;
-        w += Math.abs(tg.ux) * lead * .9;
-        h += Math.abs(tg.uy) * lead * .9 - Math.min(10, lead * .04);
-        x = cx - w / 2; y = cy - h / 2;
-      } else if (down >= 8) {
-        y += Math.min(down, 160);
-        snap = true;
-      } else {
-        const rb = (d, m) => Math.sign(d) * m * (1 - 1 / (Math.abs(d) * .55 / m + 1));
-        const dx = rb(pull.px - pull.nx - x - w / 2 - pull.ox, 28);
-        const dy = rb(pull.py - pull.ny - y - h / 2 - pull.oy, 14);
-        const ax = Math.abs(dx), ay = Math.abs(dy);
-        const cx = x + w / 2 + dx * .7, cy = y + h / 2 + dy * .7;
-        w += ax * .6 - ay * .3;
-        h += ay * .6 - ax * .2;
-        x = cx - w / 2; y = cy - h / 2;
-      }
+    if (pull && !calm()) {
+      const rb = (d, m) => Math.sign(d) * m * (1 - 1 / (Math.abs(d) * .55 / m + 1));
+      const dx = rb(pull.px - pull.nx - x - w / 2 - pull.ox, 28);
+      const dy = rb(pull.py - pull.ny - y - h / 2 - pull.oy, 14);
+      const ax = Math.abs(dx), ay = Math.abs(dy);
+      const cx = x + w / 2 + dx * .7, cy = y + h / 2 + dy * .7;
+      w += ax * .6 - ay * .3;
+      h += ay * .6 - ax * .2;
+      x = cx - w / 2; y = cy - h / 2;
     }
     [[SPR.x, x], [SPR.y, y], [SPR.w, w], [SPR.h, h]].forEach(([p, v]) => {
       p.to = v;
@@ -1807,33 +1736,21 @@ function makeNavFollow(spec) {
     const it = spec.target(e.target);
     if (e.button || !it || pull || document.body.classList.contains('rk-intro')) return;
     const nr = spec.nav().getBoundingClientRect(), r = it.getBoundingClientRect();
-    pull = { id: e.pointerId, it, nx: nr.left, ny: nr.top, px: e.clientX, py: e.clientY, y0: e.clientY,
+    pull = { id: e.pointerId, it, nx: nr.left, ny: nr.top, px: e.clientX, py: e.clientY,
              ox: e.clientX - r.left - r.width / 2, oy: e.clientY - r.top - r.height / 2 };
     aimTo(it);
   }
   function drag(e) {
-    if (!pull || e.pointerId !== pull.id || pull.in) return;
+    if (!pull || e.pointerId !== pull.id) return;
     pull.px = e.clientX; pull.py = e.clientY;
-    const tg = tugOf();
-    if (tg && tg.reach) { tugIn(tg); return; }
-    /* 다른 칸 위로 끌고 가면 알약이 그 칸으로 건너가 거기서 다시 늘어난다.
-       아래로 잰 거리는 그 칸에 앉은 뒤부터 다시 센다 */
+    /* 다른 칸 위로 끌고 가면 알약이 그 칸으로 건너가 거기서 다시 늘어난다 */
     const hit = spec.target(document.elementFromPoint(e.clientX, e.clientY));
-    if (hit && hit !== pull.it) { pull.it = hit; pull.ox = pull.oy = 0; pull.y0 = e.clientY; aimTo(hit); }
+    if (hit && hit !== pull.it) { pull.it = hit; pull.ox = pull.oy = 0; aimTo(hit); }
     else if (base) place(false);
   }
-  function drop(e, fine, commit) {
+  function drop(e, fine) {
     if (!pull || e.pointerId !== pull.id) return;
-    /* 이미 스타일로 건너갔다 — 손을 떼도 알약은 글자에 남고 판은 그대로 넘어간다 */
-    if (pull.in) { pull = null; return; }
-    const leave = commit && logoDropGo(logoDown(e.clientY), true, false);
     pull = null;
-    if (leave) {
-      /* 끌어 놓은 뒤 따라오는 click 이 로고의 홈 링크를 누르지 않게 삼킨다 */
-      skipClick = true;
-      spec.logoDrop();
-      return;
-    }
     aimTo(fine ? spec.target(document.elementFromPoint(e.clientX, e.clientY)) : null);
   }
   function wire() {
@@ -1850,8 +1767,8 @@ function makeNavFollow(spec) {
     });
     nav.addEventListener('pointerdown', grab);
     addEventListener('pointermove', drag);
-    addEventListener('pointerup', e => drop(e, fine(), true));
-    addEventListener('pointercancel', e => drop(e, false, false));
+    addEventListener('pointerup', e => drop(e, fine()));
+    addEventListener('pointercancel', e => drop(e, false));
     nav.addEventListener('pointerleave', () => {
       at = null;
       if (pull) return;
@@ -1873,13 +1790,6 @@ function makeNavFollow(spec) {
       if (!nav.contains(e.relatedTarget)) aimTo(under() || null);
     });
     addEventListener('resize', () => { on = false; aimTo(aim); });
-    /* 스타일 판에서 뒤로 왔는데 페이지가 그대로 살아 돌아오면(bfcache) 알약이 글자에 앉아 있다 */
-    addEventListener('pageshow', e => {
-      if (!e.persisted) return;
-      pull = null;
-      if (spec.tug) spec.tug.to().classList.remove('is-on');
-      on = false; aimTo(null);
-    });
     requestAnimationFrame(() => aimTo(null));
   }
   /* 가리키던 칸이 빠졌으면(뒤로가 숨었다) 그 자리에 들어선 칸으로 곧장 선다 — 사라진 칸을 재면
@@ -1891,19 +1801,12 @@ function makeNavFollow(spec) {
   }
   return { aim: aimTo, wire, relayout };
 }
-/* 로고 위 경기장 알약. 이만큼(px) 아래로 끌어 놓으면 스타일 판으로 간다.
-   봇이 조르는 동안은 logoDown 이 0 을 돌려 이 판정이 열리지 않는다 */
-const LOGO_DROP = 48;
-function logoDropGo(dy, onLogo, blocked) {
-  return !blocked && !!onLogo && dy >= LOGO_DROP;
-}
 const navTop = makeNavFollow({
   nav: () => $('#regions .navbar'),
   shape: () => $('#navShape'),
   home: () => $('#regions .navbar .nav-logo .dot'),
   target: navTopTarget,
   pillAtRest: false,
-  logoDrop: () => go('style'),
 });
 const navBot = makeNavFollow({
   nav: () => $('#regions .nav-bot'),
@@ -1911,10 +1814,7 @@ const navBot = makeNavFollow({
   home: () => $('#navPlay'),
   target: navBotTarget,
   pillAtRest: true,
-  tug: { from: () => $('#signinLink'), to: () => $('#navStyle'), go: () => go('style') },
 });
-/* 스타일 글자는 눌러서는 안 열린다 — 계정 칸의 알약을 끌어와야 한다. 키보드(Enter, detail 0)는 그냥 링크다 */
-$('#navStyle').addEventListener('click', e => { if (e.detail) e.preventDefault(); });
 function aimNavShape(el) { navTop.aim(el); }
 function aimBotShape(el) { navBot.aim(el); }
 function wireNavShape() { navTop.wire(); navBot.wire(); }
@@ -3947,9 +3847,6 @@ if (location.search.includes('rt=1')) {
     aimNavShape(logo);
     console.assert(logo.classList.contains('is-on') && shape.classList.contains('is-pill'),
       '로고를 가리키면 알약이 로고를 감싼다');
-    console.assert(logoDropGo(48, true, false) && !logoDropGo(47, true, false)
-      && !logoDropGo(80, false, false) && !logoDropGo(80, true, true),
-      '로고 알약을 아래로 끌어 놓으면 스타일 판으로, 조금만 끌거나 다른 칸·막혀 있으면 아니다');
     aimNavShape(null);
     console.assert(!logo.classList.contains('is-on') && !shape.classList.contains('is-pill'),
       '손 떼면 로고 점 자리의 원으로 돌아간다');
