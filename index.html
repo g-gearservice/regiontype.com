@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=4.87">
+<link rel="stylesheet" href="style.css?v=4.91">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -165,6 +165,10 @@
     <!-- 로그인은 홈 덮개를 연다. 로그인해 있으면 라벨과 길이 '내 계정' 으로 바뀐다 -->
     <a class="nav-item" id="signinLink" href="signin/" data-i18n="signinBtn">로그인</a>
   </nav>
+  <!-- 베타 스타일 판. 아래 막대 줄 오른쪽 끝에 글자만 선다. 알약은 가리켜도 오지 않는다 —
+       계정 칸의 알약을 끌어다 이 글자 한가운데에 대면 뚝 끌려와 들어간다(app.js 의 tug).
+       키보드는 그냥 링크다 -->
+  <a class="nav-item nav-style" id="navStyle" href="beta/style/" data-i18n="styleBeta">스타일</a>
   <!-- 폰에서만: 애플 뮤직 결의 아래 막대. 위 줄은 미니 막대(코스 이름·시작), 아래 줄은 탭 알약
        (지도·순위·기록·설정)과 계정 동그라미. 지도를 끌면 탭 알약이 지도 동그라미로 접히고 미니
        막대가 그 옆으로 내려앉는다. 요소는 app.js 의 tabDock 이 제자리에서 옮겨 온다 -->
@@ -723,7 +727,7 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=4.81"></script>
+<script src="app.js?v=4.91"></script>
 <script src="auth.js?v=4.71"></script>
 <script src="settings/settings.js?v=4.71"></script>
 <script src="ranked.js?v=4.87"></script>
