@@ -682,13 +682,14 @@ function hide() {
   setTalkUI(null);
   clearInterval(progT); clearTimeout(progHide);
   $('#rkProg').hidden = true;
+  /* 추천 버튼은 말풍선과 함께 흐려진다 — 접히는 240ms 동안 먼저 사라지면 풍선이 줄어들며 깜빡인다.
+     setTalkUI(null) 도 칩은 건드리지 않으니 풍선이 정말 숨는 자리(아래 둘)에서 같이 숨긴다 */
   const chips = $('#rkChips');
-  if (chips) chips.hidden = true;
   clearTimeout(closing);
-  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing', 'is-busy'); bubble.hidden = true; return; }
+  if (bubble.hidden || calm()) { bubble.classList.remove('is-open', 'is-closing', 'is-busy'); bubble.hidden = true; if (chips) chips.hidden = true; return; }
   bubble.classList.remove('is-open');
   bubble.classList.add('is-closing');
-  closing = setTimeout(() => { bubble.hidden = true; bubble.classList.remove('is-closing', 'is-busy'); }, 240);
+  closing = setTimeout(() => { bubble.hidden = true; if (chips) chips.hidden = true; bubble.classList.remove('is-closing', 'is-busy'); }, 240);
 }
 
 /* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳. 경쟁전을 켜면 왼쪽
@@ -756,7 +757,7 @@ function setTalkUI(mode) {
   inp.disabled = busy;
   if (go) go.disabled = busy;
   inp.placeholder = t(mode === 'thinking' ? 'botThink' : 'botChatPh');
-  if (chips) chips.hidden = !(chatting && !busy);
+  if (chips && mode !== null) chips.hidden = !(chatting && !busy);   // null 은 접는 중 — 칩은 hide() 가 풍선과 함께 숨긴다
 }
 
 function sleep() {
