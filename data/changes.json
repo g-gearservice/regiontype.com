@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.498",
+    "date": "2026-10-25",
+    "ko": "새 판이 올라온 뒤 다시 들어오면 화면 귀퉁이에 무엇이 바뀌었는지 알려 줍니다. 한 번만 뜨고, 닫거나 그냥 두어도 됩니다.",
+    "en": "When you come back after an update, a small card in the corner tells you what changed. It shows once, and you can close it or just leave it."
+  },
+  {
     "v": "0.11.497",
     "date": "2026-10-24",
     "ko": "Safari 에서는 넵바·아래 막대의 흐림 띠를 한 겹으로 바꿨습니다. 여러 겹일 때 바뀌기 전 색이나 지도가 띠에 잔상으로 남던 것을 없애기 위해서입니다. 다른 브라우저는 그대로입니다.",

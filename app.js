@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.97';
+const VER = '4.98';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -3950,3 +3950,30 @@ if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel*="ic
 
 /* ranked.js 가 화면 말을 다 읽은 뒤에 봇을 열도록 기다린다 */
 const BOOTED = boot();
+
+/* ── 업데이트 알림 ── 지난번 본 VER(rt.seenVer)과 지금 VER 이 다르면, 그 사이 data/changes.json 에 쌓인 줄을
+   셋까지 보여 준다. 처음 온 사람(rt.seenVer 없음)에겐 띄우지 않고 적어만 둔다. 띄운 순간 본 것으로 적는다 —
+   닫지 않고 떠나도 다음에 다시 조르지 않는다. 줄의 판수 C 는 VER 에서 점을 뺀 숫자다(0.11.498 ↔ 4.98) */
+const verNo = v => Number(String(v).split('.').pop());
+function showUpdate(list, seen) {
+  const since = verNo(seen.replace('.', ''));
+  const fresh = list.filter(c => verNo(c.v) > since);
+  if (!fresh.length) return;
+  $('#updV').textContent = 'v' + fresh[0].v;
+  $('#updList').replaceChildren(...fresh.slice(0, 3).map(c => {
+    const li = document.createElement('li');
+    li.textContent = c[LANG] || c.en;
+    return li;
+  }));
+  $('#upd').hidden = false;
+}
+if (location.search.includes('rt=1')) {
+  console.assert(verNo('0.11.497') === verNo('4.97'.replace('.', '')) && verNo('0.11.500') > verNo('4.99'.replace('.', '')), '업데이트: 판수 C 와 VER 을 견준다');
+}
+$('#updClose').addEventListener('click', () => { $('#upd').hidden = true; });
+$('#upd').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); $('#upd').hidden = true; } });
+BOOTED.then(() => {
+  let seen = null;
+  try { seen = localStorage.getItem('rt.seenVer'); localStorage.setItem('rt.seenVer', VER); } catch {}
+  if (seen && seen !== VER) grab('data/changes.json').then(list => showUpdate(list, seen)).catch(() => {});
+}).catch(() => {});

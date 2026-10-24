@@ -1369,6 +1369,25 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 @keyframes tilepop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){ .rt-map .tiles > g.pop{animation:none} }
 
+/* ── 업데이트 알림(app.js 의 showUpdate) ── 화면 귀퉁이의 카드 한 장. 막지 않고 초점도 뺏지 않는다.
+   덮개(z 6)가 열리면 그 밑으로 들어간다. 폰은 아래 탭 막대 위에 뜬다 */
+.upd{
+  position:fixed; z-index:5; left:24px; bottom:calc(36px + 88px); width:min(360px,calc(100vw - 32px));
+  display:flex; flex-direction:column; gap:10px; padding:16px 16px 14px;
+  background:var(--card); color:var(--ink); border-radius:var(--card-r); box-shadow:var(--shadow-lift);
+  animation:rise-fade var(--slow) var(--ease-out);
+}
+.upd[hidden]{display:none}
+:root[data-night] .upd{border:1px solid var(--grid)}
+.upd-head{display:flex;align-items:center;gap:8px}
+.upd-head h2{flex:1;margin:0;font-size:17px;font-weight:800}
+.upd-v{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.upd .back{width:36px;height:36px}
+.upd-list{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
+.upd-more{align-self:flex-start;font-size:14px;font-weight:800;color:var(--ink)}
+.upd-more:focus-visible,.upd .back:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+@media (pointer:coarse){ .upd{left:16px;bottom:calc(var(--dock-h,82px) + 64px)} }   /* 막대 위의 코스 줄까지 비킨다 */
+
 /* ── 피드백 ──────────────────────────────────────────── */
 #feedback,#codes{
   border:0; padding:0; background:none; color:var(--ink);
