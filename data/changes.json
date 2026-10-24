@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.502",
+    "date": "2026-10-25",
+    "ko": "위 넵바 알약의 왼쪽이 비어 보이던 것을 고쳐, 양 끝 여백을 같게 맞췄습니다.",
+    "en": "The top bar pill no longer has extra space on the left; both ends now have the same padding."
+  },
+  {
     "v": "0.11.501",
     "date": "2026-10-25",
     "ko": "위·아래 넵바가 플레이 화면의 타이핑 줄과 같은 색을 입습니다.",
