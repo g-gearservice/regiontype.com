@@ -1749,16 +1749,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 #regions .nav-bot .nav-item{padding:14px 18px}
 /* 시작하기 채움은 #navBotShape 가 그린다 — 호버 틴트를 두면 알약이 옮겨도 남는다 */
 #regions .nav-bot .nav-item:focus-visible{outline-offset:3px}
-/* 스타일 — 아래 막대 칸과 같은 줄·같은 글자, 오른쪽 끝. 막대(8px 안쪽)의 칸과 위아래가 맞는다.
-   알약이 끌려와 앉으면 막대 위로 올라야 글자가 알약 위에 보인다. 눌러서는 못 가니 손가락 모양을 안 쓴다 */
-#regions .nav-style{
-  position:fixed; right:28px; bottom:calc(var(--dock-gap) + 8px); z-index:5;
-  padding:14px 18px; cursor:default;
-  transition:color var(--fast), transform var(--si-dur) var(--ease-in-out), opacity var(--si-dur) var(--ease-in-out);
-}
-/* 초점 테두리는 어디서나 투명하다(위쪽 :focus-visible) — 알약도 안 오니 밑줄로 보인다 */
-#regions .nav-style:focus-visible{text-decoration:underline; text-decoration-thickness:3px; text-underline-offset:6px}
-body:is(.signing,.setting,.paging) #regions .nav-style{transform:translateY(160%);opacity:0;pointer-events:none}
 /* 뒤로는 구를 펼쳤을 때만 선다(app.js paintBack) — .nav-item 의 inline-flex 가 hidden 을 이긴다 */
 #navBack[hidden]{display:none}
 /* 폰에서만 몸을 갖는 조각(햄버거·메뉴·봇 자리). 데스크톱에는 자리를 안 차지한다 */
@@ -2306,7 +2296,7 @@ body:is(.signing,.setting,.paging) #regions .nav-style{transform:translateY(160%
    내려앉는다. 상자(#tabDock) 높이는 그대로라 지도 자리(app.js 의 homeStage)가 흔들리지 않는다.
    유리는 쓰지 않는다 — 데스크톱 알약과 같은 불투명 판이다 */
 @media (pointer:coarse){
-  #regions .nav-bot,#regions .nav-style{display:none}
+  #regions .nav-bot{display:none}
   .tab-dock{
     --row:58px; --acc:52px; --gut:12px; --dur:.42s;
     display:block;position:fixed;left:0;right:0;bottom:var(--dock-gap);z-index:4;
