@@ -6,6 +6,12 @@
     "en": "A 'Style' label now sits at the right end of the home screen's bottom bar. Drag the pill from the account button to the middle of the label and it snaps over to open the beta style page. With a keyboard, Tab to it and press Enter."
   },
   {
+    "v": "0.11.490",
+    "date": "2026-10-24",
+    "ko": "봇 대화를 접을 때 추천 버튼이 먼저 사라져 말풍선이 깜빡이던 것을 고쳤습니다. 이제 버튼도 말풍선과 함께 흐려지며 사라집니다.",
+    "en": "Fixed the bot's suggestion buttons vanishing before the chat bubble finished closing, which made it flicker. They now fade out together with the bubble."
+  },
+  {
     "v": "0.11.489",
     "date": "2026-10-24",
     "ko": "결과 화면 순위표 위에 브랜드 색으로 뜨던 '1위' 같은 순위 글자를 뺐습니다. 순위는 표에서 그대로 볼 수 있습니다.",
