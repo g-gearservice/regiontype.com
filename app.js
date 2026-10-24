@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.93';
+const VER = '4.94';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -3307,9 +3307,9 @@ function drawCard() {
   const svg = $('#map').cloneNode(true);
   svg.querySelector('.cam').removeAttribute('transform');   // 카드에는 전체 지도를
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  const acc = css.getPropertyValue('--accent'), land = css.getPropertyValue('--land');
+  const acc = css.getPropertyValue('--accent'), got = css.getPropertyValue('--block'), land = css.getPropertyValue('--land');   // 맞힌 칸은 게임처럼 칸색
   svg.insertAdjacentHTML('afterbegin', '<style>' +
-    `circle{fill:${land}}g.got circle{fill:${acc}}g.miss circle{fill:${land}}` +
+    `circle{fill:${land}}g.got circle{fill:${got}}g.miss circle{fill:${land}}` +
     'text{display:none}</style>');
   /* 긴 코스 이름이 폭을 넘으면 글씨를 줄인다 */
   const fit = (txt, weight, size, x, y) => {

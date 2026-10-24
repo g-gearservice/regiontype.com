@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.494",
+    "date": "2026-10-24",
+    "ko": "게임 지도에서 맞힌 구가 칸색으로 물들고, 시간 막대는 강조색이 됩니다. '내 스타일' 판을 작게 줄이고 프리셋을 견본 단추로 모았습니다 — 누르면 입고, 꾹 누르면 빨간 X 가 떠 지울 수 있습니다. 강조색에 어울리는 칸색 추천과 '프리셋으로 저장'이 생겼습니다.",
+    "en": "On the game map, solved districts now fill with the tile colour, and the timer bar uses the accent. The 'My styles' panel is smaller and shows presets as swatch buttons: tap to wear one, press and hold to show a red X and delete. New tile-colour ideas that match your accent, and 'Save as preset'."
+  },
+  {
     "v": "0.11.493",
     "date": "2026-10-24",
     "ko": "'내 스타일'이 따로 넘어가는 화면이 아니라 누른 단추 바로 아래에 떠 있는 판으로 열립니다. Esc·닫기 단추·바깥을 눌러 닫으면 보던 화면(계정 등)이 그대로 있습니다.",

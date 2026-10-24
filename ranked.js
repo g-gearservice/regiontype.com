@@ -344,47 +344,96 @@ function wearStyle(s) {
   if (typeof s.motion === 'boolean') o.motion = s.motion;
   if (Object.keys(o).length) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: o }));
 }
-let styleGone = null;
+let styleGone = null, styEdit = false;
+/* 견본 하나 — 지도 점 3×3, 가운데가 강조색. 프리셋·추천이 같이 쓴다 */
+function swatch(el, s) {
+  el.classList.add('sty-swatch');
+  if (HEX.test(s.block)) el.style.setProperty('--sw-block', s.block);
+  if (HEX.test(s.accent)) el.style.setProperty('--sw-accent', s.accent);
+  if (HEX.test(s.bg) && s.night !== true) el.style.setProperty('--sw-bg', s.bg);
+  el.toggleAttribute('data-night', s.night === true);
+  for (let i = 0; i < 9; i++) el.append(document.createElement('i'));
+  return el;
+}
 function fillStyles(focusId) {
   const list = readStyles(), cur = curTheme(), ul = $('#styList');
+  if (!list.length) styEdit = false;
   const day = new Intl.DateTimeFormat(document.documentElement.lang || 'ko', { month: 'numeric', day: 'numeric' });
+  ul.toggleAttribute('data-edit', styEdit);
   ul.replaceChildren(...list.map(s => {
     const li = document.createElement('li'), on = sameStyle(s, cur) && THEME.some(k => cur[k.key]);
     const name = s.name || t('styleUntitled');
-    li.dataset.id = s.id;
-    li.toggleAttribute('data-on', on);
-    const sw = document.createElement('span');
-    sw.className = 'sty-swatch';
-    sw.setAttribute('aria-hidden', 'true');
-    if (/^#[0-9a-f]{6}$/.test(s.block)) sw.style.setProperty('--sw-block', s.block);
-    if (/^#[0-9a-f]{6}$/.test(s.accent)) sw.style.setProperty('--sw-accent', s.accent);
-    if (/^#[0-9a-f]{6}$/.test(s.bg) && s.night !== true) sw.style.setProperty('--sw-bg', s.bg);
-    sw.toggleAttribute('data-night', s.night === true);
-    for (let i = 0; i < 9; i++) sw.append(document.createElement('i'));
-    const txt = document.createElement('span');
-    txt.className = 'sty-text';
-    const b = document.createElement('b'); b.textContent = name;
-    const meta = document.createElement('span');
-    meta.textContent = [day.format(new Date(s.at)), s.night === true ? t('botChipNight') : ''].filter(Boolean).join(' · ');
-    txt.append(b, meta);
-    const tag = document.createElement('span');
-    tag.className = 'sty-on'; tag.textContent = t('styleOn'); tag.hidden = !on;
-    const use = document.createElement('button');
-    use.type = 'button'; use.className = 'sty-use'; use.dataset.styUse = s.id;
-    use.textContent = t('styleApply'); use.hidden = on;
-    use.setAttribute('aria-label', t('styleApplyName', { name }));
-    const del = document.createElement('button');
-    del.type = 'button'; del.className = 'sty-del'; del.dataset.styDel = s.id;
-    del.setAttribute('aria-label', t('styleDelName', { name }));
-    del.innerHTML = '<i class="i i-close" aria-hidden="true"></i>';
-    li.append(sw, txt, tag, use, del);
+    const b = swatch(document.createElement('button'), s);
+    b.type = 'button'; b.dataset.id = s.id; b.title = name;
+    b.setAttribute('aria-pressed', on);
+    b.setAttribute('aria-label', styEdit ? t('styleDelName', { name })
+      : [name, day.format(new Date(s.at)), s.night === true ? t('botChipNight') : ''].filter(Boolean).join(' · '));
+    b.insertAdjacentHTML('beforeend', '<span class="sty-tick" aria-hidden="true">✓</span><span class="sty-x" aria-hidden="true"><i class="i i-close"></i></span>');
+    li.append(b);
     return li;
   }));
   $('#stySay').textContent = list.length ? '' : t('stylesEmpty');
+  $('#styHint').hidden = !list.length || styEdit;
+  $('#styDone').hidden = !styEdit;
   $('#styReset').hidden = !THEME.some(k => cur[k.key]);
   fillPick();
   $('#styUndo').hidden = !styleGone;
-  if (focusId) (ul.querySelector(`[data-id="${CSS.escape(focusId)}"] button:not([hidden])`) || $('#styHead')).focus({ preventScroll: true });
+  if (focusId) (ul.querySelector(`[data-id="${CSS.escape(focusId)}"]`) || $('#styHead')).focus({ preventScroll: true });
+}
+function setEdit(on, focusId) {
+  styEdit = on;
+  fillStyles(focusId || document.activeElement?.dataset?.id);
+}
+function wearPreset(id) {
+  const s = readStyles().find(x => x.id === id);
+  if (!s) return;
+  wearStyle(s);
+  fillStyles(s.id);
+  $('#styNote').textContent = t('styleWorn', { name: s.name || t('styleUntitled') });
+}
+function dropPreset(id) {
+  const list = readStyles(), i = list.findIndex(x => x.id === id);
+  if (i < 0) return;
+  styleGone = { s: list[i], i };
+  list.splice(i, 1);
+  writeStyles(list);
+  fillStyles((list[i] || list[i - 1] || {}).id);
+  $('#styNote').textContent = t('styleGone', { name: styleGone.s.name || t('styleUntitled') });
+  if (!list.length) $('#styUndo').focus({ preventScroll: true });
+}
+/* 추천 — 지금 강조색의 색상환 맞은편·옆자리에서 칸색을 짓는다. 칸색은 흰 글자와, 강조색은 진한 글자와
+   대비(THEME 의 min)를 지킬 때까지 밝기를 민다. 그래서 추천은 늘 저장할 수 있는 짝이다 */
+const hsl = (h, s, l) => '#' + [0, 8, 4].map(n => {
+  const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0');
+}).join('');
+const hueOf = hex => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+  if (!d) return 0;
+  return ((mx === r ? (g - b) / d : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60 + 360) % 360;
+};
+const fitColour = (k, h, s, l, dir) => {
+  let c = hsl(h, s, l);
+  while (contrast(c, k.on) < k.min && l > .04 && l < .96) c = hsl(h, s, l += dir * .02);
+  return c;
+};
+function styleIdeas(accent) {
+  const [A, B] = THEME, h = hueOf(accent);
+  if (contrast(accent, A.on) < A.min) accent = fitColour(A, h, .8, .6, 1);
+  return [180, 210, 150, 120].map(d => ({ accent, block: fitColour(B, (h + d) % 360, .38, .52, -1) }));
+}
+function fillSug() {
+  const acc = $('#styPick input[name="accent"]').value;
+  $('#stySug').replaceChildren(...styleIdeas(acc).map((s, n) => {
+    const b = swatch(document.createElement('button'), s);
+    b.type = 'button'; b.dataset.accent = s.accent; b.dataset.block = s.block;
+    b.setAttribute('aria-label', t('styleSugName', { n: n + 1 }));
+    return b;
+  }));
+}
+function useIdea(s) {
+  for (const k of ['accent', 'block']) $(`#styPick input[name="${k}"]`).value = s[k];
+  previewPick();
 }
 /* 색 직접 고르기 — THEME 한 줄마다 고르기 칸 하나. 고르는 동안 미리 보이되 대비가 모자란 짝은 미리 보기에서도
    빠진다(이 화면부터 읽히게). 저장해야 rt.theme 에 담기고 목록에 쌓인다. 저장 없이 닫으면 저장된 색으로 돌아간다.
@@ -404,6 +453,7 @@ function fillPick() {
     return row;
   }));
   checkPick();
+  fillSug();
   paintTheme();
 }
 function checkPick() {
@@ -429,14 +479,22 @@ function savePick() {
   $('#styNote').textContent = t('styleSaved');
 }
 function wireStyles() {
-  $('#styPick').addEventListener('input', previewPick);
+  $('#styPick').addEventListener('input', e => { previewPick(); if (e.target.name === 'accent') fillSug(); });
   $('#stySave').addEventListener('click', savePick);
-  const d = $('#styles');
+  const d = $('#styles'), ul = $('#styList');
   $('#styClose').addEventListener('click', () => d.hidePopover());
-  /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 dialog 의 기본 동작이라 그대로 산다 */
-  d.addEventListener('keydown', e => e.stopPropagation());
+  /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 popover 의 기본 동작이라 그대로 산다.
+     지우기 모드에서는 Esc 가 먼저 그 모드만 끈다. 견본에서 Delete·Backspace 는 곧 지우기(꾹 누르기의 키보드 짝) */
+  d.addEventListener('keydown', e => {
+    e.stopPropagation();
+    held = false;
+    if (e.key === 'Escape' && styEdit) { e.preventDefault(); setEdit(false); return; }
+    const b = e.target.closest('#styList .sty-swatch');
+    if (b && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); dropPreset(b.dataset.id); }
+  });
   d.addEventListener('toggle', e => {
     if (e.newState !== 'closed') return;
+    styEdit = false;
     paintTheme();   // 저장하지 않은 미리 보기를 거둔다
     /* 바깥의 다른 것을 눌러 닫혔으면 그 초점을 빼앗지 않는다 */
     const back = document.activeElement === document.body || d.contains(document.activeElement);
@@ -446,23 +504,32 @@ function wireStyles() {
   /* 뒤가 흐르거나 창이 바뀌면 단추를 따라간다 */
   addEventListener('scroll', () => { if (styOpen()) placeStyles(); }, true);
   addEventListener('resize', () => { if (styOpen()) placeStyles(); });
+  /* 꾹 누르기(.5초) — 지우기 모드를 켠다. 뒤따르는 click 은 삼킨다. 마우스 오른쪽 단추도 같은 길 */
+  let hold = 0, held = false;
+  ul.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.sty-swatch');
+    held = false;
+    if (!b || e.button) return;
+    hold = setTimeout(() => { held = true; if (!styEdit) { setEdit(true, b.dataset.id); navigator.vibrate?.(10); } }, 500);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => ul.addEventListener(n, () => clearTimeout(hold)));
+  ul.addEventListener('contextmenu', e => {
+    const b = e.target.closest('.sty-swatch');
+    if (!b) return;
+    e.preventDefault();
+    if (!styEdit) setEdit(true, b.dataset.id);
+  });
   d.addEventListener('click', e => {
-    const use = e.target.closest('[data-sty-use]'), del = e.target.closest('[data-sty-del]');
-    if (use) {
-      const s = readStyles().find(x => x.id === use.dataset.styUse);
-      if (!s) return;
-      wearStyle(s);
-      fillStyles(s.id);
-      $('#styNote').textContent = t('styleWorn', { name: s.name || t('styleUntitled') });
-    } else if (del) {
-      const list = readStyles(), i = list.findIndex(x => x.id === del.dataset.styDel);
-      if (i < 0) return;
-      styleGone = { s: list[i], i };
-      list.splice(i, 1);
-      writeStyles(list);
-      fillStyles((list[i] || list[i - 1] || {}).id);
-      $('#styNote').textContent = t('styleGone', { name: styleGone.s.name || t('styleUntitled') });
-      if (!list.length) $('#styUndo').focus({ preventScroll: true });
+    const b = e.target.closest('#styList .sty-swatch'), idea = e.target.closest('#stySug .sty-swatch');
+    if (b) {
+      if (held) { held = false; return; }
+      styEdit ? dropPreset(b.dataset.id) : wearPreset(b.dataset.id);
+    } else if (idea) {
+      useIdea(idea.dataset);
+    } else if (e.target.closest('#styShuffle')) {
+      $('#styPick input[name="accent"]').value = fitColour(THEME[0], Math.random() * 360, .8, .6, 1);
+      previewPick();
+      fillSug();
     } else if (e.target.closest('#styUndo') && styleGone) {
       const list = readStyles();
       list.splice(styleGone.i, 0, styleGone.s);
@@ -476,6 +543,8 @@ function wireStyles() {
       fillStyles();
       $('#styNote').textContent = t('styleResetDone');
       $('#styHead').focus({ preventScroll: true });
+    } else if (styEdit) {
+      setEdit(false);   // 완료 단추나 판의 빈 곳 — 지우기 모드를 끈다
     }
   });
 }
@@ -1798,6 +1867,8 @@ if (location.search.includes('rt=1')) {
   console.assert(themeLow({ ink: '#e8edf0' })[0]?.key === 'bg' && themeLow({ accent: '#232c31' })[0]?.key === 'accent', '스타일: 대비 부족을 잡는다');
   console.assert(themeCss({ bg: '#ffffff' }).startsWith(':root:not([data-night]){--bg:#ffffff') && themeCss({}) === '', '스타일: 밤엔 낮 바탕을 깔지 않는다');
   console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
+  console.assert(['#000000', '#ffffff', '#f0a03c', '#2266cc', '#ff0000', '#7a7a7a'].every(a => styleIdeas(a).every(s => !themeLow(s).length)), '스타일: 추천은 늘 대비를 지킨다');
+  console.assert(hsl(0, 1, .5) === '#ff0000' && Math.round(hueOf('#00ff00')) === 120, '스타일: 색상환 셈');
 }
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
