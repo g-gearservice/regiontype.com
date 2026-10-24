@@ -826,6 +826,7 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .ranks li.me .tag{color:var(--block-deep);background:#fff}
 .board-say{margin:-6px 0 12px;min-height:22px;color:var(--accent-text);font-weight:700}
 .board-say.bad{color:var(--bad)}
+.board-say:empty{display:none}
 .board-in{margin-top:14px;max-width:460px;font-size:14px;color:var(--ink-soft);line-height:1.6}
 
 /* 격자 한 칸짜리 버튼. 자리는 --btn-col/--btn-row (칸 번호). 기본은 app.js 가
