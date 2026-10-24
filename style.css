@@ -1242,8 +1242,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    띠의 바깥 끝(넵바에서 먼 쪽)은 모든 겹이 투명에서 시작해 흐림이 정확히 0px 이다 —
    겹의 마스크 시작점을 0% 위로 올리지 않는다. 스크림(::after)도 그 끝에서 투명이다.
    홈·플레이·설정·계정이 모두 이 한 벌을 쓴다 — 화면마다 따로 고치지 않는다.
-   --blur-nudge 는 Safari 용이다: 뒤가 바뀌어도 띠가 옛 모습을 화면에 붙들고 있을 때(스크린샷에는 안 찍힌다 —
-   합성 단계의 묵은 층이다) app.js 의 kickBlur 가 이 값을 0.01px 흔들어 층을 새로 짓게 한다.
+   Safari(WebKit)는 아래 @supports 절에서 마스크 없는 한 겹으로 바꾼다.
    출처: OuterVale, "Blobby Navbar Blur" (codepen.io/OuterVale/pen/emJQXOx) */
 .backdrop-blur{
   position:absolute; top:0; left:0; right:0; z-index:1;
@@ -1251,32 +1250,32 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 .backdrop-blur > span{grid-area:1/1}
 .backdrop-blur > :nth-child(1){
-  backdrop-filter:blur(calc(1px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55) + var(--blur-nudge,0px)));
+  backdrop-filter:blur(calc(1px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
 }
 .backdrop-blur > :nth-child(2){
-  backdrop-filter:blur(calc(4px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55) + var(--blur-nudge,0px)));
+  backdrop-filter:blur(calc(4px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
 }
 .backdrop-blur > :nth-child(3){
-  backdrop-filter:blur(calc(8px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55) + var(--blur-nudge,0px)));
+  backdrop-filter:blur(calc(8px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
 }
 .backdrop-blur > :nth-child(4){
-  backdrop-filter:blur(calc(16px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55) + var(--blur-nudge,0px)));
+  backdrop-filter:blur(calc(16px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
 }
 .backdrop-blur > :nth-child(5){
-  backdrop-filter:blur(calc(24px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55) + var(--blur-nudge,0px)));
+  backdrop-filter:blur(calc(24px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
 }
 .backdrop-blur > :nth-child(6){
-  backdrop-filter:blur(calc(32px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55) + var(--blur-nudge,0px)));
+  backdrop-filter:blur(calc(32px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
 }
@@ -1284,6 +1283,15 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 .backdrop-blur::after{
   content:""; grid-area:1/1;
   background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 34%,transparent) 60%,transparent);
+}
+/* Safari(WebKit)만 — 마스크 씌운 backdrop-filter 여러 겹은 뒤가 바뀌어도 화면의 층을 새로 짓지 않아
+   넵바·막대 띠에 옛 색·옛 지도가 잔상으로 남는다(스크린샷은 새로 그려 찍히니 눈으로만 보인다).
+   여기서는 가운데 세기의 한 겹만 남기고 마스크를 걷는다. 흐림이 잦아드는 끝은 스크림(::after)이 맡는다.
+   화면마다 겹 마스크를 덮어쓰는 규칙(설정·계정·플레이)이 id 로 세서 !important 로 누른다.
+   font:-apple-system-body 는 WebKit 만 아는 값이다 */
+@supports (font:-apple-system-body) and (not (-moz-appearance:none)){
+  .backdrop-blur > span:not(:nth-child(3)){display:none!important}
+  .backdrop-blur > span{-webkit-mask:none!important;mask:none!important;-webkit-mask-image:none!important;mask-image:none!important}
 }
 /* 상단과 같은 여섯 겹. 가로는 요소를 자르지 않고 마스크로만 좁힌다.
    폭을 숫자로 잘라내면 좌우가 절단되어 상자가 된다. */
