@@ -9,7 +9,7 @@
    표를 받아 app.js 의 start() 에 넘기고, 끝나면 결과를 올릴 뿐이다.
 
    app.js 뒤에 실려 그 전역을 빌려 쓴다: t · token · asset · start · opt · clock ·
-   calm · homeTitle · aimNavShape · relayoutNavShapes · plain · showSpeed · BOOTED ·
+   calm · kickBlur · homeTitle · aimNavShape · relayoutNavShapes · plain · showSpeed · BOOTED ·
    COURSE · PICK · G · board.
    ponytail: 빌려 쓰는 게 이만큼 늘었다. 한 번 더 늘면 app.js 를 모듈로 나눈다. */
 (function () {
@@ -1053,6 +1053,7 @@ function paintTheme(draft) {
   let el = $('#rtTheme');
   if (!el) { el = document.createElement('style'); el.id = 'rtTheme'; document.head.append(el); }
   el.textContent = css;
+  kickBlur();   // app.js — Safari 의 흐림 띠가 옛 색을 붙들지 않게
   if (!draft) try { css ? localStorage.setItem('rt.themeCss', css) : localStorage.removeItem('rt.themeCss'); } catch {}
 }
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };

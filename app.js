@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '4.95';
+const VER = '4.96';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -751,6 +751,22 @@ function spStep(p, dt, resp = RESPONSE, damp = 1) {
   return true;
 }
 const calm = () => !opt.motion || matchMedia('(prefers-reduced-motion:reduce)').matches;
+/* Safari 는 마스크 씌운 backdrop-filter(.backdrop-blur 여섯 겹)를 뒤가 바뀌어도 화면에서 새로 짓지 않을 때가
+   있다 — 넵바·막대 띠에 옛 색·옛 지도가 잔상으로 남는다. 스크린샷은 새로 그려 찍히니 눈으로만 보인다.
+   뒤가 바뀌는 때(전환·애니메이션 끝, 끌기·스크롤 끝, 색·밤·움직임 설정)에 흐림 값을 0.01px 흔들어
+   층을 다시 짓게 한다. 한 프레임에 한 번만.
+   ponytail: 바뀌는 '끝'만 잡는다 — 전환 도중의 잔상까지 지우려면 도는 동안 매 프레임 흔들어야 한다 */
+let blurRaf = 0;
+function kickBlur() {
+  if (blurRaf) return;
+  blurRaf = requestAnimationFrame(() => {
+    const st = document.documentElement.style;
+    st.setProperty('--blur-nudge', st.getPropertyValue('--blur-nudge') ? '' : '.01px');
+    blurRaf = 0;
+  });
+}
+['transitionend', 'animationend', 'pointerup', 'scrollend'].forEach(n => addEventListener(n, kickBlur, true));
+new MutationObserver(kickBlur).observe(document.documentElement, { attributeFilter: ['data-night', 'data-motion', 'class'] });
 const GZ = { z: sp(1, .0005), ax: sp(0, .05), ay: sp(0, .05),
              px: sp(0, .05), py: sp(0, .05), cz: sp(1, .0005),
              nx: sp(0, .02), ny: sp(0, .02) };   // 격자 배율·붙잡은 점·카메라·커서 반응

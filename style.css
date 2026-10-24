@@ -1242,6 +1242,8 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
    띠의 바깥 끝(넵바에서 먼 쪽)은 모든 겹이 투명에서 시작해 흐림이 정확히 0px 이다 —
    겹의 마스크 시작점을 0% 위로 올리지 않는다. 스크림(::after)도 그 끝에서 투명이다.
    홈·플레이·설정·계정이 모두 이 한 벌을 쓴다 — 화면마다 따로 고치지 않는다.
+   --blur-nudge 는 Safari 용이다: 뒤가 바뀌어도 띠가 옛 모습을 화면에 붙들고 있을 때(스크린샷에는 안 찍힌다 —
+   합성 단계의 묵은 층이다) app.js 의 kickBlur 가 이 값을 0.01px 흔들어 층을 새로 짓게 한다.
    출처: OuterVale, "Blobby Navbar Blur" (codepen.io/OuterVale/pen/emJQXOx) */
 .backdrop-blur{
   position:absolute; top:0; left:0; right:0; z-index:1;
@@ -1249,32 +1251,32 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 .backdrop-blur > span{grid-area:1/1}
 .backdrop-blur > :nth-child(1){
-  backdrop-filter:blur(calc(1px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55)));
+  backdrop-filter:blur(calc(1px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55) + var(--blur-nudge,0px)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
 }
 .backdrop-blur > :nth-child(2){
-  backdrop-filter:blur(calc(4px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55)));
+  backdrop-filter:blur(calc(4px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55) + var(--blur-nudge,0px)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
 }
 .backdrop-blur > :nth-child(3){
-  backdrop-filter:blur(calc(8px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55)));
+  backdrop-filter:blur(calc(8px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55) + var(--blur-nudge,0px)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
 }
 .backdrop-blur > :nth-child(4){
-  backdrop-filter:blur(calc(16px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55)));
+  backdrop-filter:blur(calc(16px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55) + var(--blur-nudge,0px)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
 }
 .backdrop-blur > :nth-child(5){
-  backdrop-filter:blur(calc(24px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55)));
+  backdrop-filter:blur(calc(24px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55) + var(--blur-nudge,0px)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
 }
 .backdrop-blur > :nth-child(6){
-  backdrop-filter:blur(calc(32px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55)));
+  backdrop-filter:blur(calc(32px * var(--blur-k,.55) + var(--blur-nudge,0px))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55) + var(--blur-nudge,0px)));
   mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
   -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
 }
