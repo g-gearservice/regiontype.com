@@ -3395,7 +3395,9 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 .backdrop-blur{visibility:hidden}
 #regions .navbar{background:var(--bar);border-radius:999px;box-shadow:var(--shadow)}
 @media (min-width:760px) and (not (pointer:coarse)){
-  #regions .navbar{top:16px;left:50%;right:auto;translate:-50% 0;width:max-content;max-width:calc(100vw - 32px);padding:8px 10px}
+  /* 양옆 칸은 글자 폭대로 — 1fr 둘이면 짧은 쪽(소개·기록)이 긴 쪽만큼 벌어져 알약 왼쪽이 빈다.
+     알약 자체는 translate 로 화면 가운데에 그대로 선다(로고는 양옆 폭 차이만큼 비켜 앉는다) */
+  #regions .navbar{top:16px;left:50%;right:auto;translate:-50% 0;width:max-content;max-width:calc(100vw - 32px);padding:8px 10px;grid-template-columns:auto auto auto}
 }
 @media (max-width:759px) and (not (pointer:coarse)){
   #regions .navbar{top:8px;left:8px;right:8px}
