@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.499",
+    "date": "2026-10-25",
+    "ko": "Safari 에서는 흐림 띠를 없애고, 위 넵바를 아이폰 노치처럼 화면 위에 매달린 판으로 바꿨습니다. 폰에서는 로고가 그 판이 됩니다. 바뀌기 전 색이나 지도가 띠에 남던 잔상도 함께 사라집니다.",
+    "en": "In Safari, the blurred strips are gone and the top bar now hangs from the top of the screen like an iPhone notch; on phones the logo is the notch. This also ends the old colours or map views lingering in the strips."
+  },
+  {
     "v": "0.11.498",
     "date": "2026-10-25",
     "ko": "새 판이 올라온 뒤 다시 들어오면 화면 귀퉁이에 무엇이 바뀌었는지 알려 줍니다. 한 번만 뜨고, 닫거나 그냥 두어도 됩니다.",
