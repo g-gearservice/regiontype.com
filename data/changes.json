@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.497",
+    "date": "2026-10-24",
+    "ko": "Safari 에서는 넵바·아래 막대의 흐림 띠를 한 겹으로 바꿨습니다. 여러 겹일 때 바뀌기 전 색이나 지도가 띠에 잔상으로 남던 것을 없애기 위해서입니다. 다른 브라우저는 그대로입니다.",
+    "en": "In Safari, the blurred strips behind the top and bottom bars now use a single layer, so they no longer hold on to old colours or an old view of the map. Other browsers are unchanged."
+  },
+  {
     "v": "0.11.496",
     "date": "2026-10-24",
     "ko": "Safari 에서 넵바·아래 막대의 흐림 띠에 바뀌기 전 색이나 지도가 잔상으로 남던 것을 고쳤습니다. 뒤가 바뀌면 흐림 띠를 새로 그립니다.",
