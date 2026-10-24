@@ -1365,13 +1365,21 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   margin:auto;   /* * { margin:0 } 이 UA 의 가운데 정렬을 지운다 — 되돌린다 */
 }
 #feedback::backdrop,#codes::backdrop{background:rgba(35,44,49,.42);backdrop-filter:blur(2px)}
-#fbForm,#codesBox{
+#fbForm,#codesBox,#stylesBox{
   display:flex; flex-direction:column; gap:14px;
   background:var(--card); border-radius:6px; box-shadow:var(--shadow-lift);
   padding:24px 28px 22px; max-height:88vh; overflow:auto;
 }
-:root[data-night] :is(#fbForm,#codesBox){border:1px solid var(--grid)}
+:root[data-night] :is(#fbForm,#codesBox,#stylesBox){border:1px solid var(--grid)}
 .fb-head{display:flex;align-items:center;gap:12px}
+/* 내 스타일 — 연 단추 아래에 뜨는 판(popover). 자리·높이는 ranked.js 의 placeStyles 가 적는다.
+   뒤를 가리지 않으니 고르는 색이 뒤에도 바로 비친다 */
+#styles{position:fixed;inset:auto;margin:0;border:0;padding:0;background:none;color:var(--ink);
+  width:min(calc(100vw - 32px),440px);overflow:visible}
+#styles:popover-open{display:flex;flex-direction:column}
+#stylesBox{max-height:none;min-height:0;padding:20px 20px 18px}
+#stylesBox .sty-list{overflow:visible}
+#styles:popover-open #stylesBox{animation:rise-fade var(--fast) var(--ease-out)}
 .fb-head h2{flex:1;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1}
 .fb-lead{margin-top:-8px;color:var(--ink-soft);font-size:15px;line-height:1.6}
 .fb-kind{justify-content:flex-start}
