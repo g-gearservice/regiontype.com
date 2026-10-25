@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.506",
+    "date": "2026-10-25",
+    "ko": "소개 화면 시안 여섯 개를 /landing/proto/1–6 에 올렸습니다.",
+    "en": "Six landing page prototypes are now at /landing/proto/1–6."
+  },
+  {
     "v": "0.11.505",
     "date": "2026-10-25",
     "ko": "소개 화면(/landing/)이 다섯 줄로 바뀌었습니다. 소개·개발·스타일·스토리·플레이를 누르면 그 아래로 펼쳐집니다.",
