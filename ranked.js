@@ -800,12 +800,10 @@ function hide() {
   closing = setTimeout(() => { bubble.hidden = true; if (chips) chips.hidden = true; bubble.classList.remove('is-closing', 'is-busy'); }, 240);
 }
 
-/* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳. 경쟁전을 켜면 왼쪽
-   아래는 지금 접속 부채(#rkLive)가 차지하므로 오른쪽 아래로 비킨다 */
+/* 폰이 아니면 봇은 귀퉁이에서 잔다 — 넵바 아래 두 곳과 화면 아래 두 곳 */
 function cornerAt(i) {
   /* 좁은 창(폰 폭)에서는 위 귀퉁이가 지도 머리(도봉·노원)를 덮는다 — 아래 막대 위 두 곳에만 앉는다 */
   if (narrow() && i < 2) i += 2;
-  if (ranked && i === 2) i = 3;
   const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
   const x = i % 2 ? innerWidth - BOT - 20 : 20;
   /* 아래 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
@@ -1494,9 +1492,6 @@ function setRanked(on) {
   ranked = on;
   document.body.classList.toggle('rk-ready', on);
   if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
-  if (on) ping();
-  /* 왼쪽 아래에서 자던 봇은 부채를 비켜 주고, 부채가 들어가면 돌아온다 */
-  if (out && bot && !spot && !touring && !intro && corner === 2) place(...cornerAt(corner));
   const play = $('#navPlay');
   play.dataset.i18n = on ? 'rankedStart' : 'start';
   play.textContent = t(play.dataset.i18n);
@@ -1795,35 +1790,6 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   }
 });
 
-/* ── 지금 접속 ─────────────────────────────────────────
-   사이트가 보이는 동안 2분에 한 번 중계기에 이 탭이 떠 있다고 알리고 접속 수를 받는다
-   (worker.mjs 의 online — 5분 안에 알린 탭 수). id 는 이 탭만의 난수라 로그인과 상관없고
-   아무것도 가리키지 않는다. 새로고침해도 같은 탭이면 같은 id 라 두 번 세지 않는다.
-   숫자는 경쟁전을 켜면 왼쪽 아래에서 나오는 부채에 건다 */
-const ONLINE_PING = 120000;
-let liveId = '', liveTimer = 0;
-try { liveId = sessionStorage.getItem('rt.live') || ''; } catch {}
-if (!/^[0-9a-f]{32}$/.test(liveId)) {
-  liveId = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
-  try { sessionStorage.setItem('rt.live', liveId); } catch {}
-}
-async function ping() {
-  clearTimeout(liveTimer);
-  if (document.hidden) return;
-  liveTimer = setTimeout(ping, ONLINE_PING);
-  let d;
-  try { d = await ask('/online', { id: liveId }, true); } catch { return; }
-  const n = Number(d.n);
-  if (!Number.isInteger(n) || n < 1) return;
-  $('#rkLiveN').textContent = n;
-  $('#rkLive').setAttribute('aria-label', t('online', { n }));
-  $('#rkLive').hidden = false;
-}
-/* 숨은 탭은 알리지 않는다 — 5분 조용하면 셈에서 빠지고, 돌아오면 바로 다시 알린다 */
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clearTimeout(liveTimer); else ping();
-});
-
 /* ── 손잡이 ──────────────────────────────────────────── */
 document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#"]');
@@ -1874,8 +1840,7 @@ if (location.search.includes('rt=1')) {
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
    지도 자리가 잡힌 뒤(RT_BOOT_PLACE) 귀퉁이 잠자리는 로딩 막 뒤에서 미리 세운다.
    인사(greetIn)와 첫 안내(beginIntro)는 막이 걷힌 직후(BOOTED.then) 시작한다 */
-let bootAct = '', pingedAtBoot = false;
-window.RT_PING = () => { pingedAtBoot = true; return ping(); };
+let bootAct = '';
 window.RT_BOOT_BOT = async () => {
   sizeBot();
   await makeBot();
@@ -1902,7 +1867,6 @@ window.RT_BOOT_PLACE = async () => {
   else if (!phone()) await summon().then(sleep);
 };
 BOOTED.then(() => {
-  if (!pingedAtBoot) ping();
   if (PAGES.includes(location.hash.slice(1))) openPage(location.hash.slice(1));
   if (location.hash === '#styles') { history.replaceState(null, '', location.pathname + location.search); openStyles(document.body); }
   if (!regionsOn()) return;

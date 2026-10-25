@@ -2076,7 +2076,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .sheet-more [href="#records"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M3.5 12a8.5 8.5 0 1 0 2.5-6'/><path d='M3 4v4h4M12 8v4.5l3 2'/></svg>")}
   .sheet-more [href="community/"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><circle cx='9' cy='8' r='3.2'/><path d='M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.3c1.8.6 3 2.2 3.5 4.7'/></svg>")}
   .sheet-more #aboutLink{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='9'/><path d='M12 11v6M12 7.5v.1'/></svg>")}
-  .rk-live{z-index:3}
 
   /* 구 칸 글자 — 기본 배율에서도 읽히게 크고 굵게, 청록 위에서 날아가지 않게 짙은 테를
      두른다(paint-order 로 글자 뒤에). 고른 칸(주황)은 테도 주황이라 먹 글자만 남는다 */
@@ -2530,34 +2529,6 @@ body:is(.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{
   transition:clip-path var(--si-dur) var(--ease-out),opacity 0s;
 }
 body.rk-intro #regions .navbar .nav-logo{cursor:grab}
-/* 지금 접속 — 경쟁전을 켜면(rk-ready) 왼쪽 아래 귀퉁이에서 대각선으로 밀려 나오는 부채.
-   빛깔은 경쟁전 빛깔(--rk-on)이고, 점과 숫자는 귀퉁이의 45° 선 위에 눕는다. 봇은 층이
-   위라(.rk-layer) 겹쳐도 가리지 않는다 — 왼쪽 아래에서 자던 봇은 ranked.js 가 비켜 둔다 */
-.rk-live{
-  --r:clamp(128px,12vw,168px);
-  position:fixed;left:0;bottom:0;z-index:4;width:var(--r);height:var(--r);margin:0;
-  background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff);
-  border-top-right-radius:100%;pointer-events:none;
-  translate:-100% 100%;transition:translate var(--si-dur) var(--ease-out);
-}
-.rk-live[hidden]{display:none}
-body.rk-ready .rk-live{translate:0 0}
-body:is(.signing,.setting,.paging) .rk-live{translate:-100% 100%}
-.rk-live-in{
-  position:absolute;left:44%;bottom:44%;translate:-50% 50%;rotate:45deg;
-  display:flex;align-items:center;gap:.45em;
-  font-size:calc(var(--r) * .15);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;
-}
-/* 켜져 있다는 점. 빨강 봇 위에서도 보이게 글자색 테를 두른다 */
-.rk-live-in i{
-  width:.62em;height:.62em;border-radius:50%;background:var(--bad);
-  box-shadow:0 0 0 2px color-mix(in srgb,currentColor 80%,transparent);
-  animation:rk-live 2s ease-in-out infinite;
-}
-@keyframes rk-live{50%{opacity:.35}}
-@media (prefers-reduced-motion:reduce){ .rk-live-in i{animation:none} }
-:root[data-motion="off"] .rk-live-in i{animation:none}
-@media (pointer:coarse){ .rk-live{--r:112px} }
 .rk-layer{position:fixed;inset:0;z-index:5;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
 .rk-layer[hidden]{display:none}
 /* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */

@@ -14,209 +14,196 @@
 <meta property="og:locale" content="ko_KR">
 <meta property="og:site_name" content="regiontype">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=4.94">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=4.94">
-<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=4.94">
-<!-- 공개 주소 /landing/. 본문은 landing/proto/index.html 과 같고 검색·공유 머리만 다르다.
-     초안 주소 /landing/proto/ 는 검색에 올리지 않는다. 상대 경로 ../../ 는 그 주소에서는
-     사이트 루트이고, 여기에서는 원점 위로 더 올라가지 못해 같은 루트로 풀린다. -->
-<!-- 랜딩 프로토타입. 래퍼런스 cosmos.so/e/1575382657 (Simone Biavati 포트폴리오)의 문법을 그대로 쓴다 —
-     흰 바탕, 맨 위 아주 작은 굵은 대문자 한 줄, 그 아래 굵고 큰 낱말이 줄마다 하나, 낱말 바로 뒤에 작은 그림 서넛.
-     낱말은 지명 대신 메뉴 다섯(소개·개발·스타일·스토리·플레이)이고, 누르면 그 줄 아래로 판이 펼쳐진다.
-     판은 메뉴마다 성격이 다르다 — 소개는 신문, 개발은 터미널, 스타일은 견본첩, 스토리는 책, 플레이는 오락기.
-     내용은 저장소에서 읽는다(코스·지도·바뀐 것·style.css 토큰·app.js 의 VER). 지어낸 소개는 없다 -->
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../../favicon/white.png?v=5.07">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../../favicon/dark.png?v=5.07">
+<link rel="icon" type="image/png" sizes="any" href="../../favicon/dark.png?v=5.07">
+<!-- 공개 주소 /landing/. 초안 /landing/proto/ 는 같은 화면이고 검색에 올리지 않는다.
+     줄 문법(맨 위 작은 한 줄, 굵고 큰 낱말, 작은 그림, +)은 그대로다.
+     소개·스토리는 스크롤하면 문장이 바뀌고, 개발은 페이지와 같은 바탕이다.
+     스타일은 3D 내비게이션·동네버스, 플레이는 게임을 그 자리에 띄우고, 플랜은 가격이 미정이다.
+     색은 기기 테마(prefers-color-scheme)를 따른다. 소개 문장과 염창 한 줄은 소개 페이지·코스 데이터에 있는 말이다.
+     상대 경로 ../../ 는 /landing/proto/ 에서 사이트 루트이고, /landing/ 에서는 원점 위로 더 올라가지 못해 같은 루트로 풀린다. -->
+<script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 <style>
   :root{
-    --bg:#fff; --ink:#0d0d0d; --rule:#0d0d0d;
+    --bg:#fff; --ink:#0d0d0d; --rule:#0d0d0d; --muted:#5c5c5c; --line:rgba(13,13,13,.16); --chip:#f3f3f3;
     --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
     --mono:"IBM Plex Mono","Noto Sans KR",ui-monospace,monospace;
-    --serif:"Noto Serif KR",Georgia,serif;
-    /* 브랜드 색 — style.css 의 값과 같다(스타일 판은 style.css 를 직접 읽어 보여 준다) */
-    --accent:#f0a03c; --accent-deep:#e07a3a; --on-accent:#232c31; --block:#6f9a9e; --block-deep:#496a6d;
-    --ranked:#c8322a; --site-bg:#e8edf0; --site-ink:#3c464a;
+    --accent:#f0a03c; --accent-deep:#e07a3a; --on-accent:#232c31; --ranked:#c8322a;
     --ease:cubic-bezier(.23,1,.32,1);
+    --bar:40px;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#141414; --ink:#f2f2f2; --rule:#f2f2f2; --muted:#b3b3b3; --line:rgba(242,242,242,.2); --chip:#1c1c1c;
+      color-scheme:dark;
+    }
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--bg);color:var(--ink)}
-  body{font:700 11px/1.3 var(--sans);-webkit-font-smoothing:antialiased}
+  body{font:500 16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   button,input{font:inherit;color:inherit}
   button{background:none;border:0;cursor:pointer;text-align:left}
   :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  h1.sr{font-size:clamp(80px,14vw,220px)}
 
-  /* 맨 위 한 줄 — 래퍼런스의 SIMONE BIAVATI · 날짜 · ↓ALPHABETICAL / RECENT · ABOUT / CONTACT · ○ */
   .meta{position:sticky;top:0;z-index:5;background:var(--bg);display:grid;grid-template-columns:auto auto 1fr auto auto;
-    gap:28px;align-items:center;padding:10px 12px 8px;text-transform:uppercase;letter-spacing:.01em}
+    gap:28px;align-items:center;padding:10px 12px 8px;font-size:14px;font-weight:700;line-height:1.3;text-transform:uppercase;letter-spacing:.01em}
   .meta .mid{justify-self:center}
   .meta .mid button{text-transform:uppercase}
   .meta .mid button[aria-pressed="true"]{text-decoration:underline;text-underline-offset:2px}
-  .ring{width:11px;height:11px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;vertical-align:-1px;margin-left:6px}
-  .play-cta{background:var(--ink);color:#fff;border-radius:999px;padding:4px 10px}
+  .ring{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;vertical-align:-1px;margin-left:6px}
+  .play-cta{background:var(--ink);color:var(--bg);border-radius:999px;padding:6px 12px}
 
-  /* 줄 — 굵은 큰 낱말 + 작은 그림. 줄 자체가 펼침 단추다 */
   .menu{list-style:none;padding:0 12px}
-  .row{border-bottom:1.5px solid transparent;transition:border-color .3s ease;scroll-margin-top:34px}
+  .row{border-bottom:1.5px solid transparent;transition:border-color .3s ease;scroll-margin-top:var(--bar)}
   .row.open{border-bottom-color:var(--rule)}
+  .row-title{margin:0;font-size:clamp(56px,10.4vw,168px);font-weight:900;line-height:.98;letter-spacing:-.045em}
   .head{display:flex;align-items:center;gap:clamp(10px,1.2vw,18px);width:100%;padding:2px 0}
-  .nm{font:900 clamp(56px,10.4vw,168px)/.98 var(--sans);letter-spacing:-.045em;white-space:nowrap}
-  .en{font:800 clamp(10px,.9vw,13px)/1 var(--sans);text-transform:uppercase;align-self:flex-start;margin-top:1.4em;letter-spacing:.02em}
+  .nm{font:inherit;letter-spacing:inherit;white-space:nowrap}
+  .en{font:800 14px/1 var(--sans);text-transform:uppercase;align-self:flex-start;margin-top:1.4em;letter-spacing:.02em}
   .th{display:flex;gap:clamp(6px,.8vw,12px);align-items:center;margin-left:4px}
-  .t{height:clamp(44px,6.8vw,104px);aspect-ratio:1;flex:none;display:grid;place-items:center;overflow:hidden;font-weight:700}
+  .t{height:clamp(44px,6.8vw,104px);aspect-ratio:1;flex:none;display:grid;place-items:center;overflow:hidden;font-weight:700;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink)}
   .sign{margin:0 .2em 0 auto;width:1em;height:1em;display:grid;place-items:center;flex:none;font:400 clamp(28px,4vw,60px)/1 var(--sans);transition:transform .4s var(--ease)}
   .row.open .sign{transform:rotate(45deg)}
-  @media (hover:hover){ .head:hover .nm{text-decoration:underline;text-decoration-thickness:.05em;text-underline-offset:.08em} }
+  @media (hover:hover) and (pointer:fine){ .head:hover .nm{text-decoration:underline;text-decoration-thickness:.05em;text-underline-offset:.08em} }
 
-  /* 펼침 — 0fr→1fr 로 키를 키운다 */
   .drawer{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s var(--ease)}
   .row.open .drawer{grid-template-rows:1fr}
   .drawer > div{overflow:hidden;min-height:0}
-  .panel{margin:10px 0 22px;border-radius:2px}
+  /* 소개·스토리의 문장은 뷰포트에 붙어 스크롤을 탄다. 붙으려면 조상에 overflow:hidden 이 있으면 안 된다.
+     그 두 줄은 높이 애니메이션을 끄고, 열렸을 때만 넘침을 풀어 문장이 화면 위에 남게 한다 */
+  .row.tall .drawer{transition:none}
+  .row.tall.open .drawer > div{overflow:visible}
+  .panel{margin:10px 0 22px;border-radius:2px;font-weight:400}
 
-  /* 썸네일들 — 래퍼런스의 사진 자리. 판마다 제 성격의 조각 */
-  .t-dot{background:#0d0d0d} .t-dot svg{width:86%;height:86%}
-  .t-num{background:#e9e9e9;font:900 clamp(14px,2.2vw,34px)/1 var(--sans);letter-spacing:-.04em}
-  .t-term{background:#0d0d0d;color:#b8f5b1;font:500 clamp(7px,.75vw,11px)/1.35 var(--mono);place-items:start;padding:8%;text-align:left;white-space:pre}
-  .t-ver{background:#1f4fd8;color:#fff;font:600 clamp(8px,.95vw,14px)/1 var(--mono)}
-  .t-sw{display:grid;grid-template:1fr 1fr/1fr 1fr;place-items:stretch}
-  .t-sw i{display:block}
-  .t-logo{background:var(--site-bg);color:var(--site-ink);font:800 clamp(10px,1.2vw,17px)/1 var(--sans);letter-spacing:-.03em}
-  .t-logo b{font-weight:300}
-  .t-logo em{font-style:normal;color:var(--accent)}
-  .t-book{background:#f1e9da;color:#2a2219;font:600 clamp(13px,1.9vw,28px)/1 var(--serif)}
-  .t-quote{background:#2a2219;color:#f1e9da;font:400 clamp(6px,.62vw,9px)/1.45 var(--serif);padding:9%;place-items:start;text-align:left}
-  .t-key{background:var(--accent);color:var(--on-accent);font:800 clamp(16px,2.4vw,36px)/1 var(--sans);border-radius:14%;box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)}
-  .t-key.dark{background:#232c31;color:#fff}
-  .t-key.red{background:var(--ranked);color:#fff;font-size:clamp(10px,1.1vw,16px)}
+  .t-dot{background:var(--ink);border-color:var(--ink)}
+  .t-dot svg{width:86%;height:86%}
+  .t-num{font:900 clamp(14px,2.2vw,34px)/1 var(--sans);letter-spacing:-.04em;background:var(--chip)}
+  .t-term{font:500 11px/1.15 var(--mono);place-items:start;padding:8px 7px;text-align:left;white-space:pre}
+  .t-ver{font:600 clamp(14px,1.6vw,18px)/1 var(--mono)}
+  .t-ico svg{width:58%;height:58%}
+  .t-book{font:600 clamp(14px,1.9vw,28px)/1 var(--sans);background:var(--chip)}
+  .t-quote,.t-ink{background:var(--ink);color:var(--bg);font:500 clamp(14px,1.5vw,18px)/1.3 var(--sans)}
+  .t-key{background:var(--accent);color:var(--on-accent);font:800 clamp(16px,2.4vw,36px)/1 var(--sans);border-radius:14%;border-color:transparent;box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)}
+  .t-key.dark{background:#232c31;color:#fff;border-color:var(--ink)}
+  .t-key.red{background:var(--ranked);color:#fff;font-size:14px;border-color:transparent}
 
-  /* ── 소개: 신문. 흰 바탕, 큰 첫 문장, 굵은 숫자 셋, 지도 위를 도는 코스 길 ── */
-  .p-about{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px 48px;padding:28px 0 8px;font-weight:400}
-  .p-about .lede{grid-column:1/-1;font:600 clamp(26px,3.6vw,54px)/1.12 var(--sans);letter-spacing:-.03em;max-width:21em}
-  .p-about .cols{columns:2 16em;column-gap:32px;font:400 15px/1.75 var(--sans)}
-  .p-about .cols p{margin-bottom:14px;break-inside:avoid}
-  .p-about .cols b{font-weight:700}
-  .p-about .nums{display:grid;grid-template-columns:repeat(3,1fr);border-top:1.5px solid var(--ink);margin-top:24px}
-  .p-about .nums div{padding:12px 12px 0 0}
-  .p-about .nums b{display:block;font:900 clamp(40px,5vw,76px)/1 var(--sans);letter-spacing:-.05em}
-  .p-about .nums span{font:700 11px/1.3 var(--sans);text-transform:uppercase}
-  .p-about figure{position:relative}
-  .p-about figure svg{width:100%;height:auto;display:block}
-  .p-about figcaption{font:700 11px/1.3 var(--sans);text-transform:uppercase;margin-top:8px;display:flex;justify-content:space-between;gap:12px}
+  /* 스크롤 설명 — 칸은 뷰포트에 붙어 있고, 긴 궤도를 지나며 문장만 바뀐다 */
+  .js .reel{height:calc(var(--n, 5) * 58vh + 100svh);position:relative}
+  .js .stage{position:sticky;top:var(--bar);min-height:calc(100svh - var(--bar));display:flex;flex-direction:column;justify-content:center}
+  .js .beats{display:grid;position:relative}
+  .js .beat{grid-area:1/1;opacity:0;pointer-events:none}
+  .js .beat:not(.on){position:absolute;width:100%;visibility:hidden}
+  .js .beat.on{opacity:1;pointer-events:auto;position:relative}
+  .idx{display:flex;gap:14px;margin-bottom:18px;list-style:none}
+  .step{font:800 14px/1 var(--sans);letter-spacing:.06em;color:var(--muted)}
+  .step.on{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+  .beat h3,.style-card h3{font-size:clamp(32px,4.6vw,64px);font-weight:800;letter-spacing:-.035em;line-height:1.12}
+  .beat h3{max-width:14em}
+  .beat .fig{font:900 clamp(64px,9vw,112px)/.88 var(--sans);letter-spacing:-.055em;font-variant-numeric:tabular-nums}
+  .beat p{margin-top:16px;font:400 clamp(16px,1.35vw,19px)/1.7 var(--sans);max-width:36em}
+  .scroll-hint{display:none;margin-top:28px;font:700 14px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .js .scroll-hint{display:block}
+  .route-fig{margin-top:22px}
+  .route-fig svg{width:min(100%,320px);height:auto;display:block}
+  .route-fig figcaption{margin-top:8px;font:700 14px/1.3 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .dot-gu{fill:var(--ink)}
   .route{fill:none;stroke:var(--accent-deep);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
   .route-dot{fill:var(--accent-deep)}
-  .dot-gu{fill:#0d0d0d}
-  .p-about .order{display:flex;flex-wrap:wrap;gap:4px 10px;font:500 13px/1.5 var(--sans);margin-top:12px}
-  .p-about .order li{list-style:none}
-  .p-about .order li::after{content:" →";color:#999}
-  .p-about .order li:last-child::after{content:""}
 
-  /* ── 개발: 터미널. 검은 판, 고정폭, 초록 프롬프트, 바뀐 것은 git log 처럼 ── */
-  .p-dev{background:#0b0d0c;color:#d6dbd5;font:400 13.5px/1.65 var(--mono);padding:22px 24px 26px;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px 40px}
-  .p-dev h3{font:500 12px/1 var(--mono);color:#7d877f;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
-  .p-dev .ps{color:#8ee08a} .p-dev .cm{color:#7d877f} .p-dev .hl{color:#ffd27a}
+  /* 개발 — 페이지와 같은 바탕. 검은 판을 깔지 않는다 */
+  .p-dev{color:var(--ink);font:400 15px/1.65 var(--mono);padding:8px 0 12px;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px 40px}
+  .p-dev .k{font:500 14px/1 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:28px 0 12px}
+  .p-dev .k:first-child{margin-top:0}
+  .p-dev .cm{color:var(--muted)}
   .p-dev pre{font:inherit;white-space:pre-wrap;margin-bottom:18px}
-  .p-dev .big{font:500 clamp(28px,3.4vw,50px)/1.05 var(--mono);color:#fff;letter-spacing:-.02em;margin-bottom:6px}
-  .p-dev .tree{color:#bfc6bf}
-  .p-dev .log{list-style:none;max-height:430px;overflow:auto;border-top:1px solid #2a2f2b;scrollbar-color:#2a2f2b transparent}
-  .p-dev .log li{display:grid;grid-template-columns:6.6em 6.4em 1fr;gap:12px;padding:8px 0;border-bottom:1px solid #1c201d}
-  .p-dev .log .v{color:#ffd27a} .p-dev .log time{color:#7d877f}
+  .p-dev .big{font:500 clamp(28px,3.4vw,50px)/1.05 var(--mono);letter-spacing:-.02em;margin-bottom:6px}
+  .p-dev .log{list-style:none;max-height:430px;overflow:auto;border-top:1px solid var(--line);scrollbar-color:var(--line) transparent}
+  .p-dev .log li{display:grid;grid-template-columns:7em 7em 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .p-dev .log time{color:var(--muted)}
   .p-dev .bar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
-  .p-dev .bar input{flex:1;min-width:0;background:#131714;border:1px solid #2a2f2b;color:#e8ece7;padding:6px 10px;font:inherit;outline:0}
-  .p-dev .bar input:focus{border-color:#8ee08a}
-  .p-dev .caret{display:inline-block;width:.6em;height:1.1em;background:#8ee08a;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+  .p-dev .bar input{flex:1;min-width:0;background:transparent;border:1px solid var(--line);color:var(--ink);padding:8px 10px;font:inherit;outline:0;border-radius:2px}
+  .p-dev .bar input::placeholder{color:var(--muted)}
+  .p-dev .bar input:focus{border-color:var(--ink)}
+  .p-dev .caret{display:inline-block;width:.55em;height:1em;background:var(--ink);vertical-align:-2px;animation:blink 1s steps(1) infinite}
   @keyframes blink{50%{opacity:0}}
 
-  /* ── 스타일: 견본첩. 앱 바탕색 위 격자, 색 칩(이름·값·대비), 로고 꼴, 원칙 ── */
-  .p-style{background:var(--site-bg);color:var(--site-ink);padding:24px;font-weight:400;
-    background-image:linear-gradient(90deg,#dae2e7 1px,transparent 1px),linear-gradient(0deg,#dae2e7 1px,transparent 1px);background-size:48px 48px}
-  .p-style .logo{font:800 clamp(48px,7vw,110px)/1 var(--sans);letter-spacing:-.04em;margin-bottom:6px}
-  .p-style .logo b{font-weight:300}
-  .p-style .logo em{font-style:normal;color:var(--accent)}
-  .p-style .cap{font:700 11px/1.3 var(--sans);text-transform:uppercase;margin-bottom:24px}
-  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:28px}
-  .chip{background:#f4f8f9;border-radius:20px;overflow:hidden;box-shadow:0 12px 18px -14px rgba(58,78,88,.22),0 2px 4px -2px rgba(58,78,88,.12)}
-  .chip i{display:block;height:92px;box-shadow:inset 0 -1px 0 rgba(58,78,88,.18)}
-  .chip div{padding:10px 12px 12px;font:500 12px/1.45 var(--mono)}
-  .chip b{display:block;font:700 14px/1.3 var(--sans)}
-  .chip small{display:block;color:#5b676e;font-family:var(--sans);margin-top:4px}
-  .p-style .two{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-  .card{background:#f4f8f9;border-radius:20px;padding:16px 18px;box-shadow:0 12px 18px -14px rgba(58,78,88,.22)}
-  .card h4{font:800 15px/1.3 var(--sans);margin-bottom:8px}
-  .card p{font:400 14px/1.65 var(--sans);color:#5b676e}
-  .demo{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-  .demo span{border-radius:10px;padding:8px 12px;font:700 14px/1 var(--sans);background:#d3dde3;border:2px solid transparent}
-  .demo span.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent-deep)}
-  .demo span.on::before{content:"✓ "}
-  .sig{display:flex;gap:10px;margin-top:12px}
-  .sig span{display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans)}
-  .sig i{width:22px;height:22px;display:inline-block}
+  /* 스타일 — 3D 내비게이션, 동네버스 */
+  .styles{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:8px 0}
+  .style-card{display:flex;flex-direction:column;gap:12px;min-height:100%;padding:22px;border:1.5px solid var(--ink);border-radius:18px}
+  .style-card svg{width:72px;height:72px}
+  .style-card .k{font:800 14px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .style-card h3{line-height:1.05}
+  .style-card p{font:400 16px/1.65 var(--sans);max-width:36em}
+  .sigline{display:flex;align-items:center;gap:8px;font:700 14px/1 var(--sans)}
+  .swatch{width:14px;height:14px;display:inline-block;flex:none}
+  .swatch.nav{background:#007aff}
+  .swatch.bus{background:#f6c037;border-radius:50%;box-shadow:inset 0 0 0 3px var(--ink)}
+  .style-card .more{margin-top:auto;font:800 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px}
+  @media (hover:hover) and (pointer:fine){ .style-card:hover h3{text-decoration:underline;text-underline-offset:.08em} }
 
-  /* ── 스토리: 책. 크림 종이, 명조, 가운데 길(점과 선)을 따라 정류장마다 한 줄 ── */
-  .p-story{background:#f1e9da;color:#2a2219;padding:clamp(24px,4vw,56px) clamp(16px,4vw,56px);font:400 17px/1.85 var(--serif)}
-  .p-story .kick{font:700 11px/1.3 var(--sans);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
-  .p-story h3{font:600 clamp(30px,4.4vw,64px)/1.15 var(--serif);letter-spacing:-.02em;max-width:14em;margin-bottom:14px}
-  .p-story .intro{font-size:clamp(17px,1.6vw,21px);max-width:34em;margin-bottom:28px}
-  .p-story .tabs{display:flex;gap:16px;font:700 12px/1 var(--sans);text-transform:uppercase;margin-bottom:24px}
-  .p-story .tabs button[aria-selected="true"]{text-decoration:underline;text-underline-offset:3px}
-  .walk{list-style:none;position:relative;columns:2 22em;column-gap:56px}
-  .walk li{break-inside:avoid;position:relative;padding:0 0 22px 34px}
-  .walk li::before{content:"";position:absolute;left:8px;top:.9em;bottom:-.2em;border-left:1.5px dotted #8c7a62}
-  .walk li:last-child::before{display:none}
-  .walk li::after{content:"";position:absolute;left:3px;top:.55em;width:12px;height:12px;border-radius:50%;background:#2a2219}
-  .walk b{font-weight:600;font-size:1.08em}
-  .walk .no{font:700 11px/1 var(--sans);color:#8c7a62;margin-right:8px}
-  .walk p{font-size:15.5px;line-height:1.75}
-  .p-story .src{font:500 12px/1.5 var(--sans);color:#8c7a62;margin-top:12px}
+  /* 플레이 — gdotgear.services 의 live 칸. 흐린 게임 위에 play */
+  .embed-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:14px}
+  .embed-title{font:800 clamp(28px,4vw,48px)/1 var(--sans);letter-spacing:-.03em;text-decoration:underline;text-underline-offset:5px}
+  .embed-head p{max-width:22em;text-align:right;font:500 16px/1.5 var(--sans);color:var(--muted)}
+  .embed-frame{position:relative;height:min(70vh,680px);min-height:380px;border-radius:28px;overflow:hidden;background:var(--chip)}
+  .embed-frame iframe{position:absolute;inset:-18px;width:calc(100% + 36px);height:calc(100% + 36px);border:0;filter:blur(16px);pointer-events:none;background:var(--chip)}
+  .embed.is-live iframe{inset:0;width:100%;height:100%;filter:none;pointer-events:auto}
+  .live-btn{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;
+    background:var(--ink);color:var(--bg);border-radius:999px;padding:12px 18px;font:700 16px/1 var(--sans)}
+  .embed.is-live .live-btn{left:16px;top:16px;bottom:auto;transform:none}
+  .embed-out{position:absolute;z-index:2;right:16px;bottom:14px;font:600 14px/1 var(--sans);color:var(--ink);
+    background:color-mix(in srgb,var(--bg) 88%,transparent);border-radius:999px;padding:6px 10px}
+  .embed.is-live .embed-out{bottom:18px}
 
-  /* ── 플레이: 오락기. 주황 판, 큰 숫자 계기, 점 지도 위 다음 칸, 자판 같은 칸들 ── */
-  .p-play{background:var(--accent);color:var(--on-accent);padding:22px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:22px}
-  .p-play .screen{background:#232c31;color:#fff;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px}
-  .p-play .hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .p-play .hud div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 10px}
-  .p-play .hud b{display:block;font:800 clamp(22px,2.6vw,38px)/1 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
-  .p-play .hud span{font:700 10px/1 var(--sans);text-transform:uppercase;opacity:.7}
-  .p-play svg{width:100%;height:auto;display:block}
-  .p-play .g{fill:#4a5a5e} .p-play .g.done{fill:var(--block)} .p-play .g.now{fill:var(--accent)}
-  .p-play .field{display:flex;gap:8px;align-items:center;background:#fff;color:#232c31;border-radius:14px;padding:6px 6px 6px 14px;border:3px solid transparent}
-  .p-play .field:focus-within{border-color:var(--accent-deep)}
-  .p-play .field input{flex:1;min-width:0;border:0;outline:0;background:none;font:800 22px/1.2 var(--sans);padding:6px 0}
-  .p-play .field button{background:#232c31;color:#fff;border-radius:10px;padding:10px 14px;font:800 14px/1 var(--sans)}
-  .p-play .hint{font:600 13px/1.4 var(--sans);opacity:.8;min-height:1.4em}
-  .p-play .hint label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
-  .modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
-  .mode{background:#fff;border-radius:18px;padding:14px 14px 16px;box-shadow:inset 0 -5px 0 rgba(0,0,0,.12);display:block;transition:transform .16s var(--ease)}
-  .mode:active{transform:translateY(2px)}
-  .mode i{font:800 11px/1 var(--sans);font-style:normal;text-transform:uppercase;opacity:.6}
-  .mode h4{font:900 22px/1.1 var(--sans);letter-spacing:-.03em;margin:6px 0}
-  .mode p{font:500 13px/1.5 var(--sans)}
-  .mode.ranked{background:var(--ranked);color:#fff}
-  .mode.wide{grid-column:1/-1}
-  .tiers{display:flex;gap:4px;margin-top:8px;font:700 10px/1 var(--sans)}
-  .tiers span{flex:1;padding:6px 4px;border-radius:6px;background:rgba(255,255,255,.18);text-align:center}
-  .steps{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .steps li{list-style:none;background:rgba(255,255,255,.35);border-radius:16px;padding:12px 14px;font:500 13.5px/1.55 var(--sans)}
-  .steps b{display:block;font:900 16px/1.2 var(--sans);margin-bottom:4px}
+  /* 플랜 — 월·연은 미정. 버튼은 아직 고를 수 없다 */
+  .plan-scroll{overflow-x:auto;background:var(--chip);border-radius:22px;padding:4px 6px 12px}
+  .plans{width:100%;min-width:720px;border-collapse:collapse}
+  .plans caption{caption-side:top;text-align:left;padding:16px 16px 6px;font:600 16px/1.5 var(--sans);color:var(--muted)}
+  .plans th,.plans td{text-align:left;vertical-align:top;padding:18px 16px;font-weight:500;font-size:16px}
+  .plans thead th{font:600 14px/1.3 var(--sans);color:var(--muted);padding-bottom:8px}
+  .plans tbody th{font:800 18px/1.25 var(--sans)}
+  .plans tbody tr + tr > *{border-top:1px solid var(--line)}
+  .plans .scope{font:500 16px/1.55 var(--sans);max-width:16em}
+  .plans thead th:nth-child(1){width:26%}
+  .plans thead th:nth-child(2),.plans thead th:nth-child(3){width:12%}
+  .plan-btn{display:flex;width:max-content;margin-top:12px;padding:8px 12px;border-radius:999px;border:1.5px solid var(--ink);
+    background:transparent;color:var(--ink);-webkit-text-fill-color:var(--ink);font:700 14px/1 var(--sans);cursor:not-allowed;opacity:1}
 
-  footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 12px;text-transform:uppercase;border-top:1.5px solid var(--ink);margin-top:10px}
+  footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 12px;font-size:14px;font-weight:700;text-transform:uppercase;border-top:1.5px solid var(--ink);margin-top:10px}
+  footer a{text-decoration:underline;text-underline-offset:2px}
 
   @media (max-width:860px){
     .meta{grid-template-columns:1fr auto;gap:8px 16px}
     .meta .date,.meta .mid,#ver{display:none}
     .th .t:nth-child(n+3){display:none}
     .en{display:none}
-    .p-about,.p-dev,.p-play{grid-template-columns:minmax(0,1fr)}
-    .p-style .two,.steps{grid-template-columns:1fr}
+    .p-dev,.styles{grid-template-columns:minmax(0,1fr)}
     .p-dev .log li{grid-template-columns:1fr;gap:2px}
-    .p-play .hud{grid-template-columns:repeat(2,1fr)}
-    .modes{grid-template-columns:minmax(0,1fr)}
+    .embed-head{flex-direction:column;align-items:flex-start}
+    .embed-head p{text-align:left}
+    .embed-frame{min-height:320px}
   }
   @media (max-width:480px){ .th .t:nth-child(n+2){display:none} .menu{padding:0 8px} }
   @media (prefers-reduced-motion:reduce){
-    .drawer,.sign,.row,.mode{transition:none}
+    .drawer,.sign,.row{transition:none}
     .p-dev .caret{animation:none}
+    .js .reel{height:auto}
+    .js .stage{position:static;min-height:0;display:block}
+    .js .beats{display:block}
+    .js .beat,.js .beat:not(.on){opacity:1;grid-area:auto;pointer-events:auto;margin-top:36px;position:static;visibility:visible;width:auto}
+    .step,.step.on{color:var(--ink);text-decoration:none}
+    .scroll-hint{display:none}
+    .embed-frame iframe{transition:none}
   }
 </style>
 </head>
@@ -227,152 +214,229 @@
   <span class="date" id="date"></span>
   <span class="mid" role="group" aria-label="펼치기">↓<button type="button" id="openAll" aria-pressed="false">모두 펼치기</button> / <button type="button" id="closeAll" aria-pressed="true">접기</button></span>
   <span id="ver">v—</span>
-  <span><a class="play-cta" href="../../">바로 플레이</a><span class="ring" aria-hidden="true"></span></span>
+  <span><a class="play-cta" href="#play" id="goPlay">바로 플레이</a><span class="ring" aria-hidden="true"></span></span>
 </header>
 
 <h1 class="sr">regiontype — 지명을 치는 타자연습</h1>
 
 <ol class="menu">
-  <!-- 소개 -->
-  <li class="row" id="about">
-    <button class="head" type="button" aria-expanded="false" aria-controls="d-about">
+  <li class="row tall" id="about">
+    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-about">
       <span class="nm">소개</span><span class="en">About</span>
-      <span class="th" aria-hidden="true"><span class="t t-dot" id="th-map"></span><span class="t t-num">423</span><span class="t t-num" style="background:var(--accent)">25</span></span>
+      <span class="th" aria-hidden="true"><span class="t t-dot" id="th-map"></span><span class="t t-num">423</span><span class="t t-num" style="background:var(--accent);color:var(--on-accent);border-color:transparent">25</span></span>
       <span class="sign" aria-hidden="true">+</span>
-    </button>
-    <div class="drawer" id="d-about" role="region" aria-label="소개"><div><div class="panel p-about">
-      <p class="lede">지도에 뜬 지역 이름을 손으로 직접 칩니다. 눈으로 훑으면 "봤다"에서 끝나지만, 한 글자씩 옮겨 치면 이름과 자리가 같이 붙습니다.</p>
-      <div>
-        <div class="cols">
-          <p>regiontype은 지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습입니다. 서울 25개 자치구에서 시작해, 구를 하나 고르면 그 안의 행정동으로 들어갑니다. <b>전부 합치면 423개</b>입니다.</p>
-          <p>지명은 눈으로 훑을 때보다 손으로 칠 때 오래 남습니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 하기 때문입니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
-          <p><b>코스는 무작위가 아니라 이어진 길입니다.</b> 자치구 코스는 서쪽 끝 강서구에서 출발해 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대가 되도록 짰습니다.</p>
-          <p>가나다순으로 외우면 강남·강동·강북·강서가 한꺼번에 몰려 서로 헷갈립니다. 같은 '강' 자를 쓰지만 강서구는 서쪽 끝, 강동구는 동쪽 끝입니다.</p>
+    </button></h2>
+    <div class="drawer" id="d-about" role="region" aria-label="소개"><div><div class="panel">
+      <div class="reel" data-reel style="--n:5">
+        <div class="stage">
+          <ol class="idx" aria-hidden="true"><li class="step on">01</li><li class="step">02</li><li class="step">03</li><li class="step">04</li><li class="step">05</li></ol>
+          <div class="beats">
+            <article class="beat on">
+              <h3>지명을 치면, 지도가 남는다.</h3>
+              <p>지도에 뜬 지역 이름을 손으로 직접 칩니다.</p>
+            </article>
+            <article class="beat">
+              <h3>본 것과 아는 것은 다릅니다.</h3>
+              <p>눈으로 훑으면 "봤다"에서 끝납니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
+            </article>
+            <article class="beat">
+              <p class="fig">25</p>
+              <h3>서울 자치구에서 시작합니다.</h3>
+              <p>첫 판은 서울 25개 자치구입니다. 홈에서 치는 판은 서울이고, 지도 데이터에는 46개 나라의 행정구역이 있습니다. 서울 밖은 미리보기입니다.</p>
+            </article>
+            <article class="beat">
+              <p class="fig">423</p>
+              <h3>구를 열면 행정동입니다.</h3>
+              <p>전부 합치면 423곳입니다. 주민센터 하나가 맡는 단위이고, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
+            </article>
+            <article class="beat">
+              <h3>코스는 이어진 길입니다.</h3>
+              <p>서쪽 끝 강서구에서 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대입니다. 가나다순이면 강남·강동·강북·강서가 한꺼번에 몰립니다.</p>
+              <figure class="route-fig">
+                <svg id="route" viewBox="0 0 1000 822" role="img" aria-label="강서구에서 성북구까지 시계 방향으로 도는 자치구 코스"></svg>
+                <figcaption>자치구 코스 — 강서구에서 성북구까지</figcaption>
+              </figure>
+            </article>
+          </div>
+          <p class="scroll-hint">스크롤하면 다음 문장</p>
         </div>
-        <div class="nums"><div><b>25</b><span>서울 자치구</span></div><div><b>423</b><span>서울 행정동</span></div><div><b>46</b><span>나라의 행정구역</span></div></div>
       </div>
-      <figure>
-        <svg id="route" viewBox="0 0 1000 822" role="img" aria-label="강서구에서 성북구까지 시계 방향으로 도는 자치구 코스"></svg>
-        <figcaption><span>자치구 코스 — 강서구 → 성북구</span><span>시계 방향</span></figcaption>
-        <ol class="order" id="order"></ol>
-      </figure>
     </div></div></div>
   </li>
 
-  <!-- 개발 -->
   <li class="row" id="dev">
-    <button class="head" type="button" aria-expanded="false" aria-controls="d-dev">
+    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-dev">
       <span class="nm">개발</span><span class="en">Development</span>
       <span class="th" aria-hidden="true"><span class="t t-term">$ python3
   -m http
   .server
-▍</span><span class="t t-ver" id="th-ver">v—</span><span class="t t-term" style="color:#ffd27a">?rt=1
-ok ✓</span></span>
+▍</span><span class="t t-ver" id="th-ver">v—</span><span class="t t-term">?rt=1
+ok</span></span>
       <span class="sign" aria-hidden="true">+</span>
-    </button>
+    </button></h2>
     <div class="drawer" id="d-dev" role="region" aria-label="개발"><div><div class="panel p-dev">
       <div>
-        <h3>regiontype.com / main</h3>
+        <p class="k">regiontype.com / main</p>
         <p class="big" id="dev-ver">v—</p>
         <pre class="cm" id="dev-ver-note"># 릴리스 이름 vA.B.C — C 는 app.js 의 VER 에서 점을 뺀 숫자</pre>
-        <h3>stack</h3>
-        <pre><span class="hl">정적 파일뿐이다.</span> 빌드 단계도, 패키지 매니저도,
-프레임워크도 없다. 새로 들이지 않는다.</pre>
-        <pre><span class="ps">$</span> python3 -m http.server 3000   <span class="cm"># 실행</span>
-<span class="ps">$</span> open localhost:3000/?rt=1      <span class="cm"># 판정 엔진 자체검사</span>
-<span class="ps">$</span> node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre>
-        <pre class="tree">.
+        <p class="k">stack</p>
+        <pre>정적 파일뿐이다. 빌드 단계도, 패키지 매니저도,
+프레임워크도 없다.</pre>
+        <pre>$ python3 -m http.server 3000   <span class="cm"># 실행</span>
+$ open localhost:3000/?rt=1      <span class="cm"># 판정 엔진 자체검사</span>
+$ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre>
+        <pre>.
 ├── app.js        <span class="cm"># 단일 파일. 핵심은 matchInput()</span>
 ├── style.css     <span class="cm"># 단일 파일. 색·간격은 커스텀 프로퍼티</span>
 ├── data/         <span class="cm"># tools/*.py 가 찍은 지도·코스</span>
 ├── relay/        <span class="cm"># Cloudflare Worker — 순위·경쟁전</span>
 └── mimi/ beta/   <span class="cm"># 실험 갈래</span></pre>
-        <pre><span class="cm"># 경쟁전 판정은 Durable Objects 가 맡고,
-# 실력은 Glicko-2 로 매긴다.</span> <span class="caret" aria-hidden="true"></span></pre>
+        <pre class="cm"># 경쟁전 판정은 Durable Objects 가 맡고,
+# 실력은 Glicko-2 로 매긴다. <span class="caret" aria-hidden="true"></span></pre>
       </div>
       <div>
-        <h3>git log — 바뀐 것</h3>
-        <div class="bar"><label class="sr" for="grep">바뀐 것 찾기</label><span class="ps">grep</span><input id="grep" placeholder="Safari" autocomplete="off" spellcheck="false"><span class="cm" id="hits"></span></div>
+        <p class="k">바뀐 것</p>
+        <div class="bar"><label class="sr" for="grep">바뀐 것 찾기</label><span>$</span><input id="grep" placeholder="검색" autocomplete="off" spellcheck="false"><span class="cm" id="hits"></span></div>
         <ol class="log" id="log"></ol>
       </div>
     </div></div></div>
   </li>
 
-  <!-- 스타일 -->
   <li class="row" id="style">
-    <button class="head" type="button" aria-expanded="false" aria-controls="d-style">
+    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-style">
       <span class="nm">스타일</span><span class="en">Style</span>
-      <span class="th" aria-hidden="true"><span class="t t-sw"><i style="background:#f0a03c"></i><i style="background:#6f9a9e"></i><i style="background:#c8322a"></i><i style="background:#e8edf0"></i></span><span class="t t-logo">region<b>type</b><em>•</em></span><span class="t t-sw"><i style="background:#496a6d"></i><i style="background:#e07a3a"></i><i style="background:#007aff"></i><i style="background:#f6c037"></i></span></span>
+      <span class="th" aria-hidden="true">
+        <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg></span>
+        <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg></span>
+        <span class="t t-num">베타</span>
+      </span>
       <span class="sign" aria-hidden="true">+</span>
-    </button>
-    <div class="drawer" id="d-style" role="region" aria-label="스타일"><div><div class="panel p-style">
-      <p class="logo" aria-label="regiontype 로고">region<b>type</b><em>•</em></p>
-      <p class="cap">굵은 region · 가는 type · 주황 점 — 앱 바탕색과 격자 위에서</p>
-      <div class="chips" id="chips"></div>
-      <div class="two">
-        <div class="card"><h4>색만으로 말하지 않는다</h4><p>칠해진 칸은 색에 더해 테두리와 체크 표시를 함께 붙입니다. 상태는 늘 테두리·라벨·숫자로도 읽힙니다.</p>
-          <div class="demo" aria-hidden="true"><span>강서구</span><span class="on">양천구</span><span>구로구</span></div></div>
-        <div class="card"><h4>움직임은 줄일 수 있다</h4><p>운영체제의 '동작 줄이기'를 따릅니다. 이 페이지의 펼침도 그 설정에서는 바로 열립니다. 모든 기능은 키보드로 다룹니다.</p></div>
-        <div class="card"><h4>갈래마다 서명색</h4><p>실험 갈래는 제 색을 하나씩 가집니다. 그래픽에만 쓰고 글자에는 쓰지 않습니다.</p>
-          <div class="sig"><span><i style="background:#007aff;clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)"></i>3D 내비게이션</span><span><i style="background:#f6c037;border-radius:50%;box-shadow:inset 0 0 0 6px #111"></i>동네버스</span></div></div>
+    </button></h2>
+    <div class="drawer" id="d-style" role="region" aria-label="스타일"><div><div class="panel">
+      <div class="styles">
+        <a class="style-card" href="../../beta/3dnavigation/">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg>
+          <p class="k">베타 · 01</p>
+          <h3>3D 내비게이션</h3>
+          <p>실제 지도 위에 3D 건물과 길을 얹습니다. 동 경계는 코스 데이터와 같은 자리를 씁니다. 화면은 시스템 색과 맑은 유리 판으로 읽힙니다.</p>
+          <p class="sigline"><i class="swatch nav" aria-hidden="true"></i>시스템 파랑</p>
+          <span class="more">베타 열기</span>
+        </a>
+        <a class="style-card" href="../../beta/bus/">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg>
+          <p class="k">베타 · 02</p>
+          <h3>동네버스</h3>
+          <p>정류장 이름을 치면 버스가 그 정류장으로 가서 손님을 실어 나릅니다. 25개 자치구가 행정동 코스 순서로 늘어서 있습니다. 노선은 노랑이고, 정류장은 고리입니다.</p>
+          <p class="sigline"><i class="swatch bus" aria-hidden="true"></i>노선 노랑</p>
+          <span class="more">베타 열기</span>
+        </a>
       </div>
     </div></div></div>
   </li>
 
-  <!-- 스토리 -->
-  <li class="row" id="story">
-    <button class="head" type="button" aria-expanded="false" aria-controls="d-story">
+  <li class="row tall" id="story">
+    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-story">
       <span class="nm">스토리</span><span class="en">Story</span>
-      <span class="th" aria-hidden="true"><span class="t t-book">염창</span><span class="t t-quote">"소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다."</span><span class="t t-book" style="background:#2a2219;color:#f1e9da">鹽倉</span></span>
+      <span class="th" aria-hidden="true"><span class="t t-book">염창</span><span class="t t-quote">소금 창고</span><span class="t t-ink">鹽倉</span></span>
       <span class="sign" aria-hidden="true">+</span>
-    </button>
-    <div class="drawer" id="d-story" role="region" aria-label="스토리"><div><div class="panel p-story">
-      <p class="kick">코스마다 이야기가 붙는다</p>
-      <h3 id="st-title">강서구 20개 행정동</h3>
-      <p class="intro" id="st-intro"></p>
-      <div class="tabs" role="tablist" aria-label="이야기 고르기">
-        <button type="button" role="tab" aria-selected="true" data-st="gangseo-dong">강서구 스무 동</button>
-        <button type="button" role="tab" aria-selected="false" data-st="seoul-gu">서울 스물다섯 구</button>
+    </button></h2>
+    <div class="drawer" id="d-story" role="region" aria-label="스토리"><div><div class="panel">
+      <div class="reel" data-reel style="--n:5">
+        <div class="stage">
+          <ol class="idx" aria-hidden="true"><li class="step on">01</li><li class="step">02</li><li class="step">03</li><li class="step">04</li><li class="step">05</li></ol>
+          <div class="beats">
+            <article class="beat on">
+              <h3>읽어서는 이름이 남지 않았습니다.</h3>
+              <p>지도에서 구 이름을 눈으로 따라가도 자리와 철자가 따로 놀았습니다. 남는 쪽은 손이었습니다.</p>
+            </article>
+            <article class="beat">
+              <h3>타자의 방식을 지명에 가져왔습니다.</h3>
+              <p>다음 글자를 치려면 이름을 통째로 붙들고 있어야 합니다. 설치 없이, 가입하지 않아도 지도에서 고르고 칩니다.</p>
+            </article>
+            <article class="beat">
+              <h3>처음 길은 서울 한 바퀴였습니다.</h3>
+              <p>무작위 목록은 지리가 아닙니다. 서쪽 끝 강서구에서 이웃한 구를 따라 시계 방향으로 성북구까지 잇습니다. 구 안의 동도 같은 방식으로 이웃을 따라갑니다. 가나다순이면 강남·강동·강북·강서가 한 덩어리가 됩니다.</p>
+            </article>
+            <article class="beat">
+              <h3>사람이 드나드는 동을 골랐습니다.</h3>
+              <p>법정동은 땅에 붙은 이름이고, 행정동은 동주민센터 하나가 맡는 구역입니다. 플레이하는 423곳은 행정동입니다. 설정에서는 법정동으로 바꿔 칠 수도 있습니다.</p>
+            </article>
+            <article class="beat">
+              <h3>한 줄 소개는 자료에 있는 것만 올립니다.</h3>
+              <p>염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다.</p>
+            </article>
+          </div>
+          <p class="scroll-hint">스크롤하면 다음 문장</p>
+        </div>
       </div>
-      <ol class="walk" id="walk"></ol>
-      <p class="src">한 줄 소개는 코스 데이터(data/*.course.json)에 실린 그대로입니다.</p>
     </div></div></div>
   </li>
 
-  <!-- 플레이 -->
   <li class="row" id="play">
-    <button class="head" type="button" aria-expanded="false" aria-controls="d-play">
+    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-play">
       <span class="nm">플레이</span><span class="en">Play</span>
       <span class="th" aria-hidden="true"><span class="t t-key">ㄱ</span><span class="t t-key dark">↵</span><span class="t t-key red">RANKED</span></span>
       <span class="sign" aria-hidden="true">+</span>
-    </button>
-    <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel p-play">
-      <div class="screen">
-        <div class="hud" aria-live="off">
-          <div><b id="h-n">0/25</b><span>들른 곳</span></div>
-          <div><b id="h-cpm">0</b><span>타/분</span></div>
-          <div><b id="h-combo">0</b><span>콤보</span></div>
-          <div><b id="h-t">0.0</b><span>초</span></div>
+    </button></h2>
+    <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel">
+      <div class="embed" id="embed">
+        <div class="embed-head">
+          <a class="embed-title" href="../../">regiontype.com <span aria-hidden="true">↗</span></a>
+          <p>지명을 직접 쳐서 익히는 타자연습.</p>
         </div>
-        <svg id="pmap" viewBox="0 0 1000 822" role="img" aria-label="서울 자치구 지도 — 주황 칸이 지금 칠 곳"></svg>
-        <div class="field"><label class="sr" for="pin">지금 칠 곳의 이름</label>
-          <input id="pin" autocomplete="off" spellcheck="false" placeholder="주황 칸의 이름">
-          <button type="button" id="reset">처음부터</button></div>
-        <p class="hint"><label><input type="checkbox" id="hintOn" checked> 힌트</label> <span id="hintText" aria-live="polite"></span></p>
+        <div class="embed-frame">
+          <iframe id="game" title="regiontype 게임" data-src="../../"></iframe>
+          <button type="button" class="live-btn" id="liveBtn" aria-pressed="false">
+            <svg class="ico-play" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true"><path d="M1 1.2 11 7 1 12.8Z" fill="currentColor"/></svg>
+            <svg class="ico-pause" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true" hidden><path d="M1 1h3.2v12H1Zm6.8 0H11v12H7.8Z" fill="currentColor"/></svg>
+            <span class="live-label">play</span>
+          </button>
+          <a class="embed-out" href="../../" target="_blank" rel="noopener">새 탭에서 열기 <span aria-hidden="true">↗</span></a>
+        </div>
       </div>
-      <div class="modes">
-        <a class="mode wide" href="../../"><i>01 — 연습</i><h4>지명 타자연습</h4><p>코스를 고르고, 치고, 결과를 봅니다. 서울은 동 단위까지, 나라는 마흔여섯.</p></a>
-        <a class="mode ranked wide" href="../../"><i>02 — 경쟁전</i><h4>같은 코스, 다른 사람</h4><p>로그인하고 시작하기를 꾹 누르면 경쟁전. 티어가 곧 타자 속도입니다.</p>
-          <div class="tiers" aria-label="티어별 기대 속도"><span>브론즈 III<br>100</span><span>골드 III<br>200</span><span>마스터<br>350</span></div></a>
-        <a class="mode" href="../../mimi/"><i>03 — 실험</i><h4>mimi</h4><p>보드게임처럼 두꺼운 지형 위에서 지역을 타이핑한다.</p></a>
-        <a class="mode" href="../../beta/bus/"><i>04 — 실험</i><h4>동네버스</h4><p>정류장 이름을 쳐서 버스를 보내 손님을 실어 나릅니다.</p></a>
-        <a class="mode wide" href="../../beta/3dnavigation/"><i>05 — 실험</i><h4>3D 내비게이션</h4><p>실제 지도와 3D 건물 위에서 동 이름을 칩니다.</p></a>
+    </div></div></div>
+  </li>
+
+  <li class="row" id="plans">
+    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-plans">
+      <span class="nm">플랜</span><span class="en">Plan</span>
+      <span class="th" aria-hidden="true"><span class="t t-num">수도</span><span class="t t-num">전국</span><span class="t t-num">세계</span></span>
+      <span class="sign" aria-hidden="true">+</span>
+    </button></h2>
+    <div class="drawer" id="d-plans" role="region" aria-label="플랜"><div><div class="panel">
+      <div class="plan-scroll">
+        <table class="plans">
+          <caption>월·연 가격은 미정입니다. 아직 고를 수 없습니다.</caption>
+          <thead>
+            <tr>
+              <th scope="col">플랜</th>
+              <th scope="col">월</th>
+              <th scope="col">연</th>
+              <th scope="col">지도 범위</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Capital (수도), 무료<button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button></th>
+              <td>미정</td>
+              <td>미정</td>
+              <td class="scope">지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</td>
+            </tr>
+            <tr>
+              <th scope="row">Nation (전국)<button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button></th>
+              <td>미정</td>
+              <td>미정</td>
+              <td class="scope">고른 나라 하나의 전국</td>
+            </tr>
+            <tr>
+              <th scope="row">World (세계)<button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button></th>
+              <td>미정</td>
+              <td>미정</td>
+              <td class="scope">모든 나라의 전국</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <ol class="steps">
-        <li><b>1. 코스 고르기</b>홈의 서울 지도에서 구를 누르면 그곳이 코스가 됩니다. 같은 구를 한 번 더 누르면 행정동 지도가 펼쳐집니다.</li>
-        <li><b>2. 치기</b>카운트다운이 끝나면 바로 칩니다. 연달아 맞히면 콤보가 붙고, 이웃한 곳을 따라 길이 이어집니다.</li>
-        <li><b>3. 결과 보기</b>속도, 들른 곳, 정확도, 내 최고 기록. 놓친 곳은 카드에 따로 표시됩니다.</li>
-      </ol>
     </div></div></div>
   </li>
 </ol>
@@ -384,31 +448,88 @@ const NS='http://www.w3.org/2000/svg', $=id=>document.getElementById(id);
 const el=(tag,attrs={},parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.append(e);return e};
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const d=new Date();$('date').textContent=`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+const bar=()=>{document.documentElement.style.setProperty('--bar',document.querySelector('.meta').offsetHeight+'px')};
+bar();addEventListener('resize',bar);
 
-// ── 펼침. 한 번에 한 줄만 열고, 주소의 #이름 으로 바로 연다 ──
+// 스크롤 궤도. 문장 칸이 화면 위에 붙어 있는 동안 지나간 비율로 지금 문장을 고른다
+const reels=[...document.querySelectorAll('[data-reel]')];
+function syncReels(){
+  const header=document.querySelector('.meta').offsetHeight;
+  for(const reel of reels){
+    const beats=[...reel.querySelectorAll('.beat')];
+    const steps=[...reel.querySelectorAll('.step')];
+    const n=beats.length;
+    if(!n)continue;
+    let i=0;
+    if(!reduce && reel.offsetHeight>0){
+      const stage=reel.querySelector('.stage');
+      const top=reel.getBoundingClientRect().top;
+      const travel=reel.offsetHeight-stage.offsetHeight;
+      const p=travel<=0?0:Math.min(1,Math.max(0,(header-top)/travel));
+      i=Math.min(n-1,Math.floor(p*n));
+      if(p>=1)i=n-1;
+    }
+    beats.forEach((b,k)=>b.classList.toggle('on',k===i));
+    steps.forEach((s,k)=>s.classList.toggle('on',k===i));
+    reel.dataset.i=String(i);
+  }
+}
+let raf=0;
+const onScroll=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;syncReels()})};
+addEventListener('scroll',onScroll,{passive:true});
+addEventListener('resize',onScroll);
+
+// 펼침. 한 번에 한 줄만 열고, 주소의 #이름 으로 바로 연다
 const rows=[...document.querySelectorAll('.row')];
 function setOpen(row,open){
-  row.classList.toggle('open',open);row.querySelector('.head').setAttribute('aria-expanded',open);
-  // 폰(pointer:coarse)에서는 자판이 저절로 뜨지 않게 초점을 옮기지 않는다
-  if(open&&row.id==='play'&&!matchMedia('(pointer:coarse)').matches)setTimeout(()=>$('pin').focus({preventScroll:true}),reduce?0:350);
+  row.classList.toggle('open',open);
+  row.querySelector('.head').setAttribute('aria-expanded',String(open));
+  if(open&&row.id==='play')ensureFrame();
 }
 rows.forEach(r=>r.querySelector('.head').addEventListener('click',()=>{
   const open=!r.classList.contains('open');
-  rows.forEach(x=>x!==r&&setOpen(x,false));setOpen(r,open);
+  rows.forEach(x=>x!==r&&setOpen(x,false));
+  setOpen(r,open);
   history.replaceState(null,'',open?'#'+r.id:location.pathname);
-  if(open)setTimeout(()=>r.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'}),reduce?0:120);
+  if(open){
+    r.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+    requestAnimationFrame(syncReels);
+  }
 }));
-$('openAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,true));$('openAll').setAttribute('aria-pressed',true);$('closeAll').setAttribute('aria-pressed',false)});
-$('closeAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,false));$('openAll').setAttribute('aria-pressed',false);$('closeAll').setAttribute('aria-pressed',true)});
-const fromHash=()=>{const h=location.hash.slice(1);if(h&&$(h)&&$(h).classList.contains('row')){rows.forEach(x=>setOpen(x,x.id===h))}};
-fromHash();addEventListener('hashchange',fromHash);
+$('openAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,true));$('openAll').setAttribute('aria-pressed','true');$('closeAll').setAttribute('aria-pressed','false');requestAnimationFrame(syncReels)});
+$('closeAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,false));setLive(false);$('openAll').setAttribute('aria-pressed','false');$('closeAll').setAttribute('aria-pressed','true')});
+const fromHash=()=>{const h=location.hash.slice(1);if(h&&$(h)&&$(h).classList.contains('row')){rows.forEach(x=>setOpen(x,x.id===h));requestAnimationFrame(syncReels)}};
+addEventListener('hashchange',fromHash);
 
-// ── 버전: app.js 의 VER 에서 읽는다. VER '5.03' → v0.11.503 의 C 자리(503) ──
+// 플레이 칸. 게임은 흐리게 띄워 두고, play 를 눌러야 그 안에서 칠 수 있다
+const frame=$('game');
+function ensureFrame(){if(!frame.getAttribute('src'))frame.src=frame.dataset.src}
+function setLive(on){
+  if(on)ensureFrame();
+  $('embed').classList.toggle('is-live',on);
+  const b=$('liveBtn');
+  b.setAttribute('aria-pressed',on?'true':'false');
+  b.querySelector('.live-label').textContent=on?'pause':'play';
+  b.querySelector('.ico-play').hidden=on;
+  b.querySelector('.ico-pause').hidden=!on;
+}
+$('liveBtn').addEventListener('click',()=>setLive(!$('embed').classList.contains('is-live')));
+$('goPlay').addEventListener('click',e=>{
+  e.preventDefault();
+  rows.forEach(x=>setOpen(x,x.id==='play'));
+  history.replaceState(null,'','#play');
+  setLive(true);
+  $('play').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+});
+addEventListener('keydown',e=>{
+  if(e.key==='Escape' && $('embed').classList.contains('is-live') && document.activeElement!==frame)setLive(false);
+});
+
+// 버전: app.js 의 VER 에서 읽는다. C 자리는 VER 에서 점을 뺀 숫자
 fetch('../../app.js').then(r=>r.text()).then(t=>{
   const m=t.match(/const VER\s*=\s*'([\d.]+)'/);if(!m)return;
   const c=m[1].replace('.','');
   return fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
-    // A.B 는 사람이 고른다 — 가장 최근 항목의 A.B 를 그대로 쓰고 C 만 VER 에서 옮긴다
     const ab=(list[0]&&list[0].v||'0.0.0').split('.').slice(0,2).join('.');
     const v=`v${ab}.${c}`;
     $('ver').textContent=v;$('th-ver').textContent=v;$('dev-ver').textContent=v;
@@ -416,70 +537,26 @@ fetch('../../app.js').then(r=>r.text()).then(t=>{
   });
 }).catch(()=>{});
 
-// ── 지도 데이터 하나로 썸네일·코스 길·게임판을 그린다 ──
+// 소개 썸네일과 코스 길 — 서울 자치구 격자
 Promise.all(['seoul-gu.geom','seoul-gu.course'].map(f=>fetch(`../../data/${f}.json`).then(r=>r.json()))).then(([g,course])=>{
   const by={};
   g.grid.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==='.')return;const n=g.items[parseInt(ch,36)].name;(by[n]=by[n]||[]).push([x,y])}));
   const order=course.items.map(i=>i.name), center=Object.fromEntries(g.items.map(i=>[i.name,i.c]));
   const cell=g.cell, r=cell*.36;
-
-  // 썸네일: 흰 점 서울
   const ts=el('svg',{viewBox:`0 0 ${g.w} ${g.h}`},$('th-map'));
-  Object.values(by).flat().forEach(([x,y])=>el('circle',{cx:x*cell+cell/2,cy:y*cell+cell/2,r,fill:'#fff'},ts));
-
-  // 소개: 검은 점 지도 위로 시계 방향 코스 길
+  Object.values(by).flat().forEach(([x,y])=>el('circle',{cx:x*cell+cell/2,cy:y*cell+cell/2,r,fill:'var(--bg)'},ts));
   const rs=$('route');
   Object.values(by).flat().forEach(([x,y])=>el('circle',{class:'dot-gu',cx:x*cell+cell/2,cy:y*cell+cell/2,r:cell*.3},rs));
-  const pts=order.map(n=>center[n]);
-  const path=el('polyline',{class:'route',points:pts.map(p=>p.join(',')).join(' ')},rs);
+  const pts=order.map(n=>center[n]).filter(Boolean);
+  el('polyline',{class:'route',points:pts.map(p=>p.join(',')).join(' ')},rs);
   pts.forEach((p,i)=>el('circle',{class:'route-dot',cx:p[0],cy:p[1],r:i===0||i===pts.length-1?13:7},rs));
-  // 소개를 열 때 길이 그려진다
-  const len=path.getTotalLength?path.getTotalLength():0;
-  if(len&&!reduce){path.style.strokeDasharray=len;path.style.strokeDashoffset=len;
-    $('about').querySelector('.head').addEventListener('click',()=>{path.style.transition='none';path.style.strokeDashoffset=len;
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{path.style.transition='stroke-dashoffset 2.4s cubic-bezier(.77,0,.175,1) .25s';path.style.strokeDashoffset=0}))});
-    if($('about').classList.contains('open'))path.style.strokeDashoffset=0;
-  }
-  $('order').replaceChildren(...order.map(n=>{const li=document.createElement('li');li.textContent=n;return li}));
+}).catch(()=>{});
 
-  // 플레이: 게임판
-  const pm=$('pmap'),gu={};
-  for(const n in by){gu[n]=by[n].map(([x,y])=>el('rect',{class:'g',x:x*cell+cell*.08,y:y*cell+cell*.08,width:cell*.84,height:cell*.84,rx:cell*.22},pm))}
-  game(order,gu);
-});
-
-// ── 플레이 미니 게임 — 코스 순서대로 주황 칸의 이름을 친다 ──
-function game(order,gu){
-  const pin=$('pin');let i=0,combo=0,keys=0,t0=0,tick=null;
-  // 한글 한 글자를 자판 타수로 센다(초성·중성·종성, 겹모음·겹받침은 두 타)
-  const DV=new Set([9,10,11,14,15,16,19]),DJ=new Set([3,5,6,9,10,11,12,13,14,15,18]);
-  const strokes=s=>[...s].reduce((a,ch)=>{const c=ch.charCodeAt(0)-0xAC00;if(c<0||c>11171)return a+1;const v=(c/28|0)%21,j=c%28;return a+2+(DV.has(v)?1:0)+(j?1+(DJ.has(j)?1:0):0)},0);
-  const paint=()=>{
-    order.forEach((n,k)=>gu[n].forEach(r=>{r.classList.toggle('done',k<i);r.classList.toggle('now',k===i)}));
-    $('h-n').textContent=`${i}/${order.length}`;$('h-combo').textContent=combo;
-    $('hintText').textContent=i<order.length?($('hintOn').checked?`지금: ${order[i]}`:`지금: ${order[i][0]}${'○'.repeat(order[i].length-1)}`):'한 바퀴 끝 — 강서구에서 성북구까지';
-  };
-  const time=()=>{const s=(performance.now()-t0)/1000;$('h-t').textContent=s.toFixed(1);$('h-cpm').textContent=s>0?Math.round(keys/s*60):0};
-  const check=e=>{
-    if(e&&e.isComposing)return;
-    if(i>=order.length)return;
-    const v=pin.value.replace(/\s/g,'');
-    if(v&&!t0){t0=performance.now();tick=setInterval(time,100)}
-    if(v===order[i]){keys+=strokes(v);i++;combo++;pin.value='';paint();time();if(i>=order.length){clearInterval(tick)}}
-    else if(v.length>=order[i].length&&!order[i].startsWith(v)){combo=0;$('h-combo').textContent=0}
-  };
-  pin.addEventListener('input',check);pin.addEventListener('compositionend',()=>setTimeout(check));
-  pin.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){check()}});
-  $('hintOn').addEventListener('change',paint);
-  $('reset').addEventListener('click',()=>{i=0;combo=0;keys=0;t0=0;clearInterval(tick);pin.value='';$('h-t').textContent='0.0';$('h-cpm').textContent=0;paint();pin.focus()});
-  paint();
-}
-
-// ── 개발: 바뀐 것을 git log 처럼, grep 으로 거른다 ──
+// 개발: 바뀐 것 목록
 fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
   const log=$('log');
   const draw=q=>{
-    const rs=list.filter(e=>!q||e.ko.includes(q)||e.v.includes(q)).slice(0,60);
+    const rs=list.filter(e=>!q||(e.ko||'').includes(q)||(e.en||'').includes(q)||e.v.includes(q)).slice(0,60);
     log.replaceChildren(...rs.map(e=>{
       const li=document.createElement('li');
       const v=document.createElement('span');v.className='v';v.textContent='v'+e.v;
@@ -489,45 +566,12 @@ fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
     }));
     $('hits').textContent=q?`${rs.length}건`:`${list.length}건`;
   };
-  draw('');$('grep').addEventListener('input',e=>draw(e.target.value.trim()));
-});
+  draw('');
+  $('grep').addEventListener('input',e=>draw(e.target.value.trim()));
+}).catch(()=>{});
 
-// ── 스타일: style.css 맨 위 :root 에서 색 토큰을 직접 읽는다 ──
-const NAMES={'--bg':['바탕','화면 바탕'],'--ink':['먹','본문 글자'],'--block':['칸','지도 칸'],'--block-deep':['짙은 칸','흰 글자 5.89:1'],
-  '--accent':['주황','강조·고른 칸'],'--accent-deep':['짙은 주황','그래픽 전용'],'--accent-text':['주황 글자','작은 글자용'],
-  '--on-accent':['주황 위 글자','6.64:1'],'--ranked':['경쟁전','흰 글자 5.1:1'],'--land':['땅','빈 칸'],'--card':['카드','판 바탕']};
-fetch('../../style.css').then(r=>r.text()).then(css=>{
-  const root=css.match(/:root\s*\{([\s\S]*?)\n\}/);if(!root)return;
-  const vals={};for(const [,k,v] of root[1].matchAll(/(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8})/g))vals[k]=v;
-  $('chips').replaceChildren(...Object.keys(NAMES).filter(k=>vals[k]).map(k=>{
-    const c=document.createElement('div');c.className='chip';
-    const sw=document.createElement('i');sw.style.background=vals[k];
-    const b=document.createElement('div');const t=document.createElement('b');t.textContent=NAMES[k][0];
-    b.append(t,document.createTextNode(`${k} ${vals[k]}`));const s=document.createElement('small');s.textContent=NAMES[k][1];b.append(s);
-    c.append(sw,b);return c;
-  }));
-});
-
-// ── 스토리: 코스 데이터의 한 줄 소개를 길처럼 늘어놓는다 ──
-const stories={};
-function story(slug){
-  const go=c=>{
-    $('st-title').textContent=c.title;$('st-intro').textContent=c.description||'';
-    $('walk').replaceChildren(...c.items.map((it,k)=>{
-      const li=document.createElement('li');
-      const no=document.createElement('span');no.className='no';no.textContent=String(k+1).padStart(2,'0');
-      const b=document.createElement('b');b.textContent=it.name;
-      const p=document.createElement('p');p.textContent=it.meta&&it.meta.description||'';
-      li.append(no,b,p);return li;
-    }));
-  };
-  if(stories[slug])return go(stories[slug]);
-  fetch(`../../data/${slug}.course.json`).then(r=>r.json()).then(c=>{stories[slug]=c;go(c)});
-}
-document.querySelectorAll('[data-st]').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-selected',x===b));story(b.dataset.st);
-}));
-story('gangseo-dong');
+fromHash();
+syncReels();
 </script>
 </body>
 </html>
