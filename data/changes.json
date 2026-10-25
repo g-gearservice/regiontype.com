@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.508",
+    "date": "2026-10-26",
+    "ko": "로그인하지 않은 방문자는 소개 화면(/landing/)에서 시작하고, 로그인한 사람은 바로 홈으로 갑니다. 소개 화면의 플레이 줄과 플랜 칸도 다듬었습니다.",
+    "en": "Visitors who are not signed in now start on the landing page (/landing/), and signed-in players go straight to the home screen. The landing page's Play row and plan cards were also tidied up."
+  },
+  {
     "v": "0.11.507",
     "date": "2026-10-25",
     "ko": "경쟁전을 켜면 왼쪽 아래에 뜨던 지금 접속 표시를 없앴고, 소개 화면(/landing/)을 새로 다듬었습니다.",
