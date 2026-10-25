@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.505",
+    "date": "2026-10-25",
+    "ko": "소개 화면(/landing/)이 다섯 줄로 바뀌었습니다. 소개·개발·스타일·스토리·플레이를 누르면 그 아래로 펼쳐집니다.",
+    "en": "The landing page (/landing/) is now five rows. About, development, style, story, and play each open underneath."
+  },
+  {
     "v": "0.11.504",
     "date": "2026-10-25",
     "ko": "홈의 위·아래 넵바를 브라우저 80% 배율 크기로 줄였습니다.",
