@@ -1,0 +1,50 @@
+/* 래퍼런스: workshops · my films · giulia loi.
+   갈래마다 색 한 쌍, 소문자 두 줄, 오른쪽 망점 지도. */
+:root{--sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;--serif:"Noto Serif KR",Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+html{overflow-x:clip}
+body{background:var(--out,#b5b5b5);font:700 12px/1.2 var(--sans);-webkit-font-smoothing:antialiased;
+  display:grid;place-items:center;min-height:100svh;padding:clamp(16px,6vw,96px) clamp(16px,6vw,140px);transition:background .4s ease}
+a,button{color:inherit;font:inherit}
+button{background:none;border:0;cursor:pointer;text-transform:inherit}
+:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+.panel{position:relative;width:100%;max-width:min(1140px,100%);aspect-ratio:1138/752;background:var(--bg);color:var(--ink);
+  border-radius:10px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,var(--img,33%));
+  transition:background .4s ease,color .4s ease}
+.top{position:absolute;inset:0 0 auto 0;display:grid;grid-template-columns:1fr auto;padding:20px 20px 0 22px;z-index:2;pointer-events:none}
+.top > *{pointer-events:auto}
+.logo{font-size:22px;font-weight:800;letter-spacing:-.04em;text-decoration:none;align-self:start}
+.menu{position:absolute;left:43%;right:0;top:20px;display:flex;gap:clamp(14px,2.4vw,34px);padding-bottom:10px;border-bottom:2px solid var(--ink);text-transform:uppercase;font-size:clamp(9px,.85vw,11.5px)}
+.menu button[aria-selected="true"]{text-decoration:underline;text-underline-offset:3px}
+.lang{position:absolute;right:20px;top:20px;text-transform:uppercase;font-size:clamp(9px,.85vw,11px)}
+
+.left{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:0 0 0 1.8%;min-width:0}
+.cap{display:flex;gap:8px;align-items:flex-start;text-transform:uppercase;font-size:clamp(9px,1.05vw,14px);line-height:1.05;margin:0 0 2.2% 0}
+.cap::before{content:"";width:22px;height:24px;flex:none;background:linear-gradient(to top right,transparent calc(50% - 1px),var(--ink) calc(50% - 1px),var(--ink) calc(50% + 1px),transparent calc(50% + 1px))}
+.word{font-weight:700;font-size:var(--fs,clamp(64px,15.6vw,196px));line-height:.78;letter-spacing:-.045em;white-space:pre;margin-bottom:-.05em;text-transform:lowercase;max-width:100%}
+.word .mk{font-weight:600}
+.bio{position:absolute;left:58%;bottom:0;width:40%;border-left:2px solid var(--ink);padding:0 0 1.2% 12px;
+  font:600 clamp(11px,1.4vw,19px)/1.24 var(--serif);letter-spacing:-.02em}
+.bio[hidden]{display:none}
+.go{display:inline-block;margin-top:10px;font:700 12px/1 var(--sans);text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
+
+.img{position:relative;margin-top:calc(20px + 1.2em + 12px);min-width:0}
+.img canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+.hint{position:fixed;left:16px;bottom:12px;font:600 12px/1.3 var(--sans);color:#222;opacity:.7}
+
+@media (max-width:760px){
+  body{padding:16px;place-items:start center}
+  .panel{aspect-ratio:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 46vh auto}
+  .menu{position:static;grid-column:1/-1;flex-wrap:wrap;gap:6px 14px;margin-top:40px}
+  .top{position:relative;grid-template-columns:1fr;padding:16px}
+  .lang{right:16px;top:20px}
+  .img{grid-row:2;margin:0}
+  .left{grid-row:3;padding:16px 0 0 16px;min-height:52vh}
+  .word{--fs:clamp(72px,26vw,160px)}
+  .bio{position:static;width:auto;margin:16px 16px 16px 0;border-left:0;padding:0}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){ body,.panel{transition:none} }

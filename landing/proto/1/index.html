@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 점으로 된 도시</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="/favicon/dark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section class="poster" aria-label="서울 자치구">
+  <div class="corner tl"><b>regiontype</b><br>지명을 치는 타자연습</div>
+  <div class="corner tr"><nav aria-label="주 메뉴"><a href="/">플레이</a><a href="/about/">소개</a><a href="/community/">커뮤니티</a></nav></div>
+  <div class="corner bl">서울특별시<br><span id="guCount">25</span> 자치구 · 423 행정동</div>
+  <div class="corner br">37.5665° N<br>126.9780° E</div>
+
+  <svg class="map" id="map" viewBox="0 0 1000 822" role="img" aria-label="서울 자치구 점 지도"></svg>
+
+  <div class="type">
+    <label for="t" class="sr">구 이름 입력</label>
+    <input id="t" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="구 이름을 쳐 보세요 — 강서구">
+    <p id="msg" aria-live="polite"><span class="count" id="n">0</span> / <span id="total">25</span> 켜짐</p>
+  </div>
+</section>
+
+<section class="sheet" aria-labelledby="h-n">
+  <h2 id="h-n">점 하나가 글자 하나. 마흔여섯 나라가 같은 점으로 찍힌다.</h2>
+  <p class="lead">서울 자치구에서 시작합니다. 아래 점 지도는 나라의 행정구역 데이터입니다. 구 이름을 치면 그 구의 점이 켜집니다. 지금 플레이되는 코스는 서울이고, 화면 말은 한국어입니다.</p>
+  <div class="nations" id="nations"></div>
+</section>
+
+<section class="sheet" aria-labelledby="h-l">
+  <h2 id="h-l">같은 점, 다른 판.</h2>
+  <div class="lines">
+    <div class="line"><i>01 — 연습</i><h3><a href="/">지명 타자연습</a></h3><p>코스를 고르고, 이름을 치고, 지도를 채웁니다. 서울은 동 단위까지 내려갑니다.</p></div>
+    <div class="line"><i>02 — 경쟁</i><h3><a href="/">경쟁전</a></h3><p>같은 코스를 다른 사람과 겨룹니다. 티어는 곧 타자 속도입니다. 브론즈는 분당 100타, 마스터는 350타.</p></div>
+    <div class="line"><i>03 — 실험</i><h3>mimi · 동네버스 · 3D 내비게이션</h3><p><a href="/mimi/">mimi</a>, <a href="/beta/bus/">동네버스</a>, <a href="/beta/3dnavigation/">3D 내비게이션</a>. 두꺼운 보드게임 지형, 버스 노선, 3D 길찾기 위에서 지명을 칩니다.</p></div>
+  </div>
+</section>
+
+<footer><span>regiontype.com</span><span><a href="/policy/">개인정보</a> · <a href="/terms/">약관</a></span></footer>
+<script src="main.js"></script>
+</body>
+</html>
