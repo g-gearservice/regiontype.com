@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.504",
+    "date": "2026-10-25",
+    "ko": "홈의 위·아래 넵바를 브라우저 80% 배율 크기로 줄였습니다.",
+    "en": "The home screen's top and bottom bars are now drawn at 80% size, as if the browser were zoomed to 80%."
+  },
+  {
     "v": "0.11.502",
     "date": "2026-10-25",
     "ko": "위 넵바 알약의 왼쪽이 비어 보이던 것을 고쳐, 양 끝 여백을 같게 맞췄습니다.",
