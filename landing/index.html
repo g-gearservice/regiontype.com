@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>regiontype — 지명을 치면, 지도가 남는다</title>
-<meta name="description" content="지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습. 서울 25개 자치구와 423개 행정동, 세계 46개 나라의 행정구역.">
+<title>regiontype — 지명을 치는 타자연습</title>
+<meta name="description" content="지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습. 서울 25개 자치구와 423개 행정동, 마흔여섯 나라의 행정구역.">
 <link rel="canonical" href="https://regiontype.com/landing/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://regiontype.com/landing/">
-<meta property="og:title" content="regiontype — 지명을 치면, 지도가 남는다">
-<meta property="og:description" content="서울 25개 자치구부터 세계 46개 나라까지, 지명을 직접 치며 익히는 타자연습.">
+<meta property="og:title" content="regiontype — 지명을 치는 타자연습">
+<meta property="og:description" content="지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습. 서울 25개 자치구와 423개 행정동, 마흔여섯 나라의 행정구역.">
 <meta property="og:image" content="https://regiontype.com/og.png">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:site_name" content="regiontype">
@@ -17,280 +17,517 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=4.94">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=4.94">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=4.94">
-<!-- 앱에서 고른 야간·모션 설정을 그대로 쓴다. 첫 그림 전에 붙여야 번쩍이지 않는다.
-     js 표시는 드러남 애니메이션이 스크립트 없이 글을 숨기지 않게 하려는 것이다 -->
-<script>document.documentElement.classList.add('js');try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');if(o.night)document.documentElement.setAttribute('data-night','');if(o.motion===false)document.documentElement.dataset.motion='off'}catch(e){}</script>
-<link rel="stylesheet" href="../style.css?v=4.94">
-<!-- 읽는 페이지라 앱의 고정 화면 규칙을 풀고, 토큰은 style.css 것을 물려받는다.
-     app.js 는 부르지 않는다 -->
+<!-- 공개 주소 /landing/. 본문은 landing/proto/index.html 과 같고 검색·공유 머리만 다르다.
+     초안 주소 /landing/proto/ 는 검색에 올리지 않는다. 상대 경로 ../../ 는 그 주소에서는
+     사이트 루트이고, 여기에서는 원점 위로 더 올라가지 못해 같은 루트로 풀린다. -->
+<!-- 랜딩 프로토타입. 래퍼런스 cosmos.so/e/1575382657 (Simone Biavati 포트폴리오)의 문법을 그대로 쓴다 —
+     흰 바탕, 맨 위 아주 작은 굵은 대문자 한 줄, 그 아래 굵고 큰 낱말이 줄마다 하나, 낱말 바로 뒤에 작은 그림 서넛.
+     낱말은 지명 대신 메뉴 다섯(소개·개발·스타일·스토리·플레이)이고, 누르면 그 줄 아래로 판이 펼쳐진다.
+     판은 메뉴마다 성격이 다르다 — 소개는 신문, 개발은 터미널, 스타일은 견본첩, 스토리는 책, 플레이는 오락기.
+     내용은 저장소에서 읽는다(코스·지도·바뀐 것·style.css 토큰·app.js 의 VER). 지어낸 소개는 없다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@400;600&display=swap">
 <style>
-  html,body{height:auto}
-  body{overflow:auto}
-  .lp{max-width:1080px;margin:0 auto;padding:0 24px}
-
-  /* 머리 — 내용이 밑으로 흐르는 유리 막대. 가는 선 대신 비친 내용이 경계가 된다 */
-  .lp-top{position:sticky;top:0;z-index:5;background:var(--glass);
-    -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-    box-shadow:var(--glass-hi),0 1px 0 var(--glass-line)}
-  .lp-top .lp{display:flex;align-items:center;justify-content:space-between;height:56px}
-  .lp-logo{font-weight:800;font-size:19px;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
-  .lp-top nav{display:flex;gap:6px;align-items:center}
-  .lp-top nav a{color:var(--ink-soft);text-decoration:none;font-weight:700;font-size:15px;padding:6px 10px;border-radius:8px}
-  .lp-top nav a:focus-visible{outline:2px solid var(--accent-deep);outline-offset:2px}
-
-  .btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:800;text-decoration:none;
-    border-radius:999px;cursor:pointer;border:0;
-    transition:transform var(--fast) var(--ease-out),background-color var(--fast) ease}
-  .btn:active{transform:scale(.97)}
-  .btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-  .btn-go{background:var(--accent);color:var(--on-accent);font-size:19px;padding:13px 26px}
-  .btn-sm{font-size:15px;padding:7px 16px}
-  .btn-ghost{background:var(--card);color:var(--ink);font-size:19px;padding:13px 26px;box-shadow:var(--shadow)}
-  @media (hover:hover) and (pointer:fine){
-    .btn-go:hover{background:var(--accent-deep)}
-    .lp-top nav a:hover{color:var(--ink)}
+  :root{
+    --bg:#fff; --ink:#0d0d0d; --rule:#0d0d0d;
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+    --mono:"IBM Plex Mono","Noto Sans KR",ui-monospace,monospace;
+    --serif:"Noto Serif KR",Georgia,serif;
+    /* 브랜드 색 — style.css 의 값과 같다(스타일 판은 style.css 를 직접 읽어 보여 준다) */
+    --accent:#f0a03c; --accent-deep:#e07a3a; --on-accent:#232c31; --block:#6f9a9e; --block-deep:#496a6d;
+    --ranked:#c8322a; --site-bg:#e8edf0; --site-ink:#3c464a;
+    --ease:cubic-bezier(.23,1,.32,1);
   }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink)}
+  body{font:700 11px/1.3 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  button,input{font:inherit;color:inherit}
+  button{background:none;border:0;cursor:pointer;text-align:left}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-  /* 첫 화면 */
-  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:56px;align-items:center;padding:72px 0 96px}
-  .kicker{font-weight:800;color:var(--accent-text);font-size:15px;letter-spacing:.02em;margin-bottom:14px}
-  .hero h1{font-size:clamp(40px,6.2vw,72px);font-weight:800;line-height:1.08;letter-spacing:-.035em;margin-bottom:22px}
-  .hero h1 em{font-style:normal;color:var(--accent-text)}
-  .lead{font-size:19px;line-height:1.7;color:var(--ink-soft);margin-bottom:32px;max-width:30em}
-  .ctas{display:flex;gap:12px;flex-wrap:wrap}
+  /* 맨 위 한 줄 — 래퍼런스의 SIMONE BIAVATI · 날짜 · ↓ALPHABETICAL / RECENT · ABOUT / CONTACT · ○ */
+  .meta{position:sticky;top:0;z-index:5;background:var(--bg);display:grid;grid-template-columns:auto auto 1fr auto auto;
+    gap:28px;align-items:center;padding:10px 12px 8px;text-transform:uppercase;letter-spacing:.01em}
+  .meta .mid{justify-self:center}
+  .meta .mid button{text-transform:uppercase}
+  .meta .mid button[aria-pressed="true"]{text-decoration:underline;text-underline-offset:2px}
+  .ring{width:11px;height:11px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;vertical-align:-1px;margin-left:6px}
+  .play-cta{background:var(--ink);color:#fff;border-radius:999px;padding:4px 10px}
 
-  /* 써 보는 판 — 서울 25구를 8×7 격자 위에 앉힌다(welcome 의 배치 그대로) */
-  .try{background:var(--card);border-radius:var(--card-r);padding:22px;box-shadow:var(--shadow-lift)}
-  .seoul{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(7,minmax(0,1fr));gap:6px;aspect-ratio:8/7;margin-bottom:16px}
-  .gu{display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--land);
-    color:var(--ink-soft);font-size:clamp(10px,1.15vw,13px);font-weight:700;white-space:nowrap;overflow:hidden;
-    border:2px solid transparent;
-    transition:background-color .2s var(--ease-out),color .2s var(--ease-out),border-color .2s var(--ease-out),transform .2s var(--ease-out)}
-  /* 칠해진 칸 — 색만이 아니라 테두리와 체크 표시를 함께 붙인다 */
-  .gu.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent-deep);transform:translateY(-2px)}
-  .gu.on::before{content:"✓";margin-right:2px;font-size:.9em}
-  .typer{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:var(--field-r);padding:6px 6px 6px 16px;
-    border:2px solid transparent;transition:border-color var(--fast) ease}
-  .typer:focus-within{border-color:var(--accent-deep)}
-  .typer input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:700;color:var(--ink);background:none;border:0;outline:0;padding:8px 0}
-  .typer input::placeholder{color:var(--ink-soft);font-weight:500}
-  .score{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-soft);padding:0 10px;white-space:nowrap}
-  .try-hint{font-size:14px;color:var(--ink-soft);margin-top:10px;min-height:1.5em}
+  /* 줄 — 굵은 큰 낱말 + 작은 그림. 줄 자체가 펼침 단추다 */
+  .menu{list-style:none;padding:0 12px}
+  .row{border-bottom:1.5px solid transparent;transition:border-color .3s ease;scroll-margin-top:34px}
+  .row.open{border-bottom-color:var(--rule)}
+  .head{display:flex;align-items:center;gap:clamp(10px,1.2vw,18px);width:100%;padding:2px 0}
+  .nm{font:900 clamp(56px,10.4vw,168px)/.98 var(--sans);letter-spacing:-.045em;white-space:nowrap}
+  .en{font:800 clamp(10px,.9vw,13px)/1 var(--sans);text-transform:uppercase;align-self:flex-start;margin-top:1.4em;letter-spacing:.02em}
+  .th{display:flex;gap:clamp(6px,.8vw,12px);align-items:center;margin-left:4px}
+  .t{height:clamp(44px,6.8vw,104px);aspect-ratio:1;flex:none;display:grid;place-items:center;overflow:hidden;font-weight:700}
+  .sign{margin:0 .2em 0 auto;width:1em;height:1em;display:grid;place-items:center;flex:none;font:400 clamp(28px,4vw,60px)/1 var(--sans);transition:transform .4s var(--ease)}
+  .row.open .sign{transform:rotate(45deg)}
+  @media (hover:hover){ .head:hover .nm{text-decoration:underline;text-decoration-thickness:.05em;text-underline-offset:.08em} }
 
-  /* 숫자 */
-  .lp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--card-gap);padding-bottom:96px}
-  .lp-stat{background:var(--card);border-radius:var(--card-r);padding:28px 24px;box-shadow:var(--shadow)}
-  .lp-stat b{display:block;font-size:clamp(40px,5vw,60px);font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
-  .lp-stat span{display:block;margin-top:10px;color:var(--ink-soft);font-weight:700}
+  /* 펼침 — 0fr→1fr 로 키를 키운다 */
+  .drawer{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s var(--ease)}
+  .row.open .drawer{grid-template-rows:1fr}
+  .drawer > div{overflow:hidden;min-height:0}
+  .panel{margin:10px 0 22px;border-radius:2px}
 
-  /* 단계 */
-  .sec{padding-bottom:104px}
-  .sec h2{font-size:clamp(30px,4vw,44px);font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:14px}
-  .sec > p{font-size:18px;line-height:1.75;color:var(--ink-soft);max-width:36em;margin-bottom:40px}
-  .lp-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--card-gap)}
-  .lp-step{background:var(--card);border-radius:var(--card-r);overflow:hidden;box-shadow:var(--shadow)}
-  .lp-step img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--land)}
-  .lp-step div{padding:20px 22px 24px}
-  .lp-step h3{font-size:20px;font-weight:800;margin-bottom:8px}
-  .lp-step h3 i{font-style:normal;color:var(--accent-text);margin-right:6px;font-variant-numeric:tabular-nums}
-  .lp-step p{line-height:1.7;color:var(--ink-soft)}
+  /* 썸네일들 — 래퍼런스의 사진 자리. 판마다 제 성격의 조각 */
+  .t-dot{background:#0d0d0d} .t-dot svg{width:86%;height:86%}
+  .t-num{background:#e9e9e9;font:900 clamp(14px,2.2vw,34px)/1 var(--sans);letter-spacing:-.04em}
+  .t-term{background:#0d0d0d;color:#b8f5b1;font:500 clamp(7px,.75vw,11px)/1.35 var(--mono);place-items:start;padding:8%;text-align:left;white-space:pre}
+  .t-ver{background:#1f4fd8;color:#fff;font:600 clamp(8px,.95vw,14px)/1 var(--mono)}
+  .t-sw{display:grid;grid-template:1fr 1fr/1fr 1fr;place-items:stretch}
+  .t-sw i{display:block}
+  .t-logo{background:var(--site-bg);color:var(--site-ink);font:800 clamp(10px,1.2vw,17px)/1 var(--sans);letter-spacing:-.03em}
+  .t-logo b{font-weight:300}
+  .t-logo em{font-style:normal;color:var(--accent)}
+  .t-book{background:#f1e9da;color:#2a2219;font:600 clamp(13px,1.9vw,28px)/1 var(--serif)}
+  .t-quote{background:#2a2219;color:#f1e9da;font:400 clamp(6px,.62vw,9px)/1.45 var(--serif);padding:9%;place-items:start;text-align:left}
+  .t-key{background:var(--accent);color:var(--on-accent);font:800 clamp(16px,2.4vw,36px)/1 var(--sans);border-radius:14%;box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)}
+  .t-key.dark{background:#232c31;color:#fff}
+  .t-key.red{background:var(--ranked);color:#fff;font-size:clamp(10px,1.1vw,16px)}
 
-  .why{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
-  .why h3{font-size:20px;font-weight:800;margin-bottom:8px}
-  .why p{line-height:1.75;color:var(--ink-soft)}
+  /* ── 소개: 신문. 흰 바탕, 큰 첫 문장, 굵은 숫자 셋, 지도 위를 도는 코스 길 ── */
+  .p-about{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px 48px;padding:28px 0 8px;font-weight:400}
+  .p-about .lede{grid-column:1/-1;font:600 clamp(26px,3.6vw,54px)/1.12 var(--sans);letter-spacing:-.03em;max-width:21em}
+  .p-about .cols{columns:2 16em;column-gap:32px;font:400 15px/1.75 var(--sans)}
+  .p-about .cols p{margin-bottom:14px;break-inside:avoid}
+  .p-about .cols b{font-weight:700}
+  .p-about .nums{display:grid;grid-template-columns:repeat(3,1fr);border-top:1.5px solid var(--ink);margin-top:24px}
+  .p-about .nums div{padding:12px 12px 0 0}
+  .p-about .nums b{display:block;font:900 clamp(40px,5vw,76px)/1 var(--sans);letter-spacing:-.05em}
+  .p-about .nums span{font:700 11px/1.3 var(--sans);text-transform:uppercase}
+  .p-about figure{position:relative}
+  .p-about figure svg{width:100%;height:auto;display:block}
+  .p-about figcaption{font:700 11px/1.3 var(--sans);text-transform:uppercase;margin-top:8px;display:flex;justify-content:space-between;gap:12px}
+  .route{fill:none;stroke:var(--accent-deep);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+  .route-dot{fill:var(--accent-deep)}
+  .dot-gu{fill:#0d0d0d}
+  .p-about .order{display:flex;flex-wrap:wrap;gap:4px 10px;font:500 13px/1.5 var(--sans);margin-top:12px}
+  .p-about .order li{list-style:none}
+  .p-about .order li::after{content:" →";color:#999}
+  .p-about .order li:last-child::after{content:""}
 
-  .end{text-align:center;background:var(--block-deep);color:#fff;border-radius:28px;padding:72px 24px;margin-bottom:56px}
-  .end h2{font-size:clamp(30px,4.4vw,48px);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:14px}
-  .end p{font-size:18px;opacity:.85;margin-bottom:30px}
-  .lp-foot{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;padding:0 0 48px;color:var(--ink-soft);font-size:14px}
-  .lp-foot a{color:inherit}
+  /* ── 개발: 터미널. 검은 판, 고정폭, 초록 프롬프트, 바뀐 것은 git log 처럼 ── */
+  .p-dev{background:#0b0d0c;color:#d6dbd5;font:400 13.5px/1.65 var(--mono);padding:22px 24px 26px;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px 40px}
+  .p-dev h3{font:500 12px/1 var(--mono);color:#7d877f;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+  .p-dev .ps{color:#8ee08a} .p-dev .cm{color:#7d877f} .p-dev .hl{color:#ffd27a}
+  .p-dev pre{font:inherit;white-space:pre-wrap;margin-bottom:18px}
+  .p-dev .big{font:500 clamp(28px,3.4vw,50px)/1.05 var(--mono);color:#fff;letter-spacing:-.02em;margin-bottom:6px}
+  .p-dev .tree{color:#bfc6bf}
+  .p-dev .log{list-style:none;max-height:430px;overflow:auto;border-top:1px solid #2a2f2b;scrollbar-color:#2a2f2b transparent}
+  .p-dev .log li{display:grid;grid-template-columns:6.6em 6.4em 1fr;gap:12px;padding:8px 0;border-bottom:1px solid #1c201d}
+  .p-dev .log .v{color:#ffd27a} .p-dev .log time{color:#7d877f}
+  .p-dev .bar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+  .p-dev .bar input{flex:1;min-width:0;background:#131714;border:1px solid #2a2f2b;color:#e8ece7;padding:6px 10px;font:inherit;outline:0}
+  .p-dev .bar input:focus{border-color:#8ee08a}
+  .p-dev .caret{display:inline-block;width:.6em;height:1.1em;background:#8ee08a;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
 
-  /* 스크롤로 드러남 — 한 번만, 아래서 살짝 떠오른다. 처음 보는 자리라 시간을 조금 쓴다 */
-  .js .rv{opacity:0;transform:translateY(18px);
-    transition:opacity .6s var(--ease-out),transform .6s var(--ease-out);transition-delay:calc(var(--i,0) * 60ms)}
-  .js .rv.in{opacity:1;transform:none}
-  @media (prefers-reduced-motion:reduce){
-    .js .rv{transform:none;transition:opacity .3s ease}
-    .gu{transition:background-color .2s ease,color .2s ease,border-color .2s ease}
-    .gu.on{transform:none}
-    .btn:active{transform:none}
-  }
-  :root[data-motion="off"].js .rv{opacity:1;transform:none;transition:none}
+  /* ── 스타일: 견본첩. 앱 바탕색 위 격자, 색 칩(이름·값·대비), 로고 꼴, 원칙 ── */
+  .p-style{background:var(--site-bg);color:var(--site-ink);padding:24px;font-weight:400;
+    background-image:linear-gradient(90deg,#dae2e7 1px,transparent 1px),linear-gradient(0deg,#dae2e7 1px,transparent 1px);background-size:48px 48px}
+  .p-style .logo{font:800 clamp(48px,7vw,110px)/1 var(--sans);letter-spacing:-.04em;margin-bottom:6px}
+  .p-style .logo b{font-weight:300}
+  .p-style .logo em{font-style:normal;color:var(--accent)}
+  .p-style .cap{font:700 11px/1.3 var(--sans);text-transform:uppercase;margin-bottom:24px}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:28px}
+  .chip{background:#f4f8f9;border-radius:20px;overflow:hidden;box-shadow:0 12px 18px -14px rgba(58,78,88,.22),0 2px 4px -2px rgba(58,78,88,.12)}
+  .chip i{display:block;height:92px;box-shadow:inset 0 -1px 0 rgba(58,78,88,.18)}
+  .chip div{padding:10px 12px 12px;font:500 12px/1.45 var(--mono)}
+  .chip b{display:block;font:700 14px/1.3 var(--sans)}
+  .chip small{display:block;color:#5b676e;font-family:var(--sans);margin-top:4px}
+  .p-style .two{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .card{background:#f4f8f9;border-radius:20px;padding:16px 18px;box-shadow:0 12px 18px -14px rgba(58,78,88,.22)}
+  .card h4{font:800 15px/1.3 var(--sans);margin-bottom:8px}
+  .card p{font:400 14px/1.65 var(--sans);color:#5b676e}
+  .demo{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .demo span{border-radius:10px;padding:8px 12px;font:700 14px/1 var(--sans);background:#d3dde3;border:2px solid transparent}
+  .demo span.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent-deep)}
+  .demo span.on::before{content:"✓ "}
+  .sig{display:flex;gap:10px;margin-top:12px}
+  .sig span{display:flex;align-items:center;gap:8px;font:600 13px/1 var(--sans)}
+  .sig i{width:22px;height:22px;display:inline-block}
+
+  /* ── 스토리: 책. 크림 종이, 명조, 가운데 길(점과 선)을 따라 정류장마다 한 줄 ── */
+  .p-story{background:#f1e9da;color:#2a2219;padding:clamp(24px,4vw,56px) clamp(16px,4vw,56px);font:400 17px/1.85 var(--serif)}
+  .p-story .kick{font:700 11px/1.3 var(--sans);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+  .p-story h3{font:600 clamp(30px,4.4vw,64px)/1.15 var(--serif);letter-spacing:-.02em;max-width:14em;margin-bottom:14px}
+  .p-story .intro{font-size:clamp(17px,1.6vw,21px);max-width:34em;margin-bottom:28px}
+  .p-story .tabs{display:flex;gap:16px;font:700 12px/1 var(--sans);text-transform:uppercase;margin-bottom:24px}
+  .p-story .tabs button[aria-selected="true"]{text-decoration:underline;text-underline-offset:3px}
+  .walk{list-style:none;position:relative;columns:2 22em;column-gap:56px}
+  .walk li{break-inside:avoid;position:relative;padding:0 0 22px 34px}
+  .walk li::before{content:"";position:absolute;left:8px;top:.9em;bottom:-.2em;border-left:1.5px dotted #8c7a62}
+  .walk li:last-child::before{display:none}
+  .walk li::after{content:"";position:absolute;left:3px;top:.55em;width:12px;height:12px;border-radius:50%;background:#2a2219}
+  .walk b{font-weight:600;font-size:1.08em}
+  .walk .no{font:700 11px/1 var(--sans);color:#8c7a62;margin-right:8px}
+  .walk p{font-size:15.5px;line-height:1.75}
+  .p-story .src{font:500 12px/1.5 var(--sans);color:#8c7a62;margin-top:12px}
+
+  /* ── 플레이: 오락기. 주황 판, 큰 숫자 계기, 점 지도 위 다음 칸, 자판 같은 칸들 ── */
+  .p-play{background:var(--accent);color:var(--on-accent);padding:22px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:22px}
+  .p-play .screen{background:#232c31;color:#fff;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px}
+  .p-play .hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .p-play .hud div{background:rgba(255,255,255,.07);border-radius:12px;padding:8px 10px}
+  .p-play .hud b{display:block;font:800 clamp(22px,2.6vw,38px)/1 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+  .p-play .hud span{font:700 10px/1 var(--sans);text-transform:uppercase;opacity:.7}
+  .p-play svg{width:100%;height:auto;display:block}
+  .p-play .g{fill:#4a5a5e} .p-play .g.done{fill:var(--block)} .p-play .g.now{fill:var(--accent)}
+  .p-play .field{display:flex;gap:8px;align-items:center;background:#fff;color:#232c31;border-radius:14px;padding:6px 6px 6px 14px;border:3px solid transparent}
+  .p-play .field:focus-within{border-color:var(--accent-deep)}
+  .p-play .field input{flex:1;min-width:0;border:0;outline:0;background:none;font:800 22px/1.2 var(--sans);padding:6px 0}
+  .p-play .field button{background:#232c31;color:#fff;border-radius:10px;padding:10px 14px;font:800 14px/1 var(--sans)}
+  .p-play .hint{font:600 13px/1.4 var(--sans);opacity:.8;min-height:1.4em}
+  .p-play .hint label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
+  .mode{background:#fff;border-radius:18px;padding:14px 14px 16px;box-shadow:inset 0 -5px 0 rgba(0,0,0,.12);display:block;transition:transform .16s var(--ease)}
+  .mode:active{transform:translateY(2px)}
+  .mode i{font:800 11px/1 var(--sans);font-style:normal;text-transform:uppercase;opacity:.6}
+  .mode h4{font:900 22px/1.1 var(--sans);letter-spacing:-.03em;margin:6px 0}
+  .mode p{font:500 13px/1.5 var(--sans)}
+  .mode.ranked{background:var(--ranked);color:#fff}
+  .mode.wide{grid-column:1/-1}
+  .tiers{display:flex;gap:4px;margin-top:8px;font:700 10px/1 var(--sans)}
+  .tiers span{flex:1;padding:6px 4px;border-radius:6px;background:rgba(255,255,255,.18);text-align:center}
+  .steps{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .steps li{list-style:none;background:rgba(255,255,255,.35);border-radius:16px;padding:12px 14px;font:500 13.5px/1.55 var(--sans)}
+  .steps b{display:block;font:900 16px/1.2 var(--sans);margin-bottom:4px}
+
+  footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 12px;text-transform:uppercase;border-top:1.5px solid var(--ink);margin-top:10px}
 
   @media (max-width:860px){
-    .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding:44px 0 72px}
-    .lp-steps,.why{grid-template-columns:1fr}
-    .lp-stats{grid-template-columns:1fr;padding-bottom:72px}
-    .lp-top nav a:not(.btn){display:none}
+    .meta{grid-template-columns:1fr auto;gap:8px 16px}
+    .meta .date,.meta .mid,#ver{display:none}
+    .th .t:nth-child(n+3){display:none}
+    .en{display:none}
+    .p-about,.p-dev,.p-play{grid-template-columns:minmax(0,1fr)}
+    .p-style .two,.steps{grid-template-columns:1fr}
+    .p-dev .log li{grid-template-columns:1fr;gap:2px}
+    .p-play .hud{grid-template-columns:repeat(2,1fr)}
+    .modes{grid-template-columns:minmax(0,1fr)}
   }
-  @media (max-width:420px){ .gu{font-size:9px;border-radius:7px;letter-spacing:-.04em} .gu.on::before{content:none} .seoul{gap:4px} .try{padding:14px} }
+  @media (max-width:480px){ .th .t:nth-child(n+2){display:none} .menu{padding:0 8px} }
+  @media (prefers-reduced-motion:reduce){
+    .drawer,.sign,.row,.mode{transition:none}
+    .p-dev .caret{animation:none}
+  }
 </style>
 </head>
 <body>
 
-<svg class="grid-bg" aria-hidden="true">
-  <defs><pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152"><path d="M152 0 V152 H0"/></pattern></defs>
-  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
-</svg>
-
-<header class="lp-top">
-  <div class="lp">
-    <a class="lp-logo" href="/">regiontype</a>
-    <nav>
-      <a href="#how">플레이 방법</a>
-      <a href="/about/">소개</a>
-      <a class="btn btn-go btn-sm" href="/">시작하기</a>
-    </nav>
-  </div>
+<header class="meta">
+  <a href="../../">regiontype</a>
+  <span class="date" id="date"></span>
+  <span class="mid" role="group" aria-label="펼치기">↓<button type="button" id="openAll" aria-pressed="false">모두 펼치기</button> / <button type="button" id="closeAll" aria-pressed="true">접기</button></span>
+  <span id="ver">v—</span>
+  <span><a class="play-cta" href="../../">바로 플레이</a><span class="ring" aria-hidden="true"></span></span>
 </header>
 
-<main class="lp">
-  <section class="hero">
-    <div>
-      <p class="kicker rv">지명 타자연습</p>
-      <h1 class="rv" style="--i:1">지명을 치면,<br><em>지도가 남는다.</em></h1>
-      <p class="lead rv" style="--i:2">지도에 뜬 지역 이름을 손으로 직접 칩니다. 눈으로 훑으면 "봤다"에서
-        끝나지만, 한 글자씩 옮겨 치면 이름과 자리가 같이 붙습니다.</p>
-      <div class="ctas rv" style="--i:3">
-        <a class="btn btn-go" href="/">지금 쳐 보기 <span aria-hidden="true">→</span></a>
-        <a class="btn btn-ghost" href="#how">어떻게 하나요</a>
+<h1 class="sr">regiontype — 지명을 치는 타자연습</h1>
+
+<ol class="menu">
+  <!-- 소개 -->
+  <li class="row" id="about">
+    <button class="head" type="button" aria-expanded="false" aria-controls="d-about">
+      <span class="nm">소개</span><span class="en">About</span>
+      <span class="th" aria-hidden="true"><span class="t t-dot" id="th-map"></span><span class="t t-num">423</span><span class="t t-num" style="background:var(--accent)">25</span></span>
+      <span class="sign" aria-hidden="true">+</span>
+    </button>
+    <div class="drawer" id="d-about" role="region" aria-label="소개"><div><div class="panel p-about">
+      <p class="lede">지도에 뜬 지역 이름을 손으로 직접 칩니다. 눈으로 훑으면 "봤다"에서 끝나지만, 한 글자씩 옮겨 치면 이름과 자리가 같이 붙습니다.</p>
+      <div>
+        <div class="cols">
+          <p>regiontype은 지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습입니다. 서울 25개 자치구에서 시작해, 구를 하나 고르면 그 안의 행정동으로 들어갑니다. <b>전부 합치면 423개</b>입니다.</p>
+          <p>지명은 눈으로 훑을 때보다 손으로 칠 때 오래 남습니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 하기 때문입니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
+          <p><b>코스는 무작위가 아니라 이어진 길입니다.</b> 자치구 코스는 서쪽 끝 강서구에서 출발해 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대가 되도록 짰습니다.</p>
+          <p>가나다순으로 외우면 강남·강동·강북·강서가 한꺼번에 몰려 서로 헷갈립니다. 같은 '강' 자를 쓰지만 강서구는 서쪽 끝, 강동구는 동쪽 끝입니다.</p>
+        </div>
+        <div class="nums"><div><b>25</b><span>서울 자치구</span></div><div><b>423</b><span>서울 행정동</span></div><div><b>46</b><span>나라의 행정구역</span></div></div>
       </div>
-    </div>
+      <figure>
+        <svg id="route" viewBox="0 0 1000 822" role="img" aria-label="강서구에서 성북구까지 시계 방향으로 도는 자치구 코스"></svg>
+        <figcaption><span>자치구 코스 — 강서구 → 성북구</span><span>시계 방향</span></figcaption>
+        <ol class="order" id="order"></ol>
+      </figure>
+    </div></div></div>
+  </li>
 
-    <!-- 써 보는 판. 그냥 두면 저절로 쳐 나가고, 칸을 누르면 직접 친다 -->
-    <div class="try rv" style="--i:2">
-      <div class="seoul" id="seoul" aria-hidden="true"></div>
-      <form class="typer" id="typer" autocomplete="off">
-        <label for="tryIn" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">서울 자치구 이름</label>
-        <input id="tryIn" placeholder="강남구" spellcheck="false" autocapitalize="off" enterkeyhint="done">
-        <span class="score" id="score" aria-live="polite">0 / 25</span>
-      </form>
-      <p class="try-hint" id="hint">칸을 눌러 서울 구 이름을 쳐 보세요. 스페이스나 Enter 로 확정합니다.</p>
-    </div>
-  </section>
+  <!-- 개발 -->
+  <li class="row" id="dev">
+    <button class="head" type="button" aria-expanded="false" aria-controls="d-dev">
+      <span class="nm">개발</span><span class="en">Development</span>
+      <span class="th" aria-hidden="true"><span class="t t-term">$ python3
+  -m http
+  .server
+▍</span><span class="t t-ver" id="th-ver">v—</span><span class="t t-term" style="color:#ffd27a">?rt=1
+ok ✓</span></span>
+      <span class="sign" aria-hidden="true">+</span>
+    </button>
+    <div class="drawer" id="d-dev" role="region" aria-label="개발"><div><div class="panel p-dev">
+      <div>
+        <h3>regiontype.com / main</h3>
+        <p class="big" id="dev-ver">v—</p>
+        <pre class="cm" id="dev-ver-note"># 릴리스 이름 vA.B.C — C 는 app.js 의 VER 에서 점을 뺀 숫자</pre>
+        <h3>stack</h3>
+        <pre><span class="hl">정적 파일뿐이다.</span> 빌드 단계도, 패키지 매니저도,
+프레임워크도 없다. 새로 들이지 않는다.</pre>
+        <pre><span class="ps">$</span> python3 -m http.server 3000   <span class="cm"># 실행</span>
+<span class="ps">$</span> open localhost:3000/?rt=1      <span class="cm"># 판정 엔진 자체검사</span>
+<span class="ps">$</span> node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre>
+        <pre class="tree">.
+├── app.js        <span class="cm"># 단일 파일. 핵심은 matchInput()</span>
+├── style.css     <span class="cm"># 단일 파일. 색·간격은 커스텀 프로퍼티</span>
+├── data/         <span class="cm"># tools/*.py 가 찍은 지도·코스</span>
+├── relay/        <span class="cm"># Cloudflare Worker — 순위·경쟁전</span>
+└── mimi/ beta/   <span class="cm"># 실험 갈래</span></pre>
+        <pre><span class="cm"># 경쟁전 판정은 Durable Objects 가 맡고,
+# 실력은 Glicko-2 로 매긴다.</span> <span class="caret" aria-hidden="true"></span></pre>
+      </div>
+      <div>
+        <h3>git log — 바뀐 것</h3>
+        <div class="bar"><label class="sr" for="grep">바뀐 것 찾기</label><span class="ps">grep</span><input id="grep" placeholder="Safari" autocomplete="off" spellcheck="false"><span class="cm" id="hits"></span></div>
+        <ol class="log" id="log"></ol>
+      </div>
+    </div></div></div>
+  </li>
 
-  <section class="lp-stats" aria-label="숫자로 보기">
-    <div class="lp-stat rv"><b>25</b><span>서울 자치구</span></div>
-    <div class="lp-stat rv" style="--i:1"><b>423</b><span>서울 행정동</span></div>
-    <div class="lp-stat rv" style="--i:2"><b>46</b><span>나라의 행정구역 코스</span></div>
-  </section>
+  <!-- 스타일 -->
+  <li class="row" id="style">
+    <button class="head" type="button" aria-expanded="false" aria-controls="d-style">
+      <span class="nm">스타일</span><span class="en">Style</span>
+      <span class="th" aria-hidden="true"><span class="t t-sw"><i style="background:#f0a03c"></i><i style="background:#6f9a9e"></i><i style="background:#c8322a"></i><i style="background:#e8edf0"></i></span><span class="t t-logo">region<b>type</b><em>•</em></span><span class="t t-sw"><i style="background:#496a6d"></i><i style="background:#e07a3a"></i><i style="background:#007aff"></i><i style="background:#f6c037"></i></span></span>
+      <span class="sign" aria-hidden="true">+</span>
+    </button>
+    <div class="drawer" id="d-style" role="region" aria-label="스타일"><div><div class="panel p-style">
+      <p class="logo" aria-label="regiontype 로고">region<b>type</b><em>•</em></p>
+      <p class="cap">굵은 region · 가는 type · 주황 점 — 앱 바탕색과 격자 위에서</p>
+      <div class="chips" id="chips"></div>
+      <div class="two">
+        <div class="card"><h4>색만으로 말하지 않는다</h4><p>칠해진 칸은 색에 더해 테두리와 체크 표시를 함께 붙입니다. 상태는 늘 테두리·라벨·숫자로도 읽힙니다.</p>
+          <div class="demo" aria-hidden="true"><span>강서구</span><span class="on">양천구</span><span>구로구</span></div></div>
+        <div class="card"><h4>움직임은 줄일 수 있다</h4><p>운영체제의 '동작 줄이기'를 따릅니다. 이 페이지의 펼침도 그 설정에서는 바로 열립니다. 모든 기능은 키보드로 다룹니다.</p></div>
+        <div class="card"><h4>갈래마다 서명색</h4><p>실험 갈래는 제 색을 하나씩 가집니다. 그래픽에만 쓰고 글자에는 쓰지 않습니다.</p>
+          <div class="sig"><span><i style="background:#007aff;clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)"></i>3D 내비게이션</span><span><i style="background:#f6c037;border-radius:50%;box-shadow:inset 0 0 0 6px #111"></i>동네버스</span></div></div>
+      </div>
+    </div></div></div>
+  </li>
 
-  <section class="sec" id="how">
-    <h2 class="rv">세 걸음이면 됩니다.</h2>
-    <p class="rv" style="--i:1">가입도, 설치도 없습니다. 지도에서 고르고, 치고, 결과를 봅니다.</p>
-    <div class="lp-steps">
-      <article class="lp-step rv">
-        <img src="../assets/howto/pick.png?v=4.94" alt="홈의 도트 서울 지도에서 구 하나가 주황으로 골라진 모습" loading="lazy">
-        <div><h3><i>1</i>코스 고르기</h3><p>도트로 그린 지도에서 구를 누르면 그곳이 코스가 됩니다. 구 안으로 들어가면 행정동까지.</p></div>
-      </article>
-      <article class="lp-step rv" style="--i:1">
-        <img src="../assets/howto/type.svg?v=4.94" alt="판 위에서 지명을 치는 화면" loading="lazy">
-        <div><h3><i>2</i>치기</h3><p>카운트다운이 끝나면 바로 칩니다. 연달아 맞히면 콤보가 붙고, 이웃한 곳을 따라 길이 이어집니다.</p></div>
-      </article>
-      <article class="lp-step rv" style="--i:2">
-        <img src="../assets/howto/result.svg?v=4.94" alt="속도·정확도와 들른 곳이 칠해진 결과 카드" loading="lazy">
-        <div><h3><i>3</i>결과 보기</h3><p>속도, 들른 곳, 정확도, 내 최고 기록. 놓친 곳은 카드에 따로 표시됩니다.</p></div>
-      </article>
-    </div>
-  </section>
+  <!-- 스토리 -->
+  <li class="row" id="story">
+    <button class="head" type="button" aria-expanded="false" aria-controls="d-story">
+      <span class="nm">스토리</span><span class="en">Story</span>
+      <span class="th" aria-hidden="true"><span class="t t-book">염창</span><span class="t t-quote">"소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다."</span><span class="t t-book" style="background:#2a2219;color:#f1e9da">鹽倉</span></span>
+      <span class="sign" aria-hidden="true">+</span>
+    </button>
+    <div class="drawer" id="d-story" role="region" aria-label="스토리"><div><div class="panel p-story">
+      <p class="kick">코스마다 이야기가 붙는다</p>
+      <h3 id="st-title">강서구 20개 행정동</h3>
+      <p class="intro" id="st-intro"></p>
+      <div class="tabs" role="tablist" aria-label="이야기 고르기">
+        <button type="button" role="tab" aria-selected="true" data-st="gangseo-dong">강서구 스무 동</button>
+        <button type="button" role="tab" aria-selected="false" data-st="seoul-gu">서울 스물다섯 구</button>
+      </div>
+      <ol class="walk" id="walk"></ol>
+      <p class="src">한 줄 소개는 코스 데이터(data/*.course.json)에 실린 그대로입니다.</p>
+    </div></div></div>
+  </li>
 
-  <section class="sec">
-    <h2 class="rv">순서가 곧 지도입니다.</h2>
-    <p class="rv" style="--i:1">코스는 무작위가 아니라 이어진 길입니다. 자치구 코스는 서쪽 끝 강서구에서
-      시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다.</p>
-    <div class="why">
-      <div class="rv"><h3>손이 기억합니다</h3><p>철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 그래서 오래 남습니다.</p></div>
-      <div class="rv" style="--i:1"><h3>겨뤄 볼 수도</h3><p>로그인하고 시작하기를 꾹 누르면 경쟁전. 같은 코스를 다른 사람과 겨룹니다.</p></div>
-      <div class="rv" style="--i:2"><h3>키보드만으로</h3><p>모든 기능을 키보드로 다룹니다. 폰에서는 화면 아래 게임 자판으로 칩니다.</p></div>
-    </div>
-  </section>
+  <!-- 플레이 -->
+  <li class="row" id="play">
+    <button class="head" type="button" aria-expanded="false" aria-controls="d-play">
+      <span class="nm">플레이</span><span class="en">Play</span>
+      <span class="th" aria-hidden="true"><span class="t t-key">ㄱ</span><span class="t t-key dark">↵</span><span class="t t-key red">RANKED</span></span>
+      <span class="sign" aria-hidden="true">+</span>
+    </button>
+    <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel p-play">
+      <div class="screen">
+        <div class="hud" aria-live="off">
+          <div><b id="h-n">0/25</b><span>들른 곳</span></div>
+          <div><b id="h-cpm">0</b><span>타/분</span></div>
+          <div><b id="h-combo">0</b><span>콤보</span></div>
+          <div><b id="h-t">0.0</b><span>초</span></div>
+        </div>
+        <svg id="pmap" viewBox="0 0 1000 822" role="img" aria-label="서울 자치구 지도 — 주황 칸이 지금 칠 곳"></svg>
+        <div class="field"><label class="sr" for="pin">지금 칠 곳의 이름</label>
+          <input id="pin" autocomplete="off" spellcheck="false" placeholder="주황 칸의 이름">
+          <button type="button" id="reset">처음부터</button></div>
+        <p class="hint"><label><input type="checkbox" id="hintOn" checked> 힌트</label> <span id="hintText" aria-live="polite"></span></p>
+      </div>
+      <div class="modes">
+        <a class="mode wide" href="../../"><i>01 — 연습</i><h4>지명 타자연습</h4><p>코스를 고르고, 치고, 결과를 봅니다. 서울은 동 단위까지, 나라는 마흔여섯.</p></a>
+        <a class="mode ranked wide" href="../../"><i>02 — 경쟁전</i><h4>같은 코스, 다른 사람</h4><p>로그인하고 시작하기를 꾹 누르면 경쟁전. 티어가 곧 타자 속도입니다.</p>
+          <div class="tiers" aria-label="티어별 기대 속도"><span>브론즈 III<br>100</span><span>골드 III<br>200</span><span>마스터<br>350</span></div></a>
+        <a class="mode" href="../../mimi/"><i>03 — 실험</i><h4>mimi</h4><p>보드게임처럼 두꺼운 지형 위에서 지역을 타이핑한다.</p></a>
+        <a class="mode" href="../../beta/bus/"><i>04 — 실험</i><h4>동네버스</h4><p>정류장 이름을 쳐서 버스를 보내 손님을 실어 나릅니다.</p></a>
+        <a class="mode wide" href="../../beta/3dnavigation/"><i>05 — 실험</i><h4>3D 내비게이션</h4><p>실제 지도와 3D 건물 위에서 동 이름을 칩니다.</p></a>
+      </div>
+      <ol class="steps">
+        <li><b>1. 코스 고르기</b>홈의 서울 지도에서 구를 누르면 그곳이 코스가 됩니다. 같은 구를 한 번 더 누르면 행정동 지도가 펼쳐집니다.</li>
+        <li><b>2. 치기</b>카운트다운이 끝나면 바로 칩니다. 연달아 맞히면 콤보가 붙고, 이웃한 곳을 따라 길이 이어집니다.</li>
+        <li><b>3. 결과 보기</b>속도, 들른 곳, 정확도, 내 최고 기록. 놓친 곳은 카드에 따로 표시됩니다.</li>
+      </ol>
+    </div></div></div>
+  </li>
+</ol>
 
-  <section class="end rv">
-    <h2>서울, 얼마나 아세요?</h2>
-    <p>강서구부터 성북구까지, 한 바퀴 돌아보세요.</p>
-    <a class="btn btn-go" href="/">시작하기 <span aria-hidden="true">→</span></a>
-  </section>
-
-  <footer class="lp-foot">
-    <span>regiontype</span>
-    <span><a href="/about/">소개</a> · <a href="/community/">커뮤니티</a> · <a href="/policy/">개인정보</a> · <a href="/terms/">약관</a></span>
-  </footer>
-</main>
+<footer><span>regiontype.com</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a> · <a href="../../community/">커뮤니티</a></span></footer>
 
 <script>
-// 서울 25구. 순서는 앱의 자치구 코스(강서구에서 시계 방향), 자리는 8×7 격자의 [열, 행]
-const GU = [
-  ['강서구',1,4],['양천구',2,5],['구로구',2,6],['금천구',3,7],['영등포구',3,5],
-  ['마포구',3,4],['서대문구',4,4],['은평구',3,2],['종로구',4,3],['중구',5,4],
-  ['용산구',4,5],['동작구',4,6],['관악구',4,7],['서초구',5,7],['강남구',6,6],
-  ['송파구',7,6],['강동구',8,4],['광진구',7,5],['성동구',6,5],['동대문구',6,4],
-  ['중랑구',7,3],['노원구',6,2],['도봉구',6,1],['강북구',5,2],['성북구',5,3],
-];
-const board = document.getElementById('seoul');
-const cells = new Map(GU.map(([n, c, r]) => {
-  const el = document.createElement('span');
-  el.className = 'gu'; el.textContent = n;
-  el.style.gridColumn = c; el.style.gridRow = r;
-  board.append(el);
-  return [n, el];
+const NS='http://www.w3.org/2000/svg', $=id=>document.getElementById(id);
+const el=(tag,attrs={},parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.append(e);return e};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const d=new Date();$('date').textContent=`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+
+// ── 펼침. 한 번에 한 줄만 열고, 주소의 #이름 으로 바로 연다 ──
+const rows=[...document.querySelectorAll('.row')];
+function setOpen(row,open){
+  row.classList.toggle('open',open);row.querySelector('.head').setAttribute('aria-expanded',open);
+  // 폰(pointer:coarse)에서는 자판이 저절로 뜨지 않게 초점을 옮기지 않는다
+  if(open&&row.id==='play'&&!matchMedia('(pointer:coarse)').matches)setTimeout(()=>$('pin').focus({preventScroll:true}),reduce?0:350);
+}
+rows.forEach(r=>r.querySelector('.head').addEventListener('click',()=>{
+  const open=!r.classList.contains('open');
+  rows.forEach(x=>x!==r&&setOpen(x,false));setOpen(r,open);
+  history.replaceState(null,'',open?'#'+r.id:location.pathname);
+  if(open)setTimeout(()=>r.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'}),reduce?0:120);
 }));
-const input = document.getElementById('tryIn');
-const score = document.getElementById('score');
-const hint = document.getElementById('hint');
-const done = new Set();
-const still = matchMedia('(prefers-reduced-motion: reduce)').matches
-  || document.documentElement.dataset.motion === 'off';
+$('openAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,true));$('openAll').setAttribute('aria-pressed',true);$('closeAll').setAttribute('aria-pressed',false)});
+$('closeAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,false));$('openAll').setAttribute('aria-pressed',false);$('closeAll').setAttribute('aria-pressed',true)});
+const fromHash=()=>{const h=location.hash.slice(1);if(h&&$(h)&&$(h).classList.contains('row')){rows.forEach(x=>setOpen(x,x.id===h))}};
+fromHash();addEventListener('hashchange',fromHash);
 
-function claim(n) {
-  done.add(n); cells.get(n).classList.add('on');
-  score.textContent = done.size + ' / 25';
-}
-function reset() {
-  done.clear(); cells.forEach(el => el.classList.remove('on'));
-  score.textContent = '0 / 25';
-}
+// ── 버전: app.js 의 VER 에서 읽는다. VER '5.03' → v0.11.503 의 C 자리(503) ──
+fetch('../../app.js').then(r=>r.text()).then(t=>{
+  const m=t.match(/const VER\s*=\s*'([\d.]+)'/);if(!m)return;
+  const c=m[1].replace('.','');
+  return fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
+    // A.B 는 사람이 고른다 — 가장 최근 항목의 A.B 를 그대로 쓰고 C 만 VER 에서 옮긴다
+    const ab=(list[0]&&list[0].v||'0.0.0').split('.').slice(0,2).join('.');
+    const v=`v${ab}.${c}`;
+    $('ver').textContent=v;$('th-ver').textContent=v;$('dev-ver').textContent=v;
+    $('dev-ver-note').textContent=`# VER = '${m[1]}' — C 자리는 VER 에서 점을 뺀 숫자다`;
+  });
+}).catch(()=>{});
 
-// 저절로 치기 — 보는 사람이 판을 건드리기 전까지만. 글자를 한 자씩 placeholder 에 찍는다
-let auto = null;
-function demo() {
-  let i = 0, k = 0;
-  const tick = () => {
-    const n = GU[i][0];
-    if (k < n.length) { input.placeholder = n.slice(0, ++k); auto = setTimeout(tick, 110); return; }
-    claim(n); i++; k = 0;
-    if (i === GU.length) { auto = setTimeout(() => { reset(); i = 0; tick(); }, 2400); return; }
-    auto = setTimeout(tick, 380);
-  };
-  auto = setTimeout(tick, 900);
-}
-if (!still) demo();
+// ── 지도 데이터 하나로 썸네일·코스 길·게임판을 그린다 ──
+Promise.all(['seoul-gu.geom','seoul-gu.course'].map(f=>fetch(`../../data/${f}.json`).then(r=>r.json()))).then(([g,course])=>{
+  const by={};
+  g.grid.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==='.')return;const n=g.items[parseInt(ch,36)].name;(by[n]=by[n]||[]).push([x,y])}));
+  const order=course.items.map(i=>i.name), center=Object.fromEntries(g.items.map(i=>[i.name,i.c]));
+  const cell=g.cell, r=cell*.36;
 
-// 직접 치기 — 스페이스(또는 Enter)로 확정한다. 조합 중에 칸을 비우면 IME 가 깨지므로
-// 조합이 끝난 input 에서만 견준다
-input.addEventListener('focus', () => {
-  if (auto === null && done.size === 0) return;
-  clearTimeout(auto); auto = null; reset(); input.placeholder = '강남구';
-  hint.textContent = '스페이스나 Enter 로 확정합니다.';
-}, { once: true });
-function check() {
-  const v = input.value.trim();
-  if (!cells.has(v)) return false;
-  if (!done.has(v)) claim(v);
-  input.value = '';
-  hint.textContent = done.size === 25 ? '25구를 다 돌았습니다. 이제 행정동 423곳이 기다립니다.' : v + ' ✓';
-  return true;
-}
-input.addEventListener('input', e => { if (!e.isComposing && /\s$/.test(input.value)) check(); });
-document.getElementById('typer').addEventListener('submit', e => {
-  e.preventDefault();
-  if (!check() && input.value.trim()) hint.textContent = '서울 구 이름이 아니에요 — 이름 끝의 "구"까지 칩니다.';
+  // 썸네일: 흰 점 서울
+  const ts=el('svg',{viewBox:`0 0 ${g.w} ${g.h}`},$('th-map'));
+  Object.values(by).flat().forEach(([x,y])=>el('circle',{cx:x*cell+cell/2,cy:y*cell+cell/2,r,fill:'#fff'},ts));
+
+  // 소개: 검은 점 지도 위로 시계 방향 코스 길
+  const rs=$('route');
+  Object.values(by).flat().forEach(([x,y])=>el('circle',{class:'dot-gu',cx:x*cell+cell/2,cy:y*cell+cell/2,r:cell*.3},rs));
+  const pts=order.map(n=>center[n]);
+  const path=el('polyline',{class:'route',points:pts.map(p=>p.join(',')).join(' ')},rs);
+  pts.forEach((p,i)=>el('circle',{class:'route-dot',cx:p[0],cy:p[1],r:i===0||i===pts.length-1?13:7},rs));
+  // 소개를 열 때 길이 그려진다
+  const len=path.getTotalLength?path.getTotalLength():0;
+  if(len&&!reduce){path.style.strokeDasharray=len;path.style.strokeDashoffset=len;
+    $('about').querySelector('.head').addEventListener('click',()=>{path.style.transition='none';path.style.strokeDashoffset=len;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{path.style.transition='stroke-dashoffset 2.4s cubic-bezier(.77,0,.175,1) .25s';path.style.strokeDashoffset=0}))});
+    if($('about').classList.contains('open'))path.style.strokeDashoffset=0;
+  }
+  $('order').replaceChildren(...order.map(n=>{const li=document.createElement('li');li.textContent=n;return li}));
+
+  // 플레이: 게임판
+  const pm=$('pmap'),gu={};
+  for(const n in by){gu[n]=by[n].map(([x,y])=>el('rect',{class:'g',x:x*cell+cell*.08,y:y*cell+cell*.08,width:cell*.84,height:cell*.84,rx:cell*.22},pm))}
+  game(order,gu);
 });
 
-// 스크롤로 드러남 — 들어온 것은 한 번만 켜고 놓아 준다
-const io = new IntersectionObserver(es => es.forEach(e => {
-  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-}), { rootMargin: '0px 0px -8% 0px' });
-document.querySelectorAll('.rv').forEach(el => io.observe(el));
+// ── 플레이 미니 게임 — 코스 순서대로 주황 칸의 이름을 친다 ──
+function game(order,gu){
+  const pin=$('pin');let i=0,combo=0,keys=0,t0=0,tick=null;
+  // 한글 한 글자를 자판 타수로 센다(초성·중성·종성, 겹모음·겹받침은 두 타)
+  const DV=new Set([9,10,11,14,15,16,19]),DJ=new Set([3,5,6,9,10,11,12,13,14,15,18]);
+  const strokes=s=>[...s].reduce((a,ch)=>{const c=ch.charCodeAt(0)-0xAC00;if(c<0||c>11171)return a+1;const v=(c/28|0)%21,j=c%28;return a+2+(DV.has(v)?1:0)+(j?1+(DJ.has(j)?1:0):0)},0);
+  const paint=()=>{
+    order.forEach((n,k)=>gu[n].forEach(r=>{r.classList.toggle('done',k<i);r.classList.toggle('now',k===i)}));
+    $('h-n').textContent=`${i}/${order.length}`;$('h-combo').textContent=combo;
+    $('hintText').textContent=i<order.length?($('hintOn').checked?`지금: ${order[i]}`:`지금: ${order[i][0]}${'○'.repeat(order[i].length-1)}`):'한 바퀴 끝 — 강서구에서 성북구까지';
+  };
+  const time=()=>{const s=(performance.now()-t0)/1000;$('h-t').textContent=s.toFixed(1);$('h-cpm').textContent=s>0?Math.round(keys/s*60):0};
+  const check=e=>{
+    if(e&&e.isComposing)return;
+    if(i>=order.length)return;
+    const v=pin.value.replace(/\s/g,'');
+    if(v&&!t0){t0=performance.now();tick=setInterval(time,100)}
+    if(v===order[i]){keys+=strokes(v);i++;combo++;pin.value='';paint();time();if(i>=order.length){clearInterval(tick)}}
+    else if(v.length>=order[i].length&&!order[i].startsWith(v)){combo=0;$('h-combo').textContent=0}
+  };
+  pin.addEventListener('input',check);pin.addEventListener('compositionend',()=>setTimeout(check));
+  pin.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){check()}});
+  $('hintOn').addEventListener('change',paint);
+  $('reset').addEventListener('click',()=>{i=0;combo=0;keys=0;t0=0;clearInterval(tick);pin.value='';$('h-t').textContent='0.0';$('h-cpm').textContent=0;paint();pin.focus()});
+  paint();
+}
+
+// ── 개발: 바뀐 것을 git log 처럼, grep 으로 거른다 ──
+fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
+  const log=$('log');
+  const draw=q=>{
+    const rs=list.filter(e=>!q||e.ko.includes(q)||e.v.includes(q)).slice(0,60);
+    log.replaceChildren(...rs.map(e=>{
+      const li=document.createElement('li');
+      const v=document.createElement('span');v.className='v';v.textContent='v'+e.v;
+      const t=document.createElement('time');t.dateTime=e.date;t.textContent=e.date;
+      const p=document.createElement('span');p.textContent=e.ko;
+      li.append(v,t,p);return li;
+    }));
+    $('hits').textContent=q?`${rs.length}건`:`${list.length}건`;
+  };
+  draw('');$('grep').addEventListener('input',e=>draw(e.target.value.trim()));
+});
+
+// ── 스타일: style.css 맨 위 :root 에서 색 토큰을 직접 읽는다 ──
+const NAMES={'--bg':['바탕','화면 바탕'],'--ink':['먹','본문 글자'],'--block':['칸','지도 칸'],'--block-deep':['짙은 칸','흰 글자 5.89:1'],
+  '--accent':['주황','강조·고른 칸'],'--accent-deep':['짙은 주황','그래픽 전용'],'--accent-text':['주황 글자','작은 글자용'],
+  '--on-accent':['주황 위 글자','6.64:1'],'--ranked':['경쟁전','흰 글자 5.1:1'],'--land':['땅','빈 칸'],'--card':['카드','판 바탕']};
+fetch('../../style.css').then(r=>r.text()).then(css=>{
+  const root=css.match(/:root\s*\{([\s\S]*?)\n\}/);if(!root)return;
+  const vals={};for(const [,k,v] of root[1].matchAll(/(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8})/g))vals[k]=v;
+  $('chips').replaceChildren(...Object.keys(NAMES).filter(k=>vals[k]).map(k=>{
+    const c=document.createElement('div');c.className='chip';
+    const sw=document.createElement('i');sw.style.background=vals[k];
+    const b=document.createElement('div');const t=document.createElement('b');t.textContent=NAMES[k][0];
+    b.append(t,document.createTextNode(`${k} ${vals[k]}`));const s=document.createElement('small');s.textContent=NAMES[k][1];b.append(s);
+    c.append(sw,b);return c;
+  }));
+});
+
+// ── 스토리: 코스 데이터의 한 줄 소개를 길처럼 늘어놓는다 ──
+const stories={};
+function story(slug){
+  const go=c=>{
+    $('st-title').textContent=c.title;$('st-intro').textContent=c.description||'';
+    $('walk').replaceChildren(...c.items.map((it,k)=>{
+      const li=document.createElement('li');
+      const no=document.createElement('span');no.className='no';no.textContent=String(k+1).padStart(2,'0');
+      const b=document.createElement('b');b.textContent=it.name;
+      const p=document.createElement('p');p.textContent=it.meta&&it.meta.description||'';
+      li.append(no,b,p);return li;
+    }));
+  };
+  if(stories[slug])return go(stories[slug]);
+  fetch(`../../data/${slug}.course.json`).then(r=>r.json()).then(c=>{stories[slug]=c;go(c)});
+}
+document.querySelectorAll('[data-st]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-selected',x===b));story(b.dataset.st);
+}));
+story('gangseo-dong');
 </script>
 </body>
 </html>
