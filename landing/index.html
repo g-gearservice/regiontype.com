@@ -16,16 +16,29 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../../favicon/white.png?v=5.07">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../../favicon/dark.png?v=5.07">
-<link rel="icon" type="image/png" sizes="any" href="../../favicon/dark.png?v=5.07">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../../favicon/white.png?v=5.08">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../../favicon/dark.png?v=5.08">
+<link rel="icon" type="image/png" sizes="any" href="../../favicon/dark.png?v=5.08">
 <!-- 공개 주소 /landing/. 초안 /landing/proto/ 는 같은 화면이고 검색에 올리지 않는다.
      줄 문법(맨 위 작은 한 줄, 굵고 큰 낱말, 작은 그림, +)은 그대로다.
      소개·스토리는 스크롤하면 문장이 바뀌고, 개발은 페이지와 같은 바탕이다.
      스타일은 3D 내비게이션·동네버스, 플레이는 게임을 그 자리에 띄우고, 플랜은 가격이 미정이다.
      색은 기기 테마(prefers-color-scheme)를 따른다. 소개 문장과 염창 한 줄은 소개 페이지·코스 데이터에 있는 말이다.
      상대 경로 ../../ 는 /landing/proto/ 에서 사이트 루트이고, /landing/ 에서는 원점 위로 더 올라가지 못해 같은 루트로 풀린다. -->
-<script>document.documentElement.classList.add('js')</script>
+<script>
+/* 입장. 이미 로그인한 사람은 홈으로. 이 화면을 다른 문서 안에 끼운 경우는 그대로 둔다. */
+(() => {
+  try {
+    let framed = false;
+    try { framed = window.top !== window.self; } catch { framed = true; }
+    if (localStorage.getItem('rt.token') && !framed) {
+      document.documentElement.style.visibility = 'hidden';
+      location.replace('/' + location.search);
+    }
+  } catch {}
+})();
+document.documentElement.classList.add('js');
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
@@ -93,9 +106,22 @@
   .t-ico svg{width:58%;height:58%}
   .t-book{font:600 clamp(14px,1.9vw,28px)/1 var(--sans);background:var(--chip)}
   .t-quote,.t-ink{background:var(--ink);color:var(--bg);font:500 clamp(14px,1.5vw,18px)/1.3 var(--sans)}
-  .t-key{background:var(--accent);color:var(--on-accent);font:800 clamp(16px,2.4vw,36px)/1 var(--sans);border-radius:14%;border-color:transparent;box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)}
-  .t-key.dark{background:#232c31;color:#fff;border-color:var(--ink)}
-  .t-key.red{background:var(--ranked);color:#fff;font-size:14px;border-color:transparent}
+  /* 플레이 줄의 세 칸 자리. 링크는 펼침 버튼 밖에 둔다. */
+  #play > .row-title{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;column-gap:clamp(10px,1.2vw,18px)}
+  #play > .row-title > .head{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;grid-row:1;align-items:center;width:auto;min-width:0}
+  #play > .row-title > .head .nm{grid-column:1}
+  #play > .row-title > .head .en{grid-column:2}
+  #play > .row-title > .head .sign{grid-column:4;margin-left:0}
+  #play .play-site{grid-column:3;grid-row:1;justify-self:start;align-self:center;position:relative;z-index:1;padding-block:4px;font:800 clamp(16px,2.8vw,40px)/1 var(--sans);letter-spacing:-.03em;text-decoration:underline;text-underline-offset:.14em;white-space:nowrap}
+  @media (max-width:860px){
+    #play > .row-title{grid-template-columns:auto minmax(0,1fr) auto}
+    #play > .row-title > .head .sign{grid-column:3}
+    #play .play-site{grid-column:2}
+  }
+  @media (max-width:370px){
+    #play > .row-title{grid-template-rows:auto auto;row-gap:2px}
+    #play .play-site{grid-column:1 / -1;grid-row:2}
+  }
 
   /* 스크롤 설명 — 칸은 뷰포트에 붙어 있고, 긴 궤도를 지나며 문장만 바뀐다 */
   .js .reel{height:calc(var(--n, 5) * 58vh + 100svh);position:relative}
@@ -161,22 +187,24 @@
   .live-btn{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;
     background:var(--ink);color:var(--bg);border-radius:999px;padding:12px 18px;font:700 16px/1 var(--sans)}
   .embed.is-live .live-btn{left:16px;top:16px;bottom:auto;transform:none}
+  /* 인라인 svg 의 hidden 은 HTML 전용 UA 규칙이라 그대로 그려진다 */
+  .live-btn svg[hidden]{display:none !important}
   .embed-out{position:absolute;z-index:2;right:16px;bottom:14px;font:600 14px/1 var(--sans);color:var(--ink);
     background:color-mix(in srgb,var(--bg) 88%,transparent);border-radius:999px;padding:6px 10px}
   .embed.is-live .embed-out{bottom:18px}
 
-  /* 플랜 — 월·연은 미정. 버튼은 아직 고를 수 없다 */
-  .plan-scroll{overflow-x:auto;background:var(--chip);border-radius:22px;padding:4px 6px 12px}
-  .plans{width:100%;min-width:720px;border-collapse:collapse}
-  .plans caption{caption-side:top;text-align:left;padding:16px 16px 6px;font:600 16px/1.5 var(--sans);color:var(--muted)}
-  .plans th,.plans td{text-align:left;vertical-align:top;padding:18px 16px;font-weight:500;font-size:16px}
-  .plans thead th{font:600 14px/1.3 var(--sans);color:var(--muted);padding-bottom:8px}
-  .plans tbody th{font:800 18px/1.25 var(--sans)}
-  .plans tbody tr + tr > *{border-top:1px solid var(--line)}
-  .plans .scope{font:500 16px/1.55 var(--sans);max-width:16em}
-  .plans thead th:nth-child(1){width:26%}
-  .plans thead th:nth-child(2),.plans thead th:nth-child(3){width:12%}
-  .plan-btn{display:flex;width:max-content;margin-top:12px;padding:8px 12px;border-radius:999px;border:1.5px solid var(--ink);
+  /* 플랜 — 세 칸이 가로로 선다. 월·연은 미정. 버튼은 아직 고를 수 없다.
+     이 화면은 _redirects 의 /landing/ 가 연다. 데이터 파일을 읽지 않는다. */
+  .plan-board{background:var(--chip);border-radius:22px;padding:16px 16px 18px}
+  .plan-note{padding:0 4px 14px;font:600 16px/1.5 var(--sans);color:var(--muted)}
+  .plans{display:flex;flex-flow:row nowrap;gap:12px;list-style:none;align-items:stretch;overflow-x:auto}
+  .plans > li{flex:1 0 220px;min-width:0;display:flex;flex-direction:column;gap:14px;padding:18px 16px;border-radius:16px;background:var(--bg);border:1.5px solid var(--line)}
+  .plans h3{font:800 clamp(20px,2vw,26px)/1.2 var(--sans);letter-spacing:-.02em}
+  .plan-rows{display:flex;flex-direction:column;gap:12px}
+  .plan-rows div{display:flex;flex-direction:column;gap:4px}
+  .plan-rows dt{font:600 14px/1.3 var(--sans);color:var(--muted)}
+  .plan-rows dd{font:500 16px/1.5 var(--sans)}
+  .plan-btn{margin-top:auto;align-self:flex-start;padding:8px 12px;border-radius:999px;border:1.5px solid var(--ink);
     background:transparent;color:var(--ink);-webkit-text-fill-color:var(--ink);font:700 14px/1 var(--sans);cursor:not-allowed;opacity:1}
 
   footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 12px;font-size:14px;font-weight:700;text-transform:uppercase;border-top:1.5px solid var(--ink);margin-top:10px}
@@ -373,11 +401,13 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
   </li>
 
   <li class="row" id="play">
-    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-play">
-      <span class="nm">플레이</span><span class="en">Play</span>
-      <span class="th" aria-hidden="true"><span class="t t-key">ㄱ</span><span class="t t-key dark">↵</span><span class="t t-key red">RANKED</span></span>
-      <span class="sign" aria-hidden="true">+</span>
-    </button></h2>
+    <h2 class="row-title">
+      <button class="head" type="button" aria-expanded="false" aria-controls="d-play">
+        <span class="nm">플레이</span><span class="en">Play</span>
+        <span class="sign" aria-hidden="true">+</span>
+      </button>
+      <a class="play-site" href="../../">regiontype.com <span aria-hidden="true">↗</span></a>
+    </h2>
     <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel">
       <div class="embed" id="embed">
         <div class="embed-head">
@@ -404,38 +434,37 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
       <span class="sign" aria-hidden="true">+</span>
     </button></h2>
     <div class="drawer" id="d-plans" role="region" aria-label="플랜"><div><div class="panel">
-      <div class="plan-scroll">
-        <table class="plans">
-          <caption>월·연 가격은 미정입니다. 아직 고를 수 없습니다.</caption>
-          <thead>
-            <tr>
-              <th scope="col">플랜</th>
-              <th scope="col">월</th>
-              <th scope="col">연</th>
-              <th scope="col">지도 범위</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">Capital (수도), 무료<button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button></th>
-              <td>미정</td>
-              <td>미정</td>
-              <td class="scope">지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</td>
-            </tr>
-            <tr>
-              <th scope="row">Nation (전국)<button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button></th>
-              <td>미정</td>
-              <td>미정</td>
-              <td class="scope">고른 나라 하나의 전국</td>
-            </tr>
-            <tr>
-              <th scope="row">World (세계)<button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button></th>
-              <td>미정</td>
-              <td>미정</td>
-              <td class="scope">모든 나라의 전국</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="plan-board">
+        <p class="plan-note">월·연 가격은 미정입니다. 아직 고를 수 없습니다.</p>
+        <ul class="plans">
+          <li>
+            <h3>Capital (수도), 무료</h3>
+            <dl class="plan-rows">
+              <div><dt>월</dt><dd>미정</dd></div>
+              <div><dt>연</dt><dd>미정</dd></div>
+              <div><dt>지도 범위</dt><dd>지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</dd></div>
+            </dl>
+            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
+          </li>
+          <li>
+            <h3>Nation (전국)</h3>
+            <dl class="plan-rows">
+              <div><dt>월</dt><dd>미정</dd></div>
+              <div><dt>연</dt><dd>미정</dd></div>
+              <div><dt>지도 범위</dt><dd>고른 나라 하나의 전국</dd></div>
+            </dl>
+            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
+          </li>
+          <li>
+            <h3>World (세계)</h3>
+            <dl class="plan-rows">
+              <div><dt>월</dt><dd>미정</dd></div>
+              <div><dt>연</dt><dd>미정</dd></div>
+              <div><dt>지도 범위</dt><dd>모든 나라의 전국</dd></div>
+            </dl>
+            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
+          </li>
+        </ul>
       </div>
     </div></div></div>
   </li>
@@ -510,8 +539,9 @@ function setLive(on){
   const b=$('liveBtn');
   b.setAttribute('aria-pressed',on?'true':'false');
   b.querySelector('.live-label').textContent=on?'pause':'play';
-  b.querySelector('.ico-play').hidden=on;
-  b.querySelector('.ico-pause').hidden=!on;
+  // SVGElement.hidden 은 속성에 반영되지 않아 아이콘이 같이 남는다
+  b.querySelector('.ico-play').toggleAttribute('hidden', on);
+  b.querySelector('.ico-pause').toggleAttribute('hidden', !on);
 }
 $('liveBtn').addEventListener('click',()=>setLive(!$('embed').classList.contains('is-live')));
 $('goPlay').addEventListener('click',e=>{
