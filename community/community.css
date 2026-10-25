@@ -20,7 +20,7 @@ body{overflow:auto}
 .cm{padding-top:40px;padding-bottom:96px}
 .cm h1{font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
 .cm h1:focus{outline:none}
-/* 목록 제목은 다른 화면 머리줄처럼 위 흐림 띠(.page-blur, z-index 3) 위에 선다 */
+/* 목록 제목은 다른 화면 머리줄처럼 덮개 위층(z-index 4)에 선다 */
 #listView > h1{position:relative;z-index:4}
 .cm-lead{margin-top:10px;font-size:17px;color:var(--ink-soft)}
 .cm a{color:var(--accent-text)}

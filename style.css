@@ -230,36 +230,17 @@ body > #regions{transition:opacity var(--slow) var(--ease-out)}
   #regions::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
   /* @@settings */
   /* 설정 덮개도 문서 안으로 — 덮개를 위아래 --bleed 만큼 늘려 목록이 상태바·주소창 밑으로 지나가게 한다.
-     스크롤 통은 덮개가 아니라 .opts-shell 이다(흐림 띠·머리줄이 덮개의 absolute 자식으로 제자리에 서야 해서).
-     fixed 띠는 막대 밑에 안 그려지니 띠를 스크롤 통 밖 absolute 로 둔다. 늘린 만큼 안쪽 여백·머리줄을 내려 보이는 자리는 그대로다 */
+     스크롤 통은 덮개가 아니라 .opts-shell 이다(머리줄이 덮개의 absolute 자식으로 제자리에 서야 해서).
+     늘린 만큼 안쪽 여백·머리줄을 내려 보이는 자리는 그대로다 */
   :root body:is(.set,.setting) > #options.opts-over{position:absolute;top:0;bottom:auto;inset-inline:0;height:calc(100dvh + 2 * var(--bleed));
     padding:0;overflow:visible}
   :root body:is(.set,.setting) #options .opts-shell{position:absolute;inset:0;margin:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
     padding:calc(var(--bleed) + var(--oh) + .4rem) 0 calc(var(--bleed) + 40px + var(--dock-h) + 60px)}
   :root body:is(.set,.setting) #options .screen-head{position:absolute;top:var(--bleed);left:0;right:0}
-  /* 아래 띠: 덮개 바닥(문서 여백 끝)까지 — 주소창 밑도 흐리다. 마스크는 띠 높이가 아니라 보이는 범위 --h 로 잰다 */
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot{position:absolute;--h:var(--blur-bot);height:calc(var(--bleed) + var(--h));bottom:0}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot::after{display:none}
-  /* 위 띠: 보이는 칸 위 끝 +8px 에서 시작 — 더 위로 뻗으면 Safari 가 상태바 칸을 --bg 로 덮는다. 들어오는 쪽은 마스크 둘을 교차해 0 에서 올린다 */
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot){position:absolute;--h:var(--blur-top);top:calc(var(--bleed) + 8px);height:calc(var(--h) - 8px)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > span{mask:none;-webkit-mask:none;-webkit-mask-composite:source-in;mask-composite:intersect}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(2){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(3){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(4){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(5){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur:not(.bot) > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%)}
-  :root body:is(.set,.setting) > #options > .backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
   /* 보안 판은 따로 굴리지 않는다 — 자기 높이 안에서 굴리면 내용이 판 끝에서 잘려 막대 밑까지 못 간다.
      막대 끝까지 늘어난 .opts-shell 이 함께 굴리고, 위아래 자리는 그 안쪽 여백이 맞춘다 */
   :root body:is(.set,.setting) #options #optsSecurity:not([hidden]){overflow:visible;flex:none;min-height:auto;margin-top:0}
-  /* 보안 판은 끝까지 굴리면 마지막 줄이 아래 띠(폰 --blur-bot 200px + 안전 여백) 위로 다 올라선다. 포커스도 띠 밑에 갇히지 않는다 */
-  /* 200px 를 숫자로 둔다 — --blur-bot 은 띠(.backdrop-blur) 자신에만 걸려 형제인 .opts-shell 에선 안 보인다 */
+  /* 보안 판은 끝까지 굴리면 마지막 줄이 아래 200px(탭 독·칩 줄 자리) + 안전 여백 위로 다 올라선다. 포커스도 그 밑에 갇히지 않는다 */
   :root body:is(.set,.setting) #options .opts-shell:has(#optsSecurity:not([hidden])){
     padding-bottom:calc(var(--bleed) + 200px + env(safe-area-inset-bottom) + 24px);
     scroll-padding:calc(var(--bleed) + var(--oh)) 0 calc(var(--bleed) + 200px + env(safe-area-inset-bottom))}
@@ -273,44 +254,14 @@ body > #regions{transition:opacity var(--slow) var(--ease-out)}
   /* 계정 덮개는 스크롤 상자다. 덮개 틀(위 body > .pg-over)은 이미 문서 안이지만 계정은 #account:not([hidden]) 이
      padding:0 을 쥐어 --bleed 가 안 먹으니, 본문 통이 위아래 여백만큼 내려 앉는다. 머리줄은 fixed 라 보이는 칸 기준 그대로 */
   #account .account-shell{padding-top:calc(var(--acct-top) + 48px + 28px + var(--bleed));padding-bottom:calc(40px + var(--dock-h,0px) + var(--bleed))}
-  /* 흐림 띠는 fixed 면 막대 밑에 안 그려진다. 스크롤 상자 안의 sticky 로 둔다 — 상자는 문서 y 0 부터라 띠가 문서
-     내용이고, 굴려도 제자리다. 흐름에선 높이를 0 으로(margin-bottom 음수) 접어 본문을 밀지 않는다 */
-  #account > .backdrop-blur.page-blur{display:grid;position:sticky;left:auto;right:auto;--h:100px;--blur-k:1;margin-bottom:calc(-1 * var(--h))}
-  #account > .backdrop-blur.page-blur::after{display:none}
-  /* 위 띠: 보이는 칸 위 끝 +8px 에서 시작(상태바 칸을 --bg 로 덮지 않게). 처음 25% 에서 0 -> 완전 흐림 */
-  #account > .backdrop-blur.page-blur:not(.bot){top:calc(var(--bleed) + 8px);bottom:auto;height:var(--h)}
-  #account > .backdrop-blur.page-blur:not(.bot) > span{mask:none;-webkit-mask:none;mask-composite:intersect;-webkit-mask-composite:source-in}
-  /* 아래 띠: 문서 아래 여백(주소창 밑)까지 뻗는다. 스크롤 상자 맨 아래 = 띠 아래 끝 */
-  #account > .backdrop-blur.page-blur.bot{top:calc(100% - var(--h) - var(--bleed));bottom:auto;height:calc(var(--bleed) + var(--h));margin-bottom:calc(-1 * (var(--bleed) + var(--h)))}
-  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(1){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),linear-gradient(180deg,transparent,#000 25%)}
-  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(2){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),linear-gradient(180deg,transparent,#000 25%)}
-  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(3){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),linear-gradient(180deg,transparent,#000 25%)}
-  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(4){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),linear-gradient(180deg,transparent,#000 25%)}
-  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(5){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),linear-gradient(180deg,transparent,#000 25%)}
-  #account > .backdrop-blur.page-blur:not(.bot) > :nth-child(6){-webkit-mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%);mask-image:linear-gradient(0deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),linear-gradient(180deg,transparent,#000 25%)}
-  #account > .backdrop-blur.page-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
-  #account > .backdrop-blur.page-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
-  #account > .backdrop-blur.page-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
-  #account > .backdrop-blur.page-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
-  #account > .backdrop-blur.page-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
-  #account > .backdrop-blur.page-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
   /* 떠 있는 시트(게임 자판·알약)는 키보드가 없을 때 주소창 바로 위에 앉힌다. 이 모드에선 Safari 주소창이
      보이는 칸 아래 끝을 덮어, 8px + --under 로 띄우면 주소창과 70pt 가까이 벌어진다(아이폰에서 잼) */
   :root:not([data-vv]) .play-sheet:is(:has(> .softkb:not([hidden])),:has(> .softkb[hidden])){bottom:-12px}
-  /* 시트는 판을 걷는다 — 자판·이름 줄·설명이 뒤 흐림 그라디언트 위에 바로 앉는다 */
+  /* 시트는 판을 걷는다 — 자판·이름 줄·설명이 화면 위에 바로 앉는다 */
   #play .play-sheet{background:none;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
-  /* 시트의 흐림은 뒤 띠가 맡는다 — 홈 아래 띠처럼 여섯 겹 그라디언트로, 문서 여백까지 뻗어 주소창 밑도 흐린다 */
-  #play.screen > .backdrop-blur.bot{display:grid;--h:400px;--blur-k:1;bottom:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h))}
-  #play > .backdrop-blur.bot::after{display:none}
   /* 위 상태 줄(뒤로·시간 알약)도 판을 걷고 위 그라디언트(.top-blur, 홈과 같다) 위에 띄운다 */
   #play.screen .hud-pill,#play.screen .back{background:none;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   #playTopBlur{display:block;--h:160px}
-  #play > .backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
-  #play > .backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
-  #play > .backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
-  #play > .backdrop-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
-  #play > .backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
-  #play > .backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
 }
 
 .logo{font-size:clamp(38px,5vw,64px);font-weight:800;letter-spacing:-.03em;line-height:1}
@@ -496,7 +447,7 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
   flex:0 0 auto;width:var(--opt-rail-w);
 }
 /* 낮은 창에서 셸이 화면 끝에서 잘리면 레일이 셸 안에서 굴러간다. 아래 여백(--opt-rail-pb)은 그때만
-   아래 흐림 띠 높이라 마지막 탭도 띠 위로 올라선다(settings.js syncOptShell) */
+   아래 막대 자리(110px)라 마지막 탭도 그 위로 올라선다(settings.js syncOptShell) */
 @media not (pointer:coarse){
   /* 굴리는 상자는 넘친 글자·그림자를 자른다 — 고른 탭은 레일 폭보다 넓어 왼쪽 빈 자리로 넘친다.
      상자를 왼쪽·위로 넓히고 같은 만큼 음수 여백으로 되돌려 탭 자리는 그대로 둔다 */
@@ -545,7 +496,7 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .opts-panel:not([hidden]){flex:1;min-height:0;display:flex;flex-direction:column;justify-content:safe center;overflow-y:auto;padding-top:.38rem}
 /* 언어·지역 통은 셸 밖으로 화면 끝까지 자란다 — 판이 자르면 안 된다 */
 #optsLanguage:not([hidden]),#optsRegion:not([hidden]){overflow:visible}
-/* 언어 통은 위·아래 흐림이 끝나는 자리에 맞춘다. 가운데 두면 띠에 안 닿는다 */
+/* 언어 통은 위에서부터 채운다 — 위·아래 여백은 settings.js 가 준다 */
 #optsLanguage:not([hidden]){justify-content:flex-start}
 .opts-panel:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
 /* 탭을 옮기면 새 판이 고른 쪽에서 살짝 밀려 들어온다(settings.js select 가 --dir 을 ±1 로 단다).
@@ -575,13 +526,6 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
   scroll-padding-top:var(--opt-pick-pad-t, 28px);
   scroll-padding-bottom:var(--opt-pick-pad-b, 28px);
 }
-/* 설정 페이지 위·아래 흐림 — 높이·결은 .page-blur(홈과 같은 값)가 준다. 여기는 자리만 */
-#options > .backdrop-blur{
-  display:grid; position:fixed; left:0; right:0; z-index:3; pointer-events:none;
-  --fade-x:linear-gradient(#000,#000);
-}
-#options > .backdrop-blur:not(.bot){top:0; bottom:auto}
-#options > .backdrop-blur.bot{top:auto; bottom:0}
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
 /* 언어·지역은 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
@@ -873,7 +817,7 @@ body.setting #options.opts-over{opacity:1}
   /* 언어 통이 셸 밖으로 화면 끝까지 나가도 덮개가 스크롤을 만들지 않는다 */
   body.setting #options.opts-over{overflow:hidden}
 }
-/* 셸은 뷰포트 세로 중앙에 둔다. 낮은 창에서 위 흐림 띠에 닿으면 settings.js 가
+/* 셸은 뷰포트 세로 중앙에 둔다. 낮은 창에서 제목 자리(위 120px)에 닿으면 settings.js 가
    --opt-shell-dy 로 그만큼 내린다 */
 #options .opts-shell{position:relative;top:calc(var(--opt-shell-dy) / var(--zc))}
 #options .screen-head{
@@ -920,7 +864,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 /* 들어오는 화면은 처음부터 불투명하다(@starting-style 을 쓰지 않는다). 조상의
    opacity 가 1 이 아니면 그 안의 backdrop-filter 가 backdrop root 를 갈아 엉뚱한
-   그림을 뜨고, opacity 가 1 에 닿는 순간 제 그림으로 툭 바뀐다 — 흐림 띠의 '틱'.
+   그림을 뜨고, opacity 가 1 에 닿는 순간 제 그림으로 툭 바뀐다.
    대신 나가는 화면이 위에 얹혀 사라지며 크로스페이드가 된다 */
 .screen.on{opacity:1; z-index:0}
 .screen:not(.on){z-index:1}
@@ -942,8 +886,6 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 .step,.toggle{transition:color var(--fast) var(--ease-out),
                          border-color var(--fast) var(--ease-out)}
-@media (hover:hover) and (pointer:fine){
-}
 .ranks li{border-radius:6px;box-shadow:var(--shadow)}
 #card{border-radius:6px;box-shadow:var(--shadow-lift)}
 #typein{border-radius:4px 4px 0 0;box-shadow:var(--shadow)}
@@ -967,8 +909,6 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 .combo{transition:transform var(--fast) var(--ease-out)}
 .combo.bump{transform:scale(1.16)}
 
-@media (prefers-reduced-motion:reduce){
-}
 
 /* 스케일 — 레퍼런스는 타이포가 크고 여백이 넉넉하다 */
 .opts{
@@ -1150,10 +1090,6 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   /* 자리는 .screen 그대로다. 키보드가 칸을 가릴 때(app.js fitVV 가 data-vv 를 단다)만 보이는 만큼으로 줄인다 */
   #play{padding:calc(env(safe-area-inset-top) + 8px) 12px 0}
   :root[data-vv] #play{top:calc(var(--bleed,0px) + var(--vvt,0px)); bottom:auto; height:calc(var(--vvh) + var(--kb,0px))}
-  /* 위 띠는 상태 막대 밑부터, 아래 띠는 키보드 바로 위(시트 뒤)부터 번진다 — 유리 알약 뒤에 깐다 */
-  #play > .backdrop-blur{--fade-x:linear-gradient(#000,#000)}
-  #play > .backdrop-blur:not(.bot){--blur-top:calc(env(safe-area-inset-top) + 72px)}
-  #play > .backdrop-blur.bot{bottom:var(--kb,0px);--blur-bot:140px}
   .hud{gap:8px;margin:0}
   .hud-pill{
     position:relative;flex:1;min-width:0;height:44px;padding:0 14px 2px;border-radius:999px;
@@ -1235,115 +1171,6 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 @media (pointer:coarse) and (prefers-reduced-motion:reduce){ .kb-k.down{transform:none} }
 :root[data-motion="off"] .kb-k.down{transform:none}
 
-/* 상단 그라디언트 블러 — 블러 세기가 다른 여섯 겹을 각자 다른 띠로 마스크해서 겹친다.
-   backdrop-filter 하나에 마스크를 씌우면 블러가 뚝 끊기지만, 이렇게 쌓으면 부드럽게 번진다.
-   겹마다 30% 폭으로 천천히 켜지며 서로 겹친다 — 원본처럼 8~12% 폭에서 뚝 켜면 대비 큰
-   칸(주황 칸·카드)이 지나갈 때 겹의 경계가 가로 계단으로 보인다. 세기도 --blur-k 기본
-   .55 로 낮춰(가장 센 겹 약 18px) 한 겹에서 다음 겹으로 넘는 차이를 작게 한다.
-   띠의 바깥 끝(넵바에서 먼 쪽)은 모든 겹이 투명에서 시작해 흐림이 정확히 0px 이다 —
-   겹의 마스크 시작점을 0% 위로 올리지 않는다. 스크림(::after)도 그 끝에서 투명이다.
-   홈·플레이·설정·계정이 모두 이 한 벌을 쓴다 — 화면마다 따로 고치지 않는다.
-   지금은 모든 브라우저에서 띠를 숨긴다 — 맨 끝 '위 넵바 알약' 절.
-   출처: OuterVale, "Blobby Navbar Blur" (codepen.io/OuterVale/pen/emJQXOx) */
-.backdrop-blur{
-  position:absolute; top:0; left:0; right:0; z-index:1;
-  display:grid; height:var(--blur-top,80px); pointer-events:none;
-}
-.backdrop-blur > span{grid-area:1/1}
-.backdrop-blur > :nth-child(1){
-  backdrop-filter:blur(calc(1px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(1px * var(--blur-k,.55)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 0%,#000 15%);
-}
-.backdrop-blur > :nth-child(2){
-  backdrop-filter:blur(calc(4px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(4px * var(--blur-k,.55)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 5%,#000 30%);
-}
-.backdrop-blur > :nth-child(3){
-  backdrop-filter:blur(calc(8px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(8px * var(--blur-k,.55)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 15%,#000 45%);
-}
-.backdrop-blur > :nth-child(4){
-  backdrop-filter:blur(calc(16px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(16px * var(--blur-k,.55)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 30%,#000 60%);
-}
-.backdrop-blur > :nth-child(5){
-  backdrop-filter:blur(calc(24px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(24px * var(--blur-k,.55)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 45%,#000 75%);
-}
-.backdrop-blur > :nth-child(6){
-  backdrop-filter:blur(calc(32px * var(--blur-k,.55))); -webkit-backdrop-filter:blur(calc(32px * var(--blur-k,.55)));
-  mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
-  -webkit-mask:linear-gradient(var(--blur-deg,0deg),transparent 60%,#000 90%);
-}
-/* 원본은 검정 스크림이다. 여기 배경은 밝으니 사이트 배경색으로 깐다 */
-.backdrop-blur::after{
-  content:""; grid-area:1/1;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 34%,transparent) 60%,transparent);
-}
-/* 상단과 같은 여섯 겹. 가로는 요소를 자르지 않고 마스크로만 좁힌다.
-   폭을 숫자로 잘라내면 좌우가 절단되어 상자가 된다. */
-.backdrop-blur.bot{
-  top:auto; bottom:0;
-  height:var(--blur-bot,160px);
-  --fade-x:linear-gradient(90deg,
-    transparent calc(50% - 400px),
-    #000 calc(50% - 230px),
-    #000 calc(50% + 230px),
-    transparent calc(50% + 400px));
-}
-.backdrop-blur.bot > span{
-  -webkit-mask-composite:source-in;
-  mask-composite:intersect;
-}
-.backdrop-blur.bot > :nth-child(1){
-  -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 15%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 0%,#000 15%),var(--fade-x);
-}
-.backdrop-blur.bot > :nth-child(2){
-  -webkit-mask-image:linear-gradient(180deg,transparent 5%,#000 30%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 5%,#000 30%),var(--fade-x);
-}
-.backdrop-blur.bot > :nth-child(3){
-  -webkit-mask-image:linear-gradient(180deg,transparent 15%,#000 45%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 15%,#000 45%),var(--fade-x);
-}
-.backdrop-blur.bot > :nth-child(4){
-  -webkit-mask-image:linear-gradient(180deg,transparent 30%,#000 60%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 30%,#000 60%),var(--fade-x);
-}
-.backdrop-blur.bot > :nth-child(5){
-  -webkit-mask-image:linear-gradient(180deg,transparent 45%,#000 75%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 45%,#000 75%),var(--fade-x);
-}
-.backdrop-blur.bot > :nth-child(6){
-  -webkit-mask-image:linear-gradient(180deg,transparent 60%,#000 90%),var(--fade-x);
-  mask-image:linear-gradient(180deg,transparent 60%,#000 90%),var(--fade-x);
-}
-.backdrop-blur.bot::after{
-  background:linear-gradient(0deg,color-mix(in srgb,var(--bg) 34%,transparent) 60%,transparent);
-  -webkit-mask-image:var(--fade-x);
-  mask-image:var(--fade-x);
-}
-/* 홈 밖 화면(설정·순위·기록·계정·커뮤니티·소개)의 위·아래 흐림 — 홈(#regions)과 같은 높이·결.
-   화면에 붙고 폭은 끝까지 편다. 본문은 그 밑으로 지나가고, 머리줄·뒤로 단추만 띠 위에 선다 */
-.backdrop-blur.page-blur{
-  position:fixed; left:0; right:0; z-index:3;
-  --blur-top:120px; --blur-bot:110px; --fade-x:linear-gradient(#000,#000);
-}
-.backdrop-blur.page-blur:not(.bot){top:0; bottom:auto}
-.backdrop-blur.page-blur.bot{top:auto; bottom:0}
-@media (pointer:coarse){
-  .backdrop-blur.page-blur{--blur-top:calc(env(safe-area-inset-top) + 72px); --blur-bot:calc(110px + env(safe-area-inset-bottom))}
-}
-/* 폰에서는 위아래 흐림 띠를 걷는다 — 상태바·주소창 밑으로 비치는 지도를 가린다. 홈만 아래(#regions)에서 다시 켠다 */
-@media (pointer:coarse){
-  .backdrop-blur{display:none}
-}
 .doc .go-back{position:relative; z-index:4}
 
 /* 이름 숨김 — 아직 안 친 글자는 블록으로 가린다. 친 만큼만 드러난다 */
@@ -1452,11 +1279,10 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 .si-card > :not(.si-logo){position:relative; z-index:1}
 
 /* ── 열리는 동안 ─────────────────────────────────────── */
-/* 넵바 둘은 제 방향으로 빠진다. 로그인 덮개는 흐림 띠를 배경에 남긴다.
-   설정은 띠를 걷고 칸 위에 전면 흐림을 깐다. 흐림은 #options 가 아니라
+/* 넵바 둘은 제 방향으로 빠진다.
+   설정은 칸 위에 전면 흐림을 깐다. 흐림은 #options 가 아니라
    #regions 쪽에 둔다 — 덮개에 backdrop-filter 를 걸면 셸·머리글이 필터
    레이어에 올라 글자가 얇아진다. 상태는 흐림·랜드 겹·빠진 넵바로 함께 선다 */
-body.setting #regions > .backdrop-blur,body.paging #regions > .backdrop-blur{display:none}
 #regions::after{
   content:""; position:absolute; inset:0; z-index:3; pointer-events:none;
   opacity:0; background:color-mix(in srgb,var(--bg) 34%,transparent);
@@ -1692,8 +1518,7 @@ body.signing .si-card > :not(.si-logo){opacity:1;animation:si-blur-in var(--si-d
 }
 
 /* 다른 페이지(소개·설정·방침) 사이 전환은 브라우저에 맡긴다 — 라이브러리 없음.
-   로그인은 더 이상 페이지가 아니라 홈 위의 덮개라 여기 이름이 필요 없다.
-   흐림 띠에는 절대 이름을 주지 않는다 — backdrop root 가 되어 띠가 죽는다 */
+   로그인은 더 이상 페이지가 아니라 홈 위의 덮개라 여기 이름이 필요 없다. */
 @view-transition{navigation:auto}
 @media (prefers-reduced-motion:reduce){
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
@@ -1722,29 +1547,13 @@ body.paging #account .account-shell{animation:acct-rise var(--si-dur) var(--ease
 body.paging #account .account-heading{animation:acct-drop var(--si-dur) var(--ease-out)}
 body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(--si-dur) * .6)}
 #account.pg-exit{opacity:1}
-#account.pg-exit :is(.account-shell,.backdrop-blur){opacity:0}
+#account.pg-exit .account-shell{opacity:0}
 #account.pg-exit .account-heading{animation:acct-frost calc(var(--si-dur) * .5) var(--ease-out) both}
 @keyframes acct-rise{from{transform:translateY(100vh)}}
 @keyframes acct-drop{from{transform:translate(-160px,-100%)}}
 @keyframes acct-frost{to{filter:blur(16px);opacity:0}}
 
-/* ── 홈 넵바 ─────────────────────────────────────────────
-   흐림 띠는 플레이 화면과 같은 .backdrop-blur 를 그대로 쓴다(마크업도 같다).
-   띠는 장식이라 --blur-top 으로 높이만 주고, 줄은 그 위에 따로 앉는다 —
-   띠 안에 넣으면 pointer-events:none 을 물려받아 눌리지 않는다 */
-/* 띠에 view-transition-name 을 주면 안 된다 — 이름이 붙는 순간 그 요소가
-   backdrop root 가 되어, 안쪽 여섯 겹의 backdrop-filter 가 뒤에서 가져올 그림을
-   잃고 띠가 통째로 사라진다. 나갈 때는 root 크로스페이드에 실려 저절로 흐려진다 */
-#regions > .backdrop-blur:not(.bot){--blur-top:120px; z-index:3}
-#regions > .backdrop-blur.bot{
-  z-index:3;
-  --blur-bot:110px;   /* 플레이 기본 160에서 조금 줄여 막대에 붙인다 */
-  --fade-x:linear-gradient(90deg,
-    transparent calc(50% - 280px),
-    #000 calc(50% - 160px),
-    #000 calc(50% + 160px),
-    transparent calc(50% + 280px));
-}
+/* ── 홈 넵바 ───────────────────────────────────────────── */
 #regions .navbar{
   position:fixed; top:0; left:0; right:0; z-index:4;
   display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
@@ -1768,8 +1577,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
    margin-left .03em = .25em) 알약 오른쪽만 그만큼 더 벌어 보인다 — 음수 마진으로
    그 자리만 걷는다. display:none 과 달리 글자 흐름은 그대로다 */
 #regions .navbar .nav-logo .dot{visibility:hidden;margin-right:-.25em}
-/* 설정·시작·계정. 알약은 불투명 — 타이핑 줄과 같은 --bar.
-   뒤 흐림은 플레이 타이핑 줄과 같은 .backdrop-blur.bot 이다 */
+/* 설정·시작·계정. 알약은 불투명 — 타이핑 줄과 같은 --bar */
 /* 구역 이름 줄이 막대에서 8px 넘게 떨어지게 36px(글자 16px + 위아래 10px) */
 #regions{--dock-gap:36px}
 #regions .nav-bot{
@@ -1909,20 +1717,19 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 /* ── 설정 › 보안 ── */
 /* 판은 레일 윗변에서 시작해 아래로 흐른다(Figma 에서 카드 윗변 = 첫 탭 윗변) */
 #optsSecurity:not([hidden]){justify-content:flex-start;overflow:auto;margin-top:max(0px,calc((var(--opt-shell-h) / var(--zc) - var(--opt-rail-h,0px)) / 2));min-height:0;padding:.38rem 8px 8px 2px;flex:1 1 0;
-  /* 판 아랫단은 화면 아래 흐림 띠(.page-blur --blur-bot 110px) 안에 든다 — 띠가 덮는 만큼 여백을
-     둬야 끝까지 굴렸을 때 마지막 줄이 띠 위로 올라선다. --blur-bot 은 띠 자신에만 걸려 여기선 안 보이니 숫자로 둔다 */
+  /* 판 아랫단은 아래 막대 자리(110px, settings.js 의 botGap)만큼 여백을 둬야
+     끝까지 굴렸을 때 마지막 줄이 그 위로 올라선다 */
   padding-bottom:max(8px,calc((110px - var(--opt-shell-bot)) / var(--zc)))}
-/* 데스크톱 보안 판은 따로 굴리지 않는다 — .opts-shell 이 덮개 위아래 끝까지 늘어 스크롤 통이 되고, 내용이 위·아래 흐림 띠
-   밑으로 지나간다(띠는 통 밖 덮개의 자식이라 제자리). 위 padding 은 셸이 서던 자리, 아래 padding 은 셸 아랫변까지라
-   레일·판의 첫 자리는 그대로다. 레일은 sticky 로 서 있고 판만 흐른다. 마지막 줄을 띠 위로 올리는 여백은 판 아래 padding 이 맡는다 */
+/* 데스크톱 보안 판은 따로 굴리지 않는다 — .opts-shell 이 덮개 위아래 끝까지 늘어 스크롤 통이 된다.
+   위 padding 은 셸이 서던 자리, 아래 padding 은 셸 아랫변까지라
+   레일·판의 첫 자리는 그대로다. 레일은 sticky 로 서 있고 판만 흐른다. 마지막 줄을 막대 위로 올리는 여백은 판 아래 padding 이 맡는다 */
 @media not (pointer:coarse){
   #options .opts-shell:has(#optsSecurity:not([hidden])){
     position:absolute;inset:0;width:auto;max-width:none;height:auto;margin:0;
     align-items:flex-start;justify-content:center;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
     padding:calc(((100vh - var(--opt-shell-h)) / 2 + var(--opt-shell-dy)) / var(--zc)) calc(var(--screen-pad-x) / var(--zc))
             calc(var(--opt-shell-bot) / var(--zc));
-    /* 포커스가 흐림 띠 밑에 갇히지 않게 — 위는 셸이 서던 자리(위 띠 아래), 아래는 띠 높이(.page-blur --blur-bot 110px) */
-    /* 110px 를 숫자로 둔다 — --blur-bot 은 띠(.page-blur) 자신에만 걸려 형제인 .opts-shell 에선 안 보인다 */
+    /* 포커스가 제목·막대 밑에 갇히지 않게 — 위는 셸이 서던 자리, 아래는 막대 자리 110px */
     scroll-padding-top:calc(((100vh - var(--opt-shell-h)) / 2 + var(--opt-shell-dy)) / var(--zc));
     scroll-padding-bottom:calc(110px / var(--zc));
   }
@@ -2104,11 +1911,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .account-heading{position:fixed;z-index:4;top:0;left:50%;translate:-50% 0;margin:0;
   width:min(100% - 56px,820px);padding-top:var(--acct-top)}
 .account-shell{padding-top:calc(var(--acct-top) + 48px + 28px)}
-/* 위·아래 흐림 띠 — 설정 덮개(#options)와 같은 식으로 뷰포트에 붙인다. 위 띠는
-   머리줄을 다 덮고 조금 더 내려와 지나가는 글이 머리줄 밑에서 흐려진다 */
-#account > .backdrop-blur{position:fixed;left:0;right:0;z-index:3;--fade-x:linear-gradient(#000,#000)}
-#account > .backdrop-blur:not(.bot){top:0;bottom:auto}
-#account > .backdrop-blur.bot{top:auto;bottom:0}
 .account-layout{gap:32px}
 .account-character{flex:0 1 300px;gap:16px}
 .account-details{flex:1 1 340px}
@@ -2163,44 +1965,20 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   /* 누르는 그 순간 반응한다 — 떼기를 기다리지 않는다 */
   :is(.back,.si-close,.ctl,#regions .nav-burger,#regions .nav-bot .nav-item,#again,#save):active{transform:scale(.97)}
 
-  /* 위·아래 흐림 띠 — 화면 끝까지 펴서 지도가 상태 막대·아래 알약 밑으로 스며들게 한다 */
-  #regions > .backdrop-blur{position:fixed;left:0;right:0;--fade-x:linear-gradient(#000,#000)}
-  #regions > .backdrop-blur:not(.bot){top:0;--blur-top:calc(env(safe-area-inset-top) + 72px)}
-  #regions > .backdrop-blur.bot{
-    top:auto;bottom:calc(-1 * var(--under));
-    --blur-bot:calc(110px + env(safe-area-inset-bottom) + var(--under));
-  }
   /* 로고 양옆(햄버거·전체 보기)은 걷는다 — 지도 탭을 다시 누르면 전체 보기가 된다(app.js tabGo).
      탭 단추는 손가락 끌기를 스크롤이 가로채지 않게 한다 — 지금 탭에서 봇을 끌어낸다(ranked.js) */
   #regions .nav-burger,#regions .map-ctl{display:none}
   #tabBar .nav-item{touch-action:none}
-  #regions > .backdrop-blur.bot{position:absolute;bottom:0}
-  /* 폰 Safari 탭의 홈 흐림. 아래 띠는 문서 여백(--bleed)까지 뻗어 주소창 밑도 흐린다.
-     위는 backdrop-filter 를 못 쓴다 — 상태바 +8px 안에 닿으면 Safari 가 그 칸을 --bg 단색으로
+  /* 폰 Safari 탭의 홈 위 흐림. backdrop-filter 는 못 쓴다 — 상태바 +8px 안에 닿으면 Safari 가 그 칸을 --bg 단색으로
      덮는다(아이폰에서 잼). 그래서 위는 --bg 에서 투명으로 가는 그라디언트(.top-blur) 한 장이다 —
      지도 흐린 복사본 여섯 장(옛 blurTwins)은 폰 Safari 메모리를 다 써 탭을 튕겼다 */
   @media (display-mode:browser){
-    #regions > .backdrop-blur.bot{display:grid;--h:220px;bottom:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h))}
-    #regions > .backdrop-blur.bot::after{display:none}
-    /* 독이 한 줄로 접히면(.is-min) 독 윗선이 한 줄(52 + 8px)만큼 내려앉는다 — 띠도 같은 박자·곡선으로
-       그만큼 내려 흐림 윗선이 독을 따라간다. 높이 대신 translate 라 합성기가 돌리고, 아래는 --bleed 가 남아
-       주소창 밑은 계속 덮인다 */
-    #regions > .backdrop-blur.bot{transition:translate .42s var(--ease-out)}
-    body:has(#tabDock.is-min) #regions > .backdrop-blur.bot{translate:0 60px}
-    #regions > .backdrop-blur.bot > :nth-child(1){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0),#000 calc(var(--h) * 0.15)),var(--fade-x)}
-    #regions > .backdrop-blur.bot > :nth-child(2){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.05),#000 calc(var(--h) * 0.3)),var(--fade-x)}
-    #regions > .backdrop-blur.bot > :nth-child(3){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.15),#000 calc(var(--h) * 0.45)),var(--fade-x)}
-    #regions > .backdrop-blur.bot > :nth-child(4){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.3),#000 calc(var(--h) * 0.6)),var(--fade-x)}
-    #regions > .backdrop-blur.bot > :nth-child(5){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.45),#000 calc(var(--h) * 0.75)),var(--fade-x)}
-    #regions > .backdrop-blur.bot > :nth-child(6){-webkit-mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x);mask-image:linear-gradient(180deg,transparent calc(var(--h) * 0.6),#000 calc(var(--h) * 0.9)),var(--fade-x)}
     .top-blur{
       display:block;position:absolute;left:0;right:0;z-index:1;pointer-events:none;--h:147px;
       top:calc(-1 * var(--bleed));height:calc(var(--bleed) + var(--h));
       background:linear-gradient(180deg,var(--bg) calc(100% - var(--h) * .9),transparent);
     }
   }
-  @media (display-mode:browser) and (prefers-reduced-motion:reduce){ #regions > .backdrop-blur.bot{transition:none} }
-  :root[data-motion="off"] #regions > .backdrop-blur.bot{transition:none}
 
   /* 햄버거 — 왼쪽 위, 상태 막대 밑. 로고는 화면 위 가운데(햄버거·오른쪽 컨트롤 줄과 같은
      높이 44px). 알약은 폰에 없어 점도 로고가 직접 그린다 */
@@ -3156,8 +2934,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 
    뒤에 깔린 격자(.map-backdrop)에는 이름을 주지 않는다 — 이름 없는 것들은 root
    크로스페이드에 함께 실려, 흐린 구 스물다섯이 홈의 진짜 지도로 풀린다. 이름을
-   주면 그 요소가 제 backdrop root 가 되어 블러가 뒤 그림을 잃는다(넵바 띠에서
-   같은 일이 있었다 — 위 #regions > .backdrop-blur 주석). */
+   주면 그 요소가 제 backdrop root 가 되어 블러가 뒤 그림을 잃는다. */
 .intro-shell{view-transition-name:rt-intro}
 ::view-transition-old(rt-intro){animation:intro-leave var(--si-dur) var(--ease-out) both}
 @keyframes intro-leave{to{transform:translateY(100%);opacity:0}}
@@ -3190,11 +2967,6 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
     padding:0 0 calc(40px + var(--dock-h) + 60px);justify-content:flex-start; /* 아래 탭 독·칩 줄 밑에 끝이 깔리지 않게 */
     overflow-x:hidden;overscroll-behavior:contain;
   }
-  /* 위·아래 흐림은 홈과 같은 띠(.page-blur)다. 머리줄은 판 없이 그 위에 앉는다 */
-  /* 아래 띠는 탭 독 위에 얹힌 칩 줄(52px + 틈 8px)을 넉넉히 덮고 위로 더 번지게 키운다 */
-  body:is(.set,.setting) #options > .backdrop-blur.bot{--blur-bot:calc(200px + env(safe-area-inset-bottom))}
-  body:is(.set,.setting) #options > .backdrop-blur:not(.bot){--blur-top:calc(env(safe-area-inset-top) + 96px)}
-
   /* 머리줄 — 상태 막대 밑까지 까는 유리. 딱딱한 선 대신 탭 줄 아래 끝이 스며 사라진다 */
   body:is(.set,.setting) #options .screen-head{
     position:sticky;top:0;left:auto;z-index:4;flex:none;gap:12px;
@@ -3206,8 +2978,8 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
     z-index:auto; /* 제 쌓임 맥락을 풀어야 탭 줄(z 5)이 머리줄 유리(z 4) 위로 올라선다 */
   }
 
-  /* 탭 줄 — 홈의 듀플 넵바처럼 아래 탭 독 위(미니 막대 자리: 높이 52px, 틈 8px)에 선다. 판 없이 아래
-     흐림 띠 위에 칩만 펼친다. 줄은 화면 끝에서 끝까지 굴러 가고, 첫 칩은 탭 독 왼쪽 끝(12px)에 맞춘다 */
+  /* 탭 줄 — 홈의 듀플 넵바처럼 아래 탭 독 위(미니 막대 자리: 높이 52px, 틈 8px)에 선다. 판 없이
+     칩만 펼친다. 줄은 화면 끝에서 끝까지 굴러 가고, 첫 칩은 탭 독 왼쪽 끝(12px)에 맞춘다 */
   body:is(.set,.setting) #options .opts-tabs{
     position:fixed;left:0;right:0;top:auto;bottom:calc(16px + env(safe-area-inset-bottom) + 58px + 8px);z-index:5;
     display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:8px;
@@ -3385,14 +3157,9 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
  border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
 .intro-code input{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em}
 
-/* ═══ 위 넵바 알약 · 흐림 띠 걷기 ═══════════════════════
-   흐림 띠(.backdrop-blur)는 모든 브라우저에서 걷는다 — Safari 는 마스크 씌운 backdrop-filter 를 뒤가 바뀌어도
-   새로 짓지 않아 옛 색·옛 지도가 잔상으로 남았다. visibility 로만 숨겨 자리(높이)는 남긴다: settings.js 가
-   띠 높이로 셸이 제목에 안 닿게 잰다. 그리지 않으니 흐림 셈도 없다.
-   ponytail: 띠 마크업·규칙(여섯 겹 마스크)은 죽은 채 남아 있다 — 정리할 때 settings.js 의 높이 재기를 상수로 바꾸고 함께 지운다.
+/* ═══ 위 넵바 알약 ═══════════════════════════════════
    위 넵바는 아래 알약(.nav-bot)과 같은 판이다 — 같은 색·둥근 끝·그림자, 화면 위에서 조금 떠 있다.
    폰은 위에 로고만 있으니 로고가 알약이다. 앞 규칙을 이겨야 해서 파일 맨 끝에 둔다 */
-.backdrop-blur{visibility:hidden}
 #regions .navbar{background:var(--bar);border-radius:999px;box-shadow:var(--shadow)}
 @media (min-width:760px) and (not (pointer:coarse)){
   /* 양옆 칸은 글자 폭대로 — 1fr 둘이면 짧은 쪽(소개·기록)이 긴 쪽만큼 벌어져 알약 왼쪽이 빈다.
