@@ -3165,6 +3165,10 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   /* 양옆 칸은 글자 폭대로 — 1fr 둘이면 짧은 쪽(소개·기록)이 긴 쪽만큼 벌어져 알약 왼쪽이 빈다.
      알약 자체는 translate 로 화면 가운데에 그대로 선다(로고는 양옆 폭 차이만큼 비켜 앉는다) */
   #regions .navbar{top:16px;left:50%;right:auto;translate:-50% 0;width:max-content;max-width:calc(100vw - 32px);padding:8px 10px;grid-template-columns:auto auto auto}
+  /* 위아래 막대는 브라우저 80% 배율 크기로 — 글자·여백을 하나하나 줄이지 않고 통째로 줄인다.
+     알약(#navShape·#navBotShape)은 app.js makeNavFollow 가 이 배율을 되돌려 잰다 */
+  #regions .navbar{scale:.8;transform-origin:50% 0}
+  #regions .nav-bot{scale:.8;transform-origin:50% 100%}
 }
 @media (max-width:759px) and (not (pointer:coarse)){
   #regions .navbar{top:8px;left:8px;right:8px}

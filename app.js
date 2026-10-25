@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.03';
+const VER = '5.04';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -1650,7 +1650,7 @@ function navBotTarget(el) {
 }
 function makeNavFollow(spec) {
   const SPR = { x: sp(0, .05), y: sp(0, .05), w: sp(8, .05), h: sp(8, .05) };
-  let aim = null, on = false, raf = 0, t0 = 0, base = null, pull = null, at = null;
+  let aim = null, on = false, raf = 0, t0 = 0, base = null, pull = null, at = null, k = 1;
   /* 손이 막대 위에 있으면 지금 그 아래 칸 — 칸이 빠져 줄이 밀려도(뒤로) 손 밑에 들어선 칸을 안다 */
   const under = () => at && spec.target(document.elementFromPoint(at[0], at[1]));
   function paint() {
@@ -1694,16 +1694,18 @@ function makeNavFollow(spec) {
     /* 화면이 숨어 있으면(.screen 이 display:none) 모든 rect 가 0 이다. 그 값을 스프링에
        넣으면 알약이 넵바 왼쪽 위 구석에 박힌 채 돌아온다 — 재지 말고 물러난다 */
     if (!nr.width) return;
+    /* 막대가 scale 로 줄어 있으면 rect 는 화면 px, 알약은 막대 안 px — k 로 되돌린다 */
+    k = nav.offsetWidth / nr.width || 1;
     const r = t.getBoundingClientRect();
-    const x = r.left - nr.left, w = r.width, h = r.height;
-    let y = r.top - nr.top;
+    const x = (r.left - nr.left) * k, w = r.width * k, h = r.height * k;
+    let y = (r.top - nr.top) * k;
     /* 알약은 줄 한가운데에 선다. 로고는 시각 보정으로 조금 올라가 있어서(translate)
        제 rect 를 그대로 쓰면 알약만 따라 올라가 칸마다 높이가 달라 보인다.
        쉴 때의 점은 줄이 아니라 로고의 점 자리라 손대지 않는다 */
     const ref = pill && nav.querySelector('.nav-item');
     const rr = ref && ref.getBoundingClientRect();
     /* 손가락 화면은 로고가 제 줄에 따로 선다 — 같은 줄일 때만 맞춘다 */
-    if (rr && rr.bottom > r.top && rr.top < r.bottom) y = (rr.top + rr.bottom) / 2 - nr.top - h / 2;
+    if (rr && rr.bottom > r.top && rr.top < r.bottom) y = ((rr.top + rr.bottom) / 2 - nr.top) * k - h / 2;
     const still = calm() || !on;
     on = true;
     base = { x, y, w, h };
@@ -1717,8 +1719,8 @@ function makeNavFollow(spec) {
     let snap = still;
     if (pull && !calm()) {
       const rb = (d, m) => Math.sign(d) * m * (1 - 1 / (Math.abs(d) * .55 / m + 1));
-      const dx = rb(pull.px - pull.nx - x - w / 2 - pull.ox, 28);
-      const dy = rb(pull.py - pull.ny - y - h / 2 - pull.oy, 14);
+      const dx = rb((pull.px - pull.nx - pull.ox) * k - x - w / 2, 28);
+      const dy = rb((pull.py - pull.ny - pull.oy) * k - y - h / 2, 14);
       const ax = Math.abs(dx), ay = Math.abs(dy);
       const cx = x + w / 2 + dx * .7, cy = y + h / 2 + dy * .7;
       w += ax * .6 - ay * .3;
