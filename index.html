@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.02">
+<link rel="stylesheet" href="style.css?v=5.03">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -128,11 +128,7 @@
 
 <!-- 지역 목록 -->
 <section id="regions" class="screen on">
-  <!-- 상단 넵바. 흐림 띠는 플레이 화면 것과 같은 부품(.backdrop-blur)이다 —
-       여섯 겹이 층층이 겹쳐 위에서 아래로 흐림이 사라진다. 그 위에 줄이 앉는다 -->
-  <span class="backdrop-blur" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
+  <!-- 상단 넵바. 아래 막대와 같은 떠 있는 알약이다 -->
   <nav class="navbar" data-i18n-aria="navMain" aria-label="주 메뉴">
     <span class="nav-shape" id="navShape" aria-hidden="true"></span>
     <span class="nav-side nav-start">
@@ -151,10 +147,6 @@
       <a class="nav-item title-alt" href="mimi/">Mimi</a>
     </span>
   </nav>
-  <!-- 아래 막대 뒤의 흐림 띠. 플레이 화면 타이핑 줄과 같은 .backdrop-blur.bot 이다 -->
-  <span class="backdrop-blur bot" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
   <!-- 설정·시작·계정은 아래 막대. 폰에서도 같은 알약이다. 폰의 봇은 로고 뒤에 산다(ranked.js 의 tuck) -->
   <nav class="nav-bot" data-i18n-aria="navDock" aria-label="놀이 메뉴">
     <span class="nav-shape" id="navBotShape" aria-hidden="true"></span>
@@ -268,13 +260,7 @@
   <div class="stage">
     <svg id="map" class="rt-map" role="img" data-i18n-aria="mapLabel" aria-label="지역 지도"></svg>
   </div>
-  <span class="backdrop-blur" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
 <div class="top-blur" id="playTopBlur" aria-hidden="true" inert></div>
-    <span class="backdrop-blur bot" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
   <!-- 폰에서는 화상 키보드 바로 위에 붙는 유리 시트. 데스크톱은 display:contents -->
   <div class="play-sheet">
   <div class="typing" id="typing" aria-hidden="true">
@@ -415,7 +401,6 @@
       <div id="optsLanguage" class="opts-panel" role="tabpanel" aria-labelledby="optsTabLanguage" tabindex="0" hidden>
         <div id="optLang" class="opts-lang-pick" role="radiogroup"
              data-i18n-aria="language" aria-label="언어"></div>
-        <!-- pick 위·아래 흐림 띠. fillLangPick 이 #optLang 을 replaceChildren 하므로 자식이 아니라 형제로 둔다 -->
       </div>
       <div id="optsRegion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabRegion" tabindex="0" data-dev-only hidden>
         <div id="optRegion" class="opts-region-pick" role="radiogroup"
@@ -550,18 +535,10 @@
       </div>
     </div>
   </div>
-  <span class="backdrop-blur page-blur" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
-  <span class="backdrop-blur page-blur bot" aria-hidden="true">
-    <span></span><span></span><span></span><span></span><span></span><span></span>
-  </span>
 </section>
 
 <!-- 순위·기록 — 설정처럼 홈 위에 뜨는 덮개다(ranked.js). 주소는 #ranking · #records -->
 <section id="ranking" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="rankingHead" hidden>
-  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <div class="screen-head">
     <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head" id="rankingHead" data-i18n="ranking">순위</h2>
@@ -589,8 +566,6 @@
 </section>
 
 <section id="records" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="recordsHead" hidden>
-  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <div class="screen-head">
     <button type="button" class="back" data-pg-close data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head" id="recordsHead" data-i18n="records">기록</h2>
@@ -646,10 +621,8 @@
 <!-- 내 계정 — 설정·순위처럼 홈 위에 뜨는 덮개다. 여닫기는 ranked.js(순위·기록과 같은 손),
      알맹이는 account/account.js 가 처음 열 때 실려 채운다. 뒤의 홈이 그대로 남아 닫으면
      고른 칸·지도 자리가 떠날 때 그대로다. /account/ 는 #account 로 넘기는 착지대다.
-     머리줄과 위·아래 흐림 띠는 덮개에 붙어 있고 본문이 그 밑으로 지나간다 -->
+     머리줄은 덮개에 붙어 있고 본문이 그 밑으로 지나간다 -->
 <section id="account" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="accountHead" hidden>
-  <span class="backdrop-blur page-blur" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
-  <span class="backdrop-blur page-blur bot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span>
   <header class="account-heading"><button type="button" class="back" data-pg-close data-i18n-aria="backHome" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></button><h1 id="accountHead" data-i18n="accountHead">내 계정</h1></header>
   <div class="account-shell">
   <div class="account-layout">
@@ -741,9 +714,9 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=5.02"></script>
+<script src="app.js?v=5.03"></script>
 <script src="auth.js?v=4.71"></script>
-<script src="settings/settings.js?v=4.71"></script>
+<script src="settings/settings.js?v=5.03"></script>
 <script src="ranked.js?v=4.97"></script>
 </body>
 </html>

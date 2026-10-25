@@ -114,31 +114,31 @@ function syncOptShell() {
   const vh = window.innerHeight;
   const minCells = Math.max(1, Math.ceil(railH / cell));
   const wantCells = Math.max(minCells, Math.round(vh * 0.56 / cell));
-  /* 가운데에 두되, 위 흐림 띠 안으로는 안 올라간다 — 낮은 창에서 레일이 제목과 겹치고
-     레일 옆에서 시작하는 언어 목록 머리도 흐림에 묻힌다. 그러다 화면 아래를 넘으면 셸을
-     화면 끝에서 자르고 레일이 셸 안에서 굴러간다(아래 흐림 띠만큼 여백을 둬 마지막 탭도 올라선다) */
-  const edge = sel => { const e = $(sel); return e ? e.getBoundingClientRect().height : 0; };
-  const blurT = edge('#options > .backdrop-blur:not(.bot)'), blurB = edge('#options > .backdrop-blur.bot');
+  /* 가운데에 두되, 제목 자리(위 120px) 안으로는 안 올라간다 — 낮은 창에서 레일이 제목과 겹치고
+     레일 옆에서 시작하는 언어 목록 머리도 제목 밑에 묻힌다. 그러다 화면 아래를 넘으면 셸을
+     화면 끝에서 자르고 레일이 셸 안에서 굴러간다(아래 막대 자리 110px 만큼 여백을 둬 마지막 탭도 올라선다).
+     두 값은 걷어 낸 흐림 띠의 높이 그대로다 */
+  const topGap = 120, botGap = 110;
   let h = wantCells * cell;
-  const mid = (vh - h) / 2, top = Math.max(mid, blurT);
+  const mid = (vh - h) / 2, top = Math.max(mid, topGap);
   const tight = top + h > vh;
   if (tight) h = vh - top;
   const st = document.documentElement.style;
   const zc = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zc')) || 1;
   st.setProperty('--opt-shell-h', h + 'px');
   st.setProperty('--opt-shell-dy', (top - (vh - h) / 2) + 'px');
-  st.setProperty('--opt-rail-pb', (tight ? blurB / zc : 0) + 'px');
+  st.setProperty('--opt-rail-pb', (tight ? botGap / zc : 0) + 'px');
   st.setProperty('--opt-rail-h', rail.offsetHeight + 'px');
   /* 통은 화면 위·아래까지. 목록이 언어 탭 옆에서 시작하도록 위 padding 만 잰다.
      셸 윗변은 방금 고른 top 을 쓴다 — 들어올 때 getBoundingClientRect 는 아직 바닥이다.
-     맨 아래 글자는 버전 탭에서 멈추되, 아래 흐림 띠 밑으로는 안 내려간다 */
+     맨 아래 글자는 버전 탭에서 멈추되, 아래 막대 자리(botGap) 밑으로는 안 내려간다 */
   const inner = 28;
   const railTop = top + Math.max(0, (h - railH) / 2);
   const railBot = Math.min(vh, railTop + railH);
   st.setProperty('--opt-pick-h', (vh / zc) + 'px');
   st.setProperty('--opt-pick-dy', ((-top) / zc) + 'px');
   st.setProperty('--opt-pick-pad-t', (railTop / zc) + 'px');
-  st.setProperty('--opt-pick-pad-b', (Math.max(blurB + inner, vh - railBot + inner) / zc) + 'px');
+  st.setProperty('--opt-pick-pad-b', (Math.max(botGap + inner, vh - railBot + inner) / zc) + 'px');
 }
 
 /* 데스크톱 확대는 125% 까지만 레이아웃에 반영한다 — 그 위로는 설정 셸을 같은 비율로
