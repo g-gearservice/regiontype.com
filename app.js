@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.06';
+const VER = '5.07';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2197,7 +2197,7 @@ async function boot() {
     setBoot(80, 'bootInput');
 
     /* 4단계: 경쟁전 입력 신호 준비 — 기본 코스(seoul-gu)와 자치구 코스·도트 지도를 메모리에 올리고,
-       언어별 입력 판정 열쇠(TONGUE)·게임 자판(kbFor)·접속 신호(/online)·UI 아이콘까지 예열한다 */
+       언어별 입력 판정 열쇠(TONGUE)·게임 자판(kbFor)·UI 아이콘까지 예열한다 */
     addEventListener('rt-opt', () => {
       const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
       for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
@@ -2224,7 +2224,6 @@ async function boot() {
     TONGUE = getTongue(LANG, read);
     $('#typein').lang = TONGUE ? LANG : seoulCourse.lang || document.documentElement.lang;
     kbFor(seoulCourse.items.map(it => ({ ...it, aliases: [stripSuffix(it.name), adminLabel(it.name)].filter(Boolean) })));
-    if (window.RT_PING) window.RT_PING();
     setBoot(90, 'bootInput');
 
     await showCountry(COUNTRY);

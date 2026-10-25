@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.507",
+    "date": "2026-10-25",
+    "ko": "경쟁전을 켜면 왼쪽 아래에 뜨던 지금 접속 표시를 없앴고, 소개 화면(/landing/)을 새로 다듬었습니다.",
+    "en": "The live player count that slid in at the bottom left in ranked mode is gone, and the landing page at /landing/ has been reworked."
+  },
+  {
     "v": "0.11.506",
     "date": "2026-10-25",
     "ko": "소개 화면 시안 여섯 개를 /landing/proto/1–6 에 올렸습니다.",

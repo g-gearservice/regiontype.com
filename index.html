@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.05">
+<link rel="stylesheet" href="style.css?v=5.07">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -179,8 +179,6 @@
   <!-- 폰 Safari 탭의 위 흐림 — --bg 그라디언트 한 장(style.css .top-blur). 상태바 밑까지 깔린다 -->
   <div class="top-blur" id="topBlur" aria-hidden="true" inert></div>
   <p class="course-name" id="courseName" aria-live="polite"></p>
-  <!-- 지금 접속. 경쟁전을 켜면 왼쪽 아래 귀퉁이에서 대각선으로 나온다(ranked.js 의 '지금 접속' 절).
-       첫 숫자를 받기 전에는 숨어 있다 -->
   <!-- 경쟁전 매칭 창(ranked.js 의 match 절). 상대를 찾는 동안과 짝이 지어진 뒤 카운트다운 동안만 선다 -->
   <div class="rk-match" id="rkMatch" role="dialog" aria-labelledby="rkMatchTitle" aria-describedby="rkMatchStat" hidden>
     <h3 id="rkMatchTitle" data-i18n="rkMatchTitle">1대1 경쟁전</h3>
@@ -192,7 +190,6 @@
       <button type="button" id="rkMatchCancel" data-i18n="cancel">취소</button>
     </div>
   </div>
-  <p class="rk-live" id="rkLive" role="img" hidden><span class="rk-live-in" aria-hidden="true"><i></i><b id="rkLiveN"></b></span></p>
   <!-- 도우미 봇과 말풍선. 홈이 보일 때만 산다 — #regions 안에 둬서 플레이 화면에선 저절로 빠진다.
        .rk-dim 은 처음 온 사람에게 넵바만 남기고 홈을 덮는 막이다 -->
   <div class="rk-layer" id="rkLayer" hidden>
@@ -714,9 +711,9 @@
 </dialog>
 
 <script src="relay.js?v=4.35"></script>
-<script src="app.js?v=5.05"></script>
+<script src="app.js?v=5.07"></script>
 <script src="auth.js?v=4.71"></script>
-<script src="settings/settings.js?v=5.05"></script>
-<script src="ranked.js?v=4.97"></script>
+<script src="settings/settings.js?v=5.07"></script>
+<script src="ranked.js?v=5.07"></script>
 </body>
 </html>
