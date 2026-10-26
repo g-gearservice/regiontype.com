@@ -22,7 +22,7 @@
 <!-- 공개 주소 /landing/. 초안 /landing/proto/ 는 같은 화면이고 검색에 올리지 않는다.
      줄 문법(맨 위 작은 한 줄, 굵고 큰 낱말, 작은 그림, +)은 그대로다.
      소개·스토리는 스크롤하면 문장이 바뀌고, 개발은 페이지와 같은 바탕이다.
-     스타일은 3D 내비게이션·동네버스, 플레이는 게임을 그 자리에 띄우고, 플랜은 가격이 미정이다.
+     스타일은 3D 내비게이션·동네버스·CRT 터미널, 플레이는 게임을 그 자리에 띄우고, 플랜은 가격이 미정이다.
      색은 기기 테마(prefers-color-scheme)를 따른다. 소개 문장과 염창 한 줄은 소개 페이지·코스 데이터에 있는 말이다.
      상대 경로 ../../ 는 /landing/proto/ 에서 사이트 루트이고, /landing/ 에서는 원점 위로 더 올라가지 못해 같은 루트로 풀린다. -->
 <script>
@@ -164,8 +164,8 @@ document.documentElement.classList.add('js');
   .p-dev .caret{display:inline-block;width:.55em;height:1em;background:var(--ink);vertical-align:-2px;animation:blink 1s steps(1) infinite}
   @keyframes blink{50%{opacity:0}}
 
-  /* 스타일 — 3D 내비게이션, 동네버스 */
-  .styles{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:8px 0}
+  /* 스타일 — 3D 내비게이션, 동네버스, CRT 터미널 */
+  .styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:8px 0}
   .style-card{display:flex;flex-direction:column;gap:12px;min-height:100%;padding:22px;border:1.5px solid var(--ink);border-radius:18px}
   .style-card svg{width:72px;height:72px}
   .style-card .k{font:800 14px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -175,6 +175,7 @@ document.documentElement.classList.add('js');
   .swatch{width:14px;height:14px;display:inline-block;flex:none}
   .swatch.nav{background:#007aff}
   .swatch.bus{background:#f6c037;border-radius:50%;box-shadow:inset 0 0 0 3px var(--ink)}
+  .swatch.crt{background:#5dff8a;box-shadow:inset 0 0 0 3px #050805}
   .style-card .more{margin-top:auto;font:800 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px}
   @media (hover:hover) and (pointer:fine){ .style-card:hover h3{text-decoration:underline;text-underline-offset:.08em} }
 
@@ -337,6 +338,7 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
       <span class="th" aria-hidden="true">
         <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg></span>
         <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg></span>
+        <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg></span>
         <span class="t t-num">베타</span>
       </span>
       <span class="sign" aria-hidden="true">+</span>
@@ -357,6 +359,14 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
           <h3>동네버스</h3>
           <p>정류장 이름을 치면 버스가 그 정류장으로 가서 손님을 실어 나릅니다. 25개 자치구가 행정동 코스 순서로 늘어서 있습니다. 노선은 노랑이고, 정류장은 고리입니다.</p>
           <p class="sigline"><i class="swatch bus" aria-hidden="true"></i>노선 노랑</p>
+          <span class="more">베타 열기</span>
+        </a>
+        <a class="style-card" href="../../beta/crt/">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg>
+          <p class="k">베타 · 03</p>
+          <h3>CRT 터미널</h3>
+          <p>셸에서 구를 열면 그 구의 지도가 형광체 선으로 떠오릅니다. 프롬프트에 행정동 이름을 쳐서 Enter 로 확정합니다. 녹색·앰버·백색 형광체를 고를 수 있습니다.</p>
+          <p class="sigline"><i class="swatch crt" aria-hidden="true"></i>형광 녹색</p>
           <span class="more">베타 열기</span>
         </a>
       </div>

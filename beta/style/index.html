@@ -17,8 +17,8 @@
   --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   --tick:color-mix(in srgb,var(--ink) 30%,transparent);     /* 격자 교차점의 점 */
   /* 칸마다 그 스타일의 서명색. 3D 내비게이션은 시스템 파랑, 동네버스는 노선 노랑 —
-     각 베타가 쓰는 값이다. 그래픽(막대·물든 바탕)에만 쓰고 글자에는 쓰지 않는다 */
-  --sig-nav:#007aff; --sig-bus:#f6c037;
+     CRT 터미널은 형광 녹색. 각 베타가 쓰는 값이다. 그래픽(막대·물든 바탕)에만 쓰고 글자에는 쓰지 않는다 */
+  --sig-nav:#007aff; --sig-bus:#f6c037; --sig-crt:#5dff8a;
   --sheen:linear-gradient(118deg,rgba(255,255,255,.30),rgba(255,255,255,0) 34%);   /* 홈과 같은 대각 빛 */
   background:
     /* 교차점 점: 반 칸 밀어 칸 한가운데 그린 점이 교차점에 앉는다 */
@@ -80,6 +80,9 @@ body{overflow:auto;min-height:100%;margin:0;background:none}
     <a class="cell" href="../bus/" style="--btn-col:2;--btn-row:2;--sig:var(--sig-bus)" data-n="02">
       <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="38" fill="#000" stroke="#fff" stroke-width="20"/></svg>
       <b>동네버스</b></a>
+    <a class="cell" href="../crt/" style="--btn-col:3;--btn-row:2;--sig:var(--sig-crt)" data-n="03">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg>
+      <b>CRT 터미널</b></a>
   </nav>
 </main>
 <script>

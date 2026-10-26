@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.511",
+    "date": "2026-10-26",
+    "ko": "세 번째 베타 스타일 'CRT 터미널'을 열었습니다. 셸에서 서울의 구를 열면 그 구의 지도가 형광체 선으로 뜨고, 행정동 이름을 쳐서 Enter 로 확정합니다. 소개 화면 스타일 줄에도 카드를 붙였습니다.",
+    "en": "Added a third beta style, \"CRT Terminal\": open a Seoul district from the shell, its map lights up in phosphor lines, and you type its neighborhood names and press Enter. It also has a card in the landing page's Style row."
+  },
+  {
     "v": "0.11.510",
     "date": "2026-10-26",
     "ko": "소개 화면 플레이 줄의 regiontype.com 링크를 '바로가기' 버튼으로 바꿨습니다.",
