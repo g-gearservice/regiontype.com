@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.517",
+    "date": "2026-10-27",
+    "ko": "내 스타일의 '봇 스타일' 탭에서 기본 모양·만들기·초기화 단추를 사이트의 알약 디자인과 통일하고, 모양이나 색을 골랐을 때 이전 모습으로 되돌아가던 문제를 고쳤습니다.",
+    "en": "Unified the preset/generate/reset buttons in the Bot style tab with the site's pill button design, and fixed shape and colour selections getting stuck on the previous look."
+  },
+  {
     "v": "0.11.516",
     "date": "2026-10-27",
     "ko": "할로윈 호박을 비롯한 새 캐릭터 모양 일곱 가지를 더하고, 내 스타일 창을 '게임 스타일'과 '봇 스타일' 탭으로 나누어 봇 모양·색·크기·만들기와 강조색 연동 색상을 한자리에서 고를 수 있게 했습니다.",
