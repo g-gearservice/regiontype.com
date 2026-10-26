@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.510",
+    "date": "2026-10-26",
+    "ko": "소개 화면 플레이 줄의 regiontype.com 링크를 '바로가기' 버튼으로 바꿨습니다.",
+    "en": "The regiontype.com link in the landing page's Play row is now a \"Go\" shortcut button."
+  },
+  {
     "v": "0.11.509",
     "date": "2026-10-26",
     "ko": "소개 화면의 플레이 링크(regiontype.com ↗, 새 탭에서 열기)를 누르면 새 탭에서 게임 홈 화면이 열립니다. 로그인하지 않아도 소개 화면으로 되돌아가지 않습니다.",
