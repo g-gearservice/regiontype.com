@@ -265,9 +265,19 @@ const MIRROR_KEYS = [NAME_KEY, 'rt.bio', 'rt.character', 'rt.botname', 'rt.botsi
 function clearMirror() {
   for (const k of MIRROR_KEYS) { try { localStorage.removeItem(k); } catch {} }
 }
+/* 첫 Google 로그인 때 중계기가 한 번 고정한 나라·언어(/auth/me 의 pin). 읽기만 한다 —
+   여기서 바꿔도 서버 값은 그대로다. undefined 는 아직 모름, null 은 고정 없음(기본 KR·ko).
+   게임·랜딩은 window.RT_PIN 을 읽고 'rt-pin' 이벤트(detail 도 같은 값)로 바뀐 것을 안다. */
+function setPin(p) {
+  const pin = p && /^[A-Z]{2}$/.test(p.country)
+    ? Object.freeze({ country: p.country, lang: typeof p.lang === 'string' ? p.lang : null }) : null;
+  window.RT_PIN = pin;
+  dispatchEvent(new CustomEvent('rt-pin', { detail: pin }));
+}
 function clearAcct() {
   try { localStorage.removeItem(TOKEN_KEY); } catch {}
   clearMirror();
+  setPin(null);
   try { sessionStorage.removeItem(BIND_KEY); } catch {}
 }
 function mirrorProfile(p, introTok) {
@@ -308,6 +318,7 @@ async function done(tok, generation, isNewAccount = false) {
       if (r.ok) {
         const d = await r.json().catch(() => null);
         if (!current(generation)) return;
+        if (d) setPin(d.pin);
         /* 이름을 이미 적어도 안내(intro)를 끝내기 전이면 다시 안내로 보낸다. */
         if (d && !d.intro) isNewAccount = true;
         else if (d) mirrorProfile(d.profile, d.intro ? tok : '');
@@ -787,6 +798,7 @@ if (!ssoBack) {
         if (!r.ok) return;
         const d = await r.json().catch(() => null);
         if (!d || checkedTok !== token()) return;
+        setPin(d.pin);
         if (!d.intro) {
           try {
             localStorage.removeItem('rt.intro');
@@ -798,7 +810,7 @@ if (!ssoBack) {
         mirrorProfile(d.profile, d.intro ? checkedTok : '');
       })
       .catch(() => {});
-  }
+  } else setPin(null);   // 로그인 안 한 사람은 고정이 없다 — 기다리지 않게 바로 null
 }
 
 (async () => {
