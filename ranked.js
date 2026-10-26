@@ -164,8 +164,7 @@ function openAccount() {
   s.src = asset('account/account.js');
   document.body.append(s);
 }
-function syncBotLook() {
-  syncBotStyleFromStorage();
+function syncHomeBot() {
   if (!bot) return;
   const face = readFace();
   bot.api.setShape(face.shape || 'cercle', face.gen);
@@ -177,6 +176,10 @@ function syncBotLook() {
   const was = BOT;
   sizeBot();
   if (was !== BOT && out && !touring && !intro) { if (spot) moveTo(...spot); else place(...(phone() ? underLogo() : cornerAt(corner))); }
+}
+function syncBotLook() {
+  syncBotStyleFromStorage();
+  syncHomeBot();
 }
 function leftAccount() {
   dispatchEvent(new Event('rt-opt'));
@@ -533,17 +536,40 @@ function paintBotStyle() {
   }
 }
 
-function saveBotProfile() {
+async function saveBotProfile() {
   if (!token()) return;
-  openAccount();
-  dispatchEvent(new Event('rt-bot-save'));
+  /* 내 계정 덮개(account.js)를 부르지 않고 직접 올린다 — openAccount() 는 /auth/me 를 다시 읽어
+     방금 고른 rt.character 를 서버의 옛 face 로 덮어쓰는 경합을 일으킨다 */
+  try {
+    const me = await ask('/auth/me');
+    const p = me?.profile || {};
+    const name = readName() || p.name || '';
+    if (!name) return;
+    const f = readFace();
+    const shape = (f.shape && f.shape !== 'gen') ? f.shape : 'cercle';
+    const expression = f.expression || 'curieux';
+    const colour = f.colour || 'accent';
+    await ask('/auth/profile', {
+      name,
+      bio: localStorage.getItem('rt.bio') ?? p.bio ?? '',
+      face: [shape, expression, colour].join(','),
+      lang: JSON.parse(localStorage.getItem('rt.opt') || '{}').lang || p.lang || 'auto',
+      handle: p.handle || '',
+      botname: localStorage.getItem('rt.botname') ?? p.botname ?? '',
+      push: !!p.push,
+      shut: !!p.shut,
+    });
+  } catch {}
 }
 
 function keepBotStyle(msgKey = 'acctCharSaved') {
   const out = { shape: botChar.shape, expression: botChar.expression, colour: botChar.colour };
   if (botChar.gen) out.gen = botChar.gen;
-  try { localStorage.setItem('rt.character', JSON.stringify(out)); } catch { return; }
-  dispatchEvent(new Event('rt-bot-look'));
+  try {
+    sessionStorage.setItem('rt.charDirty', '1');
+    localStorage.setItem('rt.character', JSON.stringify(out));
+  } catch { return; }
+  syncHomeBot();
   if ($('#botSay') && msgKey) $('#botSay').textContent = t(msgKey);
   clearTimeout(botKeepT);
   botKeepT = setTimeout(saveBotProfile, 400);
@@ -568,7 +594,13 @@ function updateSizeTail() {
 }
 
 function mountBotStyle() {
-  if (botMounted) { syncBotStyleFromStorage(); updateSizeTail(); return; }
+  if (botMounted) {
+    if (botMe) botMe.start();
+    if (botReal) botReal.start();
+    syncBotStyleFromStorage();
+    updateSizeTail();
+    return;
+  }
   botMounted = true;
   syncBotStyleFromStorage();
   const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
@@ -1353,7 +1385,10 @@ function act(a) {
     for (const k of ['shape', 'expression', 'colour']) if (a[k]) face[k] = a[k];
     if (a.gen) { face.gen = a.gen; if (!a.shape) face.shape = 'gen'; }
     else if (a.shape && a.shape !== 'gen') delete face.gen;
-    try { localStorage.setItem('rt.character', JSON.stringify(face)); } catch { return; }
+    try {
+      sessionStorage.setItem('rt.charDirty', '1');
+      localStorage.setItem('rt.character', JSON.stringify(face));
+    } catch { return; }
     leftAccount();
     return;
   }

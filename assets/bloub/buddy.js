@@ -53,8 +53,9 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
      뒤집히는 자리가 거기다(#e8483f .63 은 짙게, #8b5cf6 .61 은 희게). 몸 빛깔을 조금
      남겨 눈이 몸과 한 벌로 보이게 한다. --buddy-paper 를 주면 그걸 쓴다(말풍선 테두리) */
   const paper = el('path', { id: uid + '-body', fill: `var(--buddy-paper, ${EYE})` });
+  const inkRect = el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' });
   const inked = el('g', { mask: `url(#${uid})` });
-  inked.append(el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' }));
+  inked.append(inkRect);
   const stem = el('path', { class: 'buddy-stem', d: STEM_D, fill: '#424245' });
   const body = el('g');
   body.append(paper, inked, stem);
@@ -162,9 +163,8 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     });
   }
 
-  const tick = (ms) => {
-    if (!t0) t0 = ms;
-    draw((ms - t0) / 1000);
+  const tick = () => {
+    draw(clock());
     raf = requestAnimationFrame(tick);
   };
 
@@ -175,11 +175,12 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     if (!t0) t0 = performance.now();
     return (performance.now() - t0) / 1000;
   };
-  /* 모양·표정처럼 모프가 붙는 변화. 시계가 안 도는 놈은 모프가 끝난 뒤를 한 장 그린다 */
+  /* 모양·표정처럼 모프가 붙는 변화. 시계가 도는 놈도 첫 장을 바로 그려 두고,
+     시계가 안 도는 놈은 모프가 끝난 뒤(now + 1)를 한 장 그린다 */
   function at(change) {
     const now = clock();
     change(now);
-    if (!raf) draw(now + 1);
+    draw(raf ? now : now + 1);
   }
 
   /* 시계가 안 도는 놈도 시선은 따라본다 — 부르는 쪽 rAF 한 바퀴에 한 장씩.
@@ -244,10 +245,17 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
       at(now => engine.setExpression(exprOf(id), now));
     },
     setColour(id) {
-      if (id === 'accent') { host.style.setProperty('--buddy-ink', 'var(--accent)'); return; }
-      const hex = COLOR_BY_ID.get(id)?.hex;
-      if (hex) host.style.setProperty('--buddy-ink', hex);
-      else host.style.removeProperty('--buddy-ink');
+      const v = id === 'accent' ? 'var(--accent)' : COLOR_BY_ID.get(id)?.hex || '';
+      if (v) {
+        host.style.setProperty('--buddy-ink', v);
+        svg.style.setProperty('--buddy-ink', v);
+        inkRect.setAttribute('fill', v);
+      } else {
+        host.style.removeProperty('--buddy-ink');
+        svg.style.removeProperty('--buddy-ink');
+        inkRect.setAttribute('fill', 'var(--buddy-ink, var(--block))');
+      }
+      if (!raf) draw(clock() + 1);
     },
     /* 잠들고 깬다. 깰 땐 고른 표정으로 눈을 뜨며 돌아온다. 고른 표정이 없으면(null)
        엔진은 모프 없이 툭 바꾸므로, 같은 모습인 neutre 를 사이에 끼운다 */

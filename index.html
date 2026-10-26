@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.16">
+<link rel="stylesheet" href="style.css?v=5.17">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -612,11 +612,11 @@
       </div>
       <div class="profile-card character-controls sty-bot-card">
         <div class="sty-bot-bar">
-          <div class="sty-bot-modes" role="tablist" data-i18n-aria="styleTabBot" aria-label="봇 스타일">
+          <div class="pg-tabs sty-bot-modes" role="tablist" data-i18n-aria="styleTabBot" aria-label="봇 스타일">
             <button type="button" role="tab" id="botTabPreset" aria-controls="botViewPreset" aria-selected="true" data-i18n="botSubPreset">Bot</button>
             <button type="button" role="tab" id="botTabGen" aria-controls="botViewGen" aria-selected="false" tabindex="-1" data-i18n="botSubGen">Generate</button>
           </div>
-          <button type="button" class="sty-bot-reset" id="botReset" data-i18n="botReset">Reset</button>
+          <button type="button" class="sty-reset sty-bot-reset" id="botReset" data-i18n="botReset">Reset</button>
         </div>
         <div id="botViewPreset" class="sty-bot-view" role="tabpanel" aria-labelledby="botTabPreset" tabindex="0">
           <fieldset><legend class="profile-label"><span data-i18n="acctShape">모양</span> <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
@@ -624,7 +624,7 @@
         </div>
         <form id="botViewGen" class="sty-bot-view sty-bot-gen" role="tabpanel" aria-labelledby="botTabGen" tabindex="0" hidden>
           <textarea id="botGenIn" maxlength="160" rows="3" data-i18n-aria="botGenPh" aria-label="원하는 모양을 설명해 주세요…" data-i18n-ph="botGenPh" placeholder="원하는 모양을 설명해 주세요…"></textarea>
-          <button type="submit" class="sty-gen-btn" id="botGenBtn" data-i18n="botGenBtn">Generate</button>
+          <button type="submit" class="sty-save" id="botGenBtn" data-i18n="botGenBtn">Generate</button>
         </form>
       </div>
       <p class="sty-note" id="botSay" role="status" aria-live="polite"></p>
@@ -750,10 +750,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.16"></script>
-<script src="app.js?v=5.16"></script>
-<script src="auth.js?v=5.16"></script>
-<script src="settings/settings.js?v=5.16"></script>
-<script src="ranked.js?v=5.16"></script>
+<script src="relay.js?v=5.17"></script>
+<script src="app.js?v=5.17"></script>
+<script src="auth.js?v=5.17"></script>
+<script src="settings/settings.js?v=5.17"></script>
+<script src="ranked.js?v=5.17"></script>
 </body>
 </html>

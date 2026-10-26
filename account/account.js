@@ -27,6 +27,8 @@ function readChar() {
   };
 }
 function wear(face) {
+  /* 이 세션에서 내 스타일(봇 스타일 탭)로 이미 모양·색을 골랐으면 서버의 옛 face 로 덮지 않는다 */
+  if (sessionStorage.getItem('rt.charDirty') === '1') return;
   const [shape, expression, colour] = String(face || '').split(',');
   const cur = parse('rt.character', {});
   const next = {

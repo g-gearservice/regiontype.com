@@ -287,8 +287,11 @@ function mirrorProfile(p, introTok) {
     localStorage.setItem('rt.bio', p.bio || '');
     localStorage.setItem('rt.botname', p.botname || '');
     const [shape, expression, colour] = String(p.face || '').split(',');
-    if (shape && expression && colour) {
-      localStorage.setItem('rt.character', JSON.stringify({ shape, expression, colour }));
+    if (shape && expression && colour && sessionStorage.getItem('rt.charDirty') !== '1') {
+      const cur = read('rt.character', '{}');
+      const next = { shape, expression, colour };
+      if (cur && cur.gen && (shape === 'gen' || shape === cur.shape)) next.gen = cur.gen;
+      localStorage.setItem('rt.character', JSON.stringify(next));
     }
     if (p.lang) {
       const cur = read(OPT_KEY, '{}');
