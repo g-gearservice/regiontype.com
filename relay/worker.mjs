@@ -36,7 +36,7 @@
      POST /auth/mail   로그인한 사람이 복구 메일을 확인하기 시작한다 → 그 주소로만 확인 코드
      POST /auth/mail/confirm {code}  확인 코드를 맞추면 그 사서함을 이 계정에 묶는다
      POST /auth/rescue {email}  확인된 주소라면 새 복구 코드를 그 주소로만 보낸다
-     GET  /auth/me     계정 화면이 볼 값 (로그인 필요) → {codes, mailbox, google} — who·sub·메일은
+     GET  /auth/me     계정 화면이 볼 값 (로그인 필요) → {codes, mailbox, google, pin} — who·sub·메일은
                         식별자는 안 싣는다. 이 브라우저의 localStorage 만으론 다른 기기에서
                         만든 패스키·거기서 쓴 복구 코드를 몰라 "남은 비상구" 숫자가 틀릴 수 있다
      GET  /where    이 요청의 나라 코드 (cf.country). 도시는 안 보낸다
@@ -833,10 +833,10 @@ const nokey = o => reply(503, '로그인 설정이 덜 되었습니다.', o);
    둔다 — 적지 않으면 아무 값이나 챌린지라고 들고 와 서명해 보일 수 있다.
    id 를 지정하면(SSO 흐름) 나중에 같은 계산으로 같은 줄을 다시 찾을 수 있다. */
 async function challenge(env, kind, who = null,
-    { id = rand(32), back = null, sub = null, provider = null, mail = null } = {}) {
+    { id = rand(32), back = null, sub = null, provider = null, mail = null, pin = null } = {}) {
   await env.DB.prepare(
-    'insert into pending (id, kind, who, until, back, sub, provider, mail) values (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(id, kind, who, Date.now() + LIVE, back, sub, provider, mail).run();
+    'insert into pending (id, kind, who, until, back, sub, provider, mail, pin) values (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(id, kind, who, Date.now() + LIVE, back, sub, provider, mail, pin).run();
   return id;
 }
 /* 한 번 쓰면 지운다. 지나간 것도 여기서 함께 쓸어낸다 — 따로 청소할 곳을 두지 않는다.
@@ -846,8 +846,8 @@ async function challenge(env, kind, who = null,
    peekTwo/consumeTwo 를 따로 쓴다. */
 async function claim(env, id, kind = null) {
   const row = await (kind
-    ? env.DB.prepare('select who, kind, back, sub, provider, until, mail from pending where id = ? and kind = ?').bind(id, kind)
-    : env.DB.prepare('select who, kind, back, sub, provider, until, mail from pending where id = ?').bind(id)
+    ? env.DB.prepare('select who, kind, back, sub, provider, until, mail, pin from pending where id = ? and kind = ?').bind(id, kind)
+    : env.DB.prepare('select who, kind, back, sub, provider, until, mail, pin from pending where id = ?').bind(id)
   ).first();
   await env.DB.batch([
     env.DB.prepare('delete from pending where id = ?').bind(id),
@@ -860,7 +860,7 @@ async function claim(env, id, kind = null) {
    성공했을 때만 호출자가 consumeTwo 로 명시적으로 지운다. */
 async function peekTwo(env, id) {
   const row = await env.DB.prepare(
-    'select who, tries, until, sub, provider from pending where id = ? and kind = ?').bind(id, 'two').first();
+    'select who, tries, until, sub, provider, pin from pending where id = ? and kind = ?').bind(id, 'two').first();
   await env.DB.prepare('delete from pending where until < ?').bind(Date.now()).run();
   if (!row || row.until <= Date.now()) return null;
   if (row.tries >= 5) {
@@ -970,6 +970,59 @@ async function ssoToken(env, p, code) {
   if (!r.ok) return null;
   const j = await r.json().catch(() => null);
   return j?.id_token ?? null;
+}
+
+/* ── 나라·언어 고정(pin) ───────────────────────────────
+   첫 Google 로그인 때 한 번만 정한다: 접속 국가(req.cf.country)와 ID 토큰의
+   locale 이 서로 맞을 때만 계정에 나라·언어를 적고, 그 뒤로는 바꾸지 않는다.
+   맞지 않거나 locale 이 없으면 적지 않는다 — 화면은 기본(KR·ko)으로 둔다.
+   Apple·패스키는 locale 을 주지 않으니 고정하지 않는다.
+
+   locale 에 지역이 있으면('ko-KR') 그 나라가 접속 국가와 같아야 하고, 없으면('ko')
+   그 말이 접속 국가의 공용어여야 한다. 공용어 표는 화면 말 26개만 담는다 — 표에 없는
+   말은 지역 없이 오면 견줄 길이 없어 고정하지 않는다. 지역이 맞는데 말이 26개 밖이면
+   나라만 적는다. 원래 locale 문자열은 어디에도 남기지 않는다 — 접은 두 값만 적는다.
+
+   Google 은 scope 에 profile 이 있어야 locale 을 싣는다(그래도 빠질 때가 있다).
+   지금 scope 는 'openid email' 이라 실제로는 locale 이 오지 않아 고정이 일어나지 않는다
+   — 넓히는 건 사람이 고른다. */
+export const PIN_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh', 'it', 'nl', 'pl', 'cs', 'sv',
+  'nb', 'fi', 'uk', 'ro', 'hu', 'bg', 'el', 'tr', 'vi', 'th', 'id', 'ms', 'ar'];
+const OFFICIAL = {
+  ko: 'KR KP', ja: 'JP', zh: 'CN TW HK MO SG', vi: 'VN', th: 'TH', id: 'ID', ms: 'MY BN SG',
+  en: 'US GB IE AU NZ CA SG PH IN ZA NG KE GH UG ZM ZW BW MT JM TT BS BB BZ GY FJ PG',
+  de: 'DE AT CH LI LU BE', fr: 'FR BE CH LU MC CA SN CI CM CD MG ML NE BF BJ TG GA CG GN HT',
+  es: 'ES MX AR CO PE VE CL EC GT CU BO DO HN PY SV NI CR PA UY PR GQ',
+  pt: 'PT BR AO MZ CV GW ST TL', it: 'IT SM VA CH', nl: 'NL BE SR', pl: 'PL', cs: 'CZ',
+  sv: 'SE FI', nb: 'NO', fi: 'FI', uk: 'UA', ro: 'RO MD', hu: 'HU', bg: 'BG', el: 'GR CY',
+  tr: 'TR CY', ar: 'SA AE EG IQ JO KW LB LY MA OM QA SD SY TN YE BH DZ PS MR',
+};
+const LANG_ALIAS = { no: 'nb', in: 'id' };
+/* 접속 국가 · Google locale → {country, lang} | null. lang 은 26개 밖이면 null. */
+export function pinOf(cfCountry, locale) {
+  const country = regionOf({ country: cfCountry }, '').country;
+  if (!country || typeof locale !== 'string' || locale.length > 35) return null;
+  if (!/^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{1,8})*$/.test(locale)) return null;
+  const [head, ...rest] = locale.split(/[-_]/);
+  const raw = head.toLowerCase();
+  const lang = LANG_ALIAS[raw] || raw;
+  const region = rest.find(t => /^[A-Za-z]{2}$/.test(t))?.toUpperCase();
+  const known = PIN_LANGS.includes(lang) ? lang : null;
+  if (region) return region === country ? { country, lang: known } : null;
+  return known && OFFICIAL[known].split(' ').includes(country) ? { country, lang: known } : null;
+}
+/* pending.pin 에 싣는 모양: 'KR:ko' · 'ES:'. 읽을 때 다시 거른다. */
+const pinCode = p => p ? `${p.country}:${p.lang || ''}` : null;
+function pinParse(s) {
+  const m = /^([A-Z]{2}):([a-z]{2})?$/.exec(String(s ?? ''));
+  return m && (!m[2] || PIN_LANGS.includes(m[2])) ? { country: m[1], lang: m[2] || null } : null;
+}
+/* 2단계를 넘은 뒤에만 부른다. pin_at 이 비어 있을 때만 적는다 — 한 번 정하면 그대로. */
+async function pinOnce(env, who, code) {
+  const p = pinParse(code);
+  if (!who || !p) return;
+  await env.DB.prepare('update user set pin_country = ?, pin_lang = ?, pin_at = ? where id = ? and pin_at is null')
+    .bind(p.country, p.lang, Date.now(), who).run();
 }
 
 /* Google 의 sub 은 공급자를 넘어 고정된 전역 id 다 — 다른 곳에서 유출된
@@ -1187,6 +1240,7 @@ async function authTwoCheck(req, env, o) {
     if (!row.sub) return reply(400, '먼저 코드를 받으세요.', o);
     if (toHex(await sha(code)) !== row.sub) return reply(401, '맞지 않는 코드입니다.', o);
     await consumeTwo(env, id);
+    await pinOnce(env, row.who, row.pin);
     return send(200, { token: await sign(env.SESSION_KEY, row.who) }, o);
   });
 }
@@ -1325,7 +1379,9 @@ async function authCb(req, env) {
        (/auth/take) 로 미룬다. */
     /* 확인된 Google 주소만. 이번 로그인 줄에만 있고, 계정이 생기기 전에는 어디에도 안 적는다. */
     const gmail = p === 'google' && claims.email_verified === true ? (normMail(claims.email) || null) : null;
-    await challenge(env, 'take', row.who, { id, sub, provider: p, mail: gmail });
+    /* 나라·언어 후보. 이번 로그인 줄에만 싣고, 2단계를 넘어야 계정에 적는다(pinOnce). */
+    const pin = p === 'google' ? pinCode(pinOf(req.cf?.country, claims.locale)) : null;
+    await challenge(env, 'take', row.who, { id, sub, provider: p, mail: gmail, pin });
     return redir(back, `signin=ok&t=${tag}`);
   } catch {
     return redir(back, 'signin=fail');
@@ -1369,7 +1425,7 @@ async function authTake(req, env, o) {
        같은 id 를 그대로 이어 쓴다 — /auth/code·/auth/two 가 b·t 로 되짚는다.
        mail 은 이번 로그인의 Google 확인 주소다. user 로는 옮기지 않는다. */
     const rec = await env.DB.prepare('select count(*) as n from recovery where who = ?').bind(who).first();
-    await challenge(env, 'two', who, { id, mail: row.mail || null });
+    await challenge(env, 'two', who, { id, mail: row.mail || null, pin: row.pin || null });
     const via = {
       mail: !!row.mail && !!(env.MAIL?.fetch && env.MAIL_KEY),
       code: (rec?.n ?? 0) > 0,
@@ -1400,6 +1456,7 @@ async function authCode(req, env, o) {
     /* 쓰면 지운다 — 복구 코드는 한 번만 쓴다 */
     await env.DB.prepare('delete from recovery where hash = ?').bind(h).run();
     await consumeTwo(env, id);
+    await pinOnce(env, row.who, row.pin);
     return send(200, { token: await sign(env.SESSION_KEY, r.who) }, o);
   });
 }
@@ -1613,19 +1670,23 @@ async function authMe(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
   return safely(o, async () => {
-    const [codes, row, intro, box, google] = await env.DB.batch([
+    const [codes, row, intro, box, google, pin] = await env.DB.batch([
       env.DB.prepare('select count(*) as n from recovery where who = ?').bind(me),
       env.DB.prepare('select name, bio, face, lang, handle, botname, push, shut from profile where who = ?').bind(me),
       env.DB.prepare('select 1 as n from intro where who = ?').bind(me),
       env.DB.prepare('select 1 as n from mailbox where who = ?').bind(me),
       env.DB.prepare("select 1 as n from sso where who = ? and provider = 'google'").bind(me),
+      env.DB.prepare('select pin_country, pin_lang from user where id = ?').bind(me),
     ]);
+    const pr = pin.results[0];
     /* intro 는 '가입 안내를 이미 마쳤다' 는 표시다. 화면(auth.js·welcome.js)이
        이걸 보고 안내를 다시 띄울지 정한다 — 두 번 묻지 않기 위한 값 하나다. */
     return send(200, { codes: codes.results[0]?.n ?? 0,
                        profile: row.results[0] ?? null, intro: !!intro.results[0],
                        mailbox: !!box.results[0],
-                       google: !!google.results[0] }, o);
+                       google: !!google.results[0],
+                       /* 첫 Google 로그인 때 한 번 정한 나라·언어. 읽기만 한다 — 바꾸는 길은 없다. */
+                       pin: pr?.pin_country ? { country: pr.pin_country, lang: pr.pin_lang || null } : null }, o);
   });
 }
 
