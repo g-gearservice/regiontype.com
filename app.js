@@ -1242,15 +1242,12 @@ document.addEventListener('click', e => {
   if (e.target.closest('#coursePick')) { pickTile(null); syncHomeCam(); }
   if (e.target.closest('#navBack')) closeCourse();
   /* 고른 칸이 있으면 그 코스로, 없으면 서울 코스로 */
-  if (e.target.closest('#navPlay')) playNormal();
+  if (e.target.closest('#navPlay') && COURSE.root) {
+    /* 여러 칸은 한 코스 안에서만 고를 수 있으니, 그 코스를 고른 곳만 남겨 친다 */
+    if (MARK.size > 1) start(PICK.kid ? PICK.parent.slug : COURSE.root, new Set([...MARK].map(x => x.name)));
+    else start(PICK ? PICK.slug : COURSE.root);
+  }
 });
-/* 일반전 — 고른 칸이 있으면 그 코스로, 없으면 서울 코스로 */
-function playNormal() {
-  if (!COURSE.root) return;
-  /* 여러 칸은 한 코스 안에서만 고를 수 있으니, 그 코스를 고른 곳만 남겨 친다 */
-  if (MARK.size > 1) start(PICK.kid ? PICK.parent.slug : COURSE.root, new Set([...MARK].map(x => x.name)));
-  else start(PICK ? PICK.slug : COURSE.root);
-}
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
   if (document.body.matches('.signing, .setting, .paging')) return;
@@ -2250,51 +2247,15 @@ async function boot() {
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
 
-/* ── 라이선스 등급표 및 판정 (relay/license.mjs 와 같은 규칙) ─────────────────
-   완주(hits === items.length) 필수. 120초 고정. 위에서부터 처음 맞는 등급이다 */
-const EXAM_GRADES = [
-  { g: 'A', acc: 98, cpm: 600, miss: 1 },
-  { g: 'B', acc: 95, cpm: 500, miss: 3 },
-  { g: 'C', acc: 93, cpm: 400, miss: 5 },
-  { g: 'D', acc: 90, cpm: 300, miss: 10 },
-  { g: 'E', acc: 85, cpm: 200, miss: 10 },
-  { g: 'F', acc: 80, cpm: 0, miss: 10 },
-];
-function gradeOf({ done, acc, cpm, misses }) {
-  if (!done) return null;
-  for (const r of EXAM_GRADES) {
-    if (acc >= r.acc && cpm >= r.cpm && misses <= r.miss) return r.g;
-  }
-  return null;
-}
-function nextConditionOf({ done, acc, cpm, misses, grade }) {
-  if (!done) return { kind: 'done' };
-  if (!grade) {
-    if (misses > 10) return { g: 'F', kind: 'miss', need: 10 };
-    return { g: 'F', kind: 'acc', need: 80 };
-  }
-  const order = ['F', 'E', 'D', 'C', 'B', 'A'];
-  const idx = order.indexOf(grade);
-  if (idx < 0 || idx >= order.length - 1) return { kind: 'max' };
-  const next = order[idx + 1];
-  const req = EXAM_GRADES.find(x => x.g === next);
-  if (!req) return { kind: 'max' };
-  if (misses > req.miss) return { g: next, kind: 'miss', need: req.miss };
-  if (cpm < req.cpm) return { g: next, kind: 'cpm', need: req.cpm };
-  if (acc < req.acc) return { g: next, kind: 'acc', need: req.acc };
-  return { kind: 'max' };
-}
-
-/* rk 는 경쟁전 표({id, secs}), exam 은 라이선스 시험({mode, id}) — 시간은 120초 고정이다 */
-async function start(slug, only, rk, exam) {
+/* rk 는 경쟁전 표({id, secs}) — ranked.js 가 중계기에서 받아 넘긴다. 시간은 표가 정한다 */
+async function start(slug, only, rk) {
   cancelAnimationFrame(replayRaf);
   /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
      기다린 뒤의 focus 로는 안 뜬다. 화면을 먼저 열고 입력창을 잡는다 */
   /* 게임 자판이 켜져 있으면 기기 키보드가 올라오지 않게 먼저 막는다 — 코스를 못 치는
      자판이면 syncKb 가 도로 푼다 */
   if (fingers()) { kbMode(opt.softkb); go('play'); if (!opt.softkb) $('#typein').focus(); }
-  if (exam) only = null;   // 시험 모드는 부분집합이 아닌 코스 전체 완주가 조건이다
-  const secs = exam ? 120 : (rk ? rk.secs : opt.time);
+  const secs = rk ? rk.secs : opt.time;
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [[course, geom], [, names], intro, read] = await Promise.all([load(slug), krNames(), intros(), reads()]);
   const zoom = playZoom(geom);
@@ -2320,7 +2281,7 @@ async function start(slug, only, rk, exam) {
     it.alts = short !== it.say ? [short] : [];
   });
   G = { slug, names, intro, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
-       total: secs, left: secs, ranked: rk || null, exam: exam || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
+       total: secs, left: secs, ranked: rk || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
        cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
   $('#typein').lang = TONGUE ? LANG : course.lang || document.documentElement.lang;
 
@@ -2346,10 +2307,8 @@ async function start(slug, only, rk, exam) {
   $('#typein').value = '';
   $('#gaugeFill').style.width = '100%';
   $('#statTime').firstElementChild.textContent = clock(secs);
-  $('#play').classList.toggle('is-ranked', !!rk || (!!exam && exam.mode === 'ranked'));
-  $('#play').classList.toggle('is-exam', !!exam);
+  $('#play').classList.toggle('is-ranked', !!rk);
   $('#rkTag').hidden = !rk;
-  if ($('#examTag')) $('#examTag').hidden = !exam;
   G.kb = kbFor(items);
   syncKb();
   $('.gauge').classList.remove('warn');
@@ -3264,54 +3223,18 @@ function finish() {
   pending = setTimeout(() => {
     G.cpm = cpmNow(true);
     G.acc = accNow();
+    /* 옛 열쇠(rt.best.* 점수, rt.fast.* 음절 CPM)는 지금 타수와 견줄 수 없다 */
+    const key = `rt.keys.${G.slug}.t${G.total}` + (TONGUE ? '.' + TONGUE.lang : '');   // 말마다 따로 겨룬다
+    const prev = Number(localStorage.getItem(key) || 0);
     $('#rScore').textContent = speedIn(G.cpm);
     $('#rCount').textContent = G.hits;
     $('#rCount').dataset.of = G.items.length;
     $('#rAcc').textContent = G.acc + '%';
-
-    const examEl = $('#rExam');
-    if (G.exam) {
-      $('#rBest').hidden = true;
-      if ($('#rLp')) $('#rLp').hidden = true;
-      if (examEl) {
-        examEl.hidden = false;
-        const misses = Math.max(0, G.tries - G.hits);
-        const done = G.hits === G.items.length;
-        const g = gradeOf({ done, acc: G.acc, cpm: G.cpm, misses });
-        const next = nextConditionOf({ done, acc: G.acc, cpm: G.cpm, misses, grade: g });
-        const badge = $('#rExamBadge');
-        if (badge) {
-          badge.textContent = g || '—';
-          badge.dataset.grade = g || 'none';
-        }
-        if ($('#rExamTitle')) $('#rExamTitle').textContent = g ? t('examGradeNamed', { g }) : t('examNone');
-        const doneEl = $('#rExamDone');
-        if (doneEl) {
-          doneEl.textContent = done ? t('examDone') : t('examNotDone');
-          doneEl.classList.toggle('is-done', done);
-        }
-        if ($('#rExamStats')) $('#rExamStats').textContent = `${t('accuracy')} ${G.acc}% · ${showSpeed(G.cpm)} · ${t('examMissCnt', { n: misses })}`;
-        let nextText = '';
-        if (next.kind === 'done') nextText = t('examNeedDone');
-        else if (next.kind === 'max') nextText = t('examMaxGrade');
-        else if (next.kind === 'miss') nextText = t('examNeedMiss', { g: next.g, n: next.need });
-        else if (next.kind === 'cpm') nextText = t('examNeedCpm', { g: next.g, n: showSpeed(next.need) });
-        else if (next.kind === 'acc') nextText = t('examNeedAcc', { g: next.g, n: next.need });
-        if ($('#rExamNext')) $('#rExamNext').textContent = nextText;
-      }
-    } else {
-      if (examEl) examEl.hidden = true;
-      $('#rBest').hidden = false;
-      /* 옛 열쇠(rt.best.* 점수, rt.fast.* 음절 CPM)는 지금 타수와 견줄 수 없다 */
-      const key = `rt.keys.${G.slug}.t${G.total}` + (TONGUE ? '.' + TONGUE.lang : '');   // 말마다 따로 겨룬다
-      const prev = Number(localStorage.getItem(key) || 0);
-      $('#rBest').textContent = G.cpm > prev ? t('bestNew') : prev ? t('bestPrev', { n: showSpeed(prev) }) : '';
-      if (G.cpm > prev) localStorage.setItem(key, G.cpm);
-      if ($('#rLp')) $('#rLp').hidden = false;
-    }
+    $('#rBest').textContent = G.cpm > prev ? t('bestNew') : prev ? t('bestPrev', { n: showSpeed(prev) }) : '';
+    if (G.cpm > prev) localStorage.setItem(key, G.cpm);
 
     drawCard();
-    if (!G.exam) board();
+    board();
     /* 전적·경쟁전 lp 는 ranked.js 가 올린다 */
     dispatchEvent(new CustomEvent('rt-finish', { detail: G }));
     /* 폰 결과는 지도를 뒤에 남긴다 — 입력창도 남으니 화상 키보드를 내린다 */
@@ -3657,7 +3580,6 @@ const boardAsk = async (path, body) => {
 async function board() {
   const sec = $('#board');
   sec.hidden = true;
-  if (!G || G.exam) return;
   const inn = !!token();
   const play = { c: G.slug, t: G.total };
   /* 한 판은 한 번만 올린다 — 내리기 뒤에 다시 그릴 때 방금 내린 판을 도로 올리지 않게 */
@@ -3684,16 +3606,6 @@ async function board() {
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
-  /* 라이선스 시험 판정 경계값 단언 */
-  console.assert(gradeOf({ done: true, acc: 98, cpm: 600, misses: 1 }) === 'A', '라이선스: (acc 98, cpm 600, misses 1, done) → A');
-  console.assert(gradeOf({ done: true, acc: 97, cpm: 600, misses: 1 }) === 'B', '라이선스: (acc 97, cpm 600, misses 1, done) → B');
-  console.assert(gradeOf({ done: true, acc: 98, cpm: 599, misses: 1 }) === 'B', '라이선스: (acc 98, cpm 599, misses 1, done) → B');
-  console.assert(gradeOf({ done: true, acc: 98, cpm: 600, misses: 2 }) === 'B', '라이선스: (acc 98, cpm 600, misses 2, done) → B');
-  console.assert(gradeOf({ done: false, acc: 98, cpm: 600, misses: 1 }) === null, '라이선스: 완주 못 함 → null');
-  console.assert(gradeOf({ done: true, acc: 80, cpm: 100, misses: 11 }) === null, '라이선스: (acc 80, misses 11) → null');
-  console.assert(gradeOf({ done: true, acc: 79, cpm: 700, misses: 0 }) === null, '라이선스: (acc 79) → null');
-  console.assert(gradeOf({ done: true, acc: 80, cpm: 50, misses: 10 }) === 'F', '라이선스: (acc 80, misses 10, done) → F');
-
   /* 두벌식 조합기 — 자판을 누른 순서 그대로 쳐서 음절이 맞게 서는지 */
   const type = keys => [...keys].reduce(hanPush, '');
   console.assert(type('ㄱㅏㅇㅅㅓㄱㅜ') === '강서구', '두벌식: 강서구');

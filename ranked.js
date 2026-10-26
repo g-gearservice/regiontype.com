@@ -1815,24 +1815,12 @@ function wireLogo() {
   skip.addEventListener('click', quitTour);
 }
 
-/* ── 시작하기 → 일반전 / 경쟁전 ─────────────────────────
-   시작하기를 누르면 그 바로 위에 고르기 판(#modePick)이 뜬다. 짧게 누르면 그 모드로 간다 —
-   경쟁전은 지금 고른 칸(없으면 전체 코스)으로 1대1 매칭이다. 꾹(1.2초) 누르면 그 모드의
-   라이선스 시험이다. 누르는 동안 단추가 차오르고(움직임을 끄면 남은 초가 글자로 보인다),
-   다 차기 전에 떼거나 단추 밖으로 나가면 없던 일이 된다. 키보드는 Space·Enter 를 누르고
-   있으면 되고, 길게 누르기 어려우면 '라이선스 시험' 토글을 켜고 짧게 누른다 */
-const EXAM_HOLD_MS = 1200, EXAM_SECS = 120;
-/* 등급표 — 공통 조건은 120초 안에 완주. 위에서부터 처음 맞는 등급이다. E·D 의 오타는 F 의 10 을 물려받는다.
-   판정 함수는 다음 단계에서 relay/license.mjs 로 옮겨 서버와 같은 숫자를 쓴다 */
-const EXAM_GRADES = [
-  { g: 'A', acc: 98, cpm: 600, miss: 1 },
-  { g: 'B', acc: 95, cpm: 500, miss: 3 },
-  { g: 'C', acc: 93, cpm: 400, miss: 5 },
-  { g: 'D', acc: 90, cpm: 300, miss: 10 },
-  { g: 'E', acc: 85, cpm: 200, miss: 10 },
-  { g: 'F', acc: 80, cpm: 0, miss: 10 },
-];
-let ranked = false;
+/* ── 경쟁전 ────────────────────────────────────────────
+   시작하기를 꾹(0.6초) 누르면 켜진다 — 누르는 동안 알약이 봇의 빛깔로 차오르고, 다 차면
+   '경쟁전 시작'으로 바뀐다. 한 번 더 누르면 지금 고른 칸(없으면 전체 코스)으로 겨룬다.
+   다시 꾹 누르거나 Esc 면 풀린다. 키보드는 Space 를 누르고 있으면 된다 */
+const HOLD_MS = 600;
+let ranked = false, press = 0, swallowPlay = false;
 const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
   ranked = on;
@@ -1843,131 +1831,27 @@ function setRanked(on) {
   play.textContent = t(play.dataset.i18n);
   relayoutNavShapes();
 }
-const pickOpen = () => {
-  const d = $('#modePick');
-  return !!(d && d.matches && d.matches(':popover-open'));
-};
-/* 시작하기 바로 위, 그 가운데에 세운다. 폰은 시작하기가 tab-dock 안으로 옮겨 가도 그 자리를 잰다 */
-function placePick() {
-  const d = $('#modePick'), play = $('#navPlay');
-  if (!d || !play) return;
-  const a = play.getBoundingClientRect(), PAD = 12, GAP = 10;
-  const w = d.offsetWidth, h = d.offsetHeight;
-  d.style.left = Math.round(Math.min(Math.max(PAD, a.left + a.width / 2 - w / 2), innerWidth - w - PAD)) + 'px';
-  d.style.top = Math.round(Math.max(PAD, a.top - GAP - h)) + 'px';
-}
-function closePick(back) {
-  if (!pickOpen()) return;
-  $('#modePick').hidePopover();
-  if (back) $('#navPlay').focus({ preventScroll: true });
-}
-/* 꾹 누르기 하나. 짧으면 onTap, 다 차면 onHold. 꾹 뒤에 따라오는 click 은 삼킨다 */
-function wireHold(btn, onTap, onHold) {
-  let timer = 0, tick = 0, held = false, t0 = 0;
-  const stop = () => {
-    clearTimeout(timer); clearInterval(tick); timer = tick = 0;
-    btn.classList.remove('is-holding');
-    delete btn.dataset.left;
-  };
+function wirePlayHold() {
+  const play = $('#navPlay');
+  const cancel = () => { clearTimeout(press); press = 0; document.body.classList.remove('rk-charging'); };
   const begin = () => {
-    if (timer) return;
-    held = false; t0 = Date.now();
-    btn.style.setProperty('--hold-ms', EXAM_HOLD_MS + 'ms');
-    btn.classList.add('is-holding');
-    /* 움직임을 끈 사람에게는 차오르는 대신 남은 초를 글자로 보인다(CSS 가 그때만 그린다) */
-    const left = () => { btn.dataset.left = t('examLeft', { n: Math.max(0, (EXAM_HOLD_MS - (Date.now() - t0)) / 1000).toFixed(1) }); };
-    left(); tick = setInterval(left, 100);
-    timer = setTimeout(() => { stop(); held = true; navigator.vibrate?.(10); onHold(); }, EXAM_HOLD_MS);
+    if (press) return;
+    swallowPlay = false;
+    document.body.classList.add('rk-charging');
+    press = setTimeout(() => {
+      cancel();
+      swallowPlay = true;
+      setRanked(!ranked);
+      if (ranked) say('rkArmed', { name: placeOf(rankedSlug()) });
+      else if (!touring) hide();
+    }, HOLD_MS);
   };
-  btn.addEventListener('pointerdown', e => { if (!e.button) begin(); });
-  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(n => btn.addEventListener(n, stop));
-  btn.addEventListener('click', e => {
-    if (held) { held = false; e.preventDefault(); return; }
-    onTap();
-  });
-  /* 키보드: 브라우저의 click 을 막고 손수 가른다 — Enter 는 누르는 순간 click 이 나가기 때문이다 */
-  btn.addEventListener('keydown', e => {
-    if (e.key !== ' ' && e.key !== 'Enter') return;
-    e.preventDefault();
-    if (!e.repeat) begin();
-  });
-  btn.addEventListener('keyup', e => {
-    if (e.key !== ' ' && e.key !== 'Enter') return;
-    e.preventDefault();
-    if (!timer) { held = false; return; }   // 이미 다 찼다 — onHold 가 갔다
-    stop(); onTap();
-  });
+  play.addEventListener('pointerdown', e => { if (!e.button) begin(); });
+  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(n => play.addEventListener(n, cancel));
+  play.addEventListener('keydown', e => { if (e.key === ' ' && !e.repeat) begin(); });
+  play.addEventListener('keyup', e => { if (e.key === ' ') cancel(); });
   /* 손가락으로 꾹 누르면 뜨는 메뉴를 막는다 */
-  btn.addEventListener('contextmenu', e => e.preventDefault());
-}
-function pickNote(key) { $('#modeNote').textContent = key ? t(key) : ''; }
-/* 라이선스 시험 — 이번에는 들어가는 창까지다. 로그인한 사람만, 지금은 한국어 화면만 연다 */
-function openExam(mode) {
-  if (LANG !== 'ko') { pickNote('examKoOnly'); return; }
-  if (!token()) { closePick(); say('rkNeedLogin'); $('#signinLink').click(); return; }
-  closePick();
-  const d = $('#examGate');
-  d.dataset.mode = mode;
-  $('#examTitle').textContent = t('examTitle', { mode: t(mode === 'ranked' ? 'rankedTab' : 'normalTab') });
-  $('#examLede').textContent = t('examLede', { name: placeOf(rankedSlug()), n: EXAM_SECS });
-  $('#examRows').replaceChildren(...EXAM_GRADES.map(r => {
-    const tr = document.createElement('tr');
-    const th = document.createElement('th');
-    th.scope = 'row';
-    const b = document.createElement('b');
-    b.className = 'exam-badge';
-    b.textContent = r.g;
-    th.append(b);
-    tr.append(th, ...[r.acc + '%+', r.cpm ? showSpeed(r.cpm) + '+' : '—', '≤ ' + r.miss].map(s => {
-      const td = document.createElement('td'); td.textContent = s; return td;
-    }));
-    return tr;
-  }));
-  d.showModal();
-  $('#examClose').focus();
-}
-function wireModePick() {
-  const d = $('#modePick'), play = $('#navPlay'), toggle = $('#examToggle');
-  if (!d || !play || !toggle) return;
-  const examOn = () => toggle.getAttribute('aria-pressed') === 'true';
-  const pick = mode => {
-    if (examOn()) return openExam(mode);
-    closePick();
-    if (mode === 'ranked') go(rankedSlug());
-    else playNormal();
-  };
-  wireHold($('#modeNormal'), () => pick('normal'), () => openExam('normal'));
-  wireHold($('#modeRanked'), () => pick('ranked'), () => openExam('ranked'));
-  toggle.addEventListener('click', () => {
-    toggle.setAttribute('aria-pressed', String(!examOn()));
-    d.classList.toggle('is-exam', examOn());
-  });
-  d.addEventListener('beforetoggle', e => {
-    if (e.newState !== 'open') return;
-    pickNote('');
-    play.setAttribute('aria-expanded', 'true');
-  });
-  d.addEventListener('toggle', e => {
-    if (e.newState !== 'open') { play.setAttribute('aria-expanded', 'false'); return; }
-    placePick();
-    $('#modeNormal').focus({ preventScroll: true });
-  });
-  play.setAttribute('aria-expanded', 'false');
-  addEventListener('resize', () => { if (pickOpen()) placePick(); });
-  /* 판이 떠 있는 동안 Esc 는 판만 닫는다 — 홈의 Esc(고른 칸 풀기)까지 가지 않게 먼저 받는다 */
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || !pickOpen()) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    closePick(true);
-  }, true);
-  $('#examClose').addEventListener('click', () => $('#examGate').close());
-  $('#examGo').addEventListener('click', () => {
-    const d = $('#examGate');
-    const mode = d.dataset.mode || 'normal';
-    d.close();
-    start(rankedSlug(), null, null, { mode, id: 'exam-' + Date.now().toString(36) });
-  });
-  $('#examGate').addEventListener('close', () => play.focus({ preventScroll: true }));
+  play.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 let quitNote = '';
@@ -2162,11 +2046,6 @@ function wireStart() {
   document.addEventListener('click', e => {
     if (e.target.closest('#again')) {
       if (!touring) { hide(); doze(); }
-      if (G && G.exam) {
-        e.stopImmediatePropagation();
-        start(G.slug, null, null, { mode: G.exam.mode, id: 'exam-' + Date.now().toString(36) });
-        return;
-      }
       if (G && G.ranked) {
         e.stopImmediatePropagation();
         go(G.slug);
@@ -2174,19 +2053,14 @@ function wireStart() {
       return;
     }
     if (!e.target.closest('#navPlay')) return;
+    /* 꾹 누른 뒤 손을 떼며 오는 click 은 시작이 아니다 */
+    if (swallowPlay) { swallowPlay = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
     /* 안내 도중에 시작하면 안내는 거기서 끝난다 — 판에서 돌아왔을 때 매달려 있지 않게 */
     quitTour();
     if (!touring) { hide(); doze(); }
+    if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
     e.stopImmediatePropagation();
-    /* 봇이 켜 둔 경쟁전(rk-ready)이면 판을 열지 않고 곧장 겨룬다 */
-    if (ranked && !document.body.matches('.signing, .setting, .paging')) {
-      e.preventDefault();
-      go(rankedSlug());
-      return;
-    }
-    /* 시작하기는 일반전·경쟁전 고르기 판을 연다 */
-    if (pickOpen()) closePick();
-    else $('#modePick').showPopover();
+    go(rankedSlug());
   }, true);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && chatting) {
@@ -2217,8 +2091,6 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   const line = $('#rLp');
   line.textContent = '';
   line.classList.remove('bad');
-  /* 라이선스 시험 판은 /played, /ranked/end 로 올리지 않는다 — 3단계에서 /license/end 가 올린다 */
-  if (g.exam) return;
   /* 일반전 판은 app.js 의 board() 가 올린다 — 그래야 그 판의 순위표를 한 번에 받는다 */
   if (!token() || !g.ranked) return;
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
@@ -2296,16 +2168,13 @@ addEventListener('rt-tab-swap', () => closePage(true));
 
 wireTabs();
 wireLogo();
-wireModePick();
+wirePlayHold();
 wireStart();
 wireMatch();
 wireChat();
 wireStyles();
 paintTheme();   // 머리 스크립트가 붙일 rt.themeCss 를 지금 표로 다시 적는다
 if (location.search.includes('rt=1')) {
-  console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked') && $('#examToggle'), '모드 고르기: 팝오버 요소');
-  console.assert($('#examGate') && $('#examRows'), '라이선스: 시험 진입 창');
-  console.assert(EXAM_GRADES.length === 6 && EXAM_GRADES[0].g === 'A' && EXAM_GRADES[5].g === 'F', '라이선스: A~F 등급표');
   console.assert(THEME.every(k => HEX.test(k.def) && (!k.on || HEX.test(k.on) || THEME.some(x => x.key === k.on))), '스타일: 표의 기본값·짝');
   console.assert(!themeLow({}).length, '스타일: 기본 색은 대비를 지킨다');
   console.assert(themeLow({ ink: '#e8edf0' })[0]?.key === 'bg' && themeLow({ accent: '#232c31' })[0]?.key === 'accent', '스타일: 대비 부족을 잡는다');
