@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.509",
+    "date": "2026-10-26",
+    "ko": "소개 화면의 플레이 링크(regiontype.com ↗, 새 탭에서 열기)를 누르면 새 탭에서 게임 홈 화면이 열립니다. 로그인하지 않아도 소개 화면으로 되돌아가지 않습니다.",
+    "en": "The Play links on the landing page (regiontype.com ↗, Open in new tab) now open the game's home screen in a new tab, even when you are not signed in, instead of bouncing back to the landing page."
+  },
+  {
     "v": "0.11.508",
     "date": "2026-10-26",
     "ko": "로그인하지 않은 방문자는 소개 화면(/landing/)에서 시작하고, 로그인한 사람은 바로 홈으로 갑니다. 소개 화면의 플레이 줄과 플랜 칸도 다듬었습니다.",

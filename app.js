@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.08';
+const VER = '5.09';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
