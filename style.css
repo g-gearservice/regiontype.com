@@ -13,6 +13,7 @@
   --bad:#c1362b;
   /* 경쟁전. 빨간 봇·물든 칸·빨간 시작하기가 이 한 색이다. 흰 글자 대비 5.1:1 */
   --ranked:#c8322a;
+  --target-hi:#007aff;
   --land:#d3dde3; --land-line:#e8edf0; --card:#f4f8f9;
   --fast:.16s; --slow:.2s;
   /* 로그인·설정 덮개가 쓰는 시간. 화면 한 판이 통째로 바뀌는 자리라 길다 */
@@ -61,6 +62,7 @@
 :root[data-night]{
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
   --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --bar:#3a444a;
+  --target-hi:#6395ee;
   --shadow:none;
   --shadow-lift:none; --land:#334047; --land-line:#232c31; --card:#2b353b;
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.08);
@@ -963,7 +965,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 
 /* 지금 쳐야 할 구 — 이름을 숨겨도 어디인지는 보여야 한다 */
 #map g.target circle{
-  stroke:var(--accent-text); stroke-width:calc(2.4px / var(--z,1));
+  stroke:var(--target-hi); stroke-width:calc(2.4px / var(--z,1));
   animation:aimpulse 1.5s var(--ease-in-out) infinite;
 }
 @keyframes aimpulse{50%{stroke-opacity:.25}}
@@ -1034,7 +1036,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 
 /* 원래 입력창은 화면에서 뺀다. display:none 이면 포커스가 안 잡혀 IME 가 죽는다 */
 .typebar{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;padding:0}
-#typein{width:1px;height:1px;padding:0;border:0;box-shadow:none;font-size:16px}
+#typein{width:1px;height:1px;padding:0;border:0;box-shadow:none;font-size:16px;caret-color:var(--target-hi)}
 
 .fact b{display:none}
 
@@ -1043,7 +1045,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 .typing{position:relative}
 .typing .caret{
   position:absolute; left:0; top:0; width:3px; border-radius:2px; pointer-events:none;
-  background:var(--accent); transition:transform .1s linear;
+  background:var(--target-hi); transition:transform .1s linear;
 }
 .typing .caret.idle{animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}

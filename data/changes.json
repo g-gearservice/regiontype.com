@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.512",
+    "date": "2026-10-26",
+    "ko": "목표 지역 비트 테두리 깜빡임 색상을 타이핑 하이라이트(커서) 색상과 같은 블루(#007aff, 야간 #6395ee)로 통일했습니다.",
+    "en": "Unified the target bead pulsing border color with the typing highlight and caret color (#007aff, nighttime #6395ee)."
+  },
+  {
     "v": "0.11.511",
     "date": "2026-10-26",
     "ko": "세 번째 베타 스타일 'CRT 터미널'을 열었습니다. 셸에서 서울의 구를 열면 그 구의 지도가 형광체 선으로 뜨고, 행정동 이름을 쳐서 Enter 로 확정합니다. 소개 화면 스타일 줄에도 카드를 붙였습니다.",
