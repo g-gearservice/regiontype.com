@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.518",
+    "date": "2026-10-27",
+    "ko": "가입 직후 도우미 봇이 처음 꺼내 달라고 조르는 동안 넵바의 로고와 알약 모양이 어둡게 덮이지 않고 애니메이션 손보다 위에 위치하도록 고쳤습니다.",
+    "en": "Fixed an issue where the navbar logo and pill shape appeared dimmed and sat behind the bot's peek animation while the bot first asks to be rescued."
+  },
+  {
     "v": "0.11.517",
     "date": "2026-10-27",
     "ko": "내 스타일의 '봇 스타일' 탭에서 기본 모양·만들기·초기화 단추를 사이트의 알약 디자인과 통일하고, 모양이나 색을 골랐을 때 이전 모습으로 되돌아가던 문제를 고쳤습니다.",

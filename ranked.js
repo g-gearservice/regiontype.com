@@ -207,6 +207,25 @@ function rankRow(i, name, right, me, lp) {
   }
   return li;
 }
+function sLi(i, name, at, me) {
+  const li = document.createElement('li');
+  li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
+  li.querySelector('b').textContent = i + 1;
+  li.querySelector('.who').textContent = name;
+  const badge = document.createElement('span');
+  badge.className = 'exam-badge';
+  badge.dataset.grade = 'S';
+  badge.textContent = 'S';
+  li.querySelector('.who').after(badge);
+  li.querySelector('.pt').textContent = at ? new Date(at).toLocaleDateString() : '';
+  if (me) {
+    li.classList.add('me');
+    const tag = document.createElement('span');
+    tag.className = 'tag'; tag.textContent = t('me');
+    li.querySelector('.who').after(tag);
+  }
+  return li;
+}
 let rankReq = 0;
 async function fillRanking() {
   const n = ++rankReq;
@@ -219,7 +238,7 @@ async function fillRanking() {
     lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, r.lp)));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
   } catch { if (n === rankReq) say.textContent = t('boardFail'); }
-  await Promise.all(['ranked', 'normal'].map(mode => fillBests(n, mode)));
+  await Promise.all(['ranked', 'normal'].map(mode => Promise.all([fillBests(n, mode), fillLicense(n, mode)])));
 }
 /* 코스별 최고 기록. 코스·시간마다 1위 한 줄씩이고, 펼치면 그 판의 순위표와 내 자리를 읽는다.
    경쟁전과 일반전은 따로 센다. 이 나라 코스만 보인다 — 다른 나라 코스는 이름을 못 읽는다.
@@ -259,22 +278,106 @@ async function fillBests(n, mode) {
   }));
   say.textContent = rows.length ? '' : t('ladderEmpty');
 }
-function wireTabs() {
-  const tabs = [$('#rkTabRanked'), $('#rkTabNormal')];
-  const pick = tab => tabs.forEach(tb => {
-    const on = tb === tab;
-    tb.setAttribute('aria-selected', String(on));
-    tb.tabIndex = on ? 0 : -1;
-    document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
-  });
+/* 라이선스 순위 — 수도 S 등급 달성자 명단과 코스별 라이선스 등급 최고 기록 */
+async function fillLicense(n, mode) {
+  const sList = $(`#${mode}SHolders`), sSay = $(`#${mode}SSay`);
+  const box = $(`#${mode}LicenseBests`), boxSay = $(`#${mode}LicenseBestsSay`);
+  sList.replaceChildren(); sSay.textContent = t('reading');
+  box.replaceChildren(); boxSay.textContent = t('reading');
+  let topData;
+  try {
+    topData = await ask(`/license/top?mode=${mode}`);
+  } catch {
+    if (n === rankReq) {
+      sSay.textContent = t('boardFail');
+      boxSay.textContent = t('boardFail');
+    }
+    return;
+  }
+  if (n !== rankReq) return;
+
+  // 1. 수도 S 등급 달성자 명단
+  const sHolders = topData.sHolders || [];
+  sList.replaceChildren(...sHolders.map((h, i) => sLi(i, h.name || t('anon'), h.s_at, h.me)));
+  sSay.textContent = sHolders.length ? '' : t('sEmpty');
+
+  // 2. 코스별 라이선스 순위
+  const here = PICK ? PICK.slug : COURSE.root;
+  const courses = [COURSE.root, ...COURSE.tiles.map(x => x.slug)].filter((s, i, a) => a.indexOf(s) === i);
+
+  box.replaceChildren(...courses.map(slug => {
+    const det = document.createElement('details');
+    det.className = 'pg-best';
+    det.innerHTML = '<summary><span class="where"></span><span class="who"></span><span class="pt"></span></summary><ol class="ranks pg-ranks"></ol><p class="pg-say" role="status"></p>';
+    det.querySelector('.where').textContent = placeOf(slug);
+    let read = false;
+    det.addEventListener('toggle', async () => {
+      if (!det.open || read) return;
+      read = true;
+      const ol = det.querySelector('ol'), p = det.querySelector('p');
+      p.textContent = t('reading');
+      try {
+        const r = await ask(`/license/top?mode=${mode}&c=${encodeURIComponent(slug)}`);
+        const list = r.top || [];
+        ol.replaceChildren(...list.map((x, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
+          li.querySelector('b').textContent = i + 1;
+          li.querySelector('.who').textContent = x.name || t('anon');
+          const badge = document.createElement('span');
+          badge.className = 'exam-badge';
+          badge.dataset.grade = x.grade;
+          badge.textContent = x.grade;
+          li.querySelector('.who').after(badge);
+          li.querySelector('.pt').textContent = `${showSpeed(x.cpm)} · ${x.acc}%`;
+          if (x.me) {
+            li.classList.add('me');
+            const tag = document.createElement('span');
+            tag.className = 'tag'; tag.textContent = t('me');
+            li.querySelector('.who').after(tag);
+          }
+          return li;
+        }));
+        p.textContent = list.length ? '' : t('ladderEmpty');
+      } catch {
+        read = false;
+        p.textContent = t('boardFail');
+      }
+    });
+    if (slug === here) det.open = true;
+    return det;
+  }));
+  boxSay.textContent = courses.length ? '' : t('ladderEmpty');
+}
+function wireTabGroup(tablist, onSwap) {
+  if (!tablist) return () => {};
+  const tabs = [...tablist.querySelectorAll(':scope > [role="tab"]')];
+  const pick = tab => {
+    tabs.forEach(tb => {
+      const on = tb === tab;
+      tb.setAttribute('aria-selected', String(on));
+      tb.tabIndex = on ? 0 : -1;
+      const p = document.getElementById(tb.getAttribute('aria-controls'));
+      if (p) p.hidden = !on;
+    });
+    if (onSwap) onSwap(tab);
+  };
   tabs.forEach(tb => tb.addEventListener('click', () => pick(tb)));
-  $('#ranking .pg-tabs').addEventListener('keydown', e => {
+  tablist.addEventListener('keydown', e => {
     const i = tabs.indexOf(document.activeElement);
     if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
     e.preventDefault();
-    const next = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + 1) % tabs.length];
+    const next = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1
+      : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+      : (i + 1) % tabs.length];
     pick(next); next.focus();
   });
+  return pick;
+}
+function wireTabs() {
+  wireTabGroup($('#ranking > .pg-shell > .pg-tabs'));
+  wireTabGroup($('#rkRanked .sub-tabs'));
+  wireTabGroup($('#rkNormal .sub-tabs'));
 }
 
 /* ── 기록 ─────────────────────────────────────────────── */
@@ -1815,12 +1918,24 @@ function wireLogo() {
   skip.addEventListener('click', quitTour);
 }
 
-/* ── 경쟁전 ────────────────────────────────────────────
-   시작하기를 꾹(0.6초) 누르면 켜진다 — 누르는 동안 알약이 봇의 빛깔로 차오르고, 다 차면
-   '경쟁전 시작'으로 바뀐다. 한 번 더 누르면 지금 고른 칸(없으면 전체 코스)으로 겨룬다.
-   다시 꾹 누르거나 Esc 면 풀린다. 키보드는 Space 를 누르고 있으면 된다 */
-const HOLD_MS = 600;
-let ranked = false, press = 0, swallowPlay = false;
+/* ── 시작하기 → 일반전 / 경쟁전 ─────────────────────────
+   시작하기를 누르면 그 바로 위에 고르기 판(#modePick)이 뜬다. 짧게 누르면 그 모드로 간다 —
+   경쟁전은 지금 고른 칸(없으면 전체 코스)으로 1대1 매칭이다. 꾹(1.2초) 누르면 그 모드의
+   라이선스 시험이다. 누르는 동안 단추가 차오르고(움직임을 끄면 남은 초가 글자로 보인다),
+   다 차기 전에 떼거나 단추 밖으로 나가면 없던 일이 된다. 키보드는 Space·Enter 를 누르고
+   있으면 되고, 길게 누르기 어려우면 '라이선스 시험' 토글을 켜고 짧게 누른다 */
+const EXAM_HOLD_MS = 1200, EXAM_SECS = 120;
+/* 등급표 — 공통 조건은 120초 안에 완주. 위에서부터 처음 맞는 등급이다. E·D 의 오타는 F 의 10 을 물려받는다.
+   판정 함수는 relay/license.mjs 와 같은 규칙을 쓴다 */
+const EXAM_GRADES = [
+  { g: 'A', acc: 98, cpm: 600, miss: 1 },
+  { g: 'B', acc: 95, cpm: 500, miss: 3 },
+  { g: 'C', acc: 93, cpm: 400, miss: 5 },
+  { g: 'D', acc: 90, cpm: 300, miss: 10 },
+  { g: 'E', acc: 85, cpm: 200, miss: 10 },
+  { g: 'F', acc: 80, cpm: 0, miss: 10 },
+];
+let ranked = false;
 const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
   ranked = on;
@@ -1831,27 +1946,143 @@ function setRanked(on) {
   play.textContent = t(play.dataset.i18n);
   relayoutNavShapes();
 }
-function wirePlayHold() {
-  const play = $('#navPlay');
-  const cancel = () => { clearTimeout(press); press = 0; document.body.classList.remove('rk-charging'); };
-  const begin = () => {
-    if (press) return;
-    swallowPlay = false;
-    document.body.classList.add('rk-charging');
-    press = setTimeout(() => {
-      cancel();
-      swallowPlay = true;
-      setRanked(!ranked);
-      if (ranked) say('rkArmed', { name: placeOf(rankedSlug()) });
-      else if (!touring) hide();
-    }, HOLD_MS);
+const pickOpen = () => $('#modePick').matches(':popover-open');
+const quietMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'off';
+/* 시작하기 바로 위, 그 가운데에 세운다. 폰은 시작하기가 tab-dock 안으로 옮겨 가도 그 자리를 잰다 */
+function placePick() {
+  const d = $('#modePick'), a = $('#navPlay').getBoundingClientRect(), PAD = 12, GAP = 10;
+  const w = d.offsetWidth, h = d.offsetHeight;
+  d.style.left = Math.round(Math.min(Math.max(PAD, a.left + a.width / 2 - w / 2), innerWidth - w - PAD)) + 'px';
+  d.style.top = Math.round(Math.max(PAD, a.top - GAP - h)) + 'px';
+}
+function closePick(back) {
+  if (!pickOpen()) return;
+  $('#modePick').hidePopover();
+  if (back) $('#navPlay').focus({ preventScroll: true });
+}
+/* 꾹 누르기 하나. 짧으면 onTap, 다 차면 onHold. 꾹 뒤에 따라오는 click 은 삼킨다 */
+function wireHold(btn, onTap, onHold) {
+  let timer = 0, tick = 0, held = false, t0 = 0;
+  const stop = () => {
+    clearTimeout(timer); clearInterval(tick); timer = tick = 0;
+    btn.classList.remove('is-holding');
+    delete btn.dataset.left;
   };
-  play.addEventListener('pointerdown', e => { if (!e.button) begin(); });
-  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(n => play.addEventListener(n, cancel));
-  play.addEventListener('keydown', e => { if (e.key === ' ' && !e.repeat) begin(); });
-  play.addEventListener('keyup', e => { if (e.key === ' ') cancel(); });
-  /* 손가락으로 꾹 누르면 뜨는 메뉴를 막는다 */
-  play.addEventListener('contextmenu', e => e.preventDefault());
+  const step = () => {
+    const left = Math.max(0, Math.ceil((EXAM_HOLD_MS - (Date.now() - t0)) / 1000));
+    btn.dataset.left = t('examLeft', { n: left });
+  };
+  const begin = () => {
+    if (timer) return;
+    held = false; t0 = Date.now();
+    btn.style.setProperty('--hold-ms', EXAM_HOLD_MS + 'ms');
+    btn.classList.add('is-holding');
+    if (quietMotion()) step();
+    tick = setInterval(() => { if (quietMotion()) step(); }, 100);
+    timer = setTimeout(() => {
+      stop();
+      held = true;
+      try { navigator.vibrate?.(20); } catch {}
+      onHold();
+    }, EXAM_HOLD_MS);
+  };
+  btn.addEventListener('pointerdown', e => { if (!e.button) begin(); });
+  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(n => btn.addEventListener(n, stop));
+  btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) begin(); });
+  ['keyup', 'blur'].forEach(n => btn.addEventListener(n, stop));
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  btn.addEventListener('click', e => {
+    if (held) { held = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
+    onTap();
+  });
+}
+const examOn = () => $('#examToggle').getAttribute('aria-pressed') === 'true';
+function pickNote(msg) {
+  const p = $('#modeNote');
+  if (p) p.textContent = msg || '';
+}
+/* 라이선스 시험 진입 확인 창 */
+function openExam(mode) {
+  closePick();
+  if (!token()) {
+    pickNote(t('signinBtn'));
+    openPage('account');
+    return;
+  }
+  const slug = rankedSlug();
+  const d = $('#examGate');
+  d.dataset.mode = mode;
+  $('#examTitle').textContent = `${placeOf(slug)} · ${t(mode === 'ranked' ? 'rankedTab' : 'normalTab')}`;
+  $('#examLede').textContent = t('examLede', { n: EXAM_SECS });
+  const rows = $('#examRows');
+  rows.replaceChildren(...EXAM_GRADES.map(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span class="exam-badge">${r.g}</span></td><td>${r.acc}%</td><td>${r.cpm}</td><td>${r.miss}</td>`;
+    return tr;
+  }));
+  const goBtn = $('#examGo'), note = $('#examNote');
+  goBtn.disabled = false;
+  note.textContent = '';
+  d.showModal();
+}
+function wireModePick() {
+  const d = $('#modePick'), play = $('#navPlay'), toggle = $('#examToggle');
+  const pick = mode => {
+    closePick();
+    if (examOn()) { openExam(mode); return; }
+    if (mode === 'ranked') {
+      setRanked(true);
+      go(rankedSlug());
+      return;
+    }
+    setRanked(false);
+    playNormal();
+  };
+  wireHold($('#modeNormal'), () => pick('normal'), () => openExam('normal'));
+  wireHold($('#modeRanked'), () => pick('ranked'), () => openExam('ranked'));
+  toggle.addEventListener('click', () => {
+    toggle.setAttribute('aria-pressed', String(!examOn()));
+    d.classList.toggle('is-exam', examOn());
+  });
+  /* 시작하기가 판을 여닫는다 — popovertarget 이라 바깥 누르기로 닫힌 직후 다시 열리는 일이 없다.
+     ranked.js 가 없으면 이 줄도 없으니 app.js 가 곧장 일반전을 친다 */
+  play.setAttribute('popovertarget', 'modePick');
+  d.addEventListener('beforetoggle', e => {
+    if (e.newState !== 'open') return;
+    pickNote('');
+    play.setAttribute('aria-expanded', 'true');
+  });
+  d.addEventListener('toggle', e => {
+    if (e.newState !== 'open') { play.setAttribute('aria-expanded', 'false'); return; }
+    placePick();
+    $('#modeNormal').focus({ preventScroll: true });
+  });
+  play.setAttribute('aria-expanded', 'false');
+  addEventListener('resize', () => { if (pickOpen()) placePick(); });
+  /* 판이 떠 있는 동안 Esc 는 판만 닫는다 — 홈의 Esc(고른 칸 풀기)까지 가지 않게 먼저 받는다 */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !pickOpen()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    closePick(true);
+  }, true);
+  $('#examClose').addEventListener('click', () => $('#examGate').close());
+  $('#examGo').addEventListener('click', async () => {
+    const d = $('#examGate');
+    const mode = d.dataset.mode || 'normal';
+    const slug = rankedSlug();
+    const goBtn = $('#examGo');
+    goBtn.disabled = true;
+    try {
+      const res = await ask('/license/start', { c: slug, mode, dev: DEV, lang: LANG });
+      d.close();
+      start(slug, null, null, { mode, id: res.id });
+    } catch {
+      /* 서버 엔드포인트 응답이 없어도 로컬로 시험 진행 가능 */
+      d.close();
+      start(slug, null, null, { mode, id: 'exam-' + Date.now().toString(36) });
+    }
+  });
+  $('#examGate').addEventListener('close', () => play.focus({ preventScroll: true }));
 }
 
 let quitNote = '';
@@ -2046,6 +2277,11 @@ function wireStart() {
   document.addEventListener('click', e => {
     if (e.target.closest('#again')) {
       if (!touring) { hide(); doze(); }
+      if (G && G.exam) {
+        e.stopImmediatePropagation();
+        openExam(G.exam.mode);
+        return;
+      }
       if (G && G.ranked) {
         e.stopImmediatePropagation();
         go(G.slug);
@@ -2053,13 +2289,14 @@ function wireStart() {
       return;
     }
     if (!e.target.closest('#navPlay')) return;
-    /* 꾹 누른 뒤 손을 떼며 오는 click 은 시작이 아니다 */
-    if (swallowPlay) { swallowPlay = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
     /* 안내 도중에 시작하면 안내는 거기서 끝난다 — 판에서 돌아왔을 때 매달려 있지 않게 */
     quitTour();
     if (!touring) { hide(); doze(); }
-    if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
+    /* 일반 시작(app.js)은 막는다 — 시작하기는 고르기 판을 여닫는다(popovertarget) */
     e.stopImmediatePropagation();
+    /* 봇이 켜 둔 경쟁전(rk-ready)이면 판을 열지 않고 곧장 겨룬다 */
+    if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
+    e.preventDefault();
     go(rankedSlug());
   }, true);
   document.addEventListener('keydown', e => {
@@ -2091,6 +2328,26 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   const line = $('#rLp');
   line.textContent = '';
   line.classList.remove('bad');
+  if (g.exam) {
+    /* 라이선스 시험 판을 서버에 제출한다 */
+    try {
+      const res = await ask('/license/end', {
+        id: g.exam.id,
+        hits: g.hits,
+        tries: g.tries,
+        cpm: g.cpm,
+        acc: g.acc,
+        score: g.score,
+        name: plain(localStorage.getItem(NAME_KEY) || '')
+      });
+      if (res && res.sAwarded) {
+        say('examTitle');
+      }
+    } catch (err) {
+      console.warn('License submission failed', err);
+    }
+    return;
+  }
   /* 일반전 판은 app.js 의 board() 가 올린다 — 그래야 그 판의 순위표를 한 번에 받는다 */
   if (!token() || !g.ranked) return;
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
@@ -2168,7 +2425,7 @@ addEventListener('rt-tab-swap', () => closePage(true));
 
 wireTabs();
 wireLogo();
-wirePlayHold();
+wireModePick();
 wireStart();
 wireMatch();
 wireChat();
@@ -2184,6 +2441,8 @@ if (location.search.includes('rt=1')) {
   console.assert(hsl(0, 1, .5) === '#ff0000' && Math.round(hueOf('#00ff00')) === 120, '스타일: 색상환 셈');
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
+  console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked') && $('#examToggle'), '모드 고르기: 일반전·경쟁전·라이선스 시험');
+  console.assert($('#examGate') && $('#examRows'), '라이선스: 시험 진입 대화상자');
 }
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,

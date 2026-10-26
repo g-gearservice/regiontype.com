@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.17">
+<link rel="stylesheet" href="style.css?v=5.18">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -227,6 +227,7 @@
     <div class="stat"><b id="statSpeed">0</b><span class="unit">타/분</span></div>
     <div class="stat combo" id="statCombo"></div>
     <div class="stat rk-tag" id="rkTag" data-i18n="rankedTab" hidden>경쟁전</div>
+    <div class="stat exam-tag" id="examTag" data-i18n="examTab" hidden>라이선스 시험</div>
     </div>
     <!-- 1대1 상대의 진행. 숫자와 이름을 함께 두고 막대는 보조다 -->
     <p class="rk-opp" id="rkOpp"><span id="rkOppT"></span><i aria-hidden="true"><b id="rkOppFill"></b></i></p>
@@ -285,6 +286,15 @@
       <p><b id="rAcc">0%</b><span data-i18n="accuracy">정확도</span></p>
       <p class="best" id="rBest"></p>
       <p class="best rk-line" id="rLp" aria-live="polite"></p>
+      <div class="exam-res" id="rExam" aria-live="polite" hidden>
+        <div class="exam-res-head">
+          <span class="exam-badge" id="rExamBadge">—</span>
+          <span class="exam-res-title" id="rExamTitle"></span>
+          <span class="exam-res-done" id="rExamDone"></span>
+        </div>
+        <p class="exam-res-stats" id="rExamStats"></p>
+        <p class="exam-res-next" id="rExamNext"></p>
+      </div>
       <div class="menu">
         <button id="again" data-i18n="again">다시 하기</button>
         <button id="save" data-i18n="save">이미지 저장</button>
@@ -530,17 +540,45 @@
       <button type="button" role="tab" id="rkTabNormal" aria-controls="rkNormal" aria-selected="false" tabindex="-1" data-i18n="normalTab">일반전</button>
     </div>
     <div id="rkRanked" class="pg-panel" role="tabpanel" aria-labelledby="rkTabRanked" tabindex="0">
-      <p class="pg-help" data-i18n="rkHold">시작하기를 꾹 누르면 경쟁전이 켜집니다.</p>
-      <ol class="ranks pg-ranks" id="ladderList"></ol>
-      <p class="pg-say" id="ladderSay" role="status"></p>
-      <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
-      <div class="pg-bests" id="rankedBests"></div>
-      <p class="pg-say" id="rankedBestsSay" role="status"></p>
+      <div class="sub-tabs rk-sub-tabs" role="tablist" data-i18n-aria="subTabGroup" aria-label="순위 갈래">
+        <button type="button" role="tab" id="rkTabRankedCasual" aria-controls="rkRankedCasual" aria-selected="true" data-i18n="subCasual">일반</button>
+        <button type="button" role="tab" id="rkTabRankedLicense" aria-controls="rkRankedLicense" aria-selected="false" tabindex="-1" data-i18n="subLicense">라이선스</button>
+      </div>
+      <div id="rkRankedCasual" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabRankedCasual" tabindex="0">
+        <p class="pg-help" data-i18n="rkHold">시작하기를 누르고 경쟁전을 고르세요.</p>
+        <ol class="ranks pg-ranks" id="ladderList"></ol>
+        <p class="pg-say" id="ladderSay" role="status"></p>
+        <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
+        <div class="pg-bests" id="rankedBests"></div>
+        <p class="pg-say" id="rankedBestsSay" role="status"></p>
+      </div>
+      <div id="rkRankedLicense" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabRankedLicense" tabindex="0" hidden>
+        <h3 class="pg-sub" data-i18n="capitalS">수도 S 등급 달성자</h3>
+        <ol class="ranks pg-ranks" id="rankedSHolders"></ol>
+        <p class="pg-say" id="rankedSSay" role="status"></p>
+        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스 등급</h3>
+        <div class="pg-bests" id="rankedLicenseBests"></div>
+        <p class="pg-say" id="rankedLicenseBestsSay" role="status"></p>
+      </div>
     </div>
     <div id="rkNormal" class="pg-panel" role="tabpanel" aria-labelledby="rkTabNormal" tabindex="0" hidden>
-      <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
-      <div class="pg-bests" id="normalBests"></div>
-      <p class="pg-say" id="normalBestsSay" role="status"></p>
+      <div class="sub-tabs rk-sub-tabs" role="tablist" data-i18n-aria="subTabGroup" aria-label="순위 갈래">
+        <button type="button" role="tab" id="rkTabNormalCasual" aria-controls="rkNormalCasual" aria-selected="true" data-i18n="subCasual">일반</button>
+        <button type="button" role="tab" id="rkTabNormalLicense" aria-controls="rkNormalLicense" aria-selected="false" tabindex="-1" data-i18n="subLicense">라이선스</button>
+      </div>
+      <div id="rkNormalCasual" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabNormalCasual" tabindex="0">
+        <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
+        <div class="pg-bests" id="normalBests"></div>
+        <p class="pg-say" id="normalBestsSay" role="status"></p>
+      </div>
+      <div id="rkNormalLicense" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabNormalLicense" tabindex="0" hidden>
+        <h3 class="pg-sub" data-i18n="capitalS">수도 S 등급 달성자</h3>
+        <ol class="ranks pg-ranks" id="normalSHolders"></ol>
+        <p class="pg-say" id="normalSSay" role="status"></p>
+        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스 등급</h3>
+        <div class="pg-bests" id="normalLicenseBests"></div>
+        <p class="pg-say" id="normalLicenseBestsSay" role="status"></p>
+      </div>
     </div>
   </div>
 </section>
@@ -727,6 +765,46 @@
   </div>
 </dialog>
 
+<!-- 시작하기를 누르면 그 바로 위에 뜨는 고르기 판(popover, ranked.js wireModePick).
+     짧게 누르면 그 모드로, 꾹(1.2초) 누르면 그 모드의 라이선스 시험으로 간다. 키보드는 Space·Enter 를
+     누르고 있으면 되고, 길게 누르기 어려우면 '라이선스 시험' 토글을 켜고 짧게 누른다.
+     켜짐은 체크 글자와 테두리로도 보인다(색만이 아니다). Esc·바깥 누르기는 popover 가 닫는다 -->
+<div id="modePick" popover role="dialog" data-i18n-aria="modePick" aria-label="모드 고르기">
+  <div class="mode-row">
+    <button type="button" class="mode-btn" id="modeNormal" aria-describedby="modeHint"><span data-i18n="normalTab">일반전</span></button>
+    <button type="button" class="mode-btn is-ranked" id="modeRanked" aria-describedby="modeHint"><span data-i18n="rankedTab">경쟁전</span></button>
+  </div>
+  <div class="mode-foot">
+    <button type="button" class="mode-exam" id="examToggle" aria-pressed="false" aria-describedby="modeHint"><span data-i18n="examToggle">라이선스 시험</span></button>
+    <p class="mode-hint" id="modeHint" data-i18n="examHoldHint">꾹 누르면 라이선스 시험</p>
+  </div>
+  <p class="mode-note" id="modeNote" role="status" aria-live="polite"></p>
+</div>
+
+<!-- 라이선스 시험 들어가기 — 코스·시간·등급표를 보이고 [시험 시작]. 등급표는 ranked.js 의 EXAM_GRADES 가 채운다 -->
+<dialog id="examGate" aria-labelledby="examTitle" aria-describedby="examLede">
+  <div id="examBox">
+    <div class="fb-head">
+      <h2 id="examTitle"></h2>
+      <button type="button" class="back" id="examClose" data-i18n-aria="close" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
+    </div>
+    <p class="fb-lead" id="examLede"></p>
+    <table class="exam-grades">
+      <thead><tr>
+        <th scope="col" data-i18n="examGrade">등급</th>
+        <th scope="col" data-i18n="accuracy">정확도</th>
+        <th scope="col" class="unit">타/분</th>
+        <th scope="col" data-i18n="examMiss">오타</th>
+      </tr></thead>
+      <tbody id="examRows"></tbody>
+    </table>
+    <div class="fb-foot">
+      <p class="fb-note" id="examNote"></p>
+      <button type="button" class="fb-send" id="examGo" data-i18n="examStart">시험 시작</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- 피드백 — 로고 점에서 열린다 -->
 <dialog id="feedback" aria-labelledby="fbHead">
   <form id="fbForm">
@@ -750,10 +828,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.17"></script>
-<script src="app.js?v=5.17"></script>
-<script src="auth.js?v=5.17"></script>
-<script src="settings/settings.js?v=5.17"></script>
-<script src="ranked.js?v=5.17"></script>
+<script src="relay.js?v=5.18"></script>
+<script src="app.js?v=5.18"></script>
+<script src="auth.js?v=5.18"></script>
+<script src="settings/settings.js?v=5.18"></script>
+<script src="ranked.js?v=5.18"></script>
 </body>
 </html>
