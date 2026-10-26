@@ -13,12 +13,13 @@
    그대로 쥔다 — 새 buddy.js(?v= 가 붙어 새로 받은 것)와 옛 engine.js 가 만나면 없는
    이름을 가져오다 모듈째 죽는다. 실제로 그렇게 계정 화면과 카메라가 한꺼번에 멈췄다.
    저장소 규칙("에셋엔 ?v= 를 태운다")이 이 파일 하나만 비켜 가 있던 자리다. */
-const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID, SHAPES, EXPRESSIONS, COLORS } =
+const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID, SHAPES, EXPRESSIONS, COLORS, genProfile } =
   await import(new URL('engine.js' + new URL(import.meta.url).search, import.meta.url).href);
 
 /* 고를 수 있는 것의 목록. 부르는 쪽이 engine.js 를 따로 부르지 않게 여기서 건넨다 —
    두 번 부르면 판이 갈려(한쪽만 ?v=) 같은 사고가 다시 난다. */
 const EYE = 'oklch(from var(--buddy-ink, var(--block)) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
+const STEM_D = 'M-15 -72C-13 -96 -22 -114 -31 -124L-17 -133C-3 -120 10 -98 15 -72Q8 -65 0 -69Q-8 -65 -15 -72Z';
 
 export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS };
 
@@ -32,7 +33,7 @@ const el = (tag, attrs) => {
 /* calm  — 움직임을 줄인 사람. 시계도 시선도 멈춘다(사람의 뜻이다).
    still — 시계만 안 돈다. 견본처럼 여럿 띄우는 놈이 제 숨을 쉬느라 프레임을 먹지
            않게 하는 것뿐이라, 시선은 부르는 쪽이 한 바퀴에 한 장씩 그려 따라본다. */
-export function mountBuddy(host, { calm = () => false, still = false, shape = null, expression = null } = {}) {
+export function mountBuddy(host, { calm = () => false, still = false, shape = null, expression = null, gen = null } = {}) {
   const uid = 'buddy-' + Math.random().toString(36).slice(2, 8);
   const svg = el('svg', { viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`, 'aria-hidden': 'true' });
   svg.classList.add('buddy');
@@ -54,17 +55,21 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
   const paper = el('path', { id: uid + '-body', fill: `var(--buddy-paper, ${EYE})` });
   const inked = el('g', { mask: `url(#${uid})` });
   inked.append(el('rect', { x: -VB, y: -VB, width: VB * 2, height: VB * 2, fill: 'var(--buddy-ink, var(--block))' }));
+  const stem = el('path', { class: 'buddy-stem', d: STEM_D, fill: '#424245' });
   const body = el('g');
-  body.append(paper, inked);
+  body.append(paper, inked, stem);
   svg.append(defs, body);
   host.append(svg);
 
   const eyes = [];
   /* 모양·표정은 id 로 받고 엔진이 쓰는 값으로 여기서 바꾼다 — 부르는 쪽이
-     엔진 내부 표를 알 필요가 없다. 모르는 id 는 null(기본 모습)로 떨어진다 */
-  const radiiOf = id => SHAPE_BY_ID.get(id)?.radii ?? null;
+     엔진 내부 표를 알 필요가 없다. 모르는 id 는 null(기본 모습)로 떨어진다.
+     생성 모양(gen)이 함께 오면 그 레시피로 64개 반지름을 빚어 넣는다 */
+  const hasStem = (id, g) => id === 'citrouille' || !!(g && g.stem);
+  const radiiOf = (id, g) => (id === 'gen' && g ? genProfile(g) : null) ?? SHAPE_BY_ID.get(id)?.radii ?? (g ? genProfile(g) : null);
   const exprOf = id => EXPRESSION_BY_ID.get(id) ?? null;
-  const engine = new BotEngine(100, 'idle', radiiOf(shape), exprOf(expression));
+  stem.style.display = hasStem(shape, gen) ? '' : 'none';
+  const engine = new BotEngine(100, 'idle', radiiOf(shape, gen), exprOf(expression));
   let raf = 0, t0 = 0;
   /* 잠들기(doze). 엔진의 졸린 눈(somnolent)과 같은 수 — 눈꺼풀은 깜빡임처럼 open 으로
      내리고, 시선은 아래로 떨군다. 한 번에 감으면 0.45s 모프라 툭 떨어진다. 그래서
@@ -230,12 +235,16 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
        깜빡임은 sample() 이 이미 내주므로, 깨우는 일은 sleep 에서 나오는 것으로 끝난다 */
     /* 고른 모양·표정·색을 갈아 끼운다. 모양과 표정은 엔진이 모프로 넘겨 주므로
        툭 끊기지 않는다. 색은 CSS 변수라 엔진을 거치지 않는다 */
-    setShape(id) { at(now => engine.setShape(radiiOf(id), now)); },
+    setShape(id, gen) {
+      stem.style.display = hasStem(id, gen) ? '' : 'none';
+      at(now => engine.setShape(radiiOf(id, gen), now));
+    },
     setExpression(id) {
       if (dozing) { awake = exprOf(id); return; }
       at(now => engine.setExpression(exprOf(id), now));
     },
     setColour(id) {
+      if (id === 'accent') { host.style.setProperty('--buddy-ink', 'var(--accent)'); return; }
       const hex = COLOR_BY_ID.get(id)?.hex;
       if (hex) host.style.setProperty('--buddy-ink', hex);
       else host.style.removeProperty('--buddy-ink');

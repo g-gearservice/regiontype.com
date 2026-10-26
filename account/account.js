@@ -13,154 +13,33 @@ const parse = (key, fallback) => { try { return JSON.parse(read(key)) || fallbac
 const say = text => { $('#accountSay').textContent = text; };
 const write = (key, value) => { try { localStorage.setItem(key, value); return true; } catch { say(t('acctStoreFail')); return false; } };
 const opt = parse('rt.opt', {});
-/* ── 캐릭터 ────────────────────────────────────────────────
-   그림과 움직임은 로그인 화면·경쟁전 봇과 같은 엔진(assets/bloub)이 낸다. 예전엔
-   여기만 CSS 로 흉내 낸 동그라미였는데, 눈만 까딱해 같은 놈으로 보이지 않았다.
-   이제 셋이 한 몸이라 여기서 고른 모습이 경쟁전 봇에 그대로 나간다.
-
-   모양·표정·색의 id 는 엔진이 쥐고 있고(프랑스어다), 화면에 걸 이름은 화면 말 표에서 꺼낸다. */
-const KO = id => (id && t('ch_' + id) !== 'ch_' + id) ? t('ch_' + id) : '';   // 이름은 data/i18n.json 의 ch_<id>
-const FALLBACK = { shape: 'cercle', expression: 'curieux', colour: 'turquoise' };
-const saved = parse('rt.character', {});
-const character = { ...FALLBACK };
-const lists = { shape: [], expression: [], colour: [] };
-const hexes = new Map();
-/* 장식 움직임이라 움직임 줄이기(OS·앱 설정)가 켜져 있으면 한 장만 그리고 멈춘다 */
-const still = () => document.documentElement.dataset.motion === 'off'
-  || matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-let me = null;            // 확대 크기 미리보기
-let real = null;          // 실제 크기 — 홈 봇과 같은 px(--bot-scale)
-const thumbs = { shape: new Map(), expression: new Map() };
-let aim = null, looking = 0, waiting = null;
-
-/* 서버가 준 'shape,expression,colour' 를 입는다. 엔진이 아직 안 왔으면 목록이 비어
-   무엇이 옳은 값인지 판단할 수 없으니 들고 있다가 오면 그때 입는다 — 여기서 그냥
-   버리면 로그인한 사람이 자기 캐릭터 대신 기본값을 보고, 다음 저장에 그게 덮어쓴다. */
-function wear(face) {
-  if (!lists.shape.length) { waiting = face; return; }
-  waiting = null;
-  const [shape, expression, colour] = String(face || '').split(',');
-  for (const [key, value] of [['shape', shape], ['expression', expression], ['colour', colour]]) {
-    if (lists[key].includes(value)) character[key] = value;
-  }
-  write('rt.character', JSON.stringify(character));
-  paint();
-}
-
-function paint() {
-  for (const key of ['shape', 'expression', 'colour']) {
-    $('#' + key + 'Label').textContent = KO(character[key]) || '';
-    document.querySelectorAll('[data-' + key + ']')
-      .forEach(b => b.setAttribute('aria-pressed', String(b.dataset[key] === character[key])));
-  }
-  $('#character').setAttribute('aria-label',
-    `${KO(character.colour)} ${KO(character.shape)} · ${KO(character.expression)}`);
-  if (!me) return;
-  for (const api of [me, real]) {
-    api.setShape(character.shape);
-    api.setExpression(character.expression);
-    api.setColour(character.colour);
-  }
-  /* 표정 견본은 지금 고른 모양과 색을 입고 서 있어야 고를 때 비교가 된다 */
-  for (const [id, api] of thumbs.expression) { api.setShape(character.shape); api.setColour(character.colour); void id; }
-  for (const [id, api] of thumbs.shape) { api.setExpression(character.expression); api.setColour(character.colour); void id; }
-}
-
-/* 커서를 따라본다. 큰 놈도 견본 스물넷도 모두 제자리에서 커서 쪽을 본다 —
-   저마다 제 한가운데에서 커서까지의 방향을 재므로 화면 어디에 있든 같은 곳을 본다.
-
-   견본은 제 시계를 안 돌린다(still). 스물넷이 저마다 숨 쉬면 프레임을 먹으니,
-   대신 이 한 바퀴에서 한 장씩 그려 준다 — 도는 rAF 는 큰 놈 하나와 여기 하나뿐이다.
-   화면 좌표를 그대로 넘기고, 방향과 세기는 mountBuddy 의 lookToward 가 잰다
-   (로그인 화면의 봇과 같은 자 — 화면 너비로 나누던 옛 셈은 고개를 안 돌렸다). */
-function eachLooker(f) {
-  if (me) f(me);
-  if (real) f(real);
-  for (const key of ['shape', 'expression']) for (const api of thumbs[key].values()) f(api);
-}
-function look() {
-  looking = 0;
-  eachLooker(api => { if (aim) api.lookToward(aim[0], aim[1]); else api.lookAway(); });
-}
-const lookTo = p => { aim = p; looking ||= requestAnimationFrame(look); };
-addEventListener('pointermove', e => lookTo([e.clientX, e.clientY]), { passive: true });
-document.documentElement.addEventListener('pointerleave', () => lookTo(null));
-
-/* 엔진은 미리 부르지 않는다 — 계정 화면에 들어온 사람만 받는다.
-   목록도 buddy.js 가 건네는 것만 쓴다: engine.js 를 여기서 또 부르면 판이 둘이 된다 */
-const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
-buddyKit.then(({ mountBuddy, TABLES }) => {
-  lists.shape = TABLES.shapes.map(x => x.id);
-  lists.expression = TABLES.expressions.map(x => x.id);
-  lists.colour = TABLES.colours.map(x => x.id);
-  for (const c of TABLES.colours) hexes.set(c.id, c.hex);
-  for (const key of ['shape', 'expression', 'colour']) {
-    if (lists[key].includes(saved[key])) character[key] = saved[key];
-  }
-
-  me = mountBuddy($('#character'), { calm: still, shape: character.shape, expression: character.expression });
-  me.start();
-  real = mountBuddy($('#characterReal'), { calm: still, shape: character.shape, expression: character.expression });
-  real.start();
-
-  for (const key of ['shape', 'expression', 'colour']) {
-    for (const id of lists[key]) {
-      const label = KO(id) || id;
-      const button = document.createElement('button');
-      button.type = 'button'; button.dataset[key] = id;
-      button.className = 'character-choice';
-      button.setAttribute('aria-label', label); button.setAttribute('aria-pressed', 'false');
-      button.title = label;
-      if (key === 'colour') button.style.background = hexes.get(id);
-      else {
-        /* 견본은 제 시계를 안 돌린다 — 스물넷이 저마다 숨 쉴 이유가 없다.
-           그래도 시선은 따라본다(위 look() 이 한 바퀴에 한 장씩 그려 준다) */
-        const api = mountBuddy(button, {
-          still: true, calm: still,
-          shape: key === 'shape' ? id : character.shape,
-          expression: key === 'expression' ? id : character.expression,
-        });
-        api.setColour(character.colour);
-        api.start();
-        thumbs[key].set(id, api);
-      }
-      button.onclick = () => { character[key] = id; paint(); keep(); };
-      $('#' + key + 'Choices').append(button);
-    }
-  }
-  paint();
-  /* 엔진을 기다리는 사이에 서버 프로필이 먼저 왔으면 이제 입힌다 */
-  if (waiting !== null) wear(waiting);
-}).catch(err => {
-  /* 조용히 삼키면 왜 안 되는지 알 길이 없다 — 화면엔 한 줄, 콘솔엔 진짜 까닭 */
-  console.error('[account] 캐릭터 엔진', err);
-  $('#character').textContent = t('acctCharFail');
-});
-
-/* 홈 봇 크기(70~130%). 이 기기에만 둔다 — '실제 크기' 봇이 --bot-scale 로 곧장 커지고 줄며,
-   홈 봇은 계정을 닫을 때 ranked.js 의 leftAccount 가 같은 값으로 다시 세운다 */
-{
-  const size = $('#botSize');
-  const v = +read('rt.botsize');
-  size.value = v >= .7 && v <= 1.3 ? Math.round(v * 100) : 100;
-  const show = () => {
-    /* 화면엔 숫자를 안 두고(실제 크기 봇이 보여 준다) 읽기 도구에만 % 를 준다 */
-    size.setAttribute('aria-valuetext', size.value + '%');
-    document.documentElement.style.setProperty('--bot-scale', size.value / 100);
+/* ── 캐릭터 거울 ───────────────────────────────────────────
+   봇 모양·색·크기는 내 스타일(#styles)의 '봇 스타일' 탭(ranked.js)이 맡는다.
+   여기서는 서버 프로필의 face 를 rt.character 거울에 맞추고, 고른 모습을
+   다른 프로필 칸(닉네임·소개·아이디·스위치)과 함께 /auth/profile 에 실어 보낸다. */
+const FALLBACK = { shape: 'cercle', expression: 'curieux', colour: 'accent' };
+function readChar() {
+  const c = parse('rt.character', {});
+  return {
+    shape: (c.shape && c.shape !== 'gen') ? c.shape : FALLBACK.shape,
+    expression: c.expression || FALLBACK.expression,
+    colour: c.colour || FALLBACK.colour,
   };
-  show();
-  size.addEventListener('input', show);
-  /* 밀대 꼭지는 '실제 크기' 글자 아래에 선다. 봇이 커지고 줄면 칸 폭이 바뀌어 글자가
-     옮겨 가므로, 봇·밀대의 크기가 바뀔 때마다(전이 중에도) 다시 잰다 */
-  const pill = size.parentElement, cap = $('#characterReal').nextElementSibling;
-  const aim = new ResizeObserver(() => {
-    const a = cap.getBoundingClientRect(), b = pill.getBoundingClientRect();
-    pill.style.setProperty('--tail-x', (a.left + a.width / 2 - b.left - parseFloat(getComputedStyle(pill).borderLeftWidth)) + 'px');
-  });
-  aim.observe($('#characterReal'));
-  aim.observe(pill);
-  size.addEventListener('change', () => write('rt.botsize', String(size.value / 100)));
+}
+function wear(face) {
+  const [shape, expression, colour] = String(face || '').split(',');
+  const cur = parse('rt.character', {});
+  const next = {
+    shape: shape || cur.shape || FALLBACK.shape,
+    expression: expression || cur.expression || FALLBACK.expression,
+    colour: colour || cur.colour || FALLBACK.colour,
+  };
+  if (cur.gen && (!shape || shape === cur.shape || cur.shape === 'gen')) {
+    next.shape = cur.shape || 'gen';
+    next.gen = cur.gen;
+  }
+  write('rt.character', JSON.stringify(next));
+  dispatchEvent(new Event('rt-bot-look'));
 }
 
 const loggedIn = () => !!read('rt.token');
@@ -173,15 +52,8 @@ const forget = () => {
   for (const k of KEYS) localStorage.removeItem(k);
   sessionStorage.removeItem('rt.bind');
   switches.push = switches.shut = false;
-  waiting = null;
-  Object.assign(character, FALLBACK);
-  paint();
-  const size = $('#botSize');
-  if (size) {
-    size.value = 100;
-    size.setAttribute('aria-valuetext', '100%');
-    document.documentElement.style.setProperty('--bot-scale', 1);
-  }
+  document.documentElement.style.setProperty('--bot-scale', 1);
+  dispatchEvent(new Event('rt-bot-look'));
 };
 function leaveOut() {
   $('#accountName').value = '';
@@ -210,17 +82,20 @@ const API = self.RT_RELAY;   // relay.js
    handle 은 한 번 정하면 서버가 빈 값으로 덮지 않으므로, 아직 안 정한 사람이
    다른 칸을 고쳐도 아이디가 사라지지 않는다. */
 const switches = { push: false, shut: false };
-const mine = () => ({
-  name: read('rt.name'),
-  bio: read('rt.bio'),
-  face: [character.shape, character.expression, character.colour].join(','),
-  lang: parse('rt.opt', {}).lang || 'auto',
-  handle: (v => /^[a-z0-9_]{3,16}$/.test(v) ? v : '')(
-    $('#accountId').value.trim().replace(/^@/, '').toLowerCase()),
-  botname: read('rt.botname'),
-  push: switches.push,
-  shut: switches.shut,
-});
+const mine = () => {
+  const c = readChar();
+  return {
+    name: read('rt.name'),
+    bio: read('rt.bio'),
+    face: [c.shape, c.expression, c.colour].join(','),
+    lang: parse('rt.opt', {}).lang || 'auto',
+    handle: (v => /^[a-z0-9_]{3,16}$/.test(v) ? v : '')(
+      $('#accountId').value.trim().replace(/^@/, '').toLowerCase()),
+    botname: read('rt.botname'),
+    push: switches.push,
+    shut: switches.shut,
+  };
+};
 /* 소개(bio)만 비울 수 있다. 닉네임·아이디·캐릭터는 남 앞에 걸리는 값이라 빈 채로
    저장하지 않는다 — 서버도 빈 닉네임을 400 으로 막지만, 그 전에 여기서 무엇이
    비었는지 짚어 준다(400 의 말만 보면 어느 칸인지 모른다).
@@ -269,16 +144,13 @@ function apply(p) {
   wear(p.face);
   if (p.lang && p.lang !== (parse('rt.opt', {}).lang || 'auto')) saveOption('lang', p.lang, true);
 }
-/* 고르는 즉시 저장한다 — 누를 단추가 따로 없다. 브라우저엔 바로 적고, 계정으로
-   올리는 것만 잠깐 모은다: 표정을 훑어보며 열 번 누르면 열 번 다 올라가 중계기의
-   분당 창(RL_AU)을 혼자 다 써버린다. 마지막으로 고른 것 하나만 올라간다. */
+/* 봇 스타일 탭(ranked.js)에서 모양·색을 바꾸면 여기서 받아 계정에도 올린다 */
 let keeping = 0;
-function keep() {
-  if (!write('rt.character', JSON.stringify(character))) return;
-  say(t('acctCharSaved'));
+addEventListener('rt-bot-save', () => {
   clearTimeout(keeping);
+  if (!loggedIn()) return;
   keeping = setTimeout(() => push(t('acctCharSaved')), 700);
-}
+});
 
 function session() {
   const inn = loggedIn();

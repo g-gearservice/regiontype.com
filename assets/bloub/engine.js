@@ -631,6 +631,86 @@ var droplet = normalize(
   1.04
 );
 var capsule = profileFromPolygon(hullOfCircles(-0.42, 0, 0.62, 0.42, 0, 0.62), 0, 0);
+var star = normalize(
+  ANGLES2.map((a) => 0.8 + 0.22 * Math.cos(4 * a)),
+  1.08
+);
+var clover = normalize(
+  unionOfCirclesProfile([
+    { x: -0.34, y: -0.34, r: 0.56 },
+    { x: 0.34, y: -0.34, r: 0.56 },
+    { x: 0.34, y: 0.34, r: 0.56 },
+    { x: -0.34, y: 0.34, r: 0.56 }
+  ]),
+  1.04
+);
+var heart = normalize(
+  profileFromPolygon(
+    roundedPolygon(
+      [
+        { x: 0, y: -0.22 },
+        { x: 0.42, y: -0.56 },
+        { x: 0.72, y: -0.14 },
+        { x: 0, y: 0.72 },
+        { x: -0.72, y: -0.14 },
+        { x: -0.42, y: -0.56 }
+      ],
+      0.32
+    ),
+    0,
+    0
+  ),
+  1.06
+);
+var flower = normalize(
+  unionOfCirclesProfile([
+    { x: 0, y: 0, r: 0.74 },
+    ...Array.from({ length: 8 }, (_, k) => {
+      const a = k / 8 * TAU;
+      return { x: Math.cos(a) * 0.56, y: Math.sin(a) * 0.56, r: 0.46 };
+    })
+  ]),
+  1.04
+);
+var burst = normalize(
+  ANGLES2.map((a) => 0.85 + 0.17 * Math.cos(7 * (a + Math.PI / 2))),
+  1.06
+);
+var pumpkin = normalize(
+  unionOfCirclesProfile([
+    { x: -0.44, y: 0.04, r: 0.66 },
+    { x: 0.44, y: 0.04, r: 0.66 },
+    { x: -0.22, y: 0.07, r: 0.78 },
+    { x: 0.22, y: 0.07, r: 0.78 },
+    { x: 0, y: 0.08, r: 0.82 }
+  ]),
+  1.04
+);
+function genProfile(gen) {
+  if (!gen || typeof gen !== "object") return null;
+  if (Array.isArray(gen.radii) && gen.radii.length === PROFILE_SAMPLES && gen.radii.every((r) => Number.isFinite(r) && r >= 0.4 && r <= 1.3)) {
+    return normalize(gen.radii.map(Number), 1.04);
+  }
+  const lobes = Math.max(0, Math.min(12, Math.round(Number(gen.lobes) || 0)));
+  const amp = Math.max(-0.28, Math.min(0.28, Number(gen.amp) || 0));
+  const sharp = Math.max(0.5, Math.min(3, Number(gen.sharp) || 1));
+  const sx = Math.max(0.72, Math.min(1.28, Number(gen.sx) || 1));
+  const sy = Math.max(0.72, Math.min(1.28, Number(gen.sy) || 1));
+  const rot = (Number(gen.rot) || 0) * Math.PI / 180;
+  const h2 = Math.max(-0.2, Math.min(0.2, Number(gen.h2) || 0));
+  const h3 = Math.max(-0.2, Math.min(0.2, Number(gen.h3) || 0));
+  const raw = ANGLES2.map((a) => {
+    const th = a - rot;
+    const c = Math.cos(th) / sx;
+    const s = Math.sin(th) / sy;
+    const baseR = 1 / Math.hypot(c, s);
+    const wave = lobes > 0 ? Math.cos(lobes * th) : 0;
+    const shaped = Math.sign(wave) * Math.abs(wave) ** sharp;
+    const mod = 1 + amp * shaped + h2 * Math.cos(2 * th) + h3 * Math.sin(3 * th);
+    return Math.max(0.45, baseR * mod);
+  });
+  return normalize(raw, 1.04);
+}
 var SHAPES = [
   { id: "cercle", radii: new Array(PROFILE_SAMPLES).fill(1) },
   { id: "galet", radii: pebble },
@@ -643,7 +723,14 @@ var SHAPES = [
   // 0deg : sommets a gauche et a droite, donc aretes du haut et du bas plates
   { id: "hexagone", radii: regularPolygonProfile(6, 1.04, 0.26, 0) },
   { id: "nuage", radii: cloud },
-  { id: "goutte", radii: droplet }
+  { id: "goutte", radii: droplet },
+  { id: "etoile", radii: star },
+  { id: "trefle", radii: clover },
+  { id: "coeur", radii: heart },
+  { id: "fleur", radii: flower },
+  { id: "pentagone", radii: regularPolygonProfile(5, 1.08, 0.3, -90) },
+  { id: "eclat", radii: burst },
+  { id: "citrouille", radii: pumpkin }
 ];
 var SHAPE_BY_ID = new Map(SHAPES.map((s) => [s.id, s]));
 var COLORS = [
@@ -1262,9 +1349,19 @@ function batir() {
 var DECALAGES = batir();
 function decalageDesYeux(radii, state, expr) {
   if (!radii) return NUL;
-  const par = DECALAGES.get(radii);
-  if (!par) return NUL;
-  return par.get(clef(state, expr)) ?? par.get(clef(state, null)) ?? NUL;
+  let par = DECALAGES.get(radii);
+  if (!par) {
+    par = /* @__PURE__ */ new Map();
+    DECALAGES.set(radii, par);
+  }
+  const k = clef(state, expr);
+  if (par.has(k)) return par.get(k);
+  const def = STATE_BY_ID.get(state);
+  if (!def || !def.baseBody) return NUL;
+  const ex = def.baseFace && expr ? EXPRESSION_BY_ID.get(expr) ?? null : null;
+  const val = decalagePour(def, radii, ex);
+  par.set(k, val);
+  return val;
 }
 
 // src/bot/engine.ts
@@ -1652,5 +1749,6 @@ export {
   EXPRESSIONS,
   EXPRESSION_BY_ID,
   COLORS,
-  COLOR_BY_ID
+  COLOR_BY_ID,
+  genProfile
 };
