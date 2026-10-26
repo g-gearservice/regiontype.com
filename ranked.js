@@ -70,7 +70,7 @@ function siDurMs() {
 function lockBack(on, el) {
   if (on) {
     inertWas = [...document.body.children]
-      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'styles', 'tabDock'].includes(n.id))
+      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'styles', 'tabDock', 'rkLayer'].includes(n.id))
       .map(n => [n, n.inert]);
     inertWas.forEach(([n]) => { n.inert = true; });
   } else {
@@ -133,20 +133,27 @@ function placeStyles() {
   d.style.top = Math.round(top) + 'px';
   d.style.maxHeight = Math.round((a && top < a.top ? a.top - GAP : innerHeight - PAD) - top) + 'px';
 }
-function openStyles(from) {
+function openStyles(from, tab) {
   const d = $('#styles');
-  if (styOpen()) return;
+  if (styOpen()) {
+    if (tab === 'bot') pickStyTab($('#styTabBot'));
+    else if (tab === 'game') pickStyTab($('#styTabGame'));
+    return;
+  }
   styOpener = from || document.activeElement;
   styleGone = null; $('#styNote').textContent = '';
+  if ($('#botSay')) $('#botSay').textContent = '';
   fillStyles();
+  if (tab === 'bot') pickStyTab($('#styTabBot'));
+  else if (tab === 'game') pickStyTab($('#styTabGame'));
+  else if (!$('#styPanelBot').hidden) mountBotStyle();
   d.showPopover();
   placeStyles();
   (fingers() ? $('#styHead') : $('#styClose')).focus({ preventScroll: true });
 }
 
 /* ── 내 계정 ──────────────────────────────────────────
-   알맹이(account/account.js)는 처음 열 때 한 번 싣는다 — 계정 화면에 안 들어오는 사람은
-   캐릭터 견본 스물넷을 그릴 까닭이 없다. 다시 열면 로그인 상태만 새로 읽힌다.
+   알맹이(account/account.js)는 처음 열 때 한 번 싣는다 — 다시 열면 로그인 상태만 새로 읽힌다.
    닫고 나면 거기서 바꾼 것을 홈에 입힌다: 말·야간 등은 app.js 가 rt-opt 로 다시 읽고,
    봇은 고친 모습·색·이름을 입는다 */
 let accountJs = false;
@@ -157,13 +164,13 @@ function openAccount() {
   s.src = asset('account/account.js');
   document.body.append(s);
 }
-function leftAccount() {
-  dispatchEvent(new Event('rt-opt'));
+function syncBotLook() {
+  syncBotStyleFromStorage();
   if (!bot) return;
   const face = readFace();
-  if (face.shape) bot.api.setShape(face.shape);
+  bot.api.setShape(face.shape || 'cercle', face.gen);
   if (face.expression) bot.api.setExpression(face.expression);
-  bot.api.setColour(face.colour);
+  bot.api.setColour(face.colour || 'accent');
   paintTint(bot.el.querySelector('.rk-bot-motion'));
   bot.el.setAttribute('aria-label', botName());
   /* 크기가 바뀌었으면 제자리(옮겨 둔 곳이나 로고 밑)에 다시 선다 */
@@ -171,6 +178,11 @@ function leftAccount() {
   sizeBot();
   if (was !== BOT && out && !touring && !intro) { if (spot) moveTo(...spot); else place(...(phone() ? underLogo() : cornerAt(corner))); }
 }
+function leftAccount() {
+  dispatchEvent(new Event('rt-opt'));
+  syncBotLook();
+}
+addEventListener('rt-bot-look', syncBotLook);
 
 /* ── 순위 ─────────────────────────────────────────────── */
 function rankRow(i, name, right, me, lp) {
@@ -330,7 +342,7 @@ function keepStyle(acts) {
   if (!th) return;
   const look = acts.find(a => a.act === 'look');
   const s = { id: Date.now().toString(36), name: th.name || '', at: Date.now(), ...pickTheme(th) };
-  if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour };
+  if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour, ...(look.gen ? { gen: look.gen } : {}) };
   for (const a of acts) if (a.act === 'set' && (a.key === 'night' || a.key === 'motion')) s[a.key] = a.value;
   writeStyles([s, ...readStyles().filter(x => !sameStyle(x, s))].slice(0, STYLE_MAX));
   if (styOpen()) fillStyles();
@@ -478,11 +490,274 @@ function savePick() {
   fillStyles();
   $('#styNote').textContent = t('styleSaved');
 }
+
+/* ── 봇 스타일 탭 (모양·색·크기·생성) ───────────────────────
+   모양·색의 id 는 엔진(assets/bloub)이 쥐고 있고 화면 이름은 data/i18n.json 의 ch_<id> 다.
+   표정 고르기는 따로 두지 않는다. 색 첫 단추('accent')는 현재 강조색(--accent)과 연동된다 */
+const KO = id => (id && t('ch_' + id) !== 'ch_' + id) ? t('ch_' + id) : '';
+const BOT_DEF = { shape: 'cercle', expression: 'curieux', colour: 'accent', gen: null };
+const botChar = { ...BOT_DEF };
+const botLists = { shape: [], colour: [] };
+const botHexes = new Map();
+const botThumbs = new Map();
+let botMe = null, botReal = null, botMounted = false, botLookAim = null, botLooking = 0, botKeepT = 0;
+
+function syncBotStyleFromStorage() {
+  const f = readFace();
+  botChar.shape = f.shape || BOT_DEF.shape;
+  botChar.expression = f.expression || BOT_DEF.expression;
+  botChar.colour = f.colour || BOT_DEF.colour;
+  botChar.gen = f.gen || null;
+  if (botMounted) paintBotStyle();
+}
+
+function paintBotStyle() {
+  const shLabel = $('#shapeLabel'), clLabel = $('#colourLabel');
+  if (shLabel) shLabel.textContent = botChar.shape === 'gen' ? t('botSubGen') : (KO(botChar.shape) || '');
+  if (clLabel) clLabel.textContent = KO(botChar.colour) || '';
+  document.querySelectorAll('#shapeChoices [data-shape]')
+    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shape === botChar.shape && !botChar.gen)));
+  document.querySelectorAll('#colourChoices [data-colour]')
+    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.colour === botChar.colour)));
+  $('#character')?.setAttribute('aria-label',
+    `${KO(botChar.colour)} ${botChar.shape === 'gen' ? t('botSubGen') : KO(botChar.shape)}`);
+  if (!botMe) return;
+  for (const api of [botMe, botReal]) {
+    api.setShape(botChar.shape, botChar.gen);
+    api.setExpression(botChar.expression);
+    api.setColour(botChar.colour);
+  }
+  for (const api of botThumbs.values()) {
+    api.setExpression(botChar.expression);
+    api.setColour(botChar.colour);
+  }
+}
+
+function saveBotProfile() {
+  if (!token()) return;
+  openAccount();
+  dispatchEvent(new Event('rt-bot-save'));
+}
+
+function keepBotStyle(msgKey = 'acctCharSaved') {
+  const out = { shape: botChar.shape, expression: botChar.expression, colour: botChar.colour };
+  if (botChar.gen) out.gen = botChar.gen;
+  try { localStorage.setItem('rt.character', JSON.stringify(out)); } catch { return; }
+  dispatchEvent(new Event('rt-bot-look'));
+  if ($('#botSay') && msgKey) $('#botSay').textContent = t(msgKey);
+  clearTimeout(botKeepT);
+  botKeepT = setTimeout(saveBotProfile, 400);
+}
+
+function botLookTick() {
+  botLooking = 0;
+  if (!styOpen() || $('#styPanelBot').hidden) return;
+  const f = api => { if (botLookAim) api.lookToward(botLookAim[0], botLookAim[1]); else api.lookAway(); };
+  if (botMe) f(botMe);
+  if (botReal) f(botReal);
+  for (const api of botThumbs.values()) f(api);
+}
+
+function updateSizeTail() {
+  const size = $('#botSize'), realEl = $('#characterReal');
+  if (!size || !realEl) return;
+  const pill = size.parentElement, cap = realEl.nextElementSibling;
+  if (!pill || !cap) return;
+  const a = cap.getBoundingClientRect(), b = pill.getBoundingClientRect();
+  if (b.width) pill.style.setProperty('--tail-x', (a.left + a.width / 2 - b.left - parseFloat(getComputedStyle(pill).borderLeftWidth)) + 'px');
+}
+
+function mountBotStyle() {
+  if (botMounted) { syncBotStyleFromStorage(); updateSizeTail(); return; }
+  botMounted = true;
+  syncBotStyleFromStorage();
+  const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
+  buddyKit.then(({ mountBuddy, TABLES }) => {
+    botLists.shape = TABLES.shapes.map(x => x.id);
+    botLists.colour = ['accent', ...TABLES.colours.map(x => x.id)];
+    for (const c of TABLES.colours) botHexes.set(c.id, c.hex);
+    const saved = readFace();
+    if (botLists.shape.includes(saved.shape) || saved.shape === 'gen') botChar.shape = saved.shape;
+    if (botLists.colour.includes(saved.colour)) botChar.colour = saved.colour;
+    if (saved.gen) botChar.gen = saved.gen;
+
+    botMe = mountBuddy($('#character'), { calm, shape: botChar.shape, expression: botChar.expression, gen: botChar.gen });
+    botMe.start();
+    botReal = mountBuddy($('#characterReal'), { calm, shape: botChar.shape, expression: botChar.expression, gen: botChar.gen });
+    botReal.start();
+
+    const shBox = $('#shapeChoices'), clBox = $('#colourChoices');
+    shBox.replaceChildren(); clBox.replaceChildren();
+    for (const id of botLists.shape) {
+      const label = KO(id) || id;
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.shape = id;
+      b.className = 'character-choice';
+      b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', 'false');
+      b.title = label;
+      const api = mountBuddy(b, { still: true, calm, shape: id, expression: botChar.expression });
+      api.setColour(botChar.colour);
+      api.start();
+      botThumbs.set(id, api);
+      b.onclick = () => { botChar.shape = id; botChar.gen = null; paintBotStyle(); keepBotStyle(); };
+      shBox.append(b);
+    }
+    for (const id of botLists.colour) {
+      const label = KO(id) || id;
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.colour = id;
+      b.className = 'character-choice' + (id === 'accent' ? ' is-accent-link' : '');
+      b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', 'false');
+      b.title = label;
+      b.style.background = id === 'accent' ? 'var(--accent)' : botHexes.get(id);
+      b.onclick = () => { botChar.colour = id; paintBotStyle(); keepBotStyle(); };
+      clBox.append(b);
+    }
+    paintBotStyle();
+    requestAnimationFrame(() => { updateSizeTail(); if (styOpen()) placeStyles(); });
+  }).catch(err => {
+    console.error('[styles] 캐릭터 엔진', err);
+    if ($('#character')) $('#character').textContent = t('acctCharFail');
+  });
+}
+
+function pickStyTab(tab) {
+  const tabs = [$('#styTabGame'), $('#styTabBot')];
+  tabs.forEach(tb => {
+    const on = tb === tab;
+    tb.setAttribute('aria-selected', String(on));
+    tb.tabIndex = on ? 0 : -1;
+    document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
+  });
+  if (tab === $('#styTabBot')) mountBotStyle();
+  if (styOpen()) requestAnimationFrame(placeStyles);
+}
+
+function pickBotSubTab(tab) {
+  const tabs = [$('#botTabPreset'), $('#botTabGen')];
+  tabs.forEach(tb => {
+    const on = tb === tab;
+    tb.setAttribute('aria-selected', String(on));
+    tb.tabIndex = on ? 0 : -1;
+    document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
+  });
+  if (styOpen()) requestAnimationFrame(placeStyles);
+}
+
+async function generateBotLook(promptText) {
+  const btn = $('#botGenBtn'), inp = $('#botGenIn'), note = $('#botSay');
+  if (!promptText || btn.disabled) return;
+  btn.disabled = true; inp.disabled = true;
+  btn.textContent = t('botGenBusy');
+  note.textContent = t('botProgLook');
+  try {
+    const askPrompt = `Generate a bot avatar look matching this description: "${promptText}". Use {"act":"look","shape":"...","colour":"...","gen":{...}} (use a preset shape like citrouille/etoile/coeur/fleur/trefle/nuage/eclat if it fits directly, or synthesize a custom shape with "gen" lobes/amp/sharp/sx/sy/rot/h2/h3/stem and matching colour).`;
+    const d = await ask('/bot/chat', {
+      msgs: [{ role: 'user', content: askPrompt }],
+      courses: botCourses(),
+      lang: document.documentElement.lang,
+      name: botName(),
+      now: botNow(),
+    }, true);
+    const look = (d.do || []).find(a => a.act === 'look');
+    if (look) {
+      act(look);
+      saveBotProfile();
+      note.textContent = d.say || t('acctCharSaved');
+    } else {
+      /* 모델이 look 을 안 실었으면 설명 문자열 해시로 즉석 생성 모양을 빚는다 */
+      const h = [...promptText].reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
+      const abs = Math.abs(h);
+      const gen = {
+        lobes: 3 + (abs % 7),
+        amp: +((0.1 + ((abs >> 3) % 15) * 0.01) * (abs % 2 ? 1 : -1)).toFixed(2),
+        sharp: +(0.8 + ((abs >> 7) % 14) * 0.1).toFixed(2),
+        sx: +(0.9 + ((abs >> 11) % 5) * 0.05).toFixed(2),
+        sy: +(0.9 + ((abs >> 14) % 5) * 0.05).toFixed(2),
+        stem: /호박|사과|체리|귤|열매|모자|꼭지|할로윈|pumpkin|apple|fruit|halloween|stem/i.test(promptText),
+      };
+      act({ act: 'look', shape: 'gen', gen });
+      saveBotProfile();
+      note.textContent = d.say || t('acctCharSaved');
+    }
+  } catch (e) {
+    note.textContent = t(e.status === 429 ? 'botBusy' : 'botChatFail');
+  } finally {
+    btn.disabled = false; inp.disabled = false;
+    btn.textContent = t('botGenBtn');
+  }
+}
+
 function wireStyles() {
   $('#styPick').addEventListener('input', e => { previewPick(); if (e.target.name === 'accent') fillSug(); });
   $('#stySave').addEventListener('click', savePick);
   const d = $('#styles'), ul = $('#styList');
   $('#styClose').addEventListener('click', () => d.hidePopover());
+  const styTabs = [$('#styTabGame'), $('#styTabBot')];
+  styTabs.forEach(tb => tb.addEventListener('click', () => pickStyTab(tb)));
+  $('#styles .sty-tabs').addEventListener('keydown', e => {
+    const i = styTabs.indexOf(document.activeElement);
+    if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const next = styTabs[e.key === 'Home' ? 0 : e.key === 'End' ? styTabs.length - 1 : (i + 1) % styTabs.length];
+    pickStyTab(next); next.focus();
+  });
+  const botTabs = [$('#botTabPreset'), $('#botTabGen')];
+  botTabs.forEach(tb => tb.addEventListener('click', () => pickBotSubTab(tb)));
+  $('#styles .sty-bot-modes').addEventListener('keydown', e => {
+    const i = botTabs.indexOf(document.activeElement);
+    if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const next = botTabs[e.key === 'Home' ? 0 : e.key === 'End' ? botTabs.length - 1 : (i + 1) % botTabs.length];
+    pickBotSubTab(next); next.focus();
+  });
+  $('#botReset').addEventListener('click', () => {
+    Object.assign(botChar, BOT_DEF);
+    const size = $('#botSize');
+    if (size) {
+      size.value = 100;
+      size.setAttribute('aria-valuetext', '100%');
+      document.documentElement.style.setProperty('--bot-scale', 1);
+      try { localStorage.setItem('rt.botsize', '1'); } catch {}
+    }
+    paintBotStyle();
+    keepBotStyle();
+  });
+  $('#botViewGen').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('#botGenIn').value.trim();
+    if (text) generateBotLook(text);
+  });
+  {
+    const size = $('#botSize'), realEl = $('#characterReal');
+    let v = 1;
+    try { const sv = +localStorage.getItem('rt.botsize'); if (sv >= .7 && sv <= 1.3) v = sv; } catch {}
+    size.value = Math.round(v * 100);
+    const show = () => {
+      size.setAttribute('aria-valuetext', size.value + '%');
+      document.documentElement.style.setProperty('--bot-scale', size.value / 100);
+      try { localStorage.setItem('rt.botsize', String(size.value / 100)); } catch {}
+      dispatchEvent(new Event('rt-bot-look'));
+    };
+    show();
+    size.addEventListener('input', show);
+    size.addEventListener('change', () => { try { localStorage.setItem('rt.botsize', String(size.value / 100)); } catch {} });
+    const pill = size.parentElement;
+    if (typeof ResizeObserver === 'function' && realEl && pill) {
+      const ro = new ResizeObserver(updateSizeTail);
+      ro.observe(realEl); ro.observe(pill);
+    }
+  }
+  addEventListener('pointermove', e => {
+    if (!styOpen() || $('#styPanelBot').hidden) return;
+    botLookAim = [e.clientX, e.clientY];
+    botLooking ||= requestAnimationFrame(botLookTick);
+  }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => {
+    if (!styOpen() || $('#styPanelBot').hidden) return;
+    botLookAim = null;
+    botLooking ||= requestAnimationFrame(botLookTick);
+  });
   /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 popover 의 기본 동작이라 그대로 산다.
      지우기 모드에서는 Esc 가 먼저 그 모드만 끈다. 견본에서 Delete·Backspace 는 곧 지우기(꾹 누르기의 키보드 짝) */
   d.addEventListener('keydown', e => {
@@ -621,8 +896,8 @@ function makeBot() {
     el.append(motion);
     bubble.before(el);
     const face = readFace();
-    const api = mountBuddy(motion, { calm, shape: face.shape, expression: face.expression });
-    if (face.colour) api.setColour(face.colour);
+    const api = mountBuddy(motion, { calm, shape: face.shape || 'cercle', expression: face.expression || 'curieux', gen: face.gen });
+    api.setColour(face.colour || 'accent');
     paintTint(motion);
     const ring = $('#rkRing');
     ring.setAttribute('viewBox', api.node.getAttribute('viewBox'));
@@ -652,8 +927,8 @@ const docked = () => !!bot && bot.el.parentNode === $('#sheetBot');
    말풍선의 '다음'도 눌리지 않는다. 상태바 칸은 Safari 가 fixed 를 그리지 않는다 */
 function room() {
   if (!phone()) return [0, innerHeight];
-  const d = $('#tabDock');
-  return [logo().getBoundingClientRect().top, d && d.offsetHeight ? d.getBoundingClientRect().top - 8 : innerHeight];
+  const d = $('#tabDock'), lr = logo().getBoundingClientRect();
+  return [lr.height > 0 && lr.top >= 0 ? lr.top : 16, d && d.offsetHeight ? d.getBoundingClientRect().top - 8 : innerHeight];
 }
 const clampXY = (x, y) => {
   const [top, low] = room();
@@ -804,11 +1079,13 @@ function hide() {
 function cornerAt(i) {
   /* 좁은 창(폰 폭)에서는 위 귀퉁이가 지도 머리(도봉·노원)를 덮는다 — 아래 막대 위 두 곳에만 앉는다 */
   if (narrow() && i < 2) i += 2;
-  const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
+  const nr = $('#regions .navbar').getBoundingClientRect();
+  const top = nr.height > 0 && nr.bottom > 12 ? nr.bottom + 12 : 84;
   const x = i % 2 ? innerWidth - BOT - 20 : 20;
   /* 아래 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
   const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot').getBoundingClientRect();
-  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
+  const low = dock.height > 0 && dock.top < innerHeight && x < dock.right && x + BOT > dock.left
+    ? dock.top - BOT - 8 : innerHeight - BOT - 24;
   return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
 }
 const narrow = () => !phone() && innerWidth < 760;
@@ -818,9 +1095,10 @@ const narrow = () => !phone() && innerWidth < 760;
 const GREET_W = 300, GREET_H = 72;
 function greetSpot() {
   if (phone()) return null;
-  const dots = [...document.querySelectorAll('#courseBtns .course-map')]
-    .filter(el => parseFloat(getComputedStyle(el).opacity) >= .5)
-    .flatMap(el => [...el.querySelectorAll('circle')].map(c => c.getBoundingClientRect()));
+  const dots = document.body.matches('.signing, .setting, .paging') ? []
+    : [...document.querySelectorAll('#courseBtns .course-map')]
+        .filter(el => parseFloat(getComputedStyle(el).opacity) >= .5)
+        .flatMap(el => [...el.querySelectorAll('circle')].map(c => c.getBoundingClientRect()));
   if (!dots.length) return null;
   const hits = (l, t, r, b) => dots.some(d => d.left < r && d.right > l && d.top < b && d.bottom > t);
   const clampX = x => Math.max(16, Math.min(innerWidth - GREET_W - 16, x));
@@ -838,6 +1116,7 @@ let greetSide = null;
 /* 제 발로 나온 봇이 서는 곳 — 로고 바로 밑 가운데 */
 function underLogo() {
   const r = logo().getBoundingClientRect();
+  if (!(r.height > 0 && r.bottom > 0)) return [innerWidth / 2 - BOT / 2, 60];
   return [Math.max(16, Math.min(innerWidth - BOT - 16, r.left + r.width / 2 - BOT / 2)), r.bottom + 8];
 }
 /* 로고 점 자리 — 로고를 채우는 원(style.css 의 .nav-logo::before)이 여기서 커진다 */
@@ -913,6 +1192,7 @@ async function summon() {
    발끝을 로고 아랫변에 맞춰 두면 거기서 미끄러져 내려온다 */
 function behind() {
   const r = logo().getBoundingClientRect();
+  if (!(r.height > 0 && r.bottom > 0)) return [innerWidth / 2 - BOT / 2, -BOT];
   return [r.left + r.width / 2 - BOT / 2, fingers() ? r.bottom - BOT : r.top + r.height / 2 - BOT / 2];
 }
 /* 로고 한가운데에 작게 숨은 채 선다. 로고 점이 로고를 채우고(rk-emerge) 넵바가 봇 층
@@ -995,7 +1275,8 @@ function botCourses() {
 function botNow() {
   let o = {};
   try { o = JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch {}
-  return { opt: { ...DEF, ...o }, page: page || 'home', signed: !!token(), named: !!readName(), dev: DEV,
+  const nowPage = document.body.classList.contains('setting') ? 'settings' : (page || 'home');
+  return { opt: { ...DEF, ...o }, page: nowPage, signed: !!token(), named: !!readName(), dev: DEV,
            rec: token() ? botRec.v : null };
 }
 /* 내 전적 — 기록 화면과 같은 /games 를 대화 한 번에 많아야 1분에 한 번 읽는다. 못 읽으면 없이 묻는다 */
@@ -1052,10 +1333,15 @@ function paintTheme(draft) {
   if (!el) { el = document.createElement('style'); el.id = 'rtTheme'; document.head.append(el); }
   el.textContent = css;
   if (!draft) try { css ? localStorage.setItem('rt.themeCss', css) : localStorage.removeItem('rt.themeCss'); } catch {}
+  if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
 }
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
+function leaveOver() {
+  if (page) closePage(true);
+  if (document.body.classList.contains('setting')) dispatchEvent(new Event('rt-tab-swap'));
+}
 function act(a) {
-  if (a.act === 'duel' && botCourses().some(x => x.slug === a.course)) { go(a.course, true); return; }
+  if (a.act === 'duel' && botCourses().some(x => x.slug === a.course)) { leaveOver(); go(a.course, true); return; }
   if (a.act === 'post') {
     /* 초안만 — 커뮤니티 화면이 받아 글쓰기 칸에 채워 열고, 올리기는 사람이 누른다 */
     try { sessionStorage.setItem('rt.cmDraft', JSON.stringify({ tag: a.tag, title: a.title, body: a.body })); } catch { return; }
@@ -1065,6 +1351,8 @@ function act(a) {
   if (a.act === 'look') {
     const face = readFace();
     for (const k of ['shape', 'expression', 'colour']) if (a[k]) face[k] = a[k];
+    if (a.gen) { face.gen = a.gen; if (!a.shape) face.shape = 'gen'; }
+    else if (a.shape && a.shape !== 'gen') delete face.gen;
     try { localStorage.setItem('rt.character', JSON.stringify(face)); } catch { return; }
     leftAccount();
     return;
@@ -1078,6 +1366,7 @@ function act(a) {
     return;
   }
   if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
+    leaveOver();
     /* 경쟁전은 꾹 누른 시작하기와 같은 길(go) — 로그인·이름이 없으면 봇이 그걸 조른다 */
     if (a.ranked) { go(a.course); return; }
     hide();
@@ -1087,10 +1376,19 @@ function act(a) {
     /* 설정 통의 주인은 settings.js 다 — 거기서 저장하고 화면에 알린다 */
     dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { [a.key]: a.value } }));
   } else if (a.act === 'open') {
-    if (PAGES.includes(a.page)) { openPage(a.page); return; }
+    if (PAGES.includes(a.page)) {
+      if (document.body.classList.contains('setting')) dispatchEvent(new Event('rt-tab-swap'));
+      openPage(a.page);
+      return;
+    }
     if (a.page === 'styles') { openStyles(document.body); return; }
     if (a.page === 'feedback') { openFeedback(); return; }
-    if (a.page === 'home') { closePage(); return; }
+    if (a.page === 'home') {
+      if (page) closePage();
+      if (document.body.classList.contains('setting')) ($('#optClose') || { click: () => dispatchEvent(new Event('rt-tab-swap')) }).click();
+      if ($('#result').classList.contains('on')) $('#result [data-go="regions"]')?.click();
+      return;
+    }
     if (a.page === 'signin') { $('#signinLink').click(); return; }
     /* 설정은 제 손(settings.js)이 링크 click 을 받아 덮개로 연다 */
     const link = PAGE_LINK[a.page] && document.querySelector(`#regions a[href="${PAGE_LINK[a.page]}"], #tabDock a[href="${PAGE_LINK[a.page]}"]`);
@@ -1202,6 +1500,7 @@ function wireChat() {
     if (!btn || !chatting) return;
     const chip = btn.dataset.chip;
     if (chip === 'ranked') {
+      leaveOver();
       setRanked(true);
       go(rankedSlug());
       return;
@@ -1710,9 +2009,12 @@ function oppWatch(rk) {
 function wireStart() {
   /* 캡처 단계에서 먼저 받는다 — app.js 의 일반 시작·Esc 보다 앞선다 */
   document.addEventListener('click', e => {
-    if (e.target.closest('#again') && G && G.ranked) {
-      e.stopImmediatePropagation();
-      go(G.slug);
+    if (e.target.closest('#again')) {
+      if (!touring) { hide(); doze(); }
+      if (G && G.ranked) {
+        e.stopImmediatePropagation();
+        go(G.slug);
+      }
       return;
     }
     if (!e.target.closest('#navPlay')) return;
@@ -1720,11 +2022,18 @@ function wireStart() {
     if (swallowPlay) { swallowPlay = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
     /* 안내 도중에 시작하면 안내는 거기서 끝난다 — 판에서 돌아왔을 때 매달려 있지 않게 */
     quitTour();
+    if (!touring) { hide(); doze(); }
     if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
     e.stopImmediatePropagation();
     go(rankedSlug());
   }, true);
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && chatting) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      endChat();
+      return;
+    }
     if (e.key !== 'Escape' || !regionsOn()) return;
     if (document.body.matches('.signing, .setting, .paging')) return;
     if (!ranked) return;
@@ -1797,12 +2106,15 @@ document.addEventListener('click', e => {
   if (a && a.getAttribute('href') === '#styles') { e.preventDefault(); openStyles(a); }
   if (e.target.closest('[data-pg-close]')) closePage();
 });
+const botFocusable = () => layer.hidden ? [] : [...layer.querySelectorAll(
+  'a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]'
+)].filter(n => !n.closest('[hidden]') && n.getClientRects().length);
 addEventListener('keydown', e => {
   if (!page || ($('#feedback') && $('#feedback').open)) return;
   if (e.key === 'Escape') { e.preventDefault(); return closePage(); }
   if (e.key !== 'Tab') return;
-  const items = [...over(page).querySelectorAll('a[href], button:not([disabled]), [tabindex="0"]')]
-    .filter(n => !n.closest('[hidden]') && n.getClientRects().length).concat(dockTabs());
+  const items = [...over(page).querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex="0"]')]
+    .filter(n => !n.closest('[hidden]') && n.getClientRects().length).concat(botFocusable(), dockTabs());
   if (!items.length) return;
   const first = items[0], last = items[items.length - 1];
   if (e.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {
@@ -1835,6 +2147,8 @@ if (location.search.includes('rt=1')) {
   console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
   console.assert(['#000000', '#ffffff', '#f0a03c', '#2266cc', '#ff0000', '#7a7a7a'].every(a => styleIdeas(a).every(s => !themeLow(s).length)), '스타일: 추천은 늘 대비를 지킨다');
   console.assert(hsl(0, 1, .5) === '#ff0000' && Math.round(hueOf('#00ff00')) === 120, '스타일: 색상환 셈');
+  console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
+  console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
 }
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
@@ -1846,9 +2160,9 @@ window.RT_BOOT_BOT = async () => {
   await makeBot();
   if (!bot) return;
   const face = readFace();
-  if (face.shape) bot.api.setShape(face.shape);
+  bot.api.setShape(face.shape || 'cercle', face.gen);
   if (face.expression) bot.api.setExpression(face.expression);
-  bot.api.setColour(face.colour);
+  bot.api.setColour(face.colour || 'accent');
   paintTint(bot.el.querySelector('.rk-bot-motion'));
   bot.el.setAttribute('aria-label', botName());
 };

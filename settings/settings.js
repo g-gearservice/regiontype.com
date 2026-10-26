@@ -409,7 +409,7 @@ let backgroundState = [];
 function setBackgroundInert(inert) {
   if (inert) {
     backgroundState = [...document.body.children]
-      .filter(el => el !== over() && el.id !== 'boot' && el.id !== 'codes' && el.id !== 'tabDock' && el.tagName !== 'SCRIPT')
+      .filter(el => el !== over() && !['boot', 'codes', 'feedback', 'styles', 'tabDock', 'rkLayer'].includes(el.id) && el.tagName !== 'SCRIPT')
       .map(el => [el, el.hasAttribute('inert')]);
     backgroundState.forEach(([el]) => { el.inert = true; });
     return;
@@ -420,7 +420,7 @@ function setBackgroundInert(inert) {
   });
   backgroundState = [];
 }
-const focusable = () => [...over().querySelectorAll(
+const focusable = (root = over()) => !root || root.hidden ? [] : [...root.querySelectorAll(
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
   'textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 )].filter(el => !el.closest('[hidden]') && !el.closest('dialog[open]'));
@@ -620,9 +620,12 @@ function wire() {
   addEventListener('keydown', e => {
     if (over().hidden) return;
     if (($('#codes') && $('#codes').open) || ($('#feedback') && $('#feedback').open)) return;
-    if (e.key === 'Escape') return close();
+    if (e.key === 'Escape') {
+      if ($('#rkChat') && !$('#rkChat').hidden) return;
+      return close();
+    }
     if (e.key !== 'Tab') return;
-    const items = focusable().filter(n => n.getClientRects().length).concat(dockTabs());
+    const items = focusable().concat(focusable($('#rkLayer'))).filter(n => n.getClientRects().length).concat(dockTabs());
     if (!items.length) return;
     const first = items[0], last = items[items.length - 1];
     if (e.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {

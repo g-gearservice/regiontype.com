@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.13">
+<link rel="stylesheet" href="style.css?v=5.16">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -210,45 +210,6 @@
     <div class="rk-match-btns" id="rkMatchBtns">
       <button type="button" id="rkMatchBot" data-i18n="rkVsBot">봇과 겨루기</button>
       <button type="button" id="rkMatchCancel" data-i18n="cancel">취소</button>
-    </div>
-  </div>
-  <!-- 도우미 봇과 말풍선. 홈이 보일 때만 산다 — #regions 안에 둬서 플레이 화면에선 저절로 빠진다.
-       .rk-dim 은 처음 온 사람에게 넵바만 남기고 홈을 덮는 막이다 -->
-  <div class="rk-layer" id="rkLayer" hidden>
-    <div class="rk-dim" id="rkDim" hidden></div>
-    <div class="rk-say" id="rkSay" role="status" aria-live="polite" hidden>
-      <!-- 봇과 겹치는 곳에만 보이는 테두리. 봇 몸 윤곽을 <use> 로 따 와 말풍선 안에 깐다 -->
-      <svg class="rk-ring" id="rkRing" aria-hidden="true"><use></use></svg>
-      <p id="rkSayText"></p>
-      <button type="button" class="rk-next" id="rkNext" data-i18n="botNext" hidden>다음</button>
-      <!-- 폰에서만 보이는 안내 닫기. 조르기·둘러보기 어디서든 한 번에 빠져나온다 -->
-      <button type="button" class="rk-skip" id="rkSkip" data-i18n-aria="close" aria-label="닫기" hidden><span aria-hidden="true">×</span></button>
-      <form id="rkName" hidden>
-        <label for="rkNameIn" data-i18n="nameLabel">누구나 보는 순위표에 이 이름이 올라갑니다</label>
-        <div>
-          <input id="rkNameIn" maxlength="12" autocomplete="off" spellcheck="false" data-i18n-ph="namePh" placeholder="이름">
-          <button type="submit" data-i18n="rankedStart">경쟁전 시작</button>
-        </div>
-      </form>
-      <!-- 봇이 답을 짓는 동안의 진행 막대(ranked.js 의 progStart). 한 번 묻는 길이라 참 진행률은 없다 —
-           막대는 어림이고 옆의 초가 실제로 흐른 시간이다. 단계 글만 읽히고 초는 읽히지 않는다 -->
-      <div class="rk-prog" id="rkProg" hidden>
-        <div class="rk-prog-row"><span id="rkProgStep"></span><span class="rk-prog-sec" id="rkProgSec" aria-hidden="true"></span></div>
-        <div class="rk-prog-track" id="rkProgBar" role="progressbar" aria-labelledby="rkProgStep" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
-      </div>
-      <!-- 봇에게 말 걸기(ranked.js 의 chat). 중계기 /bot/chat 이 NVIDIA 모델에 묻는다 -->
-      <div class="rk-chips" id="rkChips" hidden>
-        <button type="button" data-chip="ranked" data-i18n="botChipRanked">경쟁전 시작</button>
-        <button type="button" data-chip="night" data-i18n="botChipNight">야간 모드</button>
-        <button type="button" data-chip="styles" data-i18n="botChipStyles">내 스타일</button>
-        <button type="button" data-chip="feedback" data-i18n="botChipFeedback">피드백</button>
-      </div>
-      <form id="rkChat" hidden>
-        <div>
-          <input id="rkChatIn" maxlength="300" autocomplete="off" data-i18n-aria="botChatIn" aria-label="봇에게 말 걸기" data-i18n-ph="botChatPh" placeholder="또는 말로 해 주세요">
-          <button type="submit" data-i18n="fbSend">보내기</button>
-        </div>
-      </form>
     </div>
   </div>
 </section>
@@ -602,8 +563,8 @@
   </div>
 </section>
 
-<!-- 내 스타일 — 봇이 지은 스타일과 직접 고른 색을 프리셋으로 모아 두는 판(ranked.js 의 fillStyles). popover 라
-     연 단추 바로 아래에 떠 있고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다.
+<!-- 내 스타일 — 게임 스타일(프리셋·색 직접 고르기)과 봇 스타일(모양·색·크기·생성)을 한 판의 두 탭으로 나눈다(ranked.js).
+     popover 라 연 단추 바로 아래에 떠 있고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다.
      프리셋 견본을 누르면 입고, 꾹 누르면 빨간 X 가 떠 지울 수 있다(키보드는 Delete).
      쓰는 것은 체크 표시와 테두리로 가른다(색만이 아니다). #styles 로 들어와도 연다 -->
 <div id="styles" popover role="dialog" aria-labelledby="styHead">
@@ -612,27 +573,61 @@
       <h2 class="head" id="styHead" tabindex="-1" data-i18n="stylesHead">내 스타일</h2>
       <button type="button" class="back" id="styClose" data-i18n-aria="close" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
     </div>
-    <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
-    <p class="pg-say" id="stySay" role="status"></p>
-    <p class="sty-hint" id="styHint" data-i18n="styleHold">누르면 입고, 꾹 누르면 지울 수 있어요</p>
-    <!-- 색 직접 고르기(ranked.js 의 fillPick). 칸은 THEME 표에서 짓는다. 대비가 모자라면 글자로 알리고 저장하지 않는다.
-         추천은 지금 강조색에서 대비를 지키는 칸색 짝을 짓는다(styleIdeas) -->
-    <fieldset class="sty-edit">
-      <legend data-i18n="styleEdit">색 직접 고르기</legend>
-      <div class="sty-picks" id="styPick"></div>
-      <div class="sty-sug">
-        <span class="sty-sug-head" data-i18n="styleSuggest">추천</span>
-        <div class="sty-sug-list" id="stySug"></div>
-        <button type="button" class="sty-shuffle" id="styShuffle" data-i18n="styleShuffle">다른 추천</button>
+    <div class="pg-tabs sty-tabs" role="tablist" data-i18n-aria="stylesHead" aria-label="내 스타일">
+      <button type="button" role="tab" id="styTabGame" aria-controls="styPanelGame" aria-selected="true" data-i18n="styleTabGame">게임 스타일</button>
+      <button type="button" role="tab" id="styTabBot" aria-controls="styPanelBot" aria-selected="false" tabindex="-1" data-i18n="styleTabBot">봇 스타일</button>
+    </div>
+    <div id="styPanelGame" class="sty-panel" role="tabpanel" aria-labelledby="styTabGame" tabindex="0">
+      <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
+      <p class="pg-say" id="stySay" role="status"></p>
+      <p class="sty-hint" id="styHint" data-i18n="styleHold">누르면 입고, 꾹 누르면 지울 수 있어요</p>
+      <!-- 색 직접 고르기(ranked.js 의 fillPick). 칸은 THEME 표에서 짓는다. 대비가 모자라면 글자로 알리고 저장하지 않는다.
+           추천은 지금 강조색에서 대비를 지키는 칸색 짝을 짓는다(styleIdeas) -->
+      <fieldset class="sty-edit">
+        <legend data-i18n="styleEdit">색 직접 고르기</legend>
+        <div class="sty-picks" id="styPick"></div>
+        <div class="sty-sug">
+          <span class="sty-sug-head" data-i18n="styleSuggest">추천</span>
+          <div class="sty-sug-list" id="stySug"></div>
+          <button type="button" class="sty-shuffle" id="styShuffle" data-i18n="styleShuffle">다른 추천</button>
+        </div>
+        <p class="sty-warn" id="styWarn" role="status"></p>
+        <button type="button" class="sty-save" id="stySave" data-i18n="styleSave">프리셋으로 저장</button>
+      </fieldset>
+      <div class="sty-foot">
+        <p class="sty-note" id="styNote" role="status" aria-live="polite"></p>
+        <button type="button" class="sty-done" id="styDone" data-i18n="styleDone" hidden>완료</button>
+        <button type="button" class="sty-undo" id="styUndo" data-i18n="styleUndo" hidden>되돌리기</button>
+        <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
       </div>
-      <p class="sty-warn" id="styWarn" role="status"></p>
-      <button type="button" class="sty-save" id="stySave" data-i18n="styleSave">프리셋으로 저장</button>
-    </fieldset>
-    <div class="sty-foot">
-      <p class="sty-note" id="styNote" role="status" aria-live="polite"></p>
-      <button type="button" class="sty-done" id="styDone" data-i18n="styleDone" hidden>완료</button>
-      <button type="button" class="sty-undo" id="styUndo" data-i18n="styleUndo" hidden>되돌리기</button>
-      <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
+    </div>
+    <div id="styPanelBot" class="sty-panel" role="tabpanel" aria-labelledby="styTabBot" tabindex="0" hidden>
+      <div class="profile-card character-preview">
+        <div class="pet-compare">
+          <figure class="pet-fig"><div id="characterReal" class="character-real" aria-hidden="true"></div><figcaption data-i18n="acctReal">실제 크기</figcaption></figure>
+          <i class="i i-chevron-left pet-lt" aria-hidden="true"></i>
+          <figure class="pet-fig"><div id="character" class="character" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div><figcaption data-i18n="acctZoom">확대 크기</figcaption></figure>
+        </div>
+        <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" data-i18n-aria="acctBotSize" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
+      </div>
+      <div class="profile-card character-controls sty-bot-card">
+        <div class="sty-bot-bar">
+          <div class="sty-bot-modes" role="tablist" data-i18n-aria="styleTabBot" aria-label="봇 스타일">
+            <button type="button" role="tab" id="botTabPreset" aria-controls="botViewPreset" aria-selected="true" data-i18n="botSubPreset">Bot</button>
+            <button type="button" role="tab" id="botTabGen" aria-controls="botViewGen" aria-selected="false" tabindex="-1" data-i18n="botSubGen">Generate</button>
+          </div>
+          <button type="button" class="sty-bot-reset" id="botReset" data-i18n="botReset">Reset</button>
+        </div>
+        <div id="botViewPreset" class="sty-bot-view" role="tabpanel" aria-labelledby="botTabPreset" tabindex="0">
+          <fieldset><legend class="profile-label"><span data-i18n="acctShape">모양</span> <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
+          <fieldset><legend class="profile-label"><span data-i18n="acctColour">색</span> <span id="colourLabel"></span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
+        </div>
+        <form id="botViewGen" class="sty-bot-view sty-bot-gen" role="tabpanel" aria-labelledby="botTabGen" tabindex="0" hidden>
+          <textarea id="botGenIn" maxlength="160" rows="3" data-i18n-aria="botGenPh" aria-label="원하는 모양을 설명해 주세요…" data-i18n-ph="botGenPh" placeholder="원하는 모양을 설명해 주세요…"></textarea>
+          <button type="submit" class="sty-gen-btn" id="botGenBtn" data-i18n="botGenBtn">Generate</button>
+        </form>
+      </div>
+      <p class="sty-note" id="botSay" role="status" aria-live="polite"></p>
     </div>
   </div>
 </div>
@@ -645,23 +640,6 @@
   <header class="account-heading"><button type="button" class="back" data-pg-close data-i18n-aria="backHome" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></button><h1 id="accountHead" data-i18n="accountHead">내 계정</h1></header>
   <div class="account-shell">
   <div class="account-layout">
-    <section class="account-character" data-i18n-aria="acctCharacter" aria-label="내 캐릭터">
-      <div class="profile-card character-preview">
-        <h2 class="character-title" data-i18n="acctPet">내 펫</h2>
-        <div class="pet-compare">
-          <figure class="pet-fig"><div id="characterReal" class="character-real" aria-hidden="true"></div><figcaption data-i18n="acctReal">실제 크기</figcaption></figure>
-          <i class="i i-chevron-left pet-lt" aria-hidden="true"></i>
-          <figure class="pet-fig"><div id="character" class="character" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div><figcaption data-i18n="acctZoom">확대 크기</figcaption></figure>
-        </div>
-        <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" data-i18n-aria="acctBotSize" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
-        <a class="profile-button sty-link" href="#styles" data-i18n="stylesHead">내 스타일</a>
-      </div>
-      <div class="profile-card character-controls">
-        <fieldset><legend class="profile-label"><span data-i18n="acctShape">모양</span> <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
-        <fieldset><legend class="profile-label"><span data-i18n="acctExpression">표정</span> <span id="expressionLabel"></span></legend><div class="character-choices" id="expressionChoices"></div></fieldset>
-        <fieldset><legend class="profile-label"><span data-i18n="acctColour">색</span> <span id="colourLabel"></span></legend><div class="character-choices colour-choices" id="colourChoices"></div></fieldset>
-      </div>
-    </section>
     <div class="account-details">
       <section class="profile-section account-bio"><label for="accountBio" class="profile-label" data-i18n="acctBio">소개</label><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><p class="profile-help"><span id="bioCount">0/60</span></p></section>
       <section class="profile-section"><h2 class="profile-label" data-i18n="acctSection">계정</h2>
@@ -673,7 +651,7 @@
         <div class="profile-row"><div><strong data-i18n="acctPush">새소식 알림</strong><p class="profile-help" data-i18n="acctPushHow">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><button type="button" class="profile-switch" id="accountPush" data-i18n-aria="acctPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
         <div class="profile-row"><div><strong data-i18n="acctShut">계정 비공개</strong><p class="profile-help" data-i18n="acctShutHow">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><button type="button" class="profile-switch" id="accountShut" data-i18n-aria="acctShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
       </section>
-      <div class="profile-actions"><button type="button" class="profile-button" id="accountLogout" data-i18n="signOut">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase" data-i18n="acctErase">계정 삭제</button><a class="profile-button" href="settings/#security" data-i18n="acctSecurity">보안 설정</a></div>
+      <div class="profile-actions"><a class="profile-button sty-link" href="#styles" data-i18n="stylesHead">내 스타일</a><button type="button" class="profile-button" id="accountLogout" data-i18n="signOut">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase" data-i18n="acctErase">계정 삭제</button><a class="profile-button" href="settings/#security" data-i18n="acctSecurity">보안 설정</a></div>
       <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
       <p id="accountSession" class="profile-help" role="status"></p>
       <a id="accountSignin" class="profile-button" href="signin/" data-i18n="signinBtn" hidden>로그인</a>
@@ -681,6 +659,46 @@
   </div>
 </div>
 </section>
+
+<!-- 도우미 봇과 말풍선. body 직속으로 두어 홈·결과·설정·순위·기록·계정 어디서든 함께 다니고,
+     플레이(#play.on)·로그인(body.signing)에서만 물러난다. .rk-dim 은 처음 온 사람에게 넵바만 남기고 홈을 덮는 막이다 -->
+<div class="rk-layer" id="rkLayer" hidden>
+  <div class="rk-dim" id="rkDim" hidden></div>
+  <div class="rk-say" id="rkSay" role="status" aria-live="polite" hidden>
+    <!-- 봇과 겹치는 곳에만 보이는 테두리. 봇 몸 윤곽을 <use> 로 따 와 말풍선 안에 깐다 -->
+    <svg class="rk-ring" id="rkRing" aria-hidden="true"><use></use></svg>
+    <p id="rkSayText"></p>
+    <button type="button" class="rk-next" id="rkNext" data-i18n="botNext" hidden>다음</button>
+    <!-- 폰에서만 보이는 안내 닫기. 조르기·둘러보기 어디서든 한 번에 빠져나온다 -->
+    <button type="button" class="rk-skip" id="rkSkip" data-i18n-aria="close" aria-label="닫기" hidden><span aria-hidden="true">×</span></button>
+    <form id="rkName" hidden>
+      <label for="rkNameIn" data-i18n="nameLabel">누구나 보는 순위표에 이 이름이 올라갑니다</label>
+      <div>
+        <input id="rkNameIn" maxlength="12" autocomplete="off" spellcheck="false" data-i18n-ph="namePh" placeholder="이름">
+        <button type="submit" data-i18n="rankedStart">경쟁전 시작</button>
+      </div>
+    </form>
+    <!-- 봇이 답을 짓는 동안의 진행 막대(ranked.js 의 progStart). 한 번 묻는 길이라 참 진행률은 없다 —
+         막대는 어림이고 옆의 초가 실제로 흐른 시간이다. 단계 글만 읽히고 초는 읽히지 않는다 -->
+    <div class="rk-prog" id="rkProg" hidden>
+      <div class="rk-prog-row"><span id="rkProgStep"></span><span class="rk-prog-sec" id="rkProgSec" aria-hidden="true"></span></div>
+      <div class="rk-prog-track" id="rkProgBar" role="progressbar" aria-labelledby="rkProgStep" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+    </div>
+    <!-- 봇에게 말 걸기(ranked.js 의 chat). 중계기 /bot/chat 이 NVIDIA 모델에 묻는다 -->
+    <div class="rk-chips" id="rkChips" hidden>
+      <button type="button" data-chip="ranked" data-i18n="botChipRanked">경쟁전 시작</button>
+      <button type="button" data-chip="night" data-i18n="botChipNight">야간 모드</button>
+      <button type="button" data-chip="styles" data-i18n="botChipStyles">내 스타일</button>
+      <button type="button" data-chip="feedback" data-i18n="botChipFeedback">피드백</button>
+    </div>
+    <form id="rkChat" hidden>
+      <div>
+        <input id="rkChatIn" maxlength="300" autocomplete="off" data-i18n-aria="botChatIn" aria-label="봇에게 말 걸기" data-i18n-ph="botChatPh" placeholder="또는 말로 해 주세요">
+        <button type="submit" data-i18n="fbSend">보내기</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- 업데이트 알림 — 배포가 바뀐 뒤 다시 온 사람에게만 한 번(app.js 의 showUpdate). 지난번 본 VER 뒤로
      data/changes.json 에 쌓인 줄을 보여 준다. 처음 온 사람에겐 띄우지 않는다. 화면을 막지 않고 초점도 뺏지 않는다 -->
@@ -732,10 +750,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=4.35"></script>
-<script src="app.js?v=5.10"></script>
-<script src="auth.js?v=5.10"></script>
-<script src="settings/settings.js?v=5.10"></script>
-<script src="ranked.js?v=5.10"></script>
+<script src="relay.js?v=5.16"></script>
+<script src="app.js?v=5.16"></script>
+<script src="auth.js?v=5.16"></script>
+<script src="settings/settings.js?v=5.16"></script>
+<script src="ranked.js?v=5.16"></script>
 </body>
 </html>

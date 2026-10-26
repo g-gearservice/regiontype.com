@@ -48,7 +48,7 @@ async function post(path, body) {
 }
 
 /* ── 모아 두는 답 ──────────────────────────────────────── */
-const FACE = { shape: 'cercle', expression: 'curieux', colour: 'turquoise' };
+const FACE = { shape: 'cercle', expression: 'curieux', colour: 'accent' };
 const answer = {
   platform: '', medium: '', nps: null,
   face: { ...FACE }, botname: '', name: '', handle: '',
@@ -379,7 +379,7 @@ function drawFace() {
 
   const controls = document.createElement('div');
   controls.className = 'character-controls intro-controls';
-  for (const [key, label] of [['shape', 'acctShape'], ['expression', 'acctExpression'], ['colour', 'acctColour']]) {
+  for (const [key, label] of [['shape', 'acctShape'], ['colour', 'acctColour']]) {
     const set = document.createElement('fieldset');
     const leg = document.createElement('legend');
     leg.className = 'profile-label';
@@ -593,7 +593,7 @@ function drawDone() {
   const list = document.createElement('dl');
   list.className = 'intro-recap';
   const rows = [
-    [t('introCharacter'), `${KO(answer.face.colour)} ${KO(answer.face.shape)} · ${KO(answer.face.expression)}`
+    [t('introCharacter'), `${KO(answer.face.colour)} ${KO(answer.face.shape)}`
       + (answer.botname ? ` — ${answer.botname}` : '')],
     [t('acctNick'), answer.name],
     [t('acctId'), '@' + answer.handle],
@@ -620,36 +620,33 @@ async function mountFace() {
   engine = kit;
   if (!lists.shape.length) {
     lists.shape = kit.TABLES.shapes.map(x => x.id);
-    lists.expression = kit.TABLES.expressions.map(x => x.id);
-    lists.colour = kit.TABLES.colours.map(x => x.id);
+    lists.colour = ['accent', ...kit.TABLES.colours.map(x => x.id)];
     for (const c of kit.TABLES.colours) hexes.set(c.id, c.hex);
   }
   thumbs.shape.clear();
-  thumbs.expression.clear();
   big = kit.mountBuddy($('#introFace'), { calm: still,
     shape: answer.face.shape, expression: answer.face.expression });
   big.start();
 
-  for (const key of ['shape', 'expression', 'colour']) {
+  for (const key of ['shape', 'colour']) {
     const row = $('#intro' + key);
     for (const id of lists[key]) {
       const label = KO(id);
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'character-choice';
+      b.className = 'character-choice' + (key === 'colour' && id === 'accent' ? ' is-accent-link' : '');
       b.dataset.pickKey = key;
       b.dataset.pickId = id;
       b.setAttribute('aria-label', label);
       b.setAttribute('aria-pressed', 'false');
       b.title = label;
-      if (key === 'colour') b.style.background = hexes.get(id);
+      if (key === 'colour') b.style.background = id === 'accent' ? 'var(--accent)' : hexes.get(id);
       else {
         const api = kit.mountBuddy(b, { still: true, calm: still,
-          shape: key === 'shape' ? id : answer.face.shape,
-          expression: key === 'expression' ? id : answer.face.expression });
+          shape: id, expression: answer.face.expression });
         api.setColour(answer.face.colour);
         api.start();
-        thumbs[key].set(id, api);
+        thumbs.shape.set(id, api);
       }
       b.onclick = () => { answer.face[key] = id; paintFace(); };
       row.append(b);
@@ -659,27 +656,24 @@ async function mountFace() {
 }
 
 function paintFace() {
-  for (const key of ['shape', 'expression', 'colour']) {
+  for (const key of ['shape', 'colour']) {
     document.querySelectorAll(`[data-pick-key="${key}"]`).forEach(b =>
       b.setAttribute('aria-pressed', String(b.dataset.pickId === answer.face[key])));
   }
   $('#introFace')?.setAttribute('aria-label',
-    `${KO(answer.face.colour)} ${KO(answer.face.shape)} · ${KO(answer.face.expression)}`);
+    `${KO(answer.face.colour)} ${KO(answer.face.shape)}`);
   if (!big) return;
   big.setShape(answer.face.shape);
   big.setExpression(answer.face.expression);
   big.setColour(answer.face.colour);
-  for (const api of thumbs.expression.values()) { api.setShape(answer.face.shape); api.setColour(answer.face.colour); }
   for (const api of thumbs.shape.values()) { api.setExpression(answer.face.expression); api.setColour(answer.face.colour); }
 }
 
 function dropFace() {
   big?.stop();
   big = null;
-  for (const key of ['shape', 'expression']) {
-    for (const api of thumbs[key].values()) api.stop();
-    thumbs[key].clear();
-  }
+  for (const api of thumbs.shape.values()) api.stop();
+  thumbs.shape.clear();
 }
 
 /* ── 오가기 ────────────────────────────────────────────── */

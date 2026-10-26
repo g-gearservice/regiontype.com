@@ -1,5 +1,23 @@
 [
   {
+    "v": "0.11.516",
+    "date": "2026-10-27",
+    "ko": "할로윈 호박을 비롯한 새 캐릭터 모양 일곱 가지를 더하고, 내 스타일 창을 '게임 스타일'과 '봇 스타일' 탭으로 나누어 봇 모양·색·크기·만들기와 강조색 연동 색상을 한자리에서 고를 수 있게 했습니다.",
+    "en": "Added 7 new character shapes including a Halloween pumpkin, and split the My styles modal into 'Game style' and 'Bot style' tabs with shape/size/generate controls and an accent-synced colour option."
+  },
+  {
+    "v": "0.11.515",
+    "date": "2026-10-27",
+    "ko": "도우미 봇이 홈뿐만 아니라 결과·순위·기록·내 계정·설정 화면에서도 같은 자리와 모습으로 함께 다니며 말을 걸거나 동작을 실행할 수 있게 했습니다.",
+    "en": "The helper bot now stays with you across Result, Ranking, Records, Account, and Settings screens with its position, look, and full chat and action capabilities."
+  },
+  {
+    "v": "0.11.514",
+    "date": "2026-10-27",
+    "ko": "설정에서 언어를 바꿨을 때 로그인 화면에도 바뀐 언어가 바로 반영되도록 고쳤습니다.",
+    "en": "Fixed the sign-in overlay so it updates to the newly selected language after changing the language in Settings."
+  },
+  {
     "v": "0.11.512",
     "date": "2026-10-26",
     "ko": "목표 지역 비트 테두리 깜빡임 색상을 타이핑 하이라이트(커서) 색상과 같은 블루(#007aff, 야간 #6395ee)로 통일했습니다.",

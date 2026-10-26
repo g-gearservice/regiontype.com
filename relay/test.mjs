@@ -881,6 +881,10 @@ console.log('security rule self-check done');
   assert.deepEqual(act({ act: 'post', tag: 'spam', title: 'x', body: 'y' }), [], '모르는 태그는 버린다');
   assert.deepEqual(act({ act: 'look', shape: 'nuage', colour: 'javascript', expression: 'heureux' }),
     [{ act: 'look', shape: 'nuage', expression: 'heureux' }], '아는 id 만 남는다');
+  assert.deepEqual(act({ act: 'look', shape: 'citrouille', colour: 'accent' }),
+    [{ act: 'look', shape: 'citrouille', colour: 'accent' }], '할로윈 호박과 강조색 연동');
+  assert.deepEqual(act({ act: 'look', gen: { lobes: 20, amp: 2, sharp: 5, sx: 0.2, sy: 5, stem: true } }),
+    [{ act: 'look', shape: 'gen', gen: { lobes: 12, amp: 0.28, sharp: 3, sx: 0.72, sy: 1.28, stem: true } }], '맞춤 모양(gen)은 안전 범위로 자른다');
   assert.deepEqual(act({ act: 'look', shape: '__proto__' }), []);
   assert.deepEqual(botTheme({ accent: '#F0A03C', block: '#496a6d' }), { act: 'theme', accent: '#f0a03c', block: '#496a6d' });
   assert.equal(botTheme({ accent: '#222222', block: '#eeeeee' }), null, '글자가 안 읽히는 색은 버린다');

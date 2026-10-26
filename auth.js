@@ -31,8 +31,7 @@ const OPT_KEY = 'rt.opt';
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || d); } catch { return JSON.parse(d); } };
 const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
 
-/* 설정은 홈과 같은 통에서 읽는다 — 야간 모드와 모션이 페이지를 넘어도 따라오게 */
-const opt = read(OPT_KEY, '{}');
+/* 설정은 홈과 같은 통에서 읽는다 — 바뀔 때마다 통에서 바로 읽어 낡은 값이 남지 않게 한다 */
 
 /* ── 화면 말 ─────────────────────────────────────────── */
 /* 부트 스크립트가 읽어 둔 마지막 말 팩(app.js cacheUI)이 있으면 그것부터 쓴다 — 전체 팩을
@@ -69,10 +68,10 @@ function parseUiLang(tag, langs) {
 
 /* home 이면 홈(app.js paintUI)이 <html lang> 에 적은 말을 빌린다 — sense() 의 HERE.lang 까지
    본 결과라 여기서 다시 고르면 어긋난다. 처음 읽을 때는 HTML 의 lang="ko" 가 아직 그대로라
-   쓰지 않고 같은 규칙으로 고른다 */
+   쓰지 않고 같은 규칙으로 고른다. 설정은 settings.js·account.js 가 바꿨을 수 있어 통에서 새로 읽는다 */
 function uiLang(home = false) {
-  const langs = Object.keys(I18N);
-  if (opt.lang !== 'auto' && langs.includes(opt.lang)) return opt.lang;
+  const langs = Object.keys(I18N), cur = read(OPT_KEY, '{}');
+  if (cur.lang && cur.lang !== 'auto' && langs.includes(cur.lang)) return cur.lang;
   if (home && langs.includes(document.documentElement.lang)) return document.documentElement.lang;
   for (const tag of [...(navigator.languages || []), navigator.language]) {
     const hit = parseUiLang(tag, langs);
@@ -749,6 +748,7 @@ function wire() {
   $('#siClose').onclick = close;
   over().addEventListener('pointermove', buddyLook);
   over().addEventListener('pointerleave', () => bots.forEach(b => b.api.lookAway()));
+  addEventListener('rt-opt', () => { LANG = uiLang(true); applyI18n(over()); });
   addEventListener('rt-open-settings', close);
   addEventListener('rt-tab-swap', close);
   addEventListener('keydown', e => {
@@ -816,7 +816,7 @@ if (!ssoBack) {
 (async () => {
   applyI18n(over());   // 마지막 말 팩으로 먼저
   try { I18N = await (window.RT_I18N_P || grab('data/i18n.json')); } catch {}
-  LANG = uiLang();
+  LANG = uiLang(true);
   applyI18n(over());
   wire();
 
