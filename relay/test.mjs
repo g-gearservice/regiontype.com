@@ -2616,7 +2616,7 @@ assert.equal(pinOf('KR', { toString: () => 'ko-KR' }), null, '문자열이 아�
   assert.deepEqual(await me(await login('g-jp', 'JP', 'ja')), { country: 'JP', lang: 'ja' }, 'JP + ja → JP/ja');
   assert.equal(await me(await login('g-us', 'US', 'ko-KR')), null, 'US + ko-KR → 고정 안 함');
   assert.equal(await me(await login('g-none', 'KR', undefined)), null,
-    'Google 이 locale 을 안 주면(지금 scope openid email 이 이 경우다) 고정 안 함 — 화면은 기본 KR·ko');
+    'Google 이 locale 을 안 주면(scope 에 profile 이 있어도 빠질 수 있다) 고정 안 함 — 화면은 기본 KR·ko');
 
   /* 이미 고정된 계정 재로그인 → 그대로. 다른 나라·다른 말로 들어와도 덮어쓰지 않는다 */
   const krAt = db.prepare("select pin_at from user where pin_country = 'KR'").get().pin_at;

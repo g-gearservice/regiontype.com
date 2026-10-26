@@ -57,13 +57,14 @@
 
   <h2>안 받는 것</h2>
   <p>비밀번호와 전화번호를 받지 않습니다. Apple 로그인에는 메일·실명을 요청하지
-  않습니다. Google 로그인에서는 메일 주소(openid email 범위)를 요청하지만,
-  이 주소는 로그인 2단계 인증 코드를 보내는 데만 쓰고 계정에는 저장하지
-  않습니다. 광고나 방문자 분석 스크립트를 넣지 않고, 쿠키도 쓰지 않습니다.
+  않습니다. Google 로그인에서는 메일 주소와 기본 프로필(openid email profile 범위)을
+  요청하지만, 메일 주소는 로그인 2단계 인증 코드를 보내는 데만 쓰고 계정에는 저장하지
+  않습니다. 기본 프로필에서는 계정 언어(<code>locale</code>)만 읽고, 이름과 프로필 사진은
+  읽지도 저장하지도 않습니다. 광고나 방문자 분석 스크립트를 넣지 않고, 쿠키도 쓰지 않습니다.
   계정 복구를 위해 직접 적는 보조 메일은 아래 절에 적었습니다.</p>
 
   <h2>로그인 (Google·Apple)</h2>
-  <p>로그인은 Google 또는 Apple 계정으로 합니다. Google에는 <code>openid email</code>
+  <p>로그인은 Google 또는 Apple 계정으로 합니다. Google에는 <code>openid email profile</code>
   범위를 요청하고, Apple에는 아무 범위도 요청하지 않습니다. Google에서 넘어온
   메일 주소는 로그인할 때마다 일회용 코드를 보내는 데만 쓰며,
   서버의 단기 로그인 요청 줄에만 머물다 로그인 완료 시 지워지고 계정에는
@@ -142,12 +143,14 @@
 
   <h2>What we don't collect</h2>
   <p>No passwords and no phone numbers. We do not ask Apple for an email or a real name.
-  For Google sign-in, we request the email scope (<code>openid email</code>) solely to send
-  the sign-in one-time code, and the address is never stored in your account.
+  For Google sign-in, we request the email and basic profile scopes (<code>openid email profile</code>).
+  The email address is used solely to send the sign-in one-time code and is never stored in your account.
+  From the basic profile we read only your account language (<code>locale</code>); your name and profile
+  picture are neither read nor stored.
   No ads, no analytics scripts, no cookies. A secondary email you type yourself for recovery is described below.</p>
 
   <h2>Signing in (Google · Apple)</h2>
-  <p>Sign-in goes through Google or Apple. We request the <code>openid email</code>
+  <p>Sign-in goes through Google or Apple. We request the <code>openid email profile</code>
   scope from Google and no scope at all from Apple. The Google-verified email address is used ONLY
   to send a 5-minute one-time code at each sign-in; it is kept temporarily in the server's sign-in challenge row, deleted upon successful sign-in, and never stored in your account or displayed publicly.
   The provider's account id (its <code>sub</code>) is HMAC-hashed with a server-side key before storing, and the original id is never kept anywhere.</p>

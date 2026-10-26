@@ -874,7 +874,7 @@ const consumeTwo = (env, id) =>
   env.DB.prepare('delete from pending where id = ? and kind = ?').bind(id, 'two').run();
 
 /* ── SSO (Google · Apple) ────────────────────────────────
-   1차 인증은 공급자가 한다. Google 은 openid email 을 묻는다 — 확인된 주소는
+   1차 인증은 공급자가 한다. Google 은 openid email profile 을 묻는다(profile 은 locale 을 받으려는 것 — 이름·사진은 읽지도 적지도 않는다). 확인된 주소는
    이번 로그인의 2단계 코드(pending.mail)에만 잠깐 둔다. 계정(user.mail)에는
    적지 않고, 화면·이슈로도 나가지 않는다. Apple 은 범위를 비워 메일을 받지
    않는다. 로컬 출처는 그 주소를 허용 목록과 맞춘 뒤 버린다.
@@ -895,7 +895,7 @@ const PROVIDERS = {
       const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       u.search = new URLSearchParams({
         client_id: env.GOOGLE_ID, redirect_uri: opt.redirect || REDIRECT, response_type: 'code',
-        scope: 'openid email', state, nonce: state,
+        scope: 'openid email profile', state, nonce: state,
       });
       return u.toString();
     },
@@ -983,9 +983,9 @@ async function ssoToken(env, p, code) {
    말은 지역 없이 오면 견줄 길이 없어 고정하지 않는다. 지역이 맞는데 말이 26개 밖이면
    나라만 적는다. 원래 locale 문자열은 어디에도 남기지 않는다 — 접은 두 값만 적는다.
 
-   Google 은 scope 에 profile 이 있어야 locale 을 싣는다(그래도 빠질 때가 있다).
-   지금 scope 는 'openid email' 이라 실제로는 locale 이 오지 않아 고정이 일어나지 않는다
-   — 넓히는 건 사람이 고른다. */
+   Google 은 scope 에 profile 이 있어야 locale 을 싣는다(그래도 빠질 때가 있다 — 그때는
+   고정하지 않는다). 그래서 scope 는 'openid email profile' 이다. profile 이 함께 싣는
+   이름(name)·사진(picture)은 읽지 않는다. */
 export const PIN_LANGS = ['ko', 'en', 'ja', 'de', 'fr', 'es', 'pt', 'zh', 'it', 'nl', 'pl', 'cs', 'sv',
   'nb', 'fi', 'uk', 'ro', 'hu', 'bg', 'el', 'tr', 'vi', 'th', 'id', 'ms', 'ar'];
 const OFFICIAL = {
