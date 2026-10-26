@@ -1,26 +1,20 @@
-/* 갈래 넷. 낱말의 _ \ * 는 시안의 장식. ← → 와 탭으로 넘긴다.
-   망점은 서울 구 격자와 대한민국 점 지도. */
+/* 갈래 여섯 — /landing/ 의 여섯 칸. 낱말의 _ \ * 는 시안의 장식. ← → 와 탭으로 넘긴다.
+   판 아래 '펼치기' 가 고른 갈래의 글을 펼치고 접는다. 망점은 서울 구 격자와 대한민국 점 지도. */
 const LINES = [
-  { id: 'practice', tab: '연습', bg: '#e5d7bf', ink: '#c4473f', out: '#b5b5b5', img: '36%', word: ['region_', 'type'], cap: ['Archive of place names', 'typed by hand'], map: 'seoul', href: '/' },
-  { id: 'ranked', tab: '경쟁전', bg: '#126b98', ink: '#061922', out: '#b5b5b5', img: '42%', word: ['rank\\\\', 'ed'], cap: ['Matches judged by', 'speed and accuracy'], map: 'korea', href: '/' },
-  { id: 'mimi', tab: 'mimi', bg: '#982323', ink: '#1a0607', out: 'linear-gradient(#2b74b8,#c9b8c6 60%,#c46d55)', img: '0%', word: ['mimi', '*board'], cap: ['', ''], map: null, href: '/mimi/',
-    bio: '보드게임처럼 두꺼운 지형 위에서 지역을 타이핑한다.' },
-  { id: 'bus', tab: '동네버스', bg: '#d9e04a', ink: '#14200c', out: '#b5b5b5', img: '40%', word: ['bus_', 'stops'], cap: ['Typing along', 'a neighbourhood line'], map: 'seoul', href: '/beta/bus/' }
+  { id: 'about', bg: '#e5d7bf', ink: '#c4473f', out: '#b5b5b5', img: '36%', word: ['ab_', 'out'], cap: ['소개', 'About'], map: 'seoul' },
+  { id: 'dev', bg: '#126b98', ink: '#061922', out: '#b5b5b5', img: '42%', word: ['dev\\\\', 'elop'], cap: ['개발', 'Development'], map: 'korea' },
+  { id: 'style', bg: '#d9e04a', ink: '#14200c', out: '#b5b5b5', img: '40%', word: ['sty*', 'le'], cap: ['스타일', 'Style'], map: 'seoul' },
+  { id: 'story', bg: '#982323', ink: '#1a0607', out: 'linear-gradient(#2b74b8,#c9b8c6 60%,#c46d55)', img: '36%', word: ['sto_', 'ry'], cap: ['스토리', 'Story'], map: 'korea' },
+  { id: 'play', bg: '#f0a03c', ink: '#232c31', out: '#b5b5b5', img: '40%', word: ['pl_', 'ay'], cap: ['플레이', 'Play'], map: 'seoul' },
+  { id: 'plans', bg: '#d8d4cc', ink: '#141414', out: '#b5b5b5', img: '38%', word: ['pl*', 'an'], cap: ['플랜', 'Plan'], map: 'korea' }
 ];
 const $ = id => document.getElementById(id);
 const menu = $('menu');
+const tabs = [...menu.querySelectorAll('[role="tab"]')];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let cur = 0, shapes = {};
 
-LINES.forEach((l, i) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.role = 'tab';
-  b.id = 'tab-' + l.id;
-  b.textContent = l.tab;
-  b.setAttribute('aria-controls', 'tp');
-  b.addEventListener('click', () => show(i));
-  menu.append(b);
-});
+tabs.forEach((b, i) => b.addEventListener('click', () => show(i)));
 
 addEventListener('keydown', e => {
   if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -30,9 +24,16 @@ addEventListener('keydown', e => {
   e.preventDefault();
   const n = e.key === 'ArrowRight' ? (cur + 1) % LINES.length : (cur + LINES.length - 1) % LINES.length;
   show(n);
-  const b = menu.querySelector('[aria-selected="true"]');
-  if (b) b.focus();
+  tabs[n].focus();
 });
+
+// 펼치기 — 고른 갈래의 글. 접혀 있어도 판의 짧은 줄(bio)은 보인다
+const more = $('more');
+function setOpen(open) {
+  $('detail').classList.toggle('open', open);
+  more.setAttribute('aria-expanded', String(open));
+}
+more.addEventListener('click', () => setOpen(more.getAttribute('aria-expanded') !== 'true'));
 
 function paintWord(lines) {
   const el = $('word');
@@ -51,7 +52,6 @@ function paintWord(lines) {
     }
     if (last < w.length) el.append(w.slice(last));
   });
-  el.setAttribute('aria-label', lines.join(' ').replace(/[_\\*]/g, ''));
 }
 
 function fitWord() {
@@ -69,31 +69,32 @@ function show(i) {
   p.style.setProperty('--bg', l.bg);
   p.style.setProperty('--ink', l.ink);
   p.style.setProperty('--img', l.img);
+  $('detail').style.setProperty('--bg', l.bg);
   document.body.style.background = l.out;
-  menu.querySelectorAll('button').forEach((b, k) => {
+  tabs.forEach((b, k) => {
     b.setAttribute('aria-selected', String(k === i));
     b.tabIndex = k === i ? 0 : -1;
   });
-  $('tp').setAttribute('aria-labelledby', 'tab-' + l.id);
+  document.querySelectorAll('.sec').forEach(s => { s.hidden = s.id !== l.id; });
   const cap = $('cap');
   cap.replaceChildren();
-  cap.style.visibility = l.cap[0] ? 'visible' : 'hidden';
   l.cap.forEach((c, k) => {
     if (k) cap.append(document.createElement('br'));
     cap.append(c);
   });
   paintWord(l.word);
-  const bio = $('bio');
-  bio.hidden = !l.bio;
+  // 판 오른쪽의 짧은 줄은 그 칸 첫 문장을 그대로 옮긴다. 플레이는 바로가기 버튼을 함께
+  const sec = $(l.id), bio = $('bio');
+  const lead = sec.querySelector('.beat h3, .lead, .plan-note, .card h3, pre');
   bio.replaceChildren();
-  if (l.bio) {
-    bio.append(l.bio);
-    const a = document.createElement('a');
-    a.className = 'go';
-    a.href = l.href;
-    a.textContent = '판 열기 →';
-    bio.append(document.createElement('br'), a);
+  if (lead) {
+    const q = document.createElement('p');
+    q.textContent = lead.textContent;
+    bio.append(q);
   }
+  const go = sec.querySelector('.go-site');
+  if (go) bio.append(go.cloneNode(true));
+  history.replaceState(null, '', i ? '#' + l.id : location.pathname);
   requestAnimationFrame(() => { fitWord(); draw(); });
 }
 
@@ -146,4 +147,31 @@ Promise.all([
     shapes.korea = { cells: c, w: p.w, h: p.h };
   })
 ]).then(draw).catch(() => {});
-show(0);
+const fromHash = () => {
+  const k = LINES.findIndex(l => l.id === location.hash.slice(1));
+  if (k < 0) return false;
+  show(k);
+  setOpen(true);
+  $('detail').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  return true;
+};
+addEventListener('hashchange', fromHash);
+if (!fromHash()) show(0);
+
+// 개발: 버전은 app.js 의 VER 에서 읽는다(C 자리는 VER 에서 점을 뺀 숫자). 바뀐 것은 changes.json
+fetch('/data/changes.json').then(r => r.json()).then(list => {
+  document.querySelectorAll('[data-log]').forEach(log => log.replaceChildren(...list.slice(0, 8).map(e => {
+    const li = document.createElement('li');
+    const v = document.createElement('span'); v.className = 'v'; v.textContent = 'v' + e.v;
+    const t = document.createElement('time'); t.dateTime = e.date; t.textContent = e.date;
+    const p = document.createElement('span'); p.textContent = e.ko;
+    li.append(v, t, p);
+    return li;
+  })));
+  return fetch('/app.js').then(r => r.text()).then(t => {
+    const m = t.match(/const VER\s*=\s*'([\d.]+)'/);
+    if (!m) return;
+    const ab = (list[0] && list[0].v || '0.0.0').split('.').slice(0, 2).join('.');
+    document.querySelectorAll('[data-ver]').forEach(el => { el.textContent = `v${ab}.${m[1].replace('.', '')}`; });
+  });
+}).catch(() => {});

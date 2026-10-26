@@ -1,4 +1,4 @@
-/* 지명 한 줄 + 그 지명의 점 지도. 가나다/코스 순, 앞글자로 거른다.
+/* 지명 한 줄 + 그 지명의 점 지도. 가나다/코스 순, 앞글자로 거른다. 목록은 소개 칸 안에 있다.
    빨강 칸은 /style.css 의 --ranked. 나라 목록은 world.json. */
 const NS = 'http://www.w3.org/2000/svg';
 const NAMES = {
@@ -62,8 +62,7 @@ function render() {
   const q = $('q').value.replace(/\s/g, '').toLowerCase();
   const rs = [...rows[tab]].sort((a, b) => sort === 'abc' ? a.name.localeCompare(b.name, 'ko') : a.order - b.order);
   list.replaceChildren(...rs.map(r => {
-    const li = document.createElement('li'), a = document.createElement('a');
-    a.href = '/';
+    const li = document.createElement('li'), a = document.createElement('div');
     const nm = document.createElement('span');
     nm.className = 'nm' + (r.lat ? ' lat' : '');
     nm.textContent = r.name;
@@ -76,7 +75,6 @@ function render() {
     return li;
   }));
   $('none').hidden = rs.some(r => !q || r.name.replace(/\s/g, '').toLowerCase().startsWith(q));
-  $('worldNote').hidden = tab !== 'world';
 }
 
 Promise.all([
@@ -107,7 +105,11 @@ Promise.all([
     ];
     return { name: it.name, key: it.name, order: i, thumbs: thumbs.slice(0, 2 + (i % 3)) };
   });
-  $('tabSeoul').textContent = `서울 ${rows.seoul.length}`;
+  // 여섯 칸 머리의 작은 그림 — 코스 앞쪽 구들의 점 지도를 돌려 쓴다
+  document.querySelectorAll('[data-th]').forEach(el => {
+    const r = rows.seoul[(+el.dataset.th * 4) % rows.seoul.length];
+    if (r) el.replaceChildren(...r.thumbs.slice(0, 3).map(s => s.cloneNode(true)));
+  });
   render();
 }).catch(() => {});
 
@@ -125,7 +127,6 @@ function loadWorld() {
     }).catch(() => null))
   )).then(r => {
     rows.world = r.filter(Boolean);
-    $('tabWorld').textContent = `World ${rows.world.length}`;
   });
   return worldP;
 }
@@ -141,3 +142,51 @@ document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click',
   document.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
   (tab === 'world' ? loadWorld() : Promise.resolve()).then(render).catch(() => {});
 }));
+
+/* 여섯 칸 — 소개·개발·스타일·스토리·플레이·플랜. 머리 버튼이 펼치고 접는다.
+   주소의 #이름 과 메뉴의 #이름 은 그 칸을 연다. 플레이는 /#home 을 새 탭으로 여는 바로가기다. */
+const secs = [...document.querySelectorAll('.sec')];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setOpen(sec, open) {
+  sec.classList.toggle('open', open);
+  sec.querySelector('.sec-head').setAttribute('aria-expanded', String(open));
+}
+secs.forEach(s => s.querySelector('.sec-head').addEventListener('click', () => {
+  const open = !s.classList.contains('open');
+  setOpen(s, open);
+  history.replaceState(null, '', open ? '#' + s.id : location.pathname);
+}));
+function openTo(id, scroll) {
+  const s = id && document.getElementById(id);
+  if (!s || !s.classList.contains('sec')) return;
+  setOpen(s, true);
+  if (scroll) s.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+}
+document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const id = a.getAttribute('href').slice(1), s = document.getElementById(id);
+  if (!s || !s.classList.contains('sec')) return;
+  e.preventDefault();
+  history.replaceState(null, '', '#' + id);
+  openTo(id, true);
+  s.querySelector('.sec-head').focus({ preventScroll: true });
+}));
+addEventListener('hashchange', () => openTo(location.hash.slice(1), true));
+openTo(location.hash.slice(1), true);
+
+// 개발: 버전은 app.js 의 VER 에서 읽는다(C 자리는 VER 에서 점을 뺀 숫자). 바뀐 것은 changes.json
+fetch('/data/changes.json').then(r => r.json()).then(list => {
+  document.querySelectorAll('[data-log]').forEach(log => log.replaceChildren(...list.slice(0, 8).map(e => {
+    const li = document.createElement('li');
+    const v = document.createElement('span'); v.className = 'v'; v.textContent = 'v' + e.v;
+    const t = document.createElement('time'); t.dateTime = e.date; t.textContent = e.date;
+    const p = document.createElement('span'); p.textContent = e.ko;
+    li.append(v, t, p);
+    return li;
+  })));
+  return fetch('/app.js').then(r => r.text()).then(t => {
+    const m = t.match(/const VER\s*=\s*'([\d.]+)'/);
+    if (!m) return;
+    const ab = (list[0] && list[0].v || '0.0.0').split('.').slice(0, 2).join('.');
+    document.querySelectorAll('[data-ver]').forEach(el => { el.textContent = `v${ab}.${m[1].replace('.', '')}`; });
+  });
+}).catch(() => {});

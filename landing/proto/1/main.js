@@ -88,7 +88,6 @@ t.addEventListener('compositionend', () => setTimeout(check));
 
 fetch('/data/world.json').then(r => r.json()).then(world => {
   const list = world.countries || [];
-  if (list.length !== 46) $('h-n').textContent = `점 하나가 글자 하나. ${list.length}개 나라가 같은 점으로 찍힌다.`;
   const box = $('nations');
   list.forEach(country => {
     const d = document.createElement('div');
@@ -100,5 +99,53 @@ fetch('/data/world.json').then(r => r.json()).then(world => {
     d.append(sp);
     box.append(d);
     fetch(`/data/${country.pixels}.json`).then(r => r.json()).then(p => paintPixels(s, p)).catch(() => {});
+  });
+}).catch(() => {});
+
+/* 여섯 칸 — 소개·개발·스타일·스토리·플레이·플랜. 머리 버튼이 펼치고 접는다.
+   주소의 #이름 과 메뉴의 #이름 은 그 칸을 연다. 플레이는 /#home 을 새 탭으로 여는 바로가기다. */
+const secs = [...document.querySelectorAll('.sec')];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setOpen(sec, open) {
+  sec.classList.toggle('open', open);
+  sec.querySelector('.sec-head').setAttribute('aria-expanded', String(open));
+}
+secs.forEach(s => s.querySelector('.sec-head').addEventListener('click', () => {
+  const open = !s.classList.contains('open');
+  setOpen(s, open);
+  history.replaceState(null, '', open ? '#' + s.id : location.pathname);
+}));
+function openTo(id, scroll) {
+  const s = id && document.getElementById(id);
+  if (!s || !s.classList.contains('sec')) return;
+  setOpen(s, true);
+  if (scroll) s.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+}
+document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const id = a.getAttribute('href').slice(1), s = document.getElementById(id);
+  if (!s || !s.classList.contains('sec')) return;
+  e.preventDefault();
+  history.replaceState(null, '', '#' + id);
+  openTo(id, true);
+  s.querySelector('.sec-head').focus({ preventScroll: true });
+}));
+addEventListener('hashchange', () => openTo(location.hash.slice(1), true));
+openTo(location.hash.slice(1), true);
+
+// 개발: 버전은 app.js 의 VER 에서 읽는다(C 자리는 VER 에서 점을 뺀 숫자). 바뀐 것은 changes.json
+fetch('/data/changes.json').then(r => r.json()).then(list => {
+  document.querySelectorAll('[data-log]').forEach(log => log.replaceChildren(...list.slice(0, 8).map(e => {
+    const li = document.createElement('li');
+    const v = document.createElement('span'); v.className = 'v'; v.textContent = 'v' + e.v;
+    const t = document.createElement('time'); t.dateTime = e.date; t.textContent = e.date;
+    const p = document.createElement('span'); p.textContent = e.ko;
+    li.append(v, t, p);
+    return li;
+  })));
+  return fetch('/app.js').then(r => r.text()).then(t => {
+    const m = t.match(/const VER\s*=\s*'([\d.]+)'/);
+    if (!m) return;
+    const ab = (list[0] && list[0].v || '0.0.0').split('.').slice(0, 2).join('.');
+    document.querySelectorAll('[data-ver]').forEach(el => { el.textContent = `v${ab}.${m[1].replace('.', '')}`; });
   });
 }).catch(() => {});

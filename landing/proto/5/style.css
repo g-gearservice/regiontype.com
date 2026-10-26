@@ -1,14 +1,16 @@
 /* 래퍼런스: workshops · my films · giulia loi.
    갈래마다 색 한 쌍, 소문자 두 줄, 오른쪽 망점 지도. */
-:root{--sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;--serif:"Noto Serif KR",Georgia,serif}
+:root{--sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;--serif:"Noto Serif KR",Georgia,serif;--mono:"IBM Plex Mono","Noto Sans KR",ui-monospace,monospace;
+  --paper:#f4f1ea;--text:#141414;--muted:#5c5c5c}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%}
 html{overflow-x:clip}
 body{background:var(--out,#b5b5b5);font:700 12px/1.2 var(--sans);-webkit-font-smoothing:antialiased;
-  display:grid;place-items:center;min-height:100svh;padding:clamp(16px,6vw,96px) clamp(16px,6vw,140px);transition:background .4s ease}
+  display:grid;place-items:center;align-content:start;gap:16px;min-height:100svh;padding:clamp(16px,6vw,96px) clamp(16px,6vw,140px);transition:background .4s ease}
 a,button{color:inherit;font:inherit}
 button{background:none;border:0;cursor:pointer;text-transform:inherit}
 :focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 .panel{position:relative;width:100%;max-width:min(1140px,100%);aspect-ratio:1138/752;background:var(--bg);color:var(--ink);
   border-radius:10px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,var(--img,33%));
@@ -27,8 +29,65 @@ button{background:none;border:0;cursor:pointer;text-transform:inherit}
 .word .mk{font-weight:600}
 .bio{position:absolute;left:58%;bottom:0;width:40%;border-left:2px solid var(--ink);padding:0 0 1.2% 12px;
   font:600 clamp(11px,1.4vw,19px)/1.24 var(--serif);letter-spacing:-.02em}
-.bio[hidden]{display:none}
-.go{display:inline-block;margin-top:10px;font:700 12px/1 var(--sans);text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
+.bio:empty{display:none}
+.bio .go-site{display:inline-flex;align-items:center;gap:.35em;margin-top:10px;padding:8px 14px;border-radius:999px;background:var(--ink);color:var(--bg);
+  font:700 12px/1 var(--sans);text-transform:uppercase;text-decoration:none}
+
+/* 갈래 글 — 판 아래 종이 한 장. 윗변이 갈래 색이고, 펼치기로 열고 닫는다 */
+.detail{width:100%;max-width:min(1140px,100%);background:var(--paper);color:var(--text);border-radius:10px;border-top:10px solid var(--bg,#e5d7bf);
+  font:400 15px/1.6 var(--sans);overflow:hidden;scroll-margin-top:16px}
+.toggle{display:flex;align-items:center;gap:10px;width:100%;padding:14px 20px;font:700 12px/1 var(--sans);text-transform:uppercase;letter-spacing:.02em}
+.toggle .sign{font-size:20px;font-weight:600;line-height:1;transition:transform .3s ease}
+.toggle[aria-expanded="true"] .sign{transform:rotate(45deg)}
+.toggle[aria-expanded="true"] .o,.toggle[aria-expanded="false"] .c{display:none}
+.toggle:hover .o,.toggle:hover .c{text-decoration:underline;text-underline-offset:3px}
+.js .detail:not(.open) .sheet{display:none}
+.sheet{padding:4px 20px 28px;border-top:2px solid var(--text)}
+.sec{padding-top:18px}
+.sec[hidden]{display:none}
+.sec:focus{outline:0}
+
+.beats{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:24px 28px}
+.beat{border-left:2px solid var(--text);padding-left:12px}
+.beat .step{font:700 12px/1 var(--sans);text-transform:uppercase}
+.beat .fig{font:700 clamp(56px,7vw,96px)/.85 var(--sans);letter-spacing:-.045em;margin-top:6px}
+.beat h3{font:600 clamp(19px,1.9vw,24px)/1.25 var(--serif);letter-spacing:-.02em;margin:8px 0 6px}
+
+.dev{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:24px 36px;font:400 14px/1.6 var(--mono)}
+.dev .k{font:700 12px/1 var(--sans);text-transform:uppercase;margin:22px 0 10px}
+.dev .k:first-child{margin-top:0}
+.dev .ver{font:700 clamp(32px,4vw,56px)/1 var(--sans);letter-spacing:-.04em}
+.dev pre{font:inherit;white-space:pre;overflow-x:auto;max-width:100%;margin-bottom:14px}
+.dev .cm{color:var(--muted)}
+.log{list-style:none;border-top:2px solid var(--text)}
+.log li{display:grid;grid-template-columns:6.5em 7em minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid rgba(20,20,20,.2)}
+.log time{color:var(--muted)}
+
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:10px;border:2px solid var(--text);text-decoration:none;min-width:0}
+.card svg{width:56px;height:56px}
+.card .k{font:700 12px/1 var(--sans);text-transform:uppercase}
+.card h3{font:700 clamp(32px,4vw,56px)/.9 var(--sans);letter-spacing:-.045em;text-transform:lowercase}
+.card p{font-family:var(--serif);font-weight:600;letter-spacing:-.02em}
+.card .sig{display:flex;align-items:center;gap:8px;font:700 12px/1 var(--sans);text-transform:uppercase}
+.swatch{width:14px;height:14px;display:inline-block;flex:none;border:2px solid var(--text)}
+.swatch.nav{background:#007aff}
+.swatch.bus{background:#f6c037;border-radius:50%}
+.card .more{margin-top:auto;font:700 12px/1 var(--sans);text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
+@media (hover:hover) and (pointer:fine){ .card:hover h3{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:.1em} }
+
+.play{display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px}
+.play .lead{font:600 clamp(20px,2.2vw,28px)/1.3 var(--serif);letter-spacing:-.02em}
+.play .go-site{display:inline-flex;align-items:center;gap:.35em;padding:12px 18px;border-radius:999px;background:var(--text);color:var(--paper);font:700 14px/1 var(--sans);text-transform:uppercase;text-decoration:none}
+.play .go-site:hover{opacity:.85}
+
+.plan-note{margin-bottom:16px;font-weight:600;color:var(--muted)}
+.plans{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.plans > li{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:10px;background:#fff;border:2px solid var(--text);min-width:0}
+.plans h3{font:700 clamp(20px,2vw,26px)/1.15 var(--sans);letter-spacing:-.02em}
+.plan-rows{display:flex;flex-direction:column;gap:8px}
+.plan-rows dt{font:700 12px/1.3 var(--sans);text-transform:uppercase;color:var(--muted)}
+.plan-btn{margin-top:auto;align-self:flex-start;padding:8px 12px;border-radius:999px;border:2px dashed var(--text);background:none;color:var(--text);font:700 12px/1 var(--sans);cursor:not-allowed}
 
 .img{position:relative;margin-top:calc(20px + 1.2em + 12px);min-width:0}
 .img canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -43,8 +102,11 @@ button{background:none;border:0;cursor:pointer;text-transform:inherit}
   .lang{right:16px;top:20px}
   .img{grid-row:2;margin:0}
   .left{grid-row:3;padding:16px 0 0 16px;min-height:52vh}
-  .word{--fs:clamp(72px,26vw,160px)}
-  .bio{position:static;width:auto;margin:16px 16px 16px 0;border-left:0;padding:0}
+  .word{--fs:clamp(72px,26vw,160px);margin-bottom:.12em}
+  .bio{position:static;width:auto;margin:.32em 16px 16px 0;border-left:0;padding:0}
   .hint{display:none}
+  .dev,.cards,.plans{grid-template-columns:minmax(0,1fr)}
+  .log li{grid-template-columns:1fr;gap:2px}
 }
-@media (prefers-reduced-motion:reduce){ body,.panel{transition:none} }
+@media (pointer:coarse){ .menu button{padding:6px 0} .toggle{padding:18px 20px} }
+@media (prefers-reduced-motion:reduce){ body,.panel,.toggle .sign{transition:none} }
