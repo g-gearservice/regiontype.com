@@ -780,7 +780,7 @@ if (!ssoBack) {
           try {
             const framed = window.top !== window.self;
             const home = location.pathname === '/' || location.pathname === '/index.html';
-            if (!framed && home && !location.search.includes('rt=1')) location.replace('/landing/' + location.search);
+            if (!framed && home && !location.search.includes('rt=1') && sessionStorage.getItem('rt.home') !== '1') location.replace('/landing/' + location.search);
           } catch {}
           return;
         }

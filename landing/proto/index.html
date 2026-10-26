@@ -9,9 +9,9 @@
 <link rel="canonical" href="https://regiontype.com/landing/">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../../favicon/white.png?v=5.08">
-<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../../favicon/dark.png?v=5.08">
-<link rel="icon" type="image/png" sizes="any" href="../../favicon/dark.png?v=5.08">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../../favicon/white.png?v=5.10">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../../favicon/dark.png?v=5.10">
+<link rel="icon" type="image/png" sizes="any" href="../../favicon/dark.png?v=5.10">
 <!-- 초안 주소 /landing/proto/. 같은 화면이 /landing/ 에 있고, 이 주소는 검색에 올리지 않는다.
      줄 문법(맨 위 작은 한 줄, 굵고 큰 낱말, 작은 그림, +)은 그대로다.
      소개·스토리는 스크롤하면 문장이 바뀌고, 개발은 페이지와 같은 바탕이다.
@@ -92,7 +92,8 @@
   #play > .row-title > .head .nm{grid-column:1}
   #play > .row-title > .head .en{grid-column:2}
   #play > .row-title > .head .sign{grid-column:4;margin-left:0}
-  #play .play-site{grid-column:3;grid-row:1;justify-self:start;align-self:center;position:relative;z-index:1;padding-block:4px;font:800 clamp(16px,2.8vw,40px)/1 var(--sans);letter-spacing:-.03em;text-decoration:underline;text-underline-offset:.14em;white-space:nowrap}
+  #play .play-site{grid-column:3;grid-row:1;justify-self:start;align-self:center;position:relative;z-index:1;display:inline-flex;align-items:center;gap:.35em;padding:.5em 1em;border-radius:999px;background:var(--ink);color:var(--bg);font:700 clamp(14px,1.5vw,20px)/1 var(--sans);text-decoration:none;white-space:nowrap}
+  #play .play-site:hover{opacity:.85}
   @media (max-width:860px){
     #play > .row-title{grid-template-columns:auto minmax(0,1fr) auto}
     #play > .row-title > .head .sign{grid-column:3}
@@ -385,12 +386,12 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
         <span class="nm">플레이</span><span class="en">Play</span>
         <span class="sign" aria-hidden="true">+</span>
       </button>
-      <a class="play-site" href="../../">regiontype.com <span aria-hidden="true">↗</span></a>
+      <a class="play-site" href="../../#home" target="_blank" rel="noopener" aria-label="regiontype.com 바로가기 (새 탭)">바로가기 <span aria-hidden="true">↗</span></a>
     </h2>
     <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel">
       <div class="embed" id="embed">
         <div class="embed-head">
-          <a class="embed-title" href="../../">regiontype.com <span aria-hidden="true">↗</span></a>
+          <a class="embed-title" href="../../#home" target="_blank" rel="noopener">regiontype.com <span aria-hidden="true">↗</span></a>
           <p>지명을 직접 쳐서 익히는 타자연습.</p>
         </div>
         <div class="embed-frame">
@@ -400,7 +401,7 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
             <svg class="ico-pause" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true" hidden><path d="M1 1h3.2v12H1Zm6.8 0H11v12H7.8Z" fill="currentColor"/></svg>
             <span class="live-label">play</span>
           </button>
-          <a class="embed-out" href="../../" target="_blank" rel="noopener">새 탭에서 열기 <span aria-hidden="true">↗</span></a>
+          <a class="embed-out" href="../../#home" target="_blank" rel="noopener">새 탭에서 열기 <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </div></div></div>

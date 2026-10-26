@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CRT 터미널 · regiontype beta</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#050805">
+<link rel="icon" href="../../favicon/favicon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Nanum+Gothic+Coding:wght@400;700&display=swap">
+<!-- CRT 터미널 — 셸에서 구를 열면 그 구의 지도가 형광체 선으로 뜨고, 프롬프트에 행정동 이름을 쳐서
+     Enter 로 확정한다. 지도는 tools/build_crt.py 가 maps/ 원본을 줄여 찍은 data/crt/*.jpg 이고,
+     동 이름과 한 줄 소개는 행정동 코스(data/*-dong.course.json) 그대로다 -->
+<style>
+/* ── 토큰. 꺼진 방의 모니터 한 벌뿐이다 — 낮 모드를 두지 않는다 ── */
+:root{
+  color-scheme:dark;
+  --room:#121412; --glass:#050805;
+  --p1:#5dff8a; --p3:#ffb547; --p4:#e6f0ff;   /* P1 녹색 · P3 앰버 · P4 백색 형광체 */
+  --ph:var(--p1);
+  --glow:color-mix(in srgb,var(--ph) 65%,transparent);
+  --faint:color-mix(in srgb,var(--ph) 40%,transparent);
+  --crt:'VT323','Nanum Gothic Coding',ui-monospace,Menlo,monospace;
+  --ko:'Nanum Gothic Coding','VT323',ui-monospace,Menlo,monospace;
+}
+:root[data-ph="p3"]{--ph:var(--p3)}
+:root[data-ph="p4"]{--ph:var(--p4)}
+html,body{margin:0;height:100%;background:var(--room)}
+body{display:flex;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));box-sizing:border-box}
+
+/* ── 관. 둥근 유리 위에 주사선과 가장자리 그늘을 얹는다 ── */
+.tube{position:relative;flex:1;min-width:0;border-radius:28px/34px;overflow:hidden;background:var(--glass);
+  box-shadow:inset 0 0 0 2px #000,inset 0 0 90px rgba(0,0,0,.9),0 0 0 10px #1d201d,0 0 0 11px #2c302b}
+.tube::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px)}
+.tube::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:radial-gradient(120% 95% at 50% 50%,transparent 62%,rgba(0,0,0,.7) 100%),linear-gradient(160deg,rgba(255,255,255,.05),transparent 40%)}
+.screen{position:absolute;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:22px 30px 20px;
+  color:var(--ph);font:22px/1.2 var(--crt);text-shadow:0 0 6px var(--glow)}
+:root[data-motion="on"] .screen{animation:flicker 5s steps(1) infinite}
+@keyframes flicker{0%,95%,100%{opacity:1}96%{opacity:.86}97%{opacity:.96}}
+
+.bar{display:flex;justify-content:space-between;gap:16px;padding-bottom:6px;border-bottom:1px solid var(--faint);white-space:nowrap}
+.bar a{color:inherit;text-decoration:none}
+.bar a:focus-visible{outline:2px solid var(--ph);outline-offset:2px}
+#st{font:16px/1.6 var(--ko);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+
+.main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;min-height:0}
+.main.nomap{grid-template-columns:minmax(0,1fr)}
+.main.nomap .map{display:none}
+.map{position:relative;min-height:0;display:flex;align-items:center;justify-content:center}
+.map canvas{display:block;max-width:100%;max-height:100%;image-rendering:pixelated;filter:drop-shadow(0 0 3px var(--glow))}
+.map .credit{position:absolute;right:0;bottom:0;font:14px var(--crt);opacity:.6}
+.log{min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;font:16px/1.45 var(--ko)}
+.log p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.log .dim{opacity:.6}
+.log .sub{opacity:.75;padding-left:7ch}
+
+.prompt{display:flex;gap:10px;align-items:baseline;padding-top:8px;border-top:1px solid var(--faint)}
+.prompt label{white-space:nowrap;font-family:var(--ko);font-size:16px}
+.prompt input{flex:1;min-width:0;padding:0;background:transparent;border:0;outline:0;color:inherit;font:16px var(--ko);caret-color:var(--ph);text-shadow:inherit}
+.prompt input::placeholder{color:var(--faint)}
+.keys{font:15px var(--crt);opacity:.6;white-space:nowrap}
+
+/* 손가락이면 지도를 위로, 로그를 그 아래로 쌓는다 — 입력칸은 늘 맨 아래 */
+@media (pointer:coarse){
+  .screen{padding:16px 16px 14px;font-size:19px}
+  .main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.1fr) minmax(0,1fr);gap:10px}
+  .main.nomap{grid-template-rows:minmax(0,1fr)}
+  .keys{display:none}
+}
+@media (max-width:700px) and (pointer:fine){.main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.screen{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="tube" id="tube">
+  <div class="screen">
+    <div class="bar"><a href="../../landing/" aria-label="regiontype 랜딩으로">REGIONTYPE/CRT</a><span id="st" aria-live="off">seoul</span></div>
+    <div class="main nomap" id="main">
+      <div class="map"><canvas id="cv" width="10" height="10" role="img" aria-label="지도"></canvas><span class="credit" id="credit"></span></div>
+      <div class="log" id="log" role="log" aria-live="polite"></div>
+    </div>
+    <form class="prompt" id="f" autocomplete="off">
+      <label for="in" id="ps">seoul $</label>
+      <input id="in" spellcheck="false" autocapitalize="off" autocorrect="off" enterkeyhint="enter">
+      <span class="keys" aria-hidden="true">help · ls · color</span>
+    </form>
+  </div>
+</div>
+
+<script>
+'use strict';
+const DATA = '../../data/';
+const $ = id => document.getElementById(id);
+const log = $('log'), inp = $('in'), cv = $('cv'), cx = cv.getContext('2d', { willReadFrequently: true });
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+/* 사이트 설정의 애니메이션 끔(rt.opt.motion)과 기기의 모션 줄이기를 같이 따른다 */
+let siteMotion = true;
+try { siteMotion = JSON.parse(localStorage.getItem('rt.opt') || '{}').motion !== false; } catch (e) {}
+const calm = () => !siteMotion || matchMedia('(prefers-reduced-motion:reduce)').matches;
+document.documentElement.dataset.motion = calm() ? 'off' : 'on';
+
+const PH = { green: 'p1', amber: 'p3', white: 'p4' };
+const setPh = p => { document.documentElement.dataset.ph = p; store.set('rt.crt.ph', p); };
+setPh(Object.values(PH).includes(store.get('rt.crt.ph')) ? store.get('rt.crt.ph') : 'p1');
+
+/* ── 로그 ── */
+const LINES = 200;
+function say(text, cls) {
+  const p = document.createElement('p');
+  p.textContent = text;
+  if (cls) p.className = cls;
+  log.append(p);
+  while (log.children.length > LINES) log.firstChild.remove();
+}
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const clock = s => `${pad(s / 60 | 0)}:${pad(s % 60)}`;
+/* 한글은 고정폭에서 두 칸을 먹는다 — 줄 맞춤은 그 폭으로 센다 */
+const cols = s => [...s].reduce((n, c) => n + (/[ᄀ-ᇿ　-鿿가-힯]/.test(c) ? 2 : 1), 0);
+const padTo = (s, w) => s + ' '.repeat(Math.max(0, w - cols(s)));
+
+/* ── 판정. 띄어쓰기·쉼표·가운뎃점을 빼고, '창신제1동' 의 '제' 는 없는 것으로 친다.
+   앞부분이 남은 후보 하나로만 이어지면 그것으로 확정한다(두 글자부터) ── */
+const norm = s => s.normalize('NFC').replace(/[\s,.·・\-]/g, '').replace(/제(?=\d)/g, '');
+function judge(raw, left) {
+  const q = norm(raw);
+  const exact = left.find(it => norm(it.name) === q);
+  if (exact || q.length < 2) return exact;
+  const c = left.filter(it => norm(it.name).startsWith(q));
+  return c.length === 1 ? c[0] : null;
+}
+
+/* ── 지도. 밝기를 잉크 양으로 바꿔 형광체 한 색으로 칠한다. 윤곽선은 반 해상도로 그려
+   픽셀 그대로 키우고, 이름이 붙은 흑백 지도는 글자가 읽히게 제 해상도로 그린다 ── */
+const IMG = new Map();
+const img = src => IMG.get(src) || IMG.set(src, new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; })).get(src);
+let drawn = 0;
+async function draw() {
+  if (!game || !game.d.map) return;
+  const ticket = ++drawn;
+  const pic = await img(`${DATA}crt/${game.d.slug}.${game.hint ? 'name' : 'line'}.jpg`).catch(() => null);
+  if (ticket !== drawn || !pic) return;
+  const box = cv.parentElement.getBoundingClientRect(), k = game.hint ? 1 : 2;
+  const s = Math.min(box.width / pic.naturalWidth, box.height / pic.naturalHeight);
+  const w = Math.max(1, Math.round(pic.naturalWidth * s / k)), h = Math.max(1, Math.round(pic.naturalHeight * s / k));
+  cv.width = w; cv.height = h;
+  cv.style.width = w * k + 'px'; cv.style.height = h * k + 'px';
+  cx.drawImage(pic, 0, 0, w, h);
+  const d = cx.getImageData(0, 0, w, h), px = d.data;
+  const [r, g, b] = getComputedStyle(log).color.match(/\d+/g).map(Number);
+  for (let i = 0; i < px.length; i += 4) {
+    const ink = Math.min(1, Math.max(0, (210 - px[i]) / 140));
+    px[i] = r; px[i + 1] = g; px[i + 2] = b; px[i + 3] = Math.pow(ink, .6) * 255;
+  }
+  cx.clearRect(0, 0, w, h);
+  if (calm()) { cx.putImageData(d, 0, 0); return; }
+  /* 위에서 아래로 한 띠씩 켜진다 — 전자총이 훑고 지나가듯 */
+  let y = 0;
+  const step = () => { if (ticket !== drawn) return; y = Math.min(h, y + Math.ceil(h / 40)); cx.putImageData(d, 0, 0, 0, 0, w, y); if (y < h) requestAnimationFrame(step); };
+  step();
+}
+addEventListener('resize', () => { clearTimeout(draw.t); draw.t = setTimeout(draw, 150); });
+
+/* ── 셸 ── */
+let list = [], credit = '', game = null, timer = 0;
+const best = () => { try { return JSON.parse(store.get('rt.crt.best') || '{}'); } catch (e) { return {}; } };
+const prompt = () => { $('ps').textContent = game ? `seoul/${game.d.name} $` : 'seoul $'; inp.placeholder = game ? '동 이름 · Enter' : 'ls · 구 이름이나 번호'; };
+function status() {
+  if (!game) { $('st').textContent = `seoul · ${list.length}개 구`; return; }
+  const s = game.t0 ? Math.floor(((game.t1 || Date.now()) - game.t0) / 1000) : 0;
+  $('st').textContent = `${game.d.name}  ${pad(game.found.size)}/${pad(game.items.length)}  MISS ${game.miss}  ${clock(s)}`;
+}
+
+function help() {
+  const rows = game
+    ? [['동 이름', 'Enter 로 확정. 앞부분만 쳐도 하나로 이어지면 확정'], ['hint', '이름이 붙은 흑백 지도와 윤곽선 지도를 오간다'], ['quit', '셸로 돌아간다'], ['color', 'green · amber · white'], ['clear', '화면 지우기']]
+    : [['ls', '구 목록'], ['open 종로구', '구 열기. 이름이나 번호만 쳐도 된다'], ['color amber', '형광체 바꾸기 (green · amber · white)'], ['clear', '화면 지우기'], ['home', '랜딩으로']];
+  rows.forEach(([a, b]) => say(`  ${padTo(a, 13)}${b}`, 'dim'));
+}
+function ls() {
+  const b = best();
+  list.forEach((d, i) => say(`  ${pad(i + 1)} ${d.map ? '[MAP] ' : '[----]'} ${padTo(d.name, 9)}${pad(d.count)}개 동${b[d.slug] ? '  BEST ' + clock(b[d.slug]) : ''}`));
+  say(`  [MAP] 지도 있음 · [----] 지도 없이 이름만`, 'dim');
+}
+function find(arg) {
+  const n = parseInt(arg, 10);
+  if (String(n) === arg.replace(/^0+(?=\d)/, '')) return list[n - 1];
+  const q = norm(arg);
+  return list.find(d => norm(d.name) === q) || list.find(d => norm(d.name) === q + '구');
+}
+
+async function open(d) {
+  say(`LOADING ${d.course}.course.json …`, 'dim');
+  let course;
+  try { course = await fetch(`${DATA}${d.course}.course.json`).then(r => { if (!r.ok) throw r; return r.json(); }); }
+  catch (e) { say('[FAIL] 코스를 읽지 못했습니다. 잠시 뒤 다시 open 해 주세요.'); return; }
+  game = { d, items: course.items, found: new Set(), miss: 0, t0: 0, t1: 0, hint: false };
+  $('main').classList.toggle('nomap', !d.map);
+  $('credit').textContent = d.map ? credit : '';
+  cv.setAttribute('aria-label', `${d.name} 윤곽선 지도`);
+  say(`${course.title}. 아무 순서로나 쳐도 됩니다. 첫 입력에 시계가 돕니다.`);
+  if (!d.map) say('이 구는 아직 지도 원본이 없어 이름만 칩니다.', 'dim');
+  prompt(); status(); draw();
+}
+function quit(done) {
+  clearInterval(timer);
+  if (game && !done) say(`QUIT ${game.d.name} · ${game.found.size}/${game.items.length}`, 'dim');
+  game = null; drawn++;
+  $('main').classList.add('nomap');
+  prompt(); status();
+}
+function finish() {
+  game.t1 = Date.now(); clearInterval(timer); status();
+  const s = Math.round((game.t1 - game.t0) / 1000), all = game.items.length;
+  const acc = Math.round(all / (all + game.miss) * 100);
+  const b = best(), prev = b[game.d.slug];
+  say('');
+  say(`  ALL CLEAR  ${game.d.name}`);
+  say(`  시간     ${clock(s)}`);
+  say(`  정확도   ${acc}%  (MISS ${game.miss})`);
+  if (!prev || s < prev) { b[game.d.slug] = s; store.set('rt.crt.best', JSON.stringify(b)); say(`  최고     ${clock(s)}  NEW${prev ? '  (전 ' + clock(prev) + ')' : ''}`); }
+  else say(`  최고     ${clock(prev)}`);
+  say('');
+  quit(true);
+}
+
+function type(raw) {
+  if (!game.t0) { game.t0 = Date.now(); timer = setInterval(status, 1000); }
+  const left = game.items.filter(it => !game.found.has(it.name));
+  const hit = judge(raw, left);
+  if (!hit) { game.miss++; say(`[MISS] ${raw}`); status(); return; }
+  game.found.add(hit.name);
+  say(`[ OK ] ${padTo(hit.name, 16)}${pad(game.found.size)}/${pad(game.items.length)}`);
+  if (hit.meta && hit.meta.description) say(hit.meta.description, 'sub');
+  status();
+  if (game.found.size === game.items.length) finish();
+}
+
+const hist = []; let hi = 0;
+function run(raw) {
+  const [cmd, ...rest] = raw.split(/\s+/), arg = rest.join(' '), c = cmd.toLowerCase();
+  if (c === 'clear') { log.textContent = ''; return; }
+  if (c === 'help' || c === '?') return help();
+  if (c === 'color') {
+    const keys = Object.keys(PH), cur = keys.find(k => PH[k] === document.documentElement.dataset.ph);
+    const next = PH[arg.toLowerCase()] ? arg.toLowerCase() : keys[(keys.indexOf(cur) + 1) % keys.length];
+    setPh(PH[next]); say(`PHOSPHOR ${next.toUpperCase()}`, 'dim'); draw(); return;
+  }
+  if (game) {
+    if (c === 'quit' || c === 'exit') return quit();
+    if (c === 'hint') { game.hint = !game.hint; cv.setAttribute('aria-label', `${game.d.name} ${game.hint ? '흑백 지도(동 이름 보임)' : '윤곽선 지도'}`); say(game.hint ? 'HINT 동 이름이 붙은 지도' : 'HINT 끔 · 윤곽선 지도', 'dim'); draw(); return; }
+    /* 로마자만 친 줄은 동 이름일 수 없다 — 오타 난 명령으로 보고 MISS 로 세지 않는다 */
+    if (/^[a-z?]+$/i.test(raw)) { say(`${raw}: 판 안에서는 hint · quit · color · clear 만 됩니다.`, 'dim'); return; }
+    return type(raw);
+  }
+  if (c === 'ls') return ls();
+  if (c === 'home' || c === 'exit') { location.href = '../../landing/'; return; }
+  const d = find(c === 'open' || c === 'cd' ? arg : raw);
+  if (d) return open(d);
+  say(`${raw}: 그런 명령이나 구가 없습니다. help 를 쳐 보세요.`);
+}
+
+$('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const raw = inp.value.trim();
+  inp.value = '';
+  if (!raw) return;
+  hist.push(raw); hi = hist.length;
+  say(`${$('ps').textContent} ${raw}`, 'dim');
+  run(raw);
+});
+/* 위·아래 화살표로 친 줄을 다시 부른다. 조합 중에는 IME 에 맡긴다 */
+inp.addEventListener('keydown', e => {
+  if (e.isComposing) return;
+  if (e.key === 'ArrowUp' && hi > 0) { e.preventDefault(); inp.value = hist[--hi]; }
+  else if (e.key === 'ArrowDown' && hi < hist.length) { e.preventDefault(); hi++; inp.value = hist[hi] || ''; }
+  else if (e.key === 'Escape') inp.value = '';
+});
+/* 화면 아무 데나 누르면 프롬프트로. 링크는 그대로 둔다 */
+$('tube').addEventListener('pointerup', e => { if (!e.target.closest('a') && !getSelection().toString()) inp.focus(); });
+
+/* ── 부팅. 아무 키나 누르면 남은 줄을 한 번에 찍는다 ── */
+async function boot() {
+  const j = await fetch(DATA + 'crt.json').then(r => r.json()).catch(() => null);
+  const lines = [
+    'REGIONTYPE/CRT',
+    'MEMORY TEST .......... 640K OK',
+    j ? `MAPS ................. ${j.districts.filter(d => d.map).length}/${j.districts.length}` : 'MAPS ................. FAIL',
+    '',
+    j ? '서울 25개 구의 행정동을 칩니다. ls 로 목록, help 로 명령.' : '목록을 읽지 못했습니다. 새로고침해 주세요.'
+  ];
+  let skip = calm();
+  const stop = () => { skip = true; };
+  addEventListener('keydown', stop, { once: true });
+  addEventListener('pointerdown', stop, { once: true });
+  for (const l of lines) {
+    say(l, l.startsWith('서울') || !l ? '' : 'dim');
+    if (!skip) await new Promise(r => setTimeout(r, 260));
+  }
+  if (!j) return;
+  list = j.districts; credit = j.credit ? '지도 ' + j.credit : '';
+  prompt(); status();
+}
+prompt();
+inp.focus();
+boot();
+</script>
+</body>
+</html>
