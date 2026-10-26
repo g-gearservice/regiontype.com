@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>regiontype — 지명을 치는 타자연습</title>
-<meta name="description" content="지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습. 서울 25개 자치구와 423개 행정동, 마흔여섯 나라의 행정구역.">
+<title data-i18n="page.title">regiontype — 지명을 치는 타자연습</title>
+<meta name="description" data-i18n="page.desc" data-i18n-attr="content" content="지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습. 서울 25개 자치구와 423개 행정동, 마흔여섯 나라의 행정구역.">
 <link rel="canonical" href="https://regiontype.com/landing/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://regiontype.com/landing/">
@@ -39,6 +39,9 @@
 })();
 document.documentElement.classList.add('js');
 </script>
+<!-- 화면 말: 접속 나라와 브라우저 말이 맞을 때만 그 말로 바꾼다. 한국어면 아무것도 건드리지 않는다 -->
+<script src="../../relay.js?v=5.10"></script>
+<script src="../../landing/i18n.js?v=5.10" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
@@ -83,6 +86,12 @@ document.documentElement.classList.add('js');
   .head{display:flex;align-items:center;gap:clamp(10px,1.2vw,18px);width:100%;padding:2px 0}
   .nm{font:inherit;letter-spacing:inherit;white-space:nowrap}
   .en{font:800 14px/1 var(--sans);text-transform:uppercase;align-self:flex-start;margin-top:1.4em;letter-spacing:.02em}
+  /* 영어 곁말은 한국어 화면에서만. 다른 말에서는 이름 자체가 그 말이다 */
+  html:not([lang="ko"]) .en{display:none}
+  /* 다른 말의 섹션 이름은 한국어보다 길 수 있다(Desenvolvimento). 넘치면 말 규칙대로 줄을 끊고,
+     말이 든 썸네일(수도·베타 자리)은 글자를 줄여 칸 안에 둔다. 한국어 화면은 그대로다 */
+  html:not([lang="ko"]) .nm{white-space:normal;min-width:0;overflow-wrap:anywhere;hyphens:auto}
+  html:not([lang="ko"]) .th .t-num[data-i18n]{font-size:clamp(10px,1.1vw,17px);line-height:1.05;letter-spacing:-.01em;text-align:center;padding:3px;overflow-wrap:anywhere;hyphens:auto}
   .th{display:flex;gap:clamp(6px,.8vw,12px);align-items:center;margin-left:4px}
   .t{height:clamp(44px,6.8vw,104px);aspect-ratio:1;flex:none;display:grid;place-items:center;overflow:hidden;font-weight:700;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink)}
   .sign{margin:0 .2em 0 auto;width:1em;height:1em;display:grid;place-items:center;flex:none;font:400 clamp(28px,4vw,60px)/1 var(--sans);transition:transform .4s var(--ease)}
@@ -242,53 +251,53 @@ document.documentElement.classList.add('js');
 <header class="meta">
   <a href="../../">regiontype</a>
   <span class="date" id="date"></span>
-  <span class="mid" role="group" aria-label="펼치기">↓<button type="button" id="openAll" aria-pressed="false">모두 펼치기</button> / <button type="button" id="closeAll" aria-pressed="true">접기</button></span>
+  <span class="mid" role="group" aria-label="펼치기" data-i18n="page.expand" data-i18n-attr="aria-label">↓<button type="button" id="openAll" aria-pressed="false" data-i18n="page.openAll">모두 펼치기</button> / <button type="button" id="closeAll" aria-pressed="true" data-i18n="page.closeAll">접기</button></span>
   <span id="ver">v—</span>
-  <span><a class="play-cta" href="#play" id="goPlay">바로 플레이</a><span class="ring" aria-hidden="true"></span></span>
+  <span><a class="play-cta" href="#play" id="goPlay" data-i18n="page.playNow">바로 플레이</a><span class="ring" aria-hidden="true"></span></span>
 </header>
 
-<h1 class="sr">regiontype — 지명을 치는 타자연습</h1>
+<h1 class="sr" data-i18n="page.title">regiontype — 지명을 치는 타자연습</h1>
 
 <ol class="menu">
   <li class="row tall" id="about">
     <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-about">
-      <span class="nm">소개</span><span class="en">About</span>
+      <span class="nm" data-i18n="about.name">소개</span><span class="en">About</span>
       <span class="th" aria-hidden="true"><span class="t t-dot" id="th-map"></span><span class="t t-num">423</span><span class="t t-num" style="background:var(--accent);color:var(--on-accent);border-color:transparent">25</span></span>
       <span class="sign" aria-hidden="true">+</span>
     </button></h2>
-    <div class="drawer" id="d-about" role="region" aria-label="소개"><div><div class="panel">
+    <div class="drawer" id="d-about" role="region" aria-label="소개" data-i18n="about.name" data-i18n-attr="aria-label"><div><div class="panel">
       <div class="reel" data-reel style="--n:5">
         <div class="stage">
           <ol class="idx" aria-hidden="true"><li class="step on">01</li><li class="step">02</li><li class="step">03</li><li class="step">04</li><li class="step">05</li></ol>
           <div class="beats">
             <article class="beat on">
-              <h3>지명을 치면, 지도가 남는다.</h3>
-              <p>지도에 뜬 지역 이름을 손으로 직접 칩니다.</p>
+              <h3 data-i18n="about.b1.h">지명을 치면, 지도가 남는다.</h3>
+              <p data-i18n="about.b1.p">지도에 뜬 지역 이름을 손으로 직접 칩니다.</p>
             </article>
             <article class="beat">
-              <h3>본 것과 아는 것은 다릅니다.</h3>
-              <p>눈으로 훑으면 "봤다"에서 끝납니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
+              <h3 data-i18n="about.b2.h">본 것과 아는 것은 다릅니다.</h3>
+              <p data-i18n="about.b2.p">눈으로 훑으면 "봤다"에서 끝납니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
             </article>
             <article class="beat">
               <p class="fig">25</p>
-              <h3>서울 자치구에서 시작합니다.</h3>
-              <p>첫 판은 서울 25개 자치구입니다. 홈에서 치는 판은 서울이고, 지도 데이터에는 46개 나라의 행정구역이 있습니다. 서울 밖은 미리보기입니다.</p>
+              <h3 data-i18n="about.b3.h">서울 자치구에서 시작합니다.</h3>
+              <p data-i18n="about.b3.p">첫 판은 서울 25개 자치구입니다. 홈에서 치는 판은 서울이고, 지도 데이터에는 46개 나라의 행정구역이 있습니다. 서울 밖은 미리보기입니다.</p>
             </article>
             <article class="beat">
               <p class="fig">423</p>
-              <h3>구를 열면 행정동입니다.</h3>
-              <p>전부 합치면 423곳입니다. 주민센터 하나가 맡는 단위이고, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
+              <h3 data-i18n="about.b4.h">구를 열면 행정동입니다.</h3>
+              <p data-i18n="about.b4.p">전부 합치면 423곳입니다. 주민센터 하나가 맡는 단위이고, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
             </article>
             <article class="beat">
-              <h3>코스는 이어진 길입니다.</h3>
-              <p>서쪽 끝 강서구에서 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대입니다. 가나다순이면 강남·강동·강북·강서가 한꺼번에 몰립니다.</p>
+              <h3 data-i18n="about.b5.h">코스는 이어진 길입니다.</h3>
+              <p data-i18n="about.b5.p">서쪽 끝 강서구에서 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대입니다. 가나다순이면 강남·강동·강북·강서가 한꺼번에 몰립니다.</p>
               <figure class="route-fig">
-                <svg id="route" viewBox="0 0 1000 822" role="img" aria-label="강서구에서 성북구까지 시계 방향으로 도는 자치구 코스"></svg>
-                <figcaption>자치구 코스 — 강서구에서 성북구까지</figcaption>
+                <svg id="route" viewBox="0 0 1000 822" role="img" aria-label="강서구에서 성북구까지 시계 방향으로 도는 자치구 코스" data-i18n="about.route.label" data-i18n-attr="aria-label"></svg>
+                <figcaption data-i18n="about.route.cap">자치구 코스 — 강서구에서 성북구까지</figcaption>
               </figure>
             </article>
           </div>
-          <p class="scroll-hint">스크롤하면 다음 문장</p>
+          <p class="scroll-hint" data-i18n="page.scrollHint">스크롤하면 다음 문장</p>
         </div>
       </div>
     </div></div></div>
@@ -296,7 +305,7 @@ document.documentElement.classList.add('js');
 
   <li class="row" id="dev">
     <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-dev">
-      <span class="nm">개발</span><span class="en">Development</span>
+      <span class="nm" data-i18n="dev.name">개발</span><span class="en">Development</span>
       <span class="th" aria-hidden="true"><span class="t t-term">$ python3
   -m http
   .server
@@ -304,29 +313,29 @@ document.documentElement.classList.add('js');
 ok</span></span>
       <span class="sign" aria-hidden="true">+</span>
     </button></h2>
-    <div class="drawer" id="d-dev" role="region" aria-label="개발"><div><div class="panel p-dev">
+    <div class="drawer" id="d-dev" role="region" aria-label="개발" data-i18n="dev.name" data-i18n-attr="aria-label"><div><div class="panel p-dev">
       <div>
         <p class="k">regiontype.com / main</p>
         <p class="big" id="dev-ver">v—</p>
-        <pre class="cm" id="dev-ver-note"># 릴리스 이름 vA.B.C — C 는 app.js 의 VER 에서 점을 뺀 숫자</pre>
+        <pre class="cm" id="dev-ver-note" data-i18n="dev.verNote"># 릴리스 이름 vA.B.C — C 는 app.js 의 VER 에서 점을 뺀 숫자</pre>
         <p class="k">stack</p>
-        <pre>정적 파일뿐이다. 빌드 단계도, 패키지 매니저도,
+        <pre data-i18n="dev.stack">정적 파일뿐이다. 빌드 단계도, 패키지 매니저도,
 프레임워크도 없다.</pre>
-        <pre>$ python3 -m http.server 3000   <span class="cm"># 실행</span>
-$ open localhost:3000/?rt=1      <span class="cm"># 판정 엔진 자체검사</span>
-$ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre>
+        <pre>$ python3 -m http.server 3000   <span class="cm" data-i18n="dev.run"># 실행</span>
+$ open localhost:3000/?rt=1      <span class="cm" data-i18n="dev.test"># 판정 엔진 자체검사</span>
+$ node relay/test.mjs            <span class="cm" data-i18n="dev.relayTest"># 중계기 검사</span></pre>
         <pre>.
-├── app.js        <span class="cm"># 단일 파일. 핵심은 matchInput()</span>
-├── style.css     <span class="cm"># 단일 파일. 색·간격은 커스텀 프로퍼티</span>
-├── data/         <span class="cm"># tools/*.py 가 찍은 지도·코스</span>
-├── relay/        <span class="cm"># Cloudflare Worker — 순위·경쟁전</span>
-└── mimi/ beta/   <span class="cm"># 실험 갈래</span></pre>
-        <pre class="cm"># 경쟁전 판정은 Durable Objects 가 맡고,
-# 실력은 Glicko-2 로 매긴다. <span class="caret" aria-hidden="true"></span></pre>
+├── app.js        <span class="cm" data-i18n="dev.tree.app"># 단일 파일. 핵심은 matchInput()</span>
+├── style.css     <span class="cm" data-i18n="dev.tree.style"># 단일 파일. 색·간격은 커스텀 프로퍼티</span>
+├── data/         <span class="cm" data-i18n="dev.tree.data"># tools/*.py 가 찍은 지도·코스</span>
+├── relay/        <span class="cm" data-i18n="dev.tree.relay"># Cloudflare Worker — 순위·경쟁전</span>
+└── mimi/ beta/   <span class="cm" data-i18n="dev.tree.beta"># 실험 갈래</span></pre>
+        <pre class="cm"><span data-i18n="dev.tail1"># 경쟁전 판정은 Durable Objects 가 맡고,</span>
+<span data-i18n="dev.tail2"># 실력은 Glicko-2 로 매긴다.</span> <span class="caret" aria-hidden="true"></span></pre>
       </div>
       <div>
-        <p class="k">바뀐 것</p>
-        <div class="bar"><label class="sr" for="grep">바뀐 것 찾기</label><span>$</span><input id="grep" placeholder="검색" autocomplete="off" spellcheck="false"><span class="cm" id="hits"></span></div>
+        <p class="k" data-i18n="dev.changes">바뀐 것</p>
+        <div class="bar"><label class="sr" for="grep" data-i18n="dev.grep.label">바뀐 것 찾기</label><span>$</span><input id="grep" placeholder="검색" data-i18n="dev.grep.ph" data-i18n-attr="placeholder" autocomplete="off" spellcheck="false"><span class="cm" id="hits"></span></div>
         <ol class="log" id="log"></ol>
       </div>
     </div></div></div>
@@ -334,32 +343,32 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
 
   <li class="row" id="style">
     <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-style">
-      <span class="nm">스타일</span><span class="en">Style</span>
+      <span class="nm" data-i18n="style.name">스타일</span><span class="en">Style</span>
       <span class="th" aria-hidden="true">
         <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg></span>
         <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg></span>
         <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg></span>
-        <span class="t t-num">베타</span>
+        <span class="t t-num" data-i18n="style.beta">베타</span>
       </span>
       <span class="sign" aria-hidden="true">+</span>
     </button></h2>
-    <div class="drawer" id="d-style" role="region" aria-label="스타일"><div><div class="panel">
+    <div class="drawer" id="d-style" role="region" aria-label="스타일" data-i18n="style.name" data-i18n-attr="aria-label"><div><div class="panel">
       <div class="styles">
         <a class="style-card" href="../../beta/3dnavigation/">
           <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg>
-          <p class="k">베타 · 01</p>
-          <h3>3D 내비게이션</h3>
-          <p>실제 지도 위에 3D 건물과 길을 얹습니다. 동 경계는 코스 데이터와 같은 자리를 씁니다. 화면은 시스템 색과 맑은 유리 판으로 읽힙니다.</p>
-          <p class="sigline"><i class="swatch nav" aria-hidden="true"></i>시스템 파랑</p>
-          <span class="more">베타 열기</span>
+          <p class="k"><span data-i18n="style.beta">베타</span> · 01</p>
+          <h3 data-i18n="style.nav.title">3D 내비게이션</h3>
+          <p data-i18n="style.nav.p">실제 지도 위에 3D 건물과 길을 얹습니다. 동 경계는 코스 데이터와 같은 자리를 씁니다. 화면은 시스템 색과 맑은 유리 판으로 읽힙니다.</p>
+          <p class="sigline"><i class="swatch nav" aria-hidden="true"></i><span data-i18n="style.nav.sig">시스템 파랑</span></p>
+          <span class="more" data-i18n="style.open">베타 열기</span>
         </a>
         <a class="style-card" href="../../beta/bus/">
           <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg>
-          <p class="k">베타 · 02</p>
-          <h3>동네버스</h3>
-          <p>정류장 이름을 치면 버스가 그 정류장으로 가서 손님을 실어 나릅니다. 25개 자치구가 행정동 코스 순서로 늘어서 있습니다. 노선은 노랑이고, 정류장은 고리입니다.</p>
-          <p class="sigline"><i class="swatch bus" aria-hidden="true"></i>노선 노랑</p>
-          <span class="more">베타 열기</span>
+          <p class="k"><span data-i18n="style.beta">베타</span> · 02</p>
+          <h3 data-i18n="style.bus.title">동네버스</h3>
+          <p data-i18n="style.bus.p">정류장 이름을 치면 버스가 그 정류장으로 가서 손님을 실어 나릅니다. 25개 자치구가 행정동 코스 순서로 늘어서 있습니다. 노선은 노랑이고, 정류장은 고리입니다.</p>
+          <p class="sigline"><i class="swatch bus" aria-hidden="true"></i><span data-i18n="style.bus.sig">노선 노랑</span></p>
+          <span class="more" data-i18n="style.open">베타 열기</span>
         </a>
         <a class="style-card" href="../../beta/crt/">
           <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg>
@@ -375,37 +384,37 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
 
   <li class="row tall" id="story">
     <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-story">
-      <span class="nm">스토리</span><span class="en">Story</span>
+      <span class="nm" data-i18n="story.name">스토리</span><span class="en">Story</span>
       <span class="th" aria-hidden="true"><span class="t t-book">염창</span><span class="t t-quote">소금 창고</span><span class="t t-ink">鹽倉</span></span>
       <span class="sign" aria-hidden="true">+</span>
     </button></h2>
-    <div class="drawer" id="d-story" role="region" aria-label="스토리"><div><div class="panel">
+    <div class="drawer" id="d-story" role="region" aria-label="스토리" data-i18n="story.name" data-i18n-attr="aria-label"><div><div class="panel">
       <div class="reel" data-reel style="--n:5">
         <div class="stage">
           <ol class="idx" aria-hidden="true"><li class="step on">01</li><li class="step">02</li><li class="step">03</li><li class="step">04</li><li class="step">05</li></ol>
           <div class="beats">
             <article class="beat on">
-              <h3>읽어서는 이름이 남지 않았습니다.</h3>
-              <p>지도에서 구 이름을 눈으로 따라가도 자리와 철자가 따로 놀았습니다. 남는 쪽은 손이었습니다.</p>
+              <h3 data-i18n="story.b1.h">읽어서는 이름이 남지 않았습니다.</h3>
+              <p data-i18n="story.b1.p">지도에서 구 이름을 눈으로 따라가도 자리와 철자가 따로 놀았습니다. 남는 쪽은 손이었습니다.</p>
             </article>
             <article class="beat">
-              <h3>타자의 방식을 지명에 가져왔습니다.</h3>
-              <p>다음 글자를 치려면 이름을 통째로 붙들고 있어야 합니다. 설치 없이, 가입하지 않아도 지도에서 고르고 칩니다.</p>
+              <h3 data-i18n="story.b2.h">타자의 방식을 지명에 가져왔습니다.</h3>
+              <p data-i18n="story.b2.p">다음 글자를 치려면 이름을 통째로 붙들고 있어야 합니다. 설치 없이, 가입하지 않아도 지도에서 고르고 칩니다.</p>
             </article>
             <article class="beat">
-              <h3>처음 길은 서울 한 바퀴였습니다.</h3>
-              <p>무작위 목록은 지리가 아닙니다. 서쪽 끝 강서구에서 이웃한 구를 따라 시계 방향으로 성북구까지 잇습니다. 구 안의 동도 같은 방식으로 이웃을 따라갑니다. 가나다순이면 강남·강동·강북·강서가 한 덩어리가 됩니다.</p>
+              <h3 data-i18n="story.b3.h">처음 길은 서울 한 바퀴였습니다.</h3>
+              <p data-i18n="story.b3.p">무작위 목록은 지리가 아닙니다. 서쪽 끝 강서구에서 이웃한 구를 따라 시계 방향으로 성북구까지 잇습니다. 구 안의 동도 같은 방식으로 이웃을 따라갑니다. 가나다순이면 강남·강동·강북·강서가 한 덩어리가 됩니다.</p>
             </article>
             <article class="beat">
-              <h3>사람이 드나드는 동을 골랐습니다.</h3>
-              <p>법정동은 땅에 붙은 이름이고, 행정동은 동주민센터 하나가 맡는 구역입니다. 플레이하는 423곳은 행정동입니다. 설정에서는 법정동으로 바꿔 칠 수도 있습니다.</p>
+              <h3 data-i18n="story.b4.h">사람이 드나드는 동을 골랐습니다.</h3>
+              <p data-i18n="story.b4.p">법정동은 땅에 붙은 이름이고, 행정동은 동주민센터 하나가 맡는 구역입니다. 플레이하는 423곳은 행정동입니다. 설정에서는 법정동으로 바꿔 칠 수도 있습니다.</p>
             </article>
             <article class="beat">
-              <h3>한 줄 소개는 자료에 있는 것만 올립니다.</h3>
-              <p>염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다.</p>
+              <h3 data-i18n="story.b5.h">한 줄 소개는 자료에 있는 것만 올립니다.</h3>
+              <p data-i18n="story.b5.p">염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다.</p>
             </article>
           </div>
-          <p class="scroll-hint">스크롤하면 다음 문장</p>
+          <p class="scroll-hint" data-i18n="page.scrollHint">스크롤하면 다음 문장</p>
         </div>
       </div>
     </div></div></div>
@@ -414,25 +423,25 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
   <li class="row" id="play">
     <h2 class="row-title">
       <button class="head" type="button" aria-expanded="false" aria-controls="d-play">
-        <span class="nm">플레이</span><span class="en">Play</span>
+        <span class="nm" data-i18n="play.name">플레이</span><span class="en">Play</span>
         <span class="sign" aria-hidden="true">+</span>
       </button>
-      <a class="play-site" href="../../#home" target="_blank" rel="noopener" aria-label="regiontype.com 바로가기 (새 탭)">바로가기 <span aria-hidden="true">↗</span></a>
+      <a class="play-site" href="../../#home" target="_blank" rel="noopener" aria-label="regiontype.com 바로가기 (새 탭)" data-i18n="play.go.label" data-i18n-attr="aria-label"><span data-i18n="play.go">바로가기</span> <span aria-hidden="true">↗</span></a>
     </h2>
-    <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel">
+    <div class="drawer" id="d-play" role="region" aria-label="플레이" data-i18n="play.name" data-i18n-attr="aria-label"><div><div class="panel">
       <div class="embed" id="embed">
         <div class="embed-head">
           <a class="embed-title" href="../../#home" target="_blank" rel="noopener">regiontype.com <span aria-hidden="true">↗</span></a>
-          <p>지명을 직접 쳐서 익히는 타자연습.</p>
+          <p data-i18n="play.lead">지명을 직접 쳐서 익히는 타자연습.</p>
         </div>
         <div class="embed-frame">
-          <iframe id="game" title="regiontype 게임" data-src="../../"></iframe>
+          <iframe id="game" title="regiontype 게임" data-i18n="play.frame" data-i18n-attr="title" data-src="../../"></iframe>
           <button type="button" class="live-btn" id="liveBtn" aria-pressed="false">
             <svg class="ico-play" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true"><path d="M1 1.2 11 7 1 12.8Z" fill="currentColor"/></svg>
             <svg class="ico-pause" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true" hidden><path d="M1 1h3.2v12H1Zm6.8 0H11v12H7.8Z" fill="currentColor"/></svg>
             <span class="live-label">play</span>
           </button>
-          <a class="embed-out" href="../../#home" target="_blank" rel="noopener">새 탭에서 열기 <span aria-hidden="true">↗</span></a>
+          <a class="embed-out" href="../../#home" target="_blank" rel="noopener"><span data-i18n="play.newTab">새 탭에서 열기</span> <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </div></div></div>
@@ -440,40 +449,40 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
 
   <li class="row" id="plans">
     <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-plans">
-      <span class="nm">플랜</span><span class="en">Plan</span>
-      <span class="th" aria-hidden="true"><span class="t t-num">수도</span><span class="t t-num">전국</span><span class="t t-num">세계</span></span>
+      <span class="nm" data-i18n="plans.name">플랜</span><span class="en">Plan</span>
+      <span class="th" aria-hidden="true"><span class="t t-num" data-i18n="plans.capital.short">수도</span><span class="t t-num" data-i18n="plans.nation.short">전국</span><span class="t t-num" data-i18n="plans.world.short">세계</span></span>
       <span class="sign" aria-hidden="true">+</span>
     </button></h2>
-    <div class="drawer" id="d-plans" role="region" aria-label="플랜"><div><div class="panel">
+    <div class="drawer" id="d-plans" role="region" aria-label="플랜" data-i18n="plans.name" data-i18n-attr="aria-label"><div><div class="panel">
       <div class="plan-board">
-        <p class="plan-note">월·연 가격은 미정입니다. 아직 고를 수 없습니다.</p>
+        <p class="plan-note" data-i18n="plans.note">월·연 가격은 미정입니다. 아직 고를 수 없습니다.</p>
         <ul class="plans">
           <li>
-            <h3>Capital (수도), 무료</h3>
+            <h3 data-i18n="plans.capital.title">Capital (수도), 무료</h3>
             <dl class="plan-rows">
-              <div><dt>월</dt><dd>미정</dd></div>
-              <div><dt>연</dt><dd>미정</dd></div>
-              <div><dt>지도 범위</dt><dd>지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</dd></div>
+              <div><dt data-i18n="plans.month">월</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.year">연</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.scope">지도 범위</dt><dd data-i18n="plans.capital.scope">지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</dd></div>
             </dl>
-            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
+            <button type="button" class="plan-btn" disabled data-i18n="plans.soon">아직 지원하지 않아요</button>
           </li>
           <li>
-            <h3>Nation (전국)</h3>
+            <h3 data-i18n="plans.nation.title">Nation (전국)</h3>
             <dl class="plan-rows">
-              <div><dt>월</dt><dd>미정</dd></div>
-              <div><dt>연</dt><dd>미정</dd></div>
-              <div><dt>지도 범위</dt><dd>고른 나라 하나의 전국</dd></div>
+              <div><dt data-i18n="plans.month">월</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.year">연</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.scope">지도 범위</dt><dd data-i18n="plans.nation.scope">고른 나라 하나의 전국</dd></div>
             </dl>
-            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
+            <button type="button" class="plan-btn" disabled data-i18n="plans.soon">아직 지원하지 않아요</button>
           </li>
           <li>
-            <h3>World (세계)</h3>
+            <h3 data-i18n="plans.world.title">World (세계)</h3>
             <dl class="plan-rows">
-              <div><dt>월</dt><dd>미정</dd></div>
-              <div><dt>연</dt><dd>미정</dd></div>
-              <div><dt>지도 범위</dt><dd>모든 나라의 전국</dd></div>
+              <div><dt data-i18n="plans.month">월</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.year">연</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.scope">지도 범위</dt><dd data-i18n="plans.world.scope">모든 나라의 전국</dd></div>
             </dl>
-            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
+            <button type="button" class="plan-btn" disabled data-i18n="plans.soon">아직 지원하지 않아요</button>
           </li>
         </ul>
       </div>
@@ -481,12 +490,14 @@ $ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre
   </li>
 </ol>
 
-<footer><span>regiontype.com</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a> · <a href="../../community/">커뮤니티</a></span></footer>
+<footer><span>regiontype.com</span><span><a href="../../policy/" data-i18n="page.privacy">개인정보</a> · <a href="../../terms/" data-i18n="page.terms">약관</a> · <a href="../../community/" data-i18n="page.community">커뮤니티</a></span></footer>
 
 <script>
 const NS='http://www.w3.org/2000/svg', $=id=>document.getElementById(id);
 const el=(tag,attrs={},parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.append(e);return e};
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// 화면 말 — landing/i18n.js 가 고른 말. 한국어면 원문 그대로
+const L=(k,ko,v)=>(self.RT_LANDING&&RT_LANDING.lang!=='ko'&&RT_LANDING.t(k,v))||ko;
 const d=new Date();$('date').textContent=`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
 const bar=()=>{document.documentElement.style.setProperty('--bar',document.querySelector('.meta').offsetHeight+'px')};
 bar();addEventListener('resize',bar);
@@ -549,7 +560,7 @@ function setLive(on){
   $('embed').classList.toggle('is-live',on);
   const b=$('liveBtn');
   b.setAttribute('aria-pressed',on?'true':'false');
-  b.querySelector('.live-label').textContent=on?'pause':'play';
+  b.querySelector('.live-label').textContent=on?L('play.live.pause','pause'):L('play.live.play','play');
   // SVGElement.hidden 은 속성에 반영되지 않아 아이콘이 같이 남는다
   b.querySelector('.ico-play').toggleAttribute('hidden', on);
   b.querySelector('.ico-pause').toggleAttribute('hidden', !on);
@@ -574,7 +585,9 @@ fetch('../../app.js').then(r=>r.text()).then(t=>{
     const ab=(list[0]&&list[0].v||'0.0.0').split('.').slice(0,2).join('.');
     const v=`v${ab}.${c}`;
     $('ver').textContent=v;$('th-ver').textContent=v;$('dev-ver').textContent=v;
-    $('dev-ver-note').textContent=`# VER = '${m[1]}' — C 자리는 VER 에서 점을 뺀 숫자다`;
+    const note=$('dev-ver-note');delete note.dataset.i18n;
+    const draw=()=>{note.textContent=L('dev.verNoteLive',`# VER = '${m[1]}' — C 자리는 VER 에서 점을 뺀 숫자다`,{ver:m[1]})};
+    draw();addEventListener('rt-landing-i18n',draw);
   });
 }).catch(()=>{});
 
@@ -596,23 +609,29 @@ Promise.all(['seoul-gu.geom','seoul-gu.course'].map(f=>fetch(`../../data/${f}.js
 // 개발: 바뀐 것 목록
 fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
   const log=$('log');
+  // 항목은 그 말이 없으면 영어로 보인다
+  const say=e=>{const l=self.RT_LANDING?RT_LANDING.lang:'ko';return (l==='ko'?e.ko:e[l]||e.en)||e.ko||''};
   const draw=q=>{
-    const rs=list.filter(e=>!q||(e.ko||'').includes(q)||(e.en||'').includes(q)||e.v.includes(q)).slice(0,60);
+    const rs=list.filter(e=>!q||(e.ko||'').includes(q)||(e.en||'').includes(q)||say(e).includes(q)||e.v.includes(q)).slice(0,60);
     log.replaceChildren(...rs.map(e=>{
       const li=document.createElement('li');
       const v=document.createElement('span');v.className='v';v.textContent='v'+e.v;
       const t=document.createElement('time');t.dateTime=e.date;t.textContent=e.date;
-      const p=document.createElement('span');p.textContent=e.ko;
+      const p=document.createElement('span');p.textContent=say(e);
       li.append(v,t,p);return li;
     }));
-    $('hits').textContent=q?`${rs.length}건`:`${list.length}건`;
+    const n=q?rs.length:list.length;
+    $('hits').textContent=L('dev.hits',`${n}건`,{n});
   };
   draw('');
   $('grep').addEventListener('input',e=>draw(e.target.value.trim()));
+  addEventListener('rt-landing-i18n',()=>draw($('grep').value.trim()));
 }).catch(()=>{});
 
 fromHash();
 syncReels();
+// 말이 바뀌면 play 단추 이름과 문장 높이를 다시 맞춘다
+addEventListener('rt-landing-i18n',()=>{setLive($('embed').classList.contains('is-live'));bar();syncReels()});
 </script>
 </body>
 </html>
