@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail, pinOf } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -2536,4 +2536,116 @@ console.log('security rule self-check done');
   globalThis.setInterval = realSet; globalThis.clearInterval = realClear;
   console.log('compete rating self-check done');
 }
+
+/* ── 나라·언어 고정(pin) ──────────────────────────────────
+   첫 Google 로그인 때 접속 국가와 Google locale 이 맞을 때만 한 번 적는다. 규칙은 pinOf 를
+   바로 흔들고, 흐름은 진짜 sqlite 에 /auth/sso → /auth/cb → /auth/take → /auth/two/check →
+   /auth/me 를 그대로 태운다. Google 토큰 엔드포인트만 fetch 대역으로 바꾼다. */
+assert.deepEqual(pinOf('KR', 'ko-KR'), { country: 'KR', lang: 'ko' }, 'KR + ko-KR → KR/ko');
+assert.deepEqual(pinOf('JP', 'ja'), { country: 'JP', lang: 'ja' }, 'JP + ja(지역 없음) → 공용어라 JP/ja');
+assert.equal(pinOf('US', 'ko-KR'), null, 'US + ko-KR → 나라가 달라 고정 안 함');
+assert.equal(pinOf('US', 'ko'), null, 'US + ko → 공용어가 아니라 고정 안 함');
+assert.equal(pinOf('KR', undefined), null, 'locale 없음 → 고정 안 함');
+assert.equal(pinOf('KR', ''), null);
+assert.equal(pinOf('', 'ko-KR'), null, '접속 국가를 모르면 고정 안 함');
+assert.equal(pinOf('XX', 'ko-KR'), null);
+assert.deepEqual(pinOf('TW', 'zh-Hant-TW'), { country: 'TW', lang: 'zh' }, '문자 부호는 건너뛰고 지역을 본다');
+assert.deepEqual(pinOf('BR', 'pt_BR'), { country: 'BR', lang: 'pt' }, '밑줄도 받는다');
+assert.deepEqual(pinOf('NO', 'no'), { country: 'NO', lang: 'nb' }, 'no 는 nb 로 접는다');
+assert.deepEqual(pinOf('ES', 'ca-ES'), { country: 'ES', lang: null }, '나라는 맞고 말이 26개 밖이면 나라만');
+assert.equal(pinOf('ES', 'ca'), null, '26개 밖 말이 지역 없이 오면 견줄 수 없어 고정 안 함');
+assert.equal(pinOf('KR', 'ko-KR<script>'), null, '모양이 이상한 locale 은 버린다');
+assert.equal(pinOf('KR', 'k'.repeat(40)), null);
+assert.equal(pinOf('KR', { toString: () => 'ko-KR' }), null, '문자열이 아니면 버린다');
+
+{
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(':memory:');
+  db.exec(sql);
+  const stmt = (q, a = []) => ({
+    q, bind: (...b) => stmt(q, b),
+    first: async col => { const r = db.prepare(q).get(...a); return r ? (col ? r[col] : { ...r }) : null; },
+    all: async () => ({ results: db.prepare(q).all(...a).map(r => ({ ...r })) }),
+    run: async () => ({ meta: { changes: Number(db.prepare(q).run(...a).changes) } }),
+  });
+  const DB = { prepare: q => stmt(q), batch: async ss => Promise.all(ss.map(s =>
+    /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
+  const open = { limit: async () => ({ success: true }) };
+  const env = { DB, SESSION_KEY: 'k'.repeat(32), GOOGLE_ID: 'gid', GOOGLE_SECRET: 'gsec', RL_AU: open, RL_CB: open };
+  const RELAY = 'https://regiontype.gearservicevanguard.com';
+  const hexOf = u => [...u].map(b => b.toString(16).padStart(2, '0')).join('');
+  const realFetch = globalThis.fetch;
+  let claims = null;   // 다음 토큰 교환에서 Google 이 줄 값
+  globalThis.fetch = async (url, init) => {
+    if (String(url) !== 'https://oauth2.googleapis.com/token') return realFetch(url, init);
+    const part = o => b64u(new TextEncoder().encode(JSON.stringify(o)));
+    return new Response(JSON.stringify({ id_token: `${part({ alg: 'none' })}.${part(claims)}.x` }),
+      { headers: { 'content-type': 'application/json' } });
+  };
+  const call = async (path, body, tok) => {
+    const r = await relayWorker.fetch(new Request(RELAY + path, {
+      method: body ? 'POST' : 'GET', body: body && JSON.stringify(body),
+      headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
+                 ...(tok ? { authorization: 'Bearer ' + tok } : {}) } }), env);
+    return { status: r.status, ...(await r.json()) };
+  };
+  /* Google 로그인 한 판. country 는 req.cf.country, locale 은 ID 토큰 클레임(undefined 면 싣지 않음).
+     2단계 직전에 멈추면(stop) 그때까지의 상태를 본다. */
+  const login = async (sub, country, locale, { stop = false } = {}) => {
+    const bind = rand(32), state = b64u(await sha(bind));
+    assert.equal((await call('/auth/sso', { p: 'google', s: state })).status, 200);
+    claims = { iss: 'https://accounts.google.com', aud: 'gid', sub, nonce: state,
+               exp: Date.now() / 1000 + 600, email: 'p@example.com', email_verified: true,
+               ...(locale === undefined ? {} : { locale }) };
+    const cb = new Request(`${RELAY}/auth/cb?state=${state}&code=c0de`, { headers: { 'cf-connecting-ip': '203.0.113.9' } });
+    Object.defineProperty(cb, 'cf', { value: { country } });
+    const loc = (await relayWorker.fetch(cb, env)).headers.get('location');
+    const tag = /#signin=ok&t=([\w-]{43})$/.exec(loc)?.[1];
+    assert.ok(tag, 'Google 에서 돌아오면 tag 를 받는다: ' + loc);
+    const take = await call('/auth/take', { b: bind, t: tag });
+    assert.equal(take.need, 'two');
+    if (stop) return null;
+    db.prepare("update pending set sub = ? where kind = 'two'").run(hexOf(await sha('123456')));
+    const done = await call('/auth/two/check', { b: bind, t: tag, code: '123456' });
+    assert.ok(done.token, '2단계를 넘으면 세션');
+    return done.token;
+  };
+  const me = async tok => (await call('/auth/me', null, tok)).pin;
+
+  assert.deepEqual(await me(await login('g-kr', 'KR', 'ko-KR')), { country: 'KR', lang: 'ko' }, 'KR + ko-KR → KR/ko');
+  assert.deepEqual(await me(await login('g-jp', 'JP', 'ja')), { country: 'JP', lang: 'ja' }, 'JP + ja → JP/ja');
+  assert.equal(await me(await login('g-us', 'US', 'ko-KR')), null, 'US + ko-KR → 고정 안 함');
+  assert.equal(await me(await login('g-none', 'KR', undefined)), null,
+    'Google 이 locale 을 안 주면(지금 scope openid email 이 이 경우다) 고정 안 함 — 화면은 기본 KR·ko');
+
+  /* 이미 고정된 계정 재로그인 → 그대로. 다른 나라·다른 말로 들어와도 덮어쓰지 않는다 */
+  const krAt = db.prepare("select pin_at from user where pin_country = 'KR'").get().pin_at;
+  assert.ok(krAt > 0);
+  assert.deepEqual(await me(await login('g-kr', 'JP', 'ja')), { country: 'KR', lang: 'ko' }, '재로그인해도 그대로');
+  assert.deepEqual(await me(await login('g-kr', 'KR', 'en-KR')), { country: 'KR', lang: 'ko' }, '맞는 다른 값이 와도 그대로');
+  assert.equal(db.prepare("select pin_at from user where pin_country = 'KR'").get().pin_at, krAt, 'pin_at 도 그대로');
+
+  /* 고정 없던 계정이 나중에 맞는 값으로 Google 로그인 → 그때 한 번 적는다 */
+  assert.deepEqual(await me(await login('g-us', 'US', 'en-US')), { country: 'US', lang: 'en' }, '아직 pin 이 없으면 이번에 적는다');
+
+  /* 2단계를 넘기 전에는 적지 않는다 — 반쯤 끝난 로그인이 계정을 바꾸지 않는다 */
+  await login('g-half', 'DE', 'de-DE', { stop: true });
+  assert.equal(db.prepare("select count(*) as n from user where pin_country = 'DE'").get().n, 0, '2단계 전에는 고정하지 않는다');
+  assert.equal(db.prepare("select pin from pending where kind = 'two'").get().pin, 'DE:de', '후보는 로그인 줄에만 실려 있다');
+
+  /* 원래 locale·IP 는 어디에도 남지 않는다 */
+  const dump = JSON.stringify(['user', 'sso', 'pending', 'profile'].map(t => db.prepare(`select * from ${t}`).all()));
+  assert.ok(!dump.includes('ko-KR') && !dump.includes('de-DE') && !dump.includes('203.0.113.9'), '원래 locale·IP 를 적지 않는다');
+
+  globalThis.fetch = realFetch;
+}
+/* 계정의 pin_* 를 쓰는 곳은 pinOnce 한 군데뿐이고, 늘 pin_at is null 일 때만이다 —
+   클라이언트가 보낸 값으로 pin 을 바꾸는 길이 없다 */
+{
+  const writes = worker.match(/pin_country\s*=/g) ?? [];
+  assert.equal(writes.length, 1, 'pin 을 적는 SQL 은 하나뿐');
+  assert.ok(/pin_at = \? where id = \? and pin_at is null/.test(worker), '비어 있을 때만 적는다');
+  assert.ok(/pinCode\(pinOf\(req\.cf\?\.country, claims\.locale\)\)/.test(fn('authCb')), '후보는 cf 와 토큰 클레임에서만 짓는다');
+}
+console.log('pin self-check done');
 

@@ -102,7 +102,12 @@ create index if not exists best_top on best (mode, slug, secs, dev, lang, cpm de
 create table if not exists user (
   id   text primary key,          -- 난수 16바이트 hex. 사람을 가리키는 유일한 값이다
   mail text unique,               -- 늘 null. 복구 주소는 mailbox.hash 다
-  at   integer not null
+  at   integer not null,
+  -- 첫 Google 로그인 때 한 번만 적는 나라·언어(worker.mjs 의 pinOf·pinOnce). 접속 국가와
+  -- Google locale 이 맞을 때만 적고, 그 뒤로는 바꾸지 않는다. 원래 locale·IP 는 적지 않는다.
+  pin_country text,               -- 'KR' 같은 두 글자. null 이면 고정 안 됨(화면은 KR·ko)
+  pin_lang    text,               -- 화면 말 26개 중 하나, 밖이면 null
+  pin_at      integer             -- 적은 때. null 일 때만 적는다
 );
 -- 패스키 한 개 = 기기 한 대. 한 사람이 여럿 가질 수 있다.
 -- key 는 SPKI DER 를 base64url 로 적은 공개키다 — 비밀은 기기 밖으로 나오지 않는다.
@@ -229,7 +234,9 @@ create table if not exists pending (
   mail     text,                  -- kind='take'|'two' 일 때만: 이번 로그인에서 Google 이
                                    -- 확인해 준 메일. 이 줄과 함께 죽는다(마지막 발송 뒤
                                    -- 5분) — user·twofa 어디에도 옮겨 적지 않는다
-  sends    integer not null default 0   -- kind='two': 로그인 코드를 보낸 횟수(5회 상한)
+  sends    integer not null default 0,  -- kind='two': 로그인 코드를 보낸 횟수(5회 상한)
+  pin      text                   -- kind='take'|'two', Google 만: 나라·언어 후보('KR:ko').
+                                   -- 2단계를 넘으면 user.pin_* 에 한 번 적고 이 줄과 함께 죽는다
 );
 
 -- ── 경쟁전 · 전적 ──────────────────────────────────────────

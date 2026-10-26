@@ -50,7 +50,7 @@
   <a class="logo" href="/">region<span>type</span><i class="dot"></i></a>
 
   <h1>개인정보처리방침</h1>
-  <p class="updated">2026년 10월 21일 시행</p>
+  <p class="updated">2026년 10월 26일 시행</p>
 
   <p class="lead">regiontype은 지명 타자연습입니다. 게임 자체는 로그인 없이 그대로
   돌고, 아래 값들은 순위표에 이름을 올리기로 한 사람에게만 생깁니다.</p>
@@ -69,6 +69,14 @@
   서버의 단기 로그인 요청 줄에만 머물다 로그인 완료 시 지워지고 계정에는
   저장되지도 공개되지도 않습니다. 공급자가 주는 계정 식별 번호(sub)는 저희
   서버 키로 한 번 더 섞어(HMAC) 저장하며, 원래 번호는 어디에도 남지 않습니다.</p>
+
+  <h2>나라·언어 고정</h2>
+  <p>처음 Google로 로그인할 때 한 번, 접속한 나라(접속 IP로 Cloudflare가 추정한
+  나라 코드)와 Google 계정 언어(ID 토큰의 <code>locale</code>, Google이 보내 줄 때만)를
+  견줍니다. 둘이 맞으면 그 나라와 화면 언어를 계정에 고정하고(예: <code>KR</code>·<code>ko</code>),
+  그 뒤로는 바꾸지 않습니다. 맞지 않거나 언어가 오지 않으면 고정하지 않고 기본(한국·한국어)으로
+  둡니다. 계정에는 나라 코드·언어 코드·고정한 시각만 적고, IP 주소와 원래 <code>locale</code>
+  값은 저장하지 않습니다. Apple·패스키 로그인에서는 고정하지 않습니다. 계정을 지우면 함께 지워집니다.</p>
 
   <h2>로그인 2단계 인증</h2>
   <p>로그인할 때마다 Google 계정 메일로 숫자 6자리 일회용 코드를
@@ -126,7 +134,7 @@
 
   <div class="lang-split">
   <h1>Privacy Policy</h1>
-  <p class="updated">Effective October 21, 2026</p>
+  <p class="updated">Effective October 26, 2026</p>
 
   <p class="lead">regiontype is a place-name typing drill. The game itself works
   without signing in. Everything below only applies once you choose to sign in
@@ -143,6 +151,15 @@
   scope from Google and no scope at all from Apple. The Google-verified email address is used ONLY
   to send a 5-minute one-time code at each sign-in; it is kept temporarily in the server's sign-in challenge row, deleted upon successful sign-in, and never stored in your account or displayed publicly.
   The provider's account id (its <code>sub</code>) is HMAC-hashed with a server-side key before storing, and the original id is never kept anywhere.</p>
+
+  <h2>Country and language pinning</h2>
+  <p>Once, on your first Google sign-in, we compare the country you connect from (a country code
+  Cloudflare estimates from your IP address) with your Google account language (the ID token's
+  <code>locale</code>, only when Google sends it). If they agree, that country and display language are
+  pinned to your account (e.g. <code>KR</code> · <code>ko</code>) and never changed afterwards. If they
+  disagree or no language is sent, nothing is pinned and the defaults (Korea · Korean) apply.
+  Only the country code, language code and the time of pinning are stored; your IP address and the raw
+  <code>locale</code> value are not. Apple and passkey sign-ins never pin. Deleting your account deletes it too.</p>
 
   <h2>Two-step verification</h2>
   <p>Every sign-in sends a 6-digit one-time code from <code>noreply@regiontype.gearservicevanguard.com</code> to your Google account email, and sign-in finishes only once you enter it.
