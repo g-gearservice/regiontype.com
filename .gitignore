@@ -32,3 +32,6 @@ preview/
 .cursor/
 design/
 .verify/
+
+# Higgsfield example
+tools/higgsfield/.venv/
