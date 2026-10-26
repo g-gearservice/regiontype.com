@@ -1226,7 +1226,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 /* 내 스타일 — 연 단추 아래에 뜨는 판(popover). 자리·높이는 ranked.js 의 placeStyles 가 적는다.
    뒤를 가리지 않으니 고르는 색이 뒤에도 바로 비친다 */
 #styles{position:fixed;inset:auto;margin:0;border:0;padding:0;background:none;color:var(--ink);
-  width:min(calc(100vw - 32px),340px);overflow:visible}
+  width:min(calc(100vw - 32px),368px);overflow:visible}
 #styles:popover-open{display:flex;flex-direction:column}
 #stylesBox{max-height:none;min-height:0;gap:12px;padding:16px 16px 14px}
 #stylesBox .fb-head h2{font-size:22px}
@@ -1888,8 +1888,12 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .character-choice .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
 .character-choice[aria-pressed="true"]{border-color:var(--ink);background:var(--profile-border)}
 .colour-choices{flex-wrap:wrap}
-.colour-choices .character-choice{width:22px;height:22px;border:0;border-radius:50%}
-.colour-choices .character-choice[aria-pressed="true"]{border:2px solid var(--ink)}
+.colour-choices .character-choice{width:22px;height:22px;border:0;border-radius:50%;display:grid;place-items:center}
+.colour-choices .character-choice.is-accent-link::before{
+  content:"";width:42%;height:42%;border-radius:50%;
+  border:2px solid var(--card);box-shadow:0 0 0 1.5px var(--ink);
+}
+.colour-choices .character-choice[aria-pressed="true"]{border:2px solid var(--ink);box-shadow:0 0 0 2px var(--card) inset}
 .account-details input,.account-details textarea,.account-details select{min-width:0;max-width:100%;background:var(--card);color:var(--ink);border:1px solid var(--profile-border);border-radius:6px;font:inherit;font-size:13px;padding:3px 8px}
 .account-details input:disabled,.account-details textarea:disabled{color:var(--ink-soft);opacity:1}
 .account-details textarea{display:block;width:100%;height:56px;resize:vertical;border-radius:8px;padding:8px 10px;line-height:18px;margin-bottom:6px}
@@ -2035,7 +2039,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   }
   /* 처음 온 사람 — 알약(봇·시작하기)은 막 위로 올라 밝게 남는다. 안내가 가리키는 것에는
      말풍선 빛깔의 테두리를 두르고, 말풍선 단추는 손가락 크기(44px)다. 닫기는 늘 오른쪽 위 */
-  body.rk-intro #regions .nav-bot{z-index:6}
+  body.rk-intro #regions .nav-bot{z-index:7}
   /* 조르는 동안 로고는 is-on 이지만 폰엔 그 밑에 깔 알약이 없다 — 글자색도 걷는다(야간에 묻힌다) */
   #regions .navbar .nav-logo.is-on{color:var(--ink)}
   .rk-aim{outline:3px solid var(--rk-on,var(--ranked));outline-offset:3px}
@@ -2443,8 +2447,8 @@ button.sty-swatch:active{transform:scale(.94)}
 @keyframes sty-wiggle{from{transform:rotate(-2.5deg)}to{transform:rotate(2.5deg)}}
 .sty-hint{margin:-4px 0 0;font-size:12px;color:var(--ink-soft)}
 .sty-hint[hidden]{display:none}
-.sty-foot button,.sty-sug button{font:inherit;cursor:pointer;border:0;transition:transform .1s ease-out,background var(--fast)}
-.sty-foot button:active,.sty-sug button:active{transform:scale(.96)}
+.sty-foot button,.sty-sug button,.sty-bot-reset{font:inherit;cursor:pointer;border:0;transition:transform .1s ease-out,background var(--fast)}
+.sty-foot button:active,.sty-sug button:active,.sty-bot-reset:active,.sty-save:active{transform:scale(.96)}
 .sty-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .sty-foot:not(:has(:not([hidden]):not(:empty))){display:none}
 .sty-foot [hidden]{display:none}
@@ -2475,16 +2479,43 @@ button.sty-swatch:active{transform:scale(.94)}
 .sty-shuffle{margin-left:auto;min-height:34px}
 .sty-warn{margin:0;font-size:13px;font-weight:700}
 .sty-warn:empty{display:none}
-.sty-save{align-self:stretch;min-height:40px;padding:0 18px;border:0;border-radius:999px;font:inherit;font-weight:800;color:#fff;background:var(--block-deep);cursor:pointer}
+.sty-save{align-self:stretch;min-height:40px;padding:0 18px;border:0;border-radius:999px;font:inherit;font-weight:800;color:#fff;background:var(--block-deep);cursor:pointer;transition:transform .1s ease-out,background var(--fast)}
+.sty-save:disabled{opacity:.55;cursor:default}
+/* 스타일 탭(게임 스타일 · 봇 스타일)과 봇 스타일 안쪽(기본 모양 · 만들기 · 초기화) — 모두 .pg-tabs / .sty-reset / .sty-save 알약 결을 그대로 쓴다 */
+#stylesBox .sty-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--card-inset);padding:4px;border-radius:999px}
+#stylesBox .sty-tabs [role="tab"],#stylesBox .sty-bot-modes [role="tab"]{
+  font-size:14px;font-weight:800;padding:6px 14px;min-height:34px;justify-content:center;text-align:center;
+  transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out);
+}
+.sty-panel{display:flex;flex-direction:column;gap:12px;min-height:0}
+.sty-panel[hidden]{display:none}
+.sty-bot-card{display:flex;flex-direction:column;gap:12px;padding:12px}
+.sty-bot-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--profile-border)}
+#stylesBox .sty-bot-modes{display:inline-flex;align-items:center;gap:4px;background:var(--card-inset);padding:3px;border-radius:999px}
+#stylesBox .sty-bot-modes [role="tab"]{min-height:30px;padding:4px 12px;font-size:13px}
+.sty-bot-reset{min-height:32px;padding:0 12px;font-size:13px}
+#botGenIn:focus-visible,#botGenBtn:focus-visible,.sty-bot-reset:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.sty-bot-view[hidden]{display:none}
+#styPanelBot .character-choice{width:42px;height:42px;border-radius:10px}
+#styPanelBot .colour-choices .character-choice{width:28px;height:28px}
+.sty-bot-gen{display:flex;flex-direction:column;gap:10px}
+#botGenIn{
+  width:100%;min-height:78px;resize:vertical;box-sizing:border-box;
+  font:inherit;font-size:14px;line-height:1.5;color:var(--ink);
+  background:var(--card);border:2px solid var(--grid);border-radius:var(--field-r);padding:10px 12px;
+}
+#botGenBtn{width:100%}
 @media (hover:hover){
   .sty-undo:hover,.sty-reset:hover,.sty-shuffle:hover{background:var(--card-inset)}
+  #stylesBox .pg-tabs [role="tab"]:not([aria-selected="true"]):hover{color:var(--ink)}
+  .sty-save:not(:disabled):hover{background:color-mix(in srgb,var(--block-deep) 84%,#000)}
 }
 @media (prefers-reduced-motion:reduce){
-  button.sty-swatch:active,.sty-foot button:active,.sty-sug button:active{transform:none}
+  button.sty-swatch:active,.sty-foot button:active,.sty-sug button:active,.sty-bot-reset:active,.sty-save:active{transform:none}
   .sty-list[data-edit] .sty-swatch{animation:none}
 }
 :root[data-motion="off"] .sty-list[data-edit] .sty-swatch{animation:none}
-:root[data-motion="off"] .sty-list button:active,:root[data-motion="off"] .sty-foot button:active{transform:none}
+:root[data-motion="off"] :is(.sty-list button,.sty-foot button,.sty-bot-reset,.sty-save):active{transform:none}
 
 @media (pointer:coarse){
   /* 폰 탭 화면(설정·순위·커뮤니티)은 한 틀이다 — 제목 32px · 옆 여백 16px · 머리줄 높이 44px ·
@@ -2508,6 +2539,7 @@ button.sty-swatch:active{transform:scale(.94)}
   .rec-list .pt{grid-area:2 / 3}
   .rec-list .acc{grid-area:2 / 4}
   .sty-use,.sty-del,.sty-undo,.sty-reset,.sty-save{min-height:44px}
+  #stylesBox .sty-bot-modes [role="tab"],.sty-bot-reset{min-height:36px;padding:0 12px;font-size:13px}
   .sty-del{width:44px;height:44px}
   .sty-list li{gap:10px 12px}
 }
@@ -2531,16 +2563,16 @@ body:is(.rk-intro,.rk-emerge) #regions .navbar .nav-logo::before{
   transition:clip-path var(--si-dur) var(--ease-out),opacity 0s;
 }
 body.rk-intro #regions .navbar .nav-logo{cursor:grab}
-.rk-layer{position:fixed;inset:0;z-index:5;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
+.rk-layer{position:fixed;inset:0;z-index:6;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
 .rk-layer[hidden]{display:none}
-/* 덮개가 뜨면 봇도 물러난다 — 칸이 가라앉는 것과 함께 */
-body:is(.signing,.setting,.paging) .rk-layer{opacity:0;visibility:hidden}
+/* 로그인 덮개(제 봇이 따로 산다)와 플레이 중에는 봇이 물러난다 */
+body:is(.signing,:has(#play.on)) .rk-layer{opacity:0;visibility:hidden;pointer-events:none}
 /* 처음 온 사람: 로고만 남기고 넵바까지 덮는다. 넵바를 봇 층보다 올려 봇이 로고 알약
    뒤에 반쯤 숨고, 막 위로 올라온 넵바의 다른 칸은 막만큼 어둡게 눌러 둔다(잠금은
    ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
 .rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
 .rk-dim[hidden]{display:none}
-body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:6}
+body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:7}
 body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 @keyframes rk-peek{
@@ -2699,13 +2731,91 @@ body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
 .rk-say button{font:inherit;font-weight:700;color:var(--rk-on,var(--ranked));background:var(--rk-ink,#fff);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .rk-say button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-/* 시작하기를 꾹 누르는 동안 알약이 봇의 빛깔로 차오르고, 다 차면 '경쟁전 시작'으로
-   바뀐다(ranked.js 의 wirePlayHold) — 색만으로 가르지 않고 라벨이 함께 바뀐다 */
-#navPlay{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+/* 봇이 경쟁전을 켜 두면(rk-ready) 알약이 봇의 빛깔이 되고 라벨이 '경쟁전 시작'으로 바뀐다 —
+   색만으로 가르지 않고 라벨이 함께 바뀐다 */
 .nav-shape{transition:background-color var(--si-dur) var(--ease-out)}
-body.rk-charging #navBotShape{background:var(--rk-on,var(--ranked));transition-duration:.6s}
 body.rk-ready #navBotShape{background:var(--rk-on,var(--ranked))}
 body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
+
+/* 시작하기 → 일반전 / 경쟁전 고르기 판. 아래 막대와 같은 --bar 알약 결로 시작하기 바로 위에 뜬다.
+   자리는 ranked.js 의 placePick 이 적는다 */
+#modePick{position:fixed;inset:auto;margin:0;border:0;color:var(--ink);
+  background:var(--bar);border-radius:28px;box-shadow:var(--shadow);padding:8px;
+  width:max-content;max-width:calc(100vw - 24px);overflow:visible}
+#modePick:popover-open{display:flex;flex-direction:column;gap:6px;animation:rise-fade var(--fast) var(--ease-out)}
+:root[data-night] #modePick{border:1px solid var(--grid)}
+.mode-row{display:flex;gap:6px}
+.mode-btn{position:relative;overflow:hidden;isolation:isolate;flex:1;
+  font:inherit;font-size:22px;font-weight:800;line-height:1;white-space:nowrap;
+  color:var(--ink);background:var(--card-inset);border:2px solid transparent;border-radius:999px;
+  padding:16px 22px;cursor:pointer;touch-action:manipulation;
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+  transition:border-color var(--fast)}
+.mode-btn > span{position:relative;z-index:1}
+.mode-btn:hover{border-color:var(--ink-soft)}
+.mode-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* 꾹 누르는 동안 왼쪽에서부터 차오른다. 일반전은 브랜드 빛깔, 경쟁전은 경쟁전 빨강 */
+.mode-btn::before{content:'';position:absolute;inset:0;z-index:0;background:var(--accent);
+  transform-origin:left center;transform:scaleX(0)}
+.mode-btn.is-ranked::before{background:var(--rk-on,var(--ranked))}
+.mode-btn.is-holding::before{animation:mode-fill var(--hold-ms,1.2s) linear forwards}
+.mode-btn.is-holding{border-color:var(--ink)}
+.mode-btn.is-holding > span{color:var(--on-accent)}
+.mode-btn.is-ranked.is-holding > span{color:var(--rk-ink,#fff)}
+@keyframes mode-fill{to{transform:scaleX(1)}}
+/* 움직임을 끈 사람은 차오름 대신 남은 초를 글자로 본다 */
+.mode-btn[data-left]::after{content:attr(data-left);position:relative;z-index:1;display:none;
+  margin-left:8px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){
+  .mode-btn.is-holding::before{animation:none;transform:scaleX(1);opacity:.35}
+  .mode-btn[data-left]::after{display:inline}
+}
+:root[data-motion="off"] .mode-btn.is-holding::before{animation:none;transform:scaleX(1);opacity:.35}
+:root[data-motion="off"] .mode-btn[data-left]::after{display:inline}
+.mode-foot{display:flex;align-items:center;gap:10px;padding:2px 6px 2px 2px}
+/* 라이선스 시험 토글 — 켜면 체크 글자와 테두리가 함께 선다(색만이 아니다) */
+.mode-exam{font:inherit;font-size:14px;font-weight:700;color:var(--ink);background:none;
+  border:2px solid var(--grid);border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.mode-exam::before{content:'○ '}
+.mode-exam[aria-pressed="true"]{border-color:var(--ink);background:var(--card-inset)}
+.mode-exam[aria-pressed="true"]::before{content:'✓ '}
+.mode-exam:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mode-hint{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.mode-note{font-size:13px;font-weight:700;color:var(--ink);padding:0 8px 4px;max-width:36ch}
+.mode-note:empty{display:none}
+/* 토글을 켜면 두 단추가 시험 쪽이라는 걸 테두리로도 보인다 */
+#modePick.is-exam .mode-btn{border-style:dashed;border-color:var(--ink-soft)}
+@media (pointer:coarse){ .mode-btn{font-size:19px;padding:15px 18px} }
+
+/* 라이선스 시험 들어가기 */
+#examGate{border:0;padding:0;background:none;color:var(--ink);width:min(92vw,440px);max-width:none;margin:auto}
+#examGate::backdrop{background:rgba(35,44,49,.42);backdrop-filter:blur(2px)}
+#examBox{display:flex;flex-direction:column;gap:14px;background:var(--card);border-radius:6px;
+  box-shadow:var(--shadow-lift);padding:22px 24px 20px;max-height:88vh;overflow:auto}
+:root[data-night] #examBox{border:1px solid var(--grid)}
+#examBox .fb-head h2{font-size:24px}
+#examBox .back{width:36px;height:36px}
+.exam-grades{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.exam-grades th,.exam-grades td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--grid)}
+.exam-grades thead th{font-size:13px;font-weight:700;color:var(--ink-soft)}
+/* 등급은 글자를 테두리 안에 — 색만으로 가르지 않는다 */
+.exam-badge{display:inline-grid;place-items:center;width:28px;height:28px;border:2px solid var(--ink);
+  border-radius:6px;font-weight:800}
+
+/* 시험 모드 HUD 태그 */
+.exam-tag{font-size:14px;font-weight:800;color:var(--on-accent);background:var(--accent);padding:4px 10px;border-radius:999px}
+.exam-tag[hidden]{display:none}
+#play.is-exam.is-ranked .exam-tag{color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked))}
+
+/* 시험 모드 결과 줄 */
+.exam-res{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--card-inset);border-radius:12px;border:1px solid var(--grid);margin:6px 0;text-align:left}
+.exam-res[hidden]{display:none}
+.exam-res-head{display:flex;align-items:center;gap:10px}
+.exam-res-title{font-size:18px;font-weight:800;color:var(--ink)}
+.exam-res-done{font-size:13px;font-weight:700;color:var(--ink-soft);padding:2px 8px;border-radius:999px;border:1px solid var(--grid)}
+.exam-res-done.is-done{color:var(--ink);border-color:currentColor;background:var(--card)}
+.exam-res-stats{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4;margin:0}
+.exam-res-next{font-size:13px;font-weight:700;color:var(--ink-soft);line-height:1.4;margin:0}
 
 /* 경쟁전 판. 게이지가 빨갛고 HUD 에 '경쟁전' 글자가 붙는다 */
 #play.is-ranked .gauge i{background:var(--rk-on,var(--ranked))}
@@ -3069,7 +3179,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
    매칭 창(#rkMatch)은 홈 위 가운데에 뜨는 작은 카드고, 판 중 상대 진행(#rkOpp)은 머리줄 아래 한 줄이다.
    상태는 글자(이름·숫자)가 먼저고 막대·테두리는 거든다 */
 .rk-match{
-  position:fixed;left:50%;top:50%;translate:-50% -50%;z-index:6;
+  position:fixed;left:50%;top:50%;translate:-50% -50%;z-index:7;
   width:min(340px,calc(100vw - 32px));box-sizing:border-box;padding:18px 20px;
   background:var(--card);color:var(--ink);border:3px solid var(--rk-on,var(--ranked));border-radius:14px;
   box-shadow:var(--shadow-lift);text-align:center;

@@ -10,6 +10,7 @@ import { RULES, check, tally } from './security-rules.mjs';
 import { units, strokes, itemStrokes, diffKeys, judge, rng, pool, buildSet, newMatch, step, stats, progress, parseMsg } from './compete.mjs';
 import { NAMES } from './names.mjs';
 import { SET, SPRINT, TERRITORY, RANKED_POOL } from './compete-config.mjs';
+import { EXAM_GRADES, gradeOf, nextConditionOf } from './license.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
 
@@ -881,6 +882,10 @@ console.log('security rule self-check done');
   assert.deepEqual(act({ act: 'post', tag: 'spam', title: 'x', body: 'y' }), [], '모르는 태그는 버린다');
   assert.deepEqual(act({ act: 'look', shape: 'nuage', colour: 'javascript', expression: 'heureux' }),
     [{ act: 'look', shape: 'nuage', expression: 'heureux' }], '아는 id 만 남는다');
+  assert.deepEqual(act({ act: 'look', shape: 'citrouille', colour: 'accent' }),
+    [{ act: 'look', shape: 'citrouille', colour: 'accent' }], '할로윈 호박과 강조색 연동');
+  assert.deepEqual(act({ act: 'look', gen: { lobes: 20, amp: 2, sharp: 5, sx: 0.2, sy: 5, stem: true } }),
+    [{ act: 'look', shape: 'gen', gen: { lobes: 12, amp: 0.28, sharp: 3, sx: 0.72, sy: 1.28, stem: true } }], '맞춤 모양(gen)은 안전 범위로 자른다');
   assert.deepEqual(act({ act: 'look', shape: '__proto__' }), []);
   assert.deepEqual(botTheme({ accent: '#F0A03C', block: '#496a6d' }), { act: 'theme', accent: '#f0a03c', block: '#496a6d' });
   assert.equal(botTheme({ accent: '#222222', block: '#eeeeee' }), null, '글자가 안 읽히는 색은 버린다');
@@ -2648,4 +2653,46 @@ assert.equal(pinOf('KR', { toString: () => 'ko-KR' }), null, '문자열이 아�
   assert.ok(/pinCode\(pinOf\(req\.cf\?\.country, claims\.locale\)\)/.test(fn('authCb')), '후보는 cf 와 토큰 클레임에서만 짓는다');
 }
 console.log('pin self-check done');
+
+/* ── 라이선스 시험 판정 검사 ── */
+{
+  assert.equal(EXAM_GRADES.length, 6, 'A부터 F까지 6개 등급');
+  assert.equal(gradeOf({ done: false, acc: 100, cpm: 1000, misses: 0 }), null, '완주 못 하면 등급 없음');
+  assert.equal(gradeOf({ done: true, acc: 98, cpm: 600, misses: 1 }), 'A');
+  assert.equal(gradeOf({ done: true, acc: 97, cpm: 600, misses: 1 }), 'B');
+  assert.equal(gradeOf({ done: true, acc: 98, cpm: 599, misses: 1 }), 'B');
+  assert.equal(gradeOf({ done: true, acc: 98, cpm: 600, misses: 2 }), 'B');
+
+  assert.equal(gradeOf({ done: true, acc: 95, cpm: 500, misses: 3 }), 'B');
+  assert.equal(gradeOf({ done: true, acc: 94, cpm: 500, misses: 3 }), 'C');
+  assert.equal(gradeOf({ done: true, acc: 95, cpm: 499, misses: 3 }), 'C');
+  assert.equal(gradeOf({ done: true, acc: 95, cpm: 500, misses: 4 }), 'C');
+
+  assert.equal(gradeOf({ done: true, acc: 93, cpm: 400, misses: 5 }), 'C');
+  assert.equal(gradeOf({ done: true, acc: 92, cpm: 400, misses: 5 }), 'D');
+  assert.equal(gradeOf({ done: true, acc: 93, cpm: 399, misses: 5 }), 'D');
+  assert.equal(gradeOf({ done: true, acc: 93, cpm: 400, misses: 6 }), 'D');
+
+  assert.equal(gradeOf({ done: true, acc: 90, cpm: 300, misses: 10 }), 'D');
+  assert.equal(gradeOf({ done: true, acc: 89, cpm: 300, misses: 10 }), 'E');
+  assert.equal(gradeOf({ done: true, acc: 90, cpm: 299, misses: 10 }), 'E');
+
+  assert.equal(gradeOf({ done: true, acc: 85, cpm: 200, misses: 10 }), 'E');
+  assert.equal(gradeOf({ done: true, acc: 84, cpm: 200, misses: 10 }), 'F');
+  assert.equal(gradeOf({ done: true, acc: 85, cpm: 199, misses: 10 }), 'F');
+
+  assert.equal(gradeOf({ done: true, acc: 80, cpm: 0, misses: 10 }), 'F');
+  assert.equal(gradeOf({ done: true, acc: 79, cpm: 1000, misses: 0 }), null, '정확도 80 미만은 탈락');
+  assert.equal(gradeOf({ done: true, acc: 100, cpm: 1000, misses: 11 }), null, '오타 11회 이상은 탈락');
+
+  assert.deepEqual(nextConditionOf({ done: false, acc: 99, cpm: 700, misses: 0 }), { kind: 'done' });
+  assert.deepEqual(nextConditionOf({ done: true, acc: 70, cpm: 300, misses: 15 }), { g: 'F', kind: 'miss', need: 10 });
+  assert.deepEqual(nextConditionOf({ done: true, acc: 75, cpm: 300, misses: 5 }), { g: 'F', kind: 'acc', need: 80 });
+  assert.deepEqual(nextConditionOf({ done: true, acc: 85, cpm: 150, misses: 5, grade: 'F' }), { g: 'E', kind: 'cpm', need: 200 });
+  assert.deepEqual(nextConditionOf({ done: true, acc: 98, cpm: 600, misses: 1, grade: 'A' }), { kind: 'max' });
+
+  const appJs = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.ok(appJs.includes("cpm: 600, miss: 1"), 'app.js 와 relay/license.mjs 의 기준이 일치');
+  console.log('license self-check done');
+}
 

@@ -1882,7 +1882,8 @@ export const BOT_SET = { night: ONOFF, sound: ONOFF, motion: ONOFF, grid: ONOFF,
                          unit: ['auto', 'cpm', 'wpm'], dong: ['admin', 'legal'], time: TIMES };
 /* 봇 모습. assets/bloub/engine.js 의 SHAPES·EXPRESSIONS·COLORS id 와 같다 — test.mjs 가 맞춰 본다 */
 export const BOT_LOOK = {
-  shape: ['cercle', 'galet', 'squircle', 'capsule', 'triangle', 'hexagone', 'nuage', 'goutte'],
+  shape: ['cercle', 'galet', 'squircle', 'capsule', 'triangle', 'hexagone', 'nuage', 'goutte',
+          'etoile', 'trefle', 'coeur', 'fleur', 'pentagone', 'eclat', 'citrouille'],
   expression: ['neutre', 'attentif', 'surpris', 'excite', 'heureux', 'hilare', 'colere', 'triste', 'effraye',
                'mefiant', 'confus', 'curieux', 'fier', 'timide', 'blase', 'somnolent'],
   colour: ['encre', 'brun', 'rouge', 'orange', 'ambre', 'vert', 'turquoise', 'bleu', 'violet', 'rose', 'gris', 'creme'],
@@ -1931,6 +1932,22 @@ const lum = hex => {
 };
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
 const HEX = /^#[0-9a-f]{6}$/i;
+export function botGen(g) {
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return null;
+  const num = (v, lo, hi, d) => Number.isFinite(+v) ? +Math.min(hi, Math.max(lo, +v)).toFixed(3) : d;
+  const out = {};
+  if (g.lobes != null) out.lobes = int(g.lobes, 0, 12);
+  if (g.amp != null) out.amp = num(g.amp, -0.28, 0.28, 0);
+  if (g.sharp != null) out.sharp = num(g.sharp, 0.5, 3, 1);
+  if (g.sx != null) out.sx = num(g.sx, 0.72, 1.28, 1);
+  if (g.sy != null) out.sy = num(g.sy, 0.72, 1.28, 1);
+  if (g.rot != null) out.rot = int(g.rot, -180, 180);
+  if (g.h2 != null) out.h2 = num(g.h2, -0.2, 0.2, 0);
+  if (g.h3 != null) out.h3 = num(g.h3, -0.2, 0.2, 0);
+  if (g.stem === true) out.stem = true;
+  return Object.keys(out).length ? out : null;
+}
+
 export function botTheme(a) {
   if (a?.reset === true) return { act: 'theme', reset: true };
   const t = { act: 'theme' };
@@ -1968,8 +1985,9 @@ export function botSystem({ courses, lang, name, now }) {
     `{"act":"post","tag":"<${TAGS.join('|')}>","title":"<up to ${CM.title} chars>","body":"<up to ${CM.body} chars>"} ` +
     'drafts a community post (brag, ask = question, idea, chat). It only fills the form; the user reviews and ' +
     'presses post. Write it in the user\'s voice from what they told you; never invent scores or facts.\n' +
-    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>"} changes how you look (any of the three): ' +
-    Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (ids are French words).\n' +
+    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>","gen":{"lobes":0..12,"amp":-0.28..0.28,"sharp":0.5..3,"sx":0.72..1.28,"sy":0.72..1.28,"rot":-180..180,"h2":-0.2..0.2,"h3":-0.2..0.2,"stem":true|false}} changes how you look (any of the fields): ' +
+    Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (colour can also be "accent" to sync with the highlight colour; ids are French words, citrouille = Halloween pumpkin with stem). ' +
+    'When asked to generate/create a custom avatar or shape not in the preset list, include "gen" in look (e.g. lobes=number of bumps/points, amp=bump depth, sharp=pointiness, sx/sy=width/height stretch, h2/h3=asymmetry, stem=top stem) along with matching colour.\n' +
     '{"act":"theme","name":"<short style name>","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site ' +
     'and saves the style under that name (2–4 words in the user\'s language) to the styles page: accent = highlight colour ' +
     '(must be light enough for dark text), block = main tile colour (must be dark enough for white text). ' +
@@ -2027,6 +2045,9 @@ export function botAct(text, courses) {
     }
     if (a?.act === 'look') {
       const l = Object.fromEntries(Object.entries(BOT_LOOK).filter(([k, v]) => v.includes(a[k])).map(([k]) => [k, a[k]]));
+      if (a.colour === 'accent') l.colour = 'accent';
+      const g = botGen(a.gen);
+      if (g) { l.gen = g; if (!l.shape) l.shape = 'gen'; }
       return Object.keys(l).length ? { act: 'look', ...l } : null;
     }
     if (a?.act === 'theme') return botTheme(a);
