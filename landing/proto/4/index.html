@@ -6,9 +6,12 @@
 <title>regiontype — 이번 주</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="/favicon/dark.png">
+<!-- 여섯 칸은 /landing/ 과 같다 — 소개·개발·스타일·스토리·플레이·플랜. 문장은 /landing/ 에 있는 말이다.
+     data-i18n 은 번역 로더가 읽는 키다. 플레이는 /#home 을 새 탭으로 연다. -->
+<script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500&family=IBM+Plex+Mono:wght@400&family=Noto+Sans+KR:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&family=IBM+Plex+Mono:wght@400&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,19 +20,183 @@
 
   <div class="board" id="board">
     <div class="pane logo"><a href="/" aria-label="regiontype 홈"><span>REGION</span><span></span><span>TYPE</span></a></div>
-    <nav class="nav" aria-label="주 메뉴">
-      <a href="/landing/proto/4/" aria-current="page">이번 주</a><a href="/">플레이</a><a href="/">경쟁전</a><a href="/mimi/">mimi</a><a href="/beta/bus/">동네버스</a><a href="/beta/3dnavigation/">3D 내비</a><a href="/community/">커뮤니티</a><a href="/about/">소개</a>
-    </nav>
-    <a class="pane tickets" href="/">시작하기</a>
-    <h1 class="pane week">이번 주</h1>
+    <nav class="nav" aria-label="주 메뉴"><a href="#about" data-i18n="about.title">소개</a><a href="#dev" data-i18n="dev.title">개발</a><a href="#style" data-i18n="style.title">스타일</a><a href="#story" data-i18n="story.title">스토리</a><a class="go-site" href="/#home" target="_blank" rel="noopener" aria-label="regiontype.com 바로가기 (새 탭)" data-i18n-aria-label="play.goLabel"><span data-i18n="play.go">바로가기</span> <span aria-hidden="true">↗</span></a><a href="#plans" data-i18n="plans.title">플랜</a></nav>
+    <a class="pane tickets" href="#plans" data-i18n="plans.title">플랜</a>
+    <h1 class="pane week" data-i18n="hero.week">이번 주</h1>
     <div class="pane feat" id="feat"></div>
     <div class="pane dots" aria-hidden="true"></div>
-    <section class="pane sched" aria-labelledby="h-s"><h2 id="h-s" class="sr">바뀐 것</h2><div id="sched"></div></section>
+    <section class="pane sched" aria-labelledby="h-s"><h2 id="h-s" class="sr" data-i18n="dev.changes">바뀐 것</h2><div id="sched"></div></section>
   </div>
 
-  <div class="shots">
-    <figure><img src="/shots/desk-closed.png" alt="regiontype 홈 — 격자 위 서울 지도"><figcaption>홈 — 서울 25구</figcaption></figure>
-    <figure><img src="/shots/desk-open.png" alt="구를 펼친 화면 — 행정동이 칸으로 나뉜다"><figcaption>구를 펼치면 행정동</figcaption></figure>
+  <div class="secs">
+  <section class="sec" id="about" aria-labelledby="h-about">
+    <h2><button type="button" class="sec-head" id="h-about" aria-expanded="false" aria-controls="b-about"><span class="no">01</span><span class="nm" data-i18n="about.title">소개</span><span class="en">About</span><span class="sign" aria-hidden="true">+</span></button></h2>
+    <div class="sec-body" id="b-about">
+      <ol class="beats">
+        <li class="beat">
+          <p class="step" aria-hidden="true">01</p>
+          <h3 data-i18n="about.1.title">지명을 치면, 지도가 남는다.</h3>
+          <p data-i18n="about.1.body">지도에 뜬 지역 이름을 손으로 직접 칩니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">02</p>
+          <h3 data-i18n="about.2.title">본 것과 아는 것은 다릅니다.</h3>
+          <p data-i18n="about.2.body">눈으로 훑으면 "봤다"에서 끝납니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">03</p>
+          <p class="fig">25</p>
+          <h3 data-i18n="about.3.title">서울 자치구에서 시작합니다.</h3>
+          <p data-i18n="about.3.body">첫 판은 서울 25개 자치구입니다. 홈에서 치는 판은 서울이고, 지도 데이터에는 46개 나라의 행정구역이 있습니다. 서울 밖은 미리보기입니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">04</p>
+          <p class="fig">423</p>
+          <h3 data-i18n="about.4.title">구를 열면 행정동입니다.</h3>
+          <p data-i18n="about.4.body">전부 합치면 423곳입니다. 주민센터 하나가 맡는 단위이고, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">05</p>
+          <h3 data-i18n="about.5.title">코스는 이어진 길입니다.</h3>
+          <p data-i18n="about.5.body">서쪽 끝 강서구에서 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대입니다. 가나다순이면 강남·강동·강북·강서가 한꺼번에 몰립니다.</p>
+        </li>
+      </ol>
+      <div class="shots">
+        <figure><img src="/shots/desk-closed.png" alt="regiontype 홈 — 격자 위 서울 지도" data-i18n-alt="about.shot1.alt"><figcaption data-i18n="about.shot1.cap">홈 — 서울 25구</figcaption></figure>
+        <figure><img src="/shots/desk-open.png" alt="구를 펼친 화면 — 행정동이 칸으로 나뉜다" data-i18n-alt="about.shot2.alt"><figcaption data-i18n="about.shot2.cap">구를 펼치면 행정동</figcaption></figure>
+      </div>
+    </div>
+  </section>
+  <section class="sec" id="dev" aria-labelledby="h-dev">
+    <h2><button type="button" class="sec-head" id="h-dev" aria-expanded="false" aria-controls="b-dev"><span class="no">02</span><span class="nm" data-i18n="dev.title">개발</span><span class="en">Development</span><span class="sign" aria-hidden="true">+</span></button></h2>
+    <div class="sec-body" id="b-dev">
+      <div class="dev">
+        <div>
+          <p class="k">regiontype.com / main</p>
+          <p class="ver" data-ver>v—</p>
+          <p class="k" data-i18n="dev.stackLabel">stack</p>
+          <pre data-i18n="dev.stack">정적 파일뿐이다. 빌드 단계도, 패키지 매니저도,
+프레임워크도 없다.</pre>
+          <pre>$ python3 -m http.server 3000   <span class="cm" data-i18n="dev.cmd.run"># 실행</span>
+$ open localhost:3000/?rt=1      <span class="cm" data-i18n="dev.cmd.rt"># 판정 엔진 자체검사</span>
+$ node relay/test.mjs            <span class="cm" data-i18n="dev.cmd.relay"># 중계기 검사</span></pre>
+          <pre>.
+├── app.js        <span class="cm" data-i18n="dev.tree.app"># 단일 파일. 핵심은 matchInput()</span>
+├── style.css     <span class="cm" data-i18n="dev.tree.style"># 단일 파일. 색·간격은 커스텀 프로퍼티</span>
+├── data/         <span class="cm" data-i18n="dev.tree.data"># tools/*.py 가 찍은 지도·코스</span>
+├── relay/        <span class="cm" data-i18n="dev.tree.relay"># Cloudflare Worker — 순위·경쟁전</span>
+└── mimi/ beta/   <span class="cm" data-i18n="dev.tree.beta"># 실험 갈래</span></pre>
+          <pre class="cm" data-i18n="dev.note"># 경쟁전 판정은 Durable Objects 가 맡고,
+# 실력은 Glicko-2 로 매긴다.</pre>
+        </div>
+        <div>
+          <p class="k" data-i18n="dev.changes">바뀐 것</p>
+          <ol class="log" data-log></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="sec" id="style" aria-labelledby="h-style">
+    <h2><button type="button" class="sec-head" id="h-style" aria-expanded="false" aria-controls="b-style"><span class="no">03</span><span class="nm" data-i18n="style.title">스타일</span><span class="en">Style</span><span class="sign" aria-hidden="true">+</span></button></h2>
+    <div class="sec-body" id="b-style">
+      <div class="cards">
+        <a class="card" href="/beta/3dnavigation/">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg>
+          <p class="k" data-i18n="style.nav.kicker">베타 · 01</p>
+          <h3 data-i18n="style.nav.title">3D 내비게이션</h3>
+          <p data-i18n="style.nav.body">실제 지도 위에 3D 건물과 길을 얹습니다. 동 경계는 코스 데이터와 같은 자리를 씁니다. 화면은 시스템 색과 맑은 유리 판으로 읽힙니다.</p>
+          <p class="sig"><i class="swatch nav" aria-hidden="true"></i><span data-i18n="style.nav.sig">시스템 파랑</span></p>
+          <span class="more" data-i18n="style.open">베타 열기</span>
+        </a>
+        <a class="card" href="/beta/bus/">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg>
+          <p class="k" data-i18n="style.bus.kicker">베타 · 02</p>
+          <h3 data-i18n="style.bus.title">동네버스</h3>
+          <p data-i18n="style.bus.body">정류장 이름을 치면 버스가 그 정류장으로 가서 손님을 실어 나릅니다. 25개 자치구가 행정동 코스 순서로 늘어서 있습니다. 노선은 노랑이고, 정류장은 고리입니다.</p>
+          <p class="sig"><i class="swatch bus" aria-hidden="true"></i><span data-i18n="style.bus.sig">노선 노랑</span></p>
+          <span class="more" data-i18n="style.open">베타 열기</span>
+        </a>
+      </div>
+    </div>
+  </section>
+  <section class="sec" id="story" aria-labelledby="h-story">
+    <h2><button type="button" class="sec-head" id="h-story" aria-expanded="false" aria-controls="b-story"><span class="no">04</span><span class="nm" data-i18n="story.title">스토리</span><span class="en">Story</span><span class="sign" aria-hidden="true">+</span></button></h2>
+    <div class="sec-body" id="b-story">
+      <ol class="beats">
+        <li class="beat">
+          <p class="step" aria-hidden="true">01</p>
+          <h3 data-i18n="story.1.title">읽어서는 이름이 남지 않았습니다.</h3>
+          <p data-i18n="story.1.body">지도에서 구 이름을 눈으로 따라가도 자리와 철자가 따로 놀았습니다. 남는 쪽은 손이었습니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">02</p>
+          <h3 data-i18n="story.2.title">타자의 방식을 지명에 가져왔습니다.</h3>
+          <p data-i18n="story.2.body">다음 글자를 치려면 이름을 통째로 붙들고 있어야 합니다. 설치 없이, 가입하지 않아도 지도에서 고르고 칩니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">03</p>
+          <h3 data-i18n="story.3.title">처음 길은 서울 한 바퀴였습니다.</h3>
+          <p data-i18n="story.3.body">무작위 목록은 지리가 아닙니다. 서쪽 끝 강서구에서 이웃한 구를 따라 시계 방향으로 성북구까지 잇습니다. 구 안의 동도 같은 방식으로 이웃을 따라갑니다. 가나다순이면 강남·강동·강북·강서가 한 덩어리가 됩니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">04</p>
+          <h3 data-i18n="story.4.title">사람이 드나드는 동을 골랐습니다.</h3>
+          <p data-i18n="story.4.body">법정동은 땅에 붙은 이름이고, 행정동은 동주민센터 하나가 맡는 구역입니다. 플레이하는 423곳은 행정동입니다. 설정에서는 법정동으로 바꿔 칠 수도 있습니다.</p>
+        </li>
+        <li class="beat">
+          <p class="step" aria-hidden="true">05</p>
+          <h3 data-i18n="story.5.title">한 줄 소개는 자료에 있는 것만 올립니다.</h3>
+          <p data-i18n="story.5.body">염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+  <section class="sec" id="play" aria-labelledby="h-play">
+    <h2><button type="button" class="sec-head" id="h-play" aria-expanded="false" aria-controls="b-play"><span class="no">05</span><span class="nm" data-i18n="play.title">플레이</span><span class="en">Play</span><span class="sign" aria-hidden="true">+</span></button></h2>
+    <div class="sec-body" id="b-play">
+      <div class="play">
+        <p class="lead" data-i18n="play.lead">지명을 직접 쳐서 익히는 타자연습.</p>
+        <a class="go-site" href="/#home" target="_blank" rel="noopener" aria-label="regiontype.com 바로가기 (새 탭)" data-i18n-aria-label="play.goLabel"><span data-i18n="play.go">바로가기</span> <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
+  <section class="sec" id="plans" aria-labelledby="h-plans">
+    <h2><button type="button" class="sec-head" id="h-plans" aria-expanded="false" aria-controls="b-plans"><span class="no">06</span><span class="nm" data-i18n="plans.title">플랜</span><span class="en">Plan</span><span class="sign" aria-hidden="true">+</span></button></h2>
+    <div class="sec-body" id="b-plans">
+      <div class="plan-board">
+        <p class="plan-note" data-i18n="plans.note">월·연 가격은 미정입니다. 아직 고를 수 없습니다.</p>
+        <ul class="plans">
+          <li>
+            <h3 data-i18n="plans.capital.title">Capital (수도), 무료</h3>
+            <dl class="plan-rows">
+              <div><dt data-i18n="plans.month">월</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.year">연</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.scope">지도 범위</dt><dd data-i18n="plans.capital.scope">지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</dd></div>
+            </dl>
+            <button type="button" class="plan-btn" disabled data-i18n="plans.capital.cta">아직 지원하지 않아요</button>
+          </li>
+          <li>
+            <h3 data-i18n="plans.nation.title">Nation (전국)</h3>
+            <dl class="plan-rows">
+              <div><dt data-i18n="plans.month">월</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.year">연</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.scope">지도 범위</dt><dd data-i18n="plans.nation.scope">고른 나라 하나의 전국</dd></div>
+            </dl>
+            <button type="button" class="plan-btn" disabled data-i18n="plans.nation.cta">아직 지원하지 않아요</button>
+          </li>
+          <li>
+            <h3 data-i18n="plans.world.title">World (세계)</h3>
+            <dl class="plan-rows">
+              <div><dt data-i18n="plans.month">월</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.year">연</dt><dd data-i18n="plans.tbd">미정</dd></div>
+              <div><dt data-i18n="plans.scope">지도 범위</dt><dd data-i18n="plans.world.scope">모든 나라의 전국</dd></div>
+            </dl>
+            <button type="button" class="plan-btn" disabled data-i18n="plans.world.cta">아직 지원하지 않아요</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
   </div>
 </div>
 <script src="main.js"></script>
