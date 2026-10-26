@@ -2340,6 +2340,19 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .pg-tabs [role="tab"]:focus-visible,.pg-panel:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .pg-panel{display:flex;flex-direction:column;gap:10px;min-height:0}
 .pg-panel[hidden]{display:none}
+.sub-tabs{display:inline-flex;gap:4px;background:var(--card-inset);padding:3px;border-radius:999px;width:fit-content;margin:2px 0 6px}
+.sub-tabs [role="tab"]{
+  font:inherit;font-size:14px;font-weight:700;color:var(--ink-soft);
+  background:none;border:1px solid transparent;border-radius:999px;padding:6px 14px;cursor:pointer;
+  transition:background var(--fast),color var(--fast);
+}
+.sub-tabs [aria-selected="true"]{
+  color:var(--ink);background:var(--card);border-color:var(--grid);font-weight:800;
+  box-shadow:var(--shadow-shallow, 0 1px 2px rgba(0,0,0,.06));
+}
+.sub-tabs [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pg-subpanel{display:flex;flex-direction:column;gap:10px;min-height:0}
+.pg-subpanel[hidden]{display:none}
 .pg-help{font-size:14px;line-height:1.6;color:var(--ink-soft)}
 .pg-say{min-height:22px;color:var(--ink-soft);font-weight:700}
 .pg-ranks{max-width:none;overflow:auto}
@@ -2572,6 +2585,7 @@ body:is(.signing,:has(#play.on)) .rk-layer{opacity:0;visibility:hidden;pointer-e
    ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
 .rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
 .rk-dim[hidden]{display:none}
+body:is(.rk-intro,.rk-emerge) #regions{z-index:auto}
 body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:7}
 body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
@@ -2731,13 +2745,93 @@ body.rk-intro .rk-ring{animation:rk-peek 1.4s var(--ease-out) infinite}
 .rk-say button{font:inherit;font-weight:700;color:var(--rk-on,var(--ranked));background:var(--rk-ink,#fff);border:0;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .rk-say button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-/* 시작하기를 꾹 누르는 동안 알약이 봇의 빛깔로 차오르고, 다 차면 '경쟁전 시작'으로
-   바뀐다(ranked.js 의 wirePlayHold) — 색만으로 가르지 않고 라벨이 함께 바뀐다 */
-#navPlay{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+/* 봇이 경쟁전을 켜 두면(rk-ready) 알약이 봇의 빛깔이 되고 라벨이 '경쟁전 시작'으로 바뀐다 —
+   색만으로 가르지 않고 라벨이 함께 바뀐다 */
 .nav-shape{transition:background-color var(--si-dur) var(--ease-out)}
-body.rk-charging #navBotShape{background:var(--rk-on,var(--ranked));transition-duration:.6s}
 body.rk-ready #navBotShape{background:var(--rk-on,var(--ranked))}
 body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
+
+/* 시작하기 → 일반전 / 경쟁전 고르기 판. 아래 막대와 같은 --bar 알약 결로 시작하기 바로 위에 뜬다.
+   자리는 ranked.js 의 placePick 이 적는다 */
+#modePick{position:fixed;inset:auto;margin:0;border:0;color:var(--ink);
+  background:var(--bar);border-radius:28px;box-shadow:var(--shadow);padding:8px;
+  width:max-content;max-width:calc(100vw - 24px);overflow:visible}
+#modePick:popover-open{display:flex;flex-direction:column;gap:6px;animation:rise-fade var(--fast) var(--ease-out)}
+:root[data-night] #modePick{border:1px solid var(--grid)}
+.mode-row{display:flex;gap:6px}
+.mode-btn{position:relative;overflow:hidden;isolation:isolate;flex:1;
+  font:inherit;font-size:22px;font-weight:800;line-height:1;white-space:nowrap;
+  color:var(--ink);background:var(--card-inset);border:2px solid transparent;border-radius:999px;
+  padding:16px 22px;cursor:pointer;touch-action:manipulation;
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+  transition:border-color var(--fast)}
+.mode-btn > span{position:relative;z-index:1}
+.mode-btn:hover{border-color:var(--ink-soft)}
+.mode-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* 꾹 누르는 동안 왼쪽에서부터 차오른다. 일반전은 브랜드 빛깔, 경쟁전은 경쟁전 빨강 */
+.mode-btn::before{content:'';position:absolute;inset:0;z-index:0;background:var(--accent);
+  transform-origin:left center;transform:scaleX(0)}
+.mode-btn.is-ranked::before{background:var(--rk-on,var(--ranked))}
+.mode-btn.is-holding::before{animation:mode-fill var(--hold-ms,1.2s) linear forwards}
+.mode-btn.is-holding{border-color:var(--ink)}
+.mode-btn.is-holding > span{color:var(--on-accent)}
+.mode-btn.is-ranked.is-holding > span{color:var(--rk-ink,#fff)}
+@keyframes mode-fill{to{transform:scaleX(1)}}
+/* 움직임을 끈 사람은 차오름 대신 남은 초를 글자로 본다 */
+.mode-btn[data-left]::after{content:attr(data-left);position:relative;z-index:1;display:none;
+  margin-left:8px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){
+  .mode-btn.is-holding::before{animation:none;transform:scaleX(1);opacity:.35}
+  .mode-btn[data-left]::after{display:inline}
+}
+:root[data-motion="off"] .mode-btn.is-holding::before{animation:none;transform:scaleX(1);opacity:.35}
+:root[data-motion="off"] .mode-btn[data-left]::after{display:inline}
+.mode-foot{display:flex;align-items:center;gap:10px;padding:2px 6px 2px 2px}
+/* 라이선스 시험 토글 — 켜면 체크 글자와 테두리가 함께 선다(색만이 아니다) */
+.mode-exam{font:inherit;font-size:14px;font-weight:700;color:var(--ink);background:none;
+  border:2px solid var(--grid);border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.mode-exam::before{content:'○ '}
+.mode-exam[aria-pressed="true"]{border-color:var(--ink);background:var(--card-inset)}
+.mode-exam[aria-pressed="true"]::before{content:'✓ '}
+.mode-exam:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mode-hint{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.mode-note{font-size:13px;font-weight:700;color:var(--ink);padding:0 8px 4px;max-width:36ch}
+.mode-note:empty{display:none}
+/* 토글을 켜면 두 단추가 시험 쪽이라는 걸 테두리로도 보인다 */
+#modePick.is-exam .mode-btn{border-style:dashed;border-color:var(--ink-soft)}
+@media (pointer:coarse){ .mode-btn{font-size:19px;padding:15px 18px} }
+
+/* 라이선스 시험 들어가기 */
+#examGate{border:0;padding:0;background:none;color:var(--ink);width:min(92vw,440px);max-width:none;margin:auto}
+#examGate::backdrop{background:rgba(35,44,49,.42);backdrop-filter:blur(2px)}
+#examBox{display:flex;flex-direction:column;gap:14px;background:var(--card);border-radius:6px;
+  box-shadow:var(--shadow-lift);padding:22px 24px 20px;max-height:88vh;overflow:auto}
+:root[data-night] #examBox{border:1px solid var(--grid)}
+#examBox .fb-head h2{font-size:24px}
+#examBox .back{width:36px;height:36px}
+.exam-grades{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.exam-grades th,.exam-grades td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--grid)}
+.exam-grades thead th{font-size:13px;font-weight:700;color:var(--ink-soft)}
+/* 등급은 글자를 테두리 안에 — 색만으로 가르지 않는다 */
+.exam-badge{display:inline-grid;place-items:center;width:28px;height:28px;border:2px solid var(--ink);
+  border-radius:6px;font-weight:800}
+.exam-badge[data-grade="S"]{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.exam-badge[data-grade="A"]{color:var(--ink);border-color:var(--ink);background:var(--card)}
+
+/* 시험 모드 HUD 태그 */
+.exam-tag{font-size:14px;font-weight:800;color:var(--on-accent);background:var(--accent);padding:4px 10px;border-radius:999px}
+.exam-tag[hidden]{display:none}
+#play.is-exam.is-ranked .exam-tag{color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked))}
+
+/* 시험 모드 결과 줄 */
+.exam-res{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--card-inset);border-radius:12px;border:1px solid var(--grid);margin:6px 0;text-align:left}
+.exam-res[hidden]{display:none}
+.exam-res-head{display:flex;align-items:center;gap:10px}
+.exam-res-title{font-size:18px;font-weight:800;color:var(--ink)}
+.exam-res-done{font-size:13px;font-weight:700;color:var(--ink-soft);padding:2px 8px;border-radius:999px;border:1px solid var(--grid)}
+.exam-res-done.is-done{color:var(--ink);border-color:currentColor;background:var(--card)}
+.exam-res-stats{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.4;margin:0}
+.exam-res-next{font-size:13px;font-weight:700;color:var(--ink-soft);line-height:1.4;margin:0}
 
 /* 경쟁전 판. 게이지가 빨갛고 HUD 에 '경쟁전' 글자가 붙는다 */
 #play.is-ranked .gauge i{background:var(--rk-on,var(--ranked))}

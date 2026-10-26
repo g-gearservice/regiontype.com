@@ -528,3 +528,44 @@ create table if not exists bot_calib (
   updated_at integer not null,
   primary key (dev, rating)
 );
+
+-- ── 라이선스 시험 ──────────────────────────────────────────
+-- 진행 중인 라이선스 시험 표. 한 사람 한 장.
+create table if not exists license_ticket (
+  who  text primary key,
+  id   text    not null,
+  mode text    not null,         -- 'normal' | 'ranked'
+  slug text    not null,
+  at   integer not null,
+  dev  text    not null default 'pc',
+  lang text    not null default 'ko'
+);
+
+-- 라이선스 코스별 최고 기록. (who, mode, slug) 당 한 줄.
+-- 등급 순서: A > B > C > D > E > F. 같은 등급이면 cpm 이 높은 쪽으로 갱신한다.
+create table if not exists license (
+  who    text    not null,
+  mode   text    not null,         -- 'normal' | 'ranked'
+  slug   text    not null,
+  grade  text    not null,         -- 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+  cpm    integer not null,
+  acc    integer not null,
+  misses integer not null,
+  dev    text    not null default 'pc',
+  lang   text    not null default 'ko',
+  name   text    not null default '',
+  at     integer not null,
+  primary key (who, mode, slug)
+);
+create index if not exists license_top on license (mode, slug, grade asc, cpm desc, at asc);
+create index if not exists license_who on license (who, mode);
+
+-- 수도(Capital) 플랜 26개 코스 전부 A 등급을 달성한 사람에게 주어지는 S 등급 기록.
+create table if not exists license_s (
+  who  text    not null,
+  mode text    not null,         -- 'normal' | 'ranked'
+  plan text    not null default 'capital',
+  at   integer not null,
+  primary key (who, mode, plan)
+);
+create index if not exists license_s_at on license_s (mode, plan, at asc);
