@@ -2859,14 +2859,28 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 :root[data-night] #examBox{border:1px solid var(--grid)}
 #examBox .fb-head h2{font-size:24px}
 #examBox .back{width:36px;height:36px}
-.exam-grades{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
-.exam-grades th,.exam-grades td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--grid)}
-.exam-grades thead th{font-size:13px;font-weight:700;color:var(--ink-soft)}
-/* 등급은 글자를 테두리 안에 — 색만으로 가르지 않는다 */
-.exam-badge{display:inline-grid;place-items:center;width:28px;height:28px;border:2px solid var(--ink);
-  border-radius:6px;font-weight:800}
-.exam-badge[data-grade="S"]{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent)}
-.exam-badge[data-grade="A"]{color:var(--ink);border-color:var(--ink);background:var(--card)}
+/* 면허 목록 — 라디오 묶음. 상태는 글자와 앞 표시(✓ ○ —)·테두리 모양으로도 가른다 */
+.exam-lic{display:flex;flex-direction:column;gap:8px}
+.lic-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;text-align:left;font:inherit;color:var(--ink);
+  background:var(--card);border:2px solid var(--grid);border-radius:8px;padding:10px 12px;cursor:pointer}
+.lic-row:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.lic-row[aria-checked="true"]{border-color:var(--ink);background:var(--card-inset);box-shadow:inset 5px 0 0 var(--ink)}
+.lic-row[data-st="lock"]{border-style:dashed;color:var(--ink-soft);cursor:not-allowed}
+.lic-name{font-size:17px;font-weight:800}
+.lic-state{font-size:13px;font-weight:700;align-self:center}
+.lic-state::before{margin-right:4px}
+.lic-row[data-st="pass"] .lic-state::before{content:'✓'}
+.lic-row[data-st="open"] .lic-state::before{content:'○'}
+.lic-row[data-st="lock"] .lic-state::before{content:'—'}
+.lic-course,.lic-cond{grid-column:1 / -1;font-size:13px;line-height:1.4;font-variant-numeric:tabular-nums}
+.lic-cond{color:var(--ink-soft)}
+/* 면허 이름표 — 글자가 곧 이름이라 색에 기대지 않는다. 합격·불합격은 ✓ ✗ 로도 가른다 */
+.exam-badge{display:inline-block;padding:2px 9px;border:2px solid var(--ink);border-radius:999px;
+  font-size:13px;font-weight:800;line-height:1.3;white-space:nowrap}
+.exam-badge[data-grade="expert"]{color:var(--accent);border-color:var(--accent);border-width:3px;background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.exam-badge[data-grade="pass"]::before{content:'✓ '}
+.exam-badge[data-grade="fail"]{border-style:dashed}
+.exam-badge[data-grade="fail"]::before{content:'✗ '}
 
 /* 시험 모드 HUD 태그 */
 .exam-tag{font-size:14px;font-weight:800;color:var(--on-accent);background:var(--accent);padding:4px 10px;border-radius:999px}
@@ -2876,7 +2890,10 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 /* 시험 모드: 구역(구, 동) 이름과 힌트를 일절 가린다 */
 #play.is-exam #map .tiles{display:none}
 #play.is-exam #map text{display:none}
-#play.is-exam .q-side{display:none}
+/* 지나온 곳은 왼쪽, 빈칸은 가운데 — 오른쪽(다음)은 이름 없이 자리만 지켜 빈칸을 가운데 붙든다 */
+#play.is-exam .typing{width:min(640px,100%)}
+#play.is-exam .q-side{flex:1 1 0; min-width:0}
+#play.is-exam .q-name{max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 #play.is-exam .fact{display:none}
 
 /* 시험 모드 결과 줄 */

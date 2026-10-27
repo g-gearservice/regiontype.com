@@ -2,10 +2,14 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.27';
+const VER = '5.28';
+/* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
+const REL = '1.0.0';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
-  'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
+  'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
+  /* tools/build_map.py 와 같은 꼴로 뒤에만 잇는다 — 전국 시군구(kr-sgg)가 250곳이다 */
+  'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝÞĀĒĪŌŪЙЪЫЬабвгдежзийклмнопрстуфхцчшщъыьэюя';
 let UI_LANGS = ['ko', 'en', 'ja'];
 let I18N = { ko: {}, en: {}, ja: {} };
 let WORLD = { countries: [] };
@@ -2250,42 +2254,39 @@ async function boot() {
 /* ── 게임 ───────────────────────────────────────────── */
 let G = null, tick = null, pending = null;
 
-/* ── 라이선스 등급표 및 판정 (relay/license.mjs 와 같은 규칙) ─────────────────
-   완주(hits === items.length) 필수. 120초 고정. 위에서부터 처음 맞는 등급이다 */
-const EXAM_GRADES = [
-  { g: 'A', acc: 98, cpm: 600, miss: 1 },
-  { g: 'B', acc: 95, cpm: 500, miss: 3 },
-  { g: 'C', acc: 93, cpm: 400, miss: 5 },
-  { g: 'D', acc: 90, cpm: 300, miss: 10 },
-  { g: 'E', acc: 85, cpm: 200, miss: 10 },
-  { g: 'F', acc: 80, cpm: 0, miss: 10 },
+/* ── 라이선스 다섯 면허와 판정 (relay/license.mjs 와 같은 표·같은 규칙) ─────────────
+   아래에서 위로 하나씩 응시한다. gamer·reporter 는 고른 코스, 나머지는 전국 시군구에서
+   서버가 뽑아 준 이름(chars 자)을 secs 안에 다 치는 시험이다. 완주(done)가 먼저다 */
+const LICENSES = [
+  { id: 'gamer', secs: 120, cpm: 400, acc: 93, miss: 5 },
+  { id: 'reporter', secs: 120, cpm: 600, acc: 98, miss: 1 },
+  { id: 'basic', secs: 60, chars: 270, acc: 90 },
+  { id: 'mid', secs: 60, chars: 300, acc: 90 },
+  { id: 'expert', secs: 60, chars: 320, acc: 90 },
 ];
-function gradeOf({ done, acc, cpm, misses }) {
-  if (!done) return null;
-  for (const r of EXAM_GRADES) {
-    if (acc >= r.acc && cpm >= r.cpm && misses <= r.miss) return r.g;
-  }
+function failOf(lic, { done, acc, cpm, misses }) {
+  if (!done) return { kind: 'done' };
+  if (lic.miss != null && misses > lic.miss) return { kind: 'miss', need: lic.miss };
+  if (lic.cpm && cpm < lic.cpm) return { kind: 'cpm', need: lic.cpm };
+  if (acc < lic.acc) return { kind: 'acc', need: lic.acc };
   return null;
 }
-function nextConditionOf({ done, acc, cpm, misses, grade }) {
-  if (!done) return { kind: 'done' };
-  if (!grade) {
-    if (misses > 10) return { g: 'F', kind: 'miss', need: 10 };
-    return { g: 'F', kind: 'acc', need: 80 };
+const licName = id => t('lic' + id[0].toUpperCase() + id.slice(1));
+/* 이름 묶음을 지도 위 가까운 순으로 잇는다(최근접 이웃). first 부터 시작한다 */
+function routeOf(items, first) {
+  const at = it => it.at || [0, 0], left = items.slice(), out = [];
+  const k = left.findIndex(it => it.name === first);
+  let cur = left.splice(k < 0 ? 0 : k, 1)[0];
+  while (cur) {
+    out.push(cur);
+    let bi = 0, bd = Infinity;
+    left.forEach((it, i) => { const d = (at(it)[0] - at(cur)[0]) ** 2 + (at(it)[1] - at(cur)[1]) ** 2; if (d < bd) { bd = d; bi = i; } });
+    cur = left.splice(bi, 1)[0];
   }
-  const order = ['F', 'E', 'D', 'C', 'B', 'A'];
-  const idx = order.indexOf(grade);
-  if (idx < 0 || idx >= order.length - 1) return { kind: 'max' };
-  const next = order[idx + 1];
-  const req = EXAM_GRADES.find(x => x.g === next);
-  if (!req) return { kind: 'max' };
-  if (misses > req.miss) return { g: next, kind: 'miss', need: req.miss };
-  if (cpm < req.cpm) return { g: next, kind: 'cpm', need: req.cpm };
-  if (acc < req.acc) return { g: next, kind: 'acc', need: req.acc };
-  return { kind: 'max' };
+  return out;
 }
 
-/* rk 는 경쟁전 표({id, secs}), exam 은 라이선스 시험({mode, id}) — 시간은 120초 고정이다 */
+/* rk 는 경쟁전 표({id, secs}), exam 은 라이선스 시험({mode, id, tier, names?}) — 시간은 그 면허의 secs 다 */
 async function start(slug, only, rk, exam) {
   cancelAnimationFrame(replayRaf);
   /* 폰 화상 키보드는 누른 그 자리(동기)에서 초점을 줘야 뜬다(iOS) — 불러오기를
@@ -2293,8 +2294,11 @@ async function start(slug, only, rk, exam) {
   /* 게임 자판이 켜져 있으면 기기 키보드가 올라오지 않게 먼저 막는다 — 코스를 못 치는
      자판이면 syncKb 가 도로 푼다 */
   if (fingers()) { kbMode(opt.softkb); go('play'); if (!opt.softkb) $('#typein').focus(); }
-  if (exam) only = null;   // 시험 모드는 부분집합이 아닌 코스 전체 완주가 조건이다
-  const secs = exam ? 120 : (rk ? rk.secs : opt.time);
+  /* 코스 면허는 부분집합이 아닌 코스 전체 완주가 조건이고, 자수 면허는 서버가 준 이름만 친다 */
+  const lic = exam && LICENSES.find(l => l.id === exam.tier) || null;
+  const byChars = !!(lic && lic.chars);
+  if (exam) only = byChars ? new Set(exam.names || []) : null;
+  const secs = lic ? lic.secs : exam ? 120 : (rk ? rk.secs : opt.time);
   /* 속도는 '맞힌 곳 이름의 글자 수 ÷ 걸린 시간' 이다. 띄어쓰기는 세지 않는다 */
   const [[course, geom], [, names], intro, read] = await Promise.all([load(slug), krNames(), intros(), reads()]);
   const zoom = playZoom(geom);
@@ -2303,12 +2307,12 @@ async function start(slug, only, rk, exam) {
   const items = (pick.length ? pick : course.items).map(it => {
     // 어간('서울')과 줄인 행정명('서울시') 둘 다 쳐서 맞는다.
     // 코스가 손으로 적어 둔 별칭(울릉도 같은 것)은 그대로 남는다
-    const also = [stripSuffix(it.name), adminLabel(it.name)]
+    const also = byChars ? [] : [stripSuffix(it.name), adminLabel(it.name)]
       .filter(a => a && a !== it.name);
     // 한 줄 소개는 아직 사람이 안 쓴 코스가 있다. 여기서 한 번만 채워 두면
     // 목표 줄·자유형·결과 목록이 저마다 undefined 를 막을 필요가 없다
     return { ...it, meta: { description: '', ...it.meta },
-             aliases: [...new Set([...(it.aliases || []), ...also])], claimed: false };
+             aliases: byChars ? [] : [...new Set([...(it.aliases || []), ...also])], claimed: false };   // 자수 면허는 전체 이름만 센다
   });
   /* 한국어가 아닌 화면 말이면 칸에 보이는 그 말의 이름을 친다. 표에 없는 칸(나라 코스·
      한자가 없는 동)은 제 이름과 제 별칭 그대로다 */
@@ -2319,9 +2323,10 @@ async function start(slug, only, rk, exam) {
     const short = typeForm(placeName(names, slug, it.name, true));
     it.alts = short !== it.say ? [short] : [];
   });
-  G = { slug, names, intro, course, items, zoom, z: zoom, seq: course.mode === 'sequence', idx: 0,
+  G = { slug, names, intro, course, items, zoom, z: zoom, seq: byChars || course.mode === 'sequence', idx: 0,
        total: secs, left: secs, ranked: rk || null, exam: exam || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
-       cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(it.name)), tx: 0, ty: 0 };
+       cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(it.name)), tx: 0, ty: 0,
+       blind: !!exam && !byChars };   // 코스 면허는 이름을 가린다. 자수 면허는 속기처럼 칠 글을 보여 주고 속도를 본다
   $('#typein').lang = TONGUE ? LANG : course.lang || document.documentElement.lang;
 
   const svg = $('#map');
@@ -2330,6 +2335,8 @@ async function start(slug, only, rk, exam) {
   /* 홈 칸과 같은 표. drawDots 는 치는 이름(adminLabel)을 먼저 넣고, 여기만 화면 말로 바꾼다.
      이름 자리 재기(coverDots)는 다음 프레임이라 이 글자로 앉는다 */
   items.forEach(it => { if (it.label) it.label.textContent = shownName(it.name); });
+  /* drawDots 가 it.at(중심)을 채운 뒤에 길로 잇는다 — G.items 는 같은 배열이라 자리에서 바꾼다 */
+  if (byChars) items.splice(0, items.length, ...routeOf(items, (exam.names || [])[0]));
 
   svg.style.setProperty('--z', zoom);   // 라벨·테두리를 역보정해 화면상 크기를 유지한다
   G.cam = svg.querySelector('.cam');
@@ -2524,7 +2531,7 @@ function paintQueue() {
   if (!G) return;
   const t = target();
   const i = t ? G.items.indexOf(t) : -1;
-  fillSide($('#qPrev'), i > 0 ? G.items[i - 1] : null, !!G.exam);
+  fillSide($('#qPrev'), i > 0 ? G.items[i - 1] : null);   // 지나온 곳은 시험에서도 보인다 — 이미 친 이름이다
   fillSide($('#qNext'), i >= 0 ? G.items[i + 1] : null, !opt.hint || !!G.exam);
 }
 
@@ -2542,7 +2549,7 @@ function setTarget(name) {
     box.append(el);
   }
   $('#typing').classList.remove('bad');
-  $('#typing').classList.toggle('hide', !opt.hint || !!G.exam);
+  $('#typing').classList.toggle('hide', G.exam ? G.blind : !opt.hint);
   paintTyped('');
 }
 
@@ -3261,6 +3268,37 @@ function cpmNow(done = false) {
   return done ? Math.min(G.hits * 50, cpm) : cpm;
 }
 
+/* 라이선스 결과 칸. srv 는 /license/end 의 답({pass, fail?}) — 아직 없으면(null) 로컬 판정으로 먼저 채우고,
+   답이 오면 ranked.js 가 다시 불러 서버 쪽 판정으로 고친다. 합격/불합격은 글자와 테두리 모양으로도 가른다 */
+function examResult(srv) {
+  const el = $('#rExam'), lic = G && G.exam && LICENSES.find(l => l.id === G.exam.tier);
+  if (!el || !lic) { if (el) el.hidden = true; return; }
+  el.hidden = false;
+  const misses = Math.max(0, G.tries - G.hits), done = G.hits === G.items.length;
+  const f = failOf(lic, { done, acc: G.acc, cpm: G.cpm, misses });
+  const pass = srv && typeof srv.pass === 'boolean' ? srv.pass : !f;
+  const why = pass ? null : srv && srv.fail && srv.fail.kind ? srv.fail : f;
+  const badge = $('#rExamBadge');
+  badge.textContent = t(pass ? 'examPass' : 'examFail');
+  badge.dataset.grade = pass ? 'pass' : 'fail';
+  $('#rExamTitle').textContent = licName(lic.id);
+  const doneEl = $('#rExamDone');
+  doneEl.textContent = done ? t('examDone') : t('examNotDone');
+  doneEl.classList.toggle('is-done', done);
+  $('#rExamStats').textContent = `${t('accuracy')} ${G.acc}% · ${showSpeed(G.cpm)} · ${t('examMissCnt', { n: misses })}`;
+  let text = '';
+  if (why) {
+    text = why.kind === 'done' ? t('examNeedDone')
+      : why.kind === 'miss' ? t('examNeedMiss', { n: why.need })
+      : why.kind === 'cpm' ? t('examNeedCpm', { n: showSpeed(why.need) })
+      : why.kind === 'acc' ? t('examNeedAcc', { n: why.need }) : '';
+  } else if (srv && srv.pass) {
+    const next = LICENSES[LICENSES.indexOf(lic) + 1];
+    text = next ? t('examNextOpen', { name: licName(next.id) }) : t('examAllDone');
+  }
+  $('#rExamNext').textContent = text;
+}
+
 function finish() {
   stop();
   G.t1 = performance.now();
@@ -3278,32 +3316,7 @@ function finish() {
     if (G.exam) {
       $('#rBest').hidden = true;
       if ($('#rLp')) $('#rLp').hidden = true;
-      if (examEl) {
-        examEl.hidden = false;
-        const misses = Math.max(0, G.tries - G.hits);
-        const done = G.hits === G.items.length;
-        const g = gradeOf({ done, acc: G.acc, cpm: G.cpm, misses });
-        const next = nextConditionOf({ done, acc: G.acc, cpm: G.cpm, misses, grade: g });
-        const badge = $('#rExamBadge');
-        if (badge) {
-          badge.textContent = g || '—';
-          badge.dataset.grade = g || 'none';
-        }
-        if ($('#rExamTitle')) $('#rExamTitle').textContent = g ? t('examGradeNamed', { g }) : t('examNone');
-        const doneEl = $('#rExamDone');
-        if (doneEl) {
-          doneEl.textContent = done ? t('examDone') : t('examNotDone');
-          doneEl.classList.toggle('is-done', done);
-        }
-        if ($('#rExamStats')) $('#rExamStats').textContent = `${t('accuracy')} ${G.acc}% · ${showSpeed(G.cpm)} · ${t('examMissCnt', { n: misses })}`;
-        let nextText = '';
-        if (next.kind === 'done') nextText = t('examNeedDone');
-        else if (next.kind === 'max') nextText = t('examMaxGrade');
-        else if (next.kind === 'miss') nextText = t('examNeedMiss', { g: next.g, n: next.need });
-        else if (next.kind === 'cpm') nextText = t('examNeedCpm', { g: next.g, n: showSpeed(next.need) });
-        else if (next.kind === 'acc') nextText = t('examNeedAcc', { g: next.g, n: next.need });
-        if ($('#rExamNext')) $('#rExamNext').textContent = nextText;
-      }
+      examResult(null);
     } else {
       if (examEl) examEl.hidden = true;
       $('#rBest').hidden = false;
@@ -3689,15 +3702,23 @@ async function board() {
 
 /* ── 자체 검사: rt=1 쿼리로 실행 ─────────────────────── */
 if (location.search.includes('rt=1')) {
-  /* 라이선스 시험 판정 경계값 단언 */
-  console.assert(gradeOf({ done: true, acc: 98, cpm: 600, misses: 1 }) === 'A', '라이선스: (acc 98, cpm 600, misses 1, done) → A');
-  console.assert(gradeOf({ done: true, acc: 97, cpm: 600, misses: 1 }) === 'B', '라이선스: (acc 97, cpm 600, misses 1, done) → B');
-  console.assert(gradeOf({ done: true, acc: 98, cpm: 599, misses: 1 }) === 'B', '라이선스: (acc 98, cpm 599, misses 1, done) → B');
-  console.assert(gradeOf({ done: true, acc: 98, cpm: 600, misses: 2 }) === 'B', '라이선스: (acc 98, cpm 600, misses 2, done) → B');
-  console.assert(gradeOf({ done: false, acc: 98, cpm: 600, misses: 1 }) === null, '라이선스: 완주 못 함 → null');
-  console.assert(gradeOf({ done: true, acc: 80, cpm: 100, misses: 11 }) === null, '라이선스: (acc 80, misses 11) → null');
-  console.assert(gradeOf({ done: true, acc: 79, cpm: 700, misses: 0 }) === null, '라이선스: (acc 79) → null');
-  console.assert(gradeOf({ done: true, acc: 80, cpm: 50, misses: 10 }) === 'F', '라이선스: (acc 80, misses 10, done) → F');
+  /* 라이선스 시험 판정 경계값 단언 — relay/license.mjs 의 failOf 와 같은 표 */
+  const LIC = Object.fromEntries(LICENSES.map(l => [l.id, l]));
+  const pass0 = { done: true, acc: 100, cpm: 1000, misses: 0 };
+  const failKind = (id, o) => (failOf(LIC[id], { ...pass0, ...o }) || {}).kind || null;
+  console.assert(LICENSES.map(l => l.id).join() === 'gamer,reporter,basic,mid,expert', '라이선스: 다섯 면허 순서');
+  console.assert(LIC.reporter.cpm === 600 && LIC.reporter.acc === 98 && LIC.reporter.miss === 1, '라이선스: 기자 조건');
+  console.assert(failKind('gamer', { acc: 93, cpm: 400, misses: 5 }) === null, '라이선스: 프로게이머 경계 합격');
+  console.assert(failKind('gamer', { acc: 92 }) === 'acc' && failKind('gamer', { cpm: 399 }) === 'cpm' && failKind('gamer', { misses: 6 }) === 'miss', '라이선스: 프로게이머 경계 불합격');
+  console.assert(failKind('reporter', { acc: 98, cpm: 600, misses: 1 }) === null, '라이선스: 기자 경계 합격');
+  console.assert(failKind('reporter', { acc: 97 }) === 'acc' && failKind('reporter', { cpm: 599 }) === 'cpm' && failKind('reporter', { misses: 2 }) === 'miss', '라이선스: 기자 경계 불합격');
+  console.assert(failKind('gamer', { done: false }) === 'done' && failKind('expert', { done: false }) === 'done', '라이선스: 미완주는 늘 불합격');
+  console.assert(failKind('basic', { acc: 90, cpm: 0, misses: 99 }) === null && failKind('mid', { acc: 89 }) === 'acc', '라이선스: 자수 면허는 완주·정확도만 본다');
+  console.assert(failOf(LIC.gamer, { ...pass0, misses: 6, cpm: 1 }).kind === 'miss' && failOf(LIC.gamer, { ...pass0, misses: 6, cpm: 1 }).need === 5, '라이선스: 오타가 먼저 걸린다');
+  {
+    const r = routeOf([{ name: 'a', at: [0, 0] }, { name: 'b', at: [10, 0] }, { name: 'c', at: [1, 0] }, { name: 'd', at: [9, 0] }], 'b');
+    console.assert(r.map(x => x.name).join('') === 'bdca', '라이선스: 가까운 순으로 잇는다');
+  }
 
   /* 두벌식 조합기 — 자판을 누른 순서 그대로 쳐서 음절이 맞게 서는지 */
   const type = keys => [...keys].reduce(hanPush, '');
@@ -4045,13 +4066,17 @@ if (isDev()) document.querySelectorAll('[src*="?v="],[href*="?v="]:not([rel*="ic
 /* ranked.js 가 화면 말을 다 읽은 뒤에 봇을 열도록 기다린다 */
 const BOOTED = boot();
 
-/* ── 업데이트 알림 ── 지난번 본 VER(rt.seenVer)과 지금 VER 이 다르면, 그 사이 data/changes.json 에 쌓인 줄을
-   셋까지 보여 준다. 처음 온 사람(rt.seenVer 없음)에겐 띄우지 않고 적어만 둔다. 띄운 순간 본 것으로 적는다 —
-   닫지 않고 떠나도 다음에 다시 조르지 않는다. 줄의 판수 C 는 VER 에서 점을 뺀 숫자다(0.11.498 ↔ 4.98) */
-const verNo = v => Number(String(v).split('.').pop());
+/* ── 업데이트 알림 ── 지난번 본 릴리스(rt.seenRel)와 지금 REL 이 다르면, changes.json(새것이 위)에서 그 줄
+   위에 쌓인 것을 셋까지 보여 준다. 처음 온 사람에겐 띄우지 않고 적어만 둔다. 띄운 순간 본 것으로 적는다 —
+   닫지 않고 떠나도 다음에 다시 조르지 않는다. 1.0.0 앞 사람은 VER(rt.seenVer, 5.27)만 들고 있다 —
+   그때는 판수 C 가 VER 에서 점을 뺀 숫자였다(0.11.527 ↔ 5.27) */
+function freshOf(list, seen) {
+  const old = /^\d+\.\d+$/.test(seen) && '.' + seen.replace('.', '');
+  const at = list.findIndex(c => c.v === seen || (old && c.v.endsWith(old)));
+  return at < 0 ? [] : list.slice(0, at);
+}
 function showUpdate(list, seen) {
-  const since = verNo(seen.replace('.', ''));
-  const fresh = list.filter(c => verNo(c.v) > since);
+  const fresh = freshOf(list, seen);
   if (!fresh.length) return;
   $('#updV').textContent = 'v' + fresh[0].v;
   $('#updList').replaceChildren(...fresh.slice(0, 3).map(c => {
@@ -4062,12 +4087,13 @@ function showUpdate(list, seen) {
   $('#upd').hidden = false;
 }
 if (location.search.includes('rt=1')) {
-  console.assert(verNo('0.11.497') === verNo('4.97'.replace('.', '')) && verNo('0.11.500') > verNo('4.99'.replace('.', '')), '업데이트: 판수 C 와 VER 을 견준다');
+  const L = [{ v: '1.0.0' }, { v: '0.11.527' }, { v: '0.11.526' }];
+  console.assert(freshOf(L, '0.11.527').length === 1 && freshOf(L, '5.26').length === 2 && !freshOf(L, '1.0.0').length && !freshOf(L, '9.99').length, '업데이트: 본 릴리스 위의 줄만 새것이다');
 }
 $('#updClose').addEventListener('click', () => { $('#upd').hidden = true; });
 $('#upd').addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); $('#upd').hidden = true; } });
 BOOTED.then(() => {
   let seen = null;
-  try { seen = localStorage.getItem('rt.seenVer'); localStorage.setItem('rt.seenVer', VER); } catch {}
-  if (seen && seen !== VER) grab('data/changes.json').then(list => showUpdate(list, seen)).catch(() => {});
+  try { seen = localStorage.getItem('rt.seenRel') || localStorage.getItem('rt.seenVer'); localStorage.setItem('rt.seenRel', REL); } catch {}
+  if (seen && seen !== REL) grab('data/changes.json').then(list => showUpdate(list, seen)).catch(() => {});
 }).catch(() => {});

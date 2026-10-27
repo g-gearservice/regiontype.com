@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.27">
+<link rel="stylesheet" href="style.css?v=5.28">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -521,7 +521,7 @@
         </div>
       </div>
       <div id="optsVersion" class="opts-panel" role="tabpanel" aria-labelledby="optsTabVersion" tabindex="0" hidden>
-        <p class="ver">regiontype v0.11.<span id="verPatch"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
+        <p class="ver">regiontype v<span id="verRel"></span> (<span id="verBuild"></span>) · <span data-i18n="verNote">행정경계 Natural Earth · 서울 자치구 2013</span></p>
       </div>
     </div>
   </div>
@@ -553,10 +553,10 @@
         <p class="pg-say" id="rankedBestsSay" role="status"></p>
       </div>
       <div id="rkRankedLicense" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabRankedLicense" tabindex="0" hidden>
-        <h3 class="pg-sub" data-i18n="capitalS">수도 S 등급 달성자</h3>
+        <h3 class="pg-sub" data-i18n="holdersHead">숙련 라이선스 보유자</h3>
         <ol class="ranks pg-ranks" id="rankedSHolders"></ol>
         <p class="pg-say" id="rankedSSay" role="status"></p>
-        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스 등급</h3>
+        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스</h3>
         <div class="pg-bests" id="rankedLicenseBests"></div>
         <p class="pg-say" id="rankedLicenseBestsSay" role="status"></p>
       </div>
@@ -572,10 +572,10 @@
         <p class="pg-say" id="normalBestsSay" role="status"></p>
       </div>
       <div id="rkNormalLicense" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabNormalLicense" tabindex="0" hidden>
-        <h3 class="pg-sub" data-i18n="capitalS">수도 S 등급 달성자</h3>
+        <h3 class="pg-sub" data-i18n="holdersHead">숙련 라이선스 보유자</h3>
         <ol class="ranks pg-ranks" id="normalSHolders"></ol>
         <p class="pg-say" id="normalSSay" role="status"></p>
-        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스 등급</h3>
+        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스</h3>
         <div class="pg-bests" id="normalLicenseBests"></div>
         <p class="pg-say" id="normalLicenseBestsSay" role="status"></p>
       </div>
@@ -771,7 +771,7 @@
   <p class="mode-note" id="modeNote" role="status" aria-live="polite"></p>
 </div>
 
-<!-- 라이선스 시험 들어가기 — 코스·시간·등급표를 보이고 [시험 시작]. 등급표는 ranked.js 의 EXAM_GRADES 가 채운다 -->
+<!-- 라이선스 시험 들어가기 — 다섯 면허를 아래에서 위로 보이고 하나를 골라 [시험 시작]. 목록은 ranked.js 의 paintLicenses 가 app.js 의 LICENSES 로 채운다 -->
 <dialog id="examGate" aria-labelledby="examTitle" aria-describedby="examLede">
   <div id="examBox">
     <div class="fb-head">
@@ -779,15 +779,7 @@
       <button type="button" class="back" id="examClose" data-i18n-aria="close" aria-label="닫기"><i class="i i-close" aria-hidden="true"></i></button>
     </div>
     <p class="fb-lead" id="examLede"></p>
-    <table class="exam-grades">
-      <thead><tr>
-        <th scope="col" data-i18n="examGrade">등급</th>
-        <th scope="col" data-i18n="accuracy">정확도</th>
-        <th scope="col" class="unit">타/분</th>
-        <th scope="col" data-i18n="examMiss">오타</th>
-      </tr></thead>
-      <tbody id="examRows"></tbody>
-    </table>
+    <div class="exam-lic" id="examRows" role="radiogroup" data-i18n-aria="examPickAria" aria-label="라이선스 고르기"></div>
     <div class="fb-foot">
       <p class="fb-note" id="examNote"></p>
       <button type="button" class="fb-send" id="examGo" data-i18n="examStart">시험 시작</button>
@@ -818,10 +810,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.27"></script>
-<script src="app.js?v=5.27"></script>
-<script src="auth.js?v=5.27"></script>
-<script src="settings/settings.js?v=5.27"></script>
-<script src="ranked.js?v=5.27"></script>
+<script src="relay.js?v=5.28"></script>
+<script src="app.js?v=5.28"></script>
+<script src="auth.js?v=5.28"></script>
+<script src="settings/settings.js?v=5.28"></script>
+<script src="ranked.js?v=5.28"></script>
 </body>
 </html>

@@ -73,8 +73,8 @@
 
 import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac, sha } from './auth.mjs';
 import { SIZE } from './size.mjs';
-import { EXAM_GRADES, gradeOf, GRADE_WEIGHT, nextConditionOf } from './license.mjs';
-import { CAPITAL_COURSES } from './plans.mjs';
+import { LICENSES, TIER_WEIGHT, POOL_SLUG, failOf, pickPool } from './license.mjs';
+import { KR_SGG } from './pool.mjs';
 
 const REPO = 'g-gearservice/regiontype.com';
 const SITE = ['https://regiontype.com', 'https://www.regiontype.com'];
@@ -826,28 +826,49 @@ async function ladderTop(req, env, o) {
 }
 
 /* ── 라이선스 시험 ──────────────────────────────────────────
-   120초 제한, 완주 필수, 코스별 F~A 등급 부여.
-   수도(Capital) 플랜 26개 코스 전수 A 달성 시 S 등급 자동 수여. */
+   면허 다섯 개(LICENSES)를 아래에서 위로 하나씩 응시한다. 경쟁전·일반전 따로.
+   gamer·reporter 는 고른 코스, basic·mid·expert 는 전국 시군구에서 뽑은 이름 묶음이다.
+   합격은 합격·불합격 둘뿐이고, license 줄의 grade 에는 딴 면허 id 가 들어간다. */
+
+const clamp = (v, hi) => Math.min(hi, Math.max(0, Number(v) || 0));
+const licOf = id => LICENSES.find(l => l.id === id);
+
+/* 이 mode 에서 가진 가장 높은 면허 id (없으면 null) */
+const bestOf = rows => rows.reduce((b, r) => (TIER_WEIGHT[r.grade] || 0) > (TIER_WEIGHT[b] || 0) ? r.grade : b, null);
 
 export async function licenseStart(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '라이선스 시험은 로그인이 필요합니다.', o);
   let c;
   try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
-  const slug = cut(c.c, 40), mode = c.mode === 'ranked' ? 'ranked' : 'normal';
+  const mode = c.mode === 'ranked' ? 'ranked' : 'normal';
   const dev = devOf(c.dev), lang = langOf(c.lang);
-  if (!Object.hasOwn(SIZE, slug)) return reply(400, '시작할 수 없는 코스입니다.', o);
+  const lic = typeof c.tier === 'string' ? licOf(c.tier) : null;
+  if (!lic) return reply(400, '없는 라이선스입니다.', o);
+  const chars = !!lic.chars;
+  const slug = chars ? POOL_SLUG : cut(c.c, 40);
+  if (!chars && !Object.hasOwn(SIZE, slug)) return reply(400, '시작할 수 없는 코스입니다.', o);
   const ok = await pass(env.RL_RK, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
+    /* 바로 아래 면허 이상을 같은 mode 에서 가져야 연다 */
+    const idx = LICENSES.indexOf(lic);
+    if (idx > 0) {
+      const need = LICENSES[idx - 1].id;
+      const rows = await env.DB.prepare('select grade from license where who = ? and mode = ?').bind(me, mode).all();
+      if (!(rows.results || []).some(r => (TIER_WEIGHT[r.grade] || 0) >= TIER_WEIGHT[need]))
+        return send(403, { error: 'locked', need }, o);
+    }
+    const names = chars ? pickPool(KR_SGG, lic.chars) : undefined;
     const id = rand(18), now = Date.now();
-    await env.DB.prepare(`insert into license_ticket (who, id, mode, slug, dev, lang, at)
-                          values (?, ?, ?, ?, ?, ?, ?)
+    await env.DB.prepare(`insert into license_ticket (who, id, mode, slug, tier, n, dev, lang, at)
+                          values (?, ?, ?, ?, ?, ?, ?, ?, ?)
                           on conflict (who) do update set
                             id = excluded.id, mode = excluded.mode, slug = excluded.slug,
+                            tier = excluded.tier, n = excluded.n,
                             dev = excluded.dev, lang = excluded.lang, at = excluded.at`)
-      .bind(me, id, mode, slug, dev, lang, now).run();
-    return send(201, { id, secs: 120 }, o);
+      .bind(me, id, mode, slug, lic.id, names ? names.length : 0, dev, lang, now).run();
+    return send(201, { id, secs: lic.secs, tier: lic.id, slug, names }, o);
   });
 }
 
@@ -859,103 +880,54 @@ export async function licenseEnd(req, env, o) {
   const ok = await pass(env.RL_RK, ip(req));
   if (ok !== true) return shut(ok, o);
   return safely(o, async () => {
-    const now = Date.now();
-    const tk = await env.DB.prepare('delete from license_ticket where who = ? and id = ? returning mode, slug, dev, lang, at')
-      .bind(me, cut(c.id, 40)).first();
-    if (!tk) return reply(409, '끝낼 라이선스 시험이 없습니다.', o);
+    const now = Date.now(), id = cut(c.id, 40);
+    const tk = await env.DB.prepare('select tier, n, mode, slug, dev, lang, at from license_ticket where who = ? and id = ?')
+      .bind(me, id).first();
+    const lic = tk && licOf(tk.tier);
+    if (!lic) return reply(409, '끝낼 라이선스 시험이 없습니다.', o);
+    /* 시간 창은 표를 쓰기 전에 본다 — 너무 빠르거나 늦은 제출이 표를 태우지 않게 */
     const took = now - tk.at;
-    const hits = Number(c.hits) || 0, tries = Number(c.tries) || 0;
-    const cpm = Number(c.cpm) || 0, acc = Number(c.acc) || 0;
-    const totalItems = SIZE[tk.slug] || 0;
-    const done = hits === totalItems;
-    const misses = Math.max(0, tries - hits);
+    if (took < 5000 || took > (lic.secs + 15) * 1000) return reply(400, '올릴 수 없는 시험 기록입니다.', o);
+    /* 표는 먼저 쓴다 — 같은 표로 두 번 올릴 수 없다 */
+    const gone = await env.DB.prepare('delete from license_ticket where who = ? and id = ?').bind(me, id).run();
+    if (!gone.meta?.changes) return reply(409, '끝낼 라이선스 시험이 없습니다.', o);
 
-    /* 120초 판: 완주했으면 최소 5초 이상, 시간 종료면 최대 135초 이내 */
-    if (took < 5000 || took > 135000) {
-      return reply(400, '올릴 수 없는 시험 기록입니다.', o);
-    }
-    const grade = gradeOf({ done, acc, cpm, misses });
-    const next = nextConditionOf({ done, acc, cpm, misses, grade });
-    if (!grade) {
-      return send(200, { ok: false, grade: null, done, acc, cpm, misses, next }, o);
-    }
+    const hits = Number(c.hits) || 0, tries = Number(c.tries) || 0;
+    const cpm = clamp(c.cpm, 1500), acc = clamp(c.acc, 100);
+    const done = hits === (tk.n || SIZE[tk.slug]);
+    const misses = Math.max(0, tries - hits);
+    const fail = failOf(lic, { done, acc, cpm, misses });
+    if (fail) return send(200, { ok: false, pass: false, tier: lic.id, fail }, o);
 
     const prev = await env.DB.prepare('select grade, cpm from license where who = ? and mode = ? and slug = ?')
       .bind(me, tk.mode, tk.slug).first();
-    const newW = GRADE_WEIGHT[grade] || 0, prevW = prev ? (GRADE_WEIGHT[prev.grade] || 0) : 0;
-    const isBetter = !prev || newW > prevW || (newW === prevW && cpm > prev.cpm);
-    const name = plain(c.name, CAP.name);
-
-    if (isBetter) {
+    const newW = TIER_WEIGHT[lic.id], prevW = prev ? (TIER_WEIGHT[prev.grade] || 0) : 0;
+    if (!prev || newW > prevW || (newW === prevW && cpm > prev.cpm)) {
       await env.DB.prepare(`insert into license (who, mode, slug, grade, cpm, acc, misses, dev, lang, name, at)
                             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             on conflict (who, mode, slug) do update set
                               grade = excluded.grade, cpm = excluded.cpm, acc = excluded.acc,
                               misses = excluded.misses, dev = excluded.dev, lang = excluded.lang,
                               name = excluded.name, at = excluded.at`)
-        .bind(me, tk.mode, tk.slug, grade, cpm, acc, misses, tk.dev, tk.lang, name, now).run();
+        .bind(me, tk.mode, tk.slug, lic.id, cpm, acc, misses, tk.dev, tk.lang, plain(c.name, CAP.name), now).run();
     }
-
-    /* Capital 플랜 26개 전수 A 달성 시 S 등급 산정 */
-    const q = CAPITAL_COURSES.map(() => '?').join(',');
-    const aRow = await env.DB.prepare(`select count(distinct slug) as n from license
-                                       where who = ? and mode = ? and grade = 'A' and slug in (${q})`)
-      .bind(me, tk.mode, ...CAPITAL_COURSES).first();
-    const aCount = aRow?.n || 0;
-    let sAwarded = false;
-    if (aCount === CAPITAL_COURSES.length) {
-      await env.DB.prepare(`insert into license_s (who, mode, plan, at) values (?, ?, 'capital', ?)
-                            on conflict (who, mode, plan) do nothing`)
-        .bind(me, tk.mode, now).run();
-      sAwarded = true;
-    }
-
-    const sRow = await env.DB.prepare("select at from license_s where who = ? and mode = ? and plan = 'capital'")
-      .bind(me, tk.mode).first();
-
-    return send(200, {
-      ok: true,
-      grade,
-      cpm,
-      acc,
-      misses,
-      isBest: isBetter,
-      next,
-      sAwarded: sAwarded || !!sRow,
-      capitalA: aCount,
-      capitalTotal: CAPITAL_COURSES.length,
-    }, o);
+    const rows = await env.DB.prepare('select grade from license where who = ? and mode = ?').bind(me, tk.mode).all();
+    return send(200, { ok: true, pass: true, tier: lic.id, best: bestOf(rows.results || []) }, o);
   });
 }
 
 export async function licenseMe(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
-  const u = new URL(req.url);
-  const mode = u.searchParams.get('mode') === 'ranked' ? 'ranked' : 'normal';
   return safely(o, async () => {
-    const [rows, sRow] = await Promise.all([
-      env.DB.prepare('select slug, grade, cpm, acc, misses, at from license where who = ? and mode = ?')
-        .bind(me, mode).all(),
-      env.DB.prepare("select at from license_s where who = ? and mode = ? and plan = 'capital'")
-        .bind(me, mode).first(),
-    ]);
-    const grades = {};
-    for (const r of rows.results || []) grades[r.slug] = r;
-    let aCount = 0;
-    for (const c of CAPITAL_COURSES) {
-      if (grades[c]?.grade === 'A') aCount++;
+    const rows = await env.DB.prepare('select mode, slug, grade from license where who = ?').bind(me).all();
+    const best = { ranked: null, normal: null }, grades = { ranked: {}, normal: {} };
+    for (const m of Object.keys(best)) {
+      const mine = (rows.results || []).filter(r => r.mode === m);
+      best[m] = bestOf(mine);
+      for (const r of mine) grades[m][r.slug] = r.grade;
     }
-    return send(200, {
-      mode,
-      grades,
-      capital: {
-        s: !!sRow,
-        sAt: sRow ? sRow.at : null,
-        aCount,
-        total: CAPITAL_COURSES.length,
-      },
-    }, o);
+    return send(200, { best, grades }, o);
   });
 }
 
@@ -965,36 +937,30 @@ export async function licenseTop(req, env, o) {
   const slug = u.searchParams.get('c');
   const me = await sessionWho(env, req);
   return safely(o, async () => {
-    const sHolders = await env.DB.prepare(`
-      select s.who, s.at as s_at, coalesce(p.name, l.name, '') as name
-      from license_s s
-      left join profile p on p.who = s.who
-      left join (select who, mode, max(name) as name from license group by who, mode) l on l.who = s.who and l.mode = s.mode
-      where s.mode = ? and s.plan = 'capital'
-      order by s.at asc
+    /* 숙련(expert)을 딴 사람 — 먼저 딴 순 */
+    const holders = await env.DB.prepare(`
+      select l.who, l.at as s_at, coalesce(p.name, l.name, '') as name
+      from license l
+      left join profile p on p.who = l.who
+      where l.mode = ? and l.grade = 'expert'
+      order by l.at asc
       limit 50
     `).bind(mode).all();
 
     let top = [];
-    if (slug && Object.hasOwn(SIZE, slug)) {
+    if (slug && (Object.hasOwn(SIZE, slug) || slug === POOL_SLUG)) {
       const cRows = await env.DB.prepare(`
         select l.who, coalesce(p.name, l.name, '') as name, l.grade, l.cpm, l.acc, l.misses, l.at
         from license l
         left join profile p on p.who = l.who
         where l.mode = ? and l.slug = ?
-        order by case l.grade
-          when 'A' then 1
-          when 'B' then 2
-          when 'C' then 3
-          when 'D' then 4
-          when 'E' then 5
-          when 'F' then 6
-          else 7 end asc, l.cpm desc, l.at asc
+        order by case l.grade ${LICENSES.map(l => `when '${l.id}' then ${TIER_WEIGHT[l.id]}`).join(' ')} else 0 end desc,
+                 l.cpm desc, l.at asc
         limit 50
       `).bind(mode, slug).all();
       top = seen(cRows.results || [], me);
     }
-    return send(200, { mode, sHolders: seen(sHolders.results || [], me), top }, o);
+    return send(200, { mode, holders: seen(holders.results || [], me), top }, o);
   });
 }
 
@@ -1809,7 +1775,7 @@ async function authIntro(req, env, o) {
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
 export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro', 'match_participants', 'match_logs', 'player_ratings',
                       'passkey', 'recovery', 'mailbox', 'phonebox', 'twofa', 'pending', 'sso', 'post', 'reply', 'mark',
-                      'license_ticket', 'license', 'license_s'];
+                      'license_ticket', 'license', 'license_s', 'license_v1', 'license_s_v1'];
 
 async function authErase(req, env, o) {
   const me = await sessionWho(env, req);

@@ -10,7 +10,7 @@
 
    app.js 뒤에 실려 그 전역을 빌려 쓴다: t · token · asset · start · opt · clock ·
    calm · homeTitle · aimNavShape · relayoutNavShapes · plain · showSpeed · BOOTED ·
-   COURSE · PICK · G · board.
+   COURSE · PICK · G · board · LICENSES · licName · examResult.
    ponytail: 빌려 쓰는 게 이만큼 늘었다. 한 번 더 늘면 app.js 를 모듈로 나눈다. */
 (function () {
 'use strict';
@@ -18,6 +18,8 @@
 const $ = s => document.querySelector(s);
 const RELAY = self.RT_RELAY;   // relay.js
 const NAME_KEY = 'rt.name';
+/* relay/worker.mjs 의 plain(s, CAP.name) 과 같은 자 — 부르던 곳만 있고 정의가 없어 이름·라이선스 제출이 ReferenceError 로 죽었다 */
+const plain = s => String(s ?? '').trim().slice(0, 12).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
 /* 중계기와 같은 수다(worker.mjs 의 STEP · DIVS · PLACE). 티어 이름은 여기서만 짓는다.
    한 디비전이 STEP lp, 한 티어가 III·II·I 세 디비전이고 마스터만 하나다 */
 const STEP = 100, DIVS = 3, PLACE = 5, TIERS = 6;
@@ -48,12 +50,12 @@ async function ask(path, body, anon) {
   const r = await fetch(RELAY + path, body
     ? { method: 'POST', headers: head, body: JSON.stringify(body) } : { headers: head });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) { const e = new Error(d.msg || String(r.status)); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(d.msg || String(r.status)); e.status = r.status; e.data = d; throw e; }
   return d;
 }
 
 /* 코스 이름은 홈 칸에서 읽는다. 서울 코스는 머리글 이름이다 */
-const placeOf = slug => slug === COURSE.root ? homeTitle()
+const placeOf = slug => slug === 'kr-sgg' ? t('courseSgg') : slug === COURSE.root ? homeTitle()
   : (COURSE.tiles.find(x => x.slug === slug && !x.kid) || COURSE.tiles.find(x => x.slug === slug) || {}).label || slug;
 
 /* ── 덮개 여닫기 ─────────────────────────────────────────
@@ -202,8 +204,8 @@ function sLi(i, name, at, me) {
   li.querySelector('.who').textContent = name;
   const badge = document.createElement('span');
   badge.className = 'exam-badge';
-  badge.dataset.grade = 'S';
-  badge.textContent = 'S';
+  badge.dataset.grade = 'expert';
+  badge.textContent = licName('expert');
   li.querySelector('.who').after(badge);
   li.querySelector('.pt').textContent = at ? new Date(at).toLocaleDateString() : '';
   if (me) {
@@ -266,7 +268,7 @@ async function fillBests(n, mode) {
   }));
   say.textContent = rows.length ? '' : t('ladderEmpty');
 }
-/* 라이선스 순위 — 수도 S 등급 달성자 명단과 코스별 라이선스 등급 최고 기록 */
+/* 라이선스 순위 — 숙련 라이선스 보유자 명단과 코스별 라이선스 최고 기록 */
 async function fillLicense(n, mode) {
   const sList = $(`#${mode}SHolders`), sSay = $(`#${mode}SSay`);
   const box = $(`#${mode}LicenseBests`), boxSay = $(`#${mode}LicenseBestsSay`);
@@ -284,14 +286,14 @@ async function fillLicense(n, mode) {
   }
   if (n !== rankReq) return;
 
-  // 1. 수도 S 등급 달성자 명단
-  const sHolders = topData.sHolders || [];
+  // 1. 숙련 라이선스 보유자 명단
+  const sHolders = topData.holders || [];
   sList.replaceChildren(...sHolders.map((h, i) => sLi(i, h.name || t('anon'), h.s_at, h.me)));
-  sSay.textContent = sHolders.length ? '' : t('sEmpty');
+  sSay.textContent = sHolders.length ? '' : t('holdersEmpty');
 
   // 2. 코스별 라이선스 순위
   const here = PICK ? PICK.slug : COURSE.root;
-  const courses = [COURSE.root, ...COURSE.tiles.map(x => x.slug)].filter((s, i, a) => a.indexOf(s) === i);
+  const courses = [COURSE.root, ...COURSE.tiles.map(x => x.slug), 'kr-sgg'].filter((s, i, a) => a.indexOf(s) === i);   // 자수 면허는 전국 시군구에서 친다
 
   box.replaceChildren(...courses.map(slug => {
     const det = document.createElement('details');
@@ -315,7 +317,7 @@ async function fillLicense(n, mode) {
           const badge = document.createElement('span');
           badge.className = 'exam-badge';
           badge.dataset.grade = x.grade;
-          badge.textContent = x.grade;
+          badge.textContent = LICENSES.some(l => l.id === x.grade) ? licName(x.grade) : x.grade;
           li.querySelector('.who').after(badge);
           li.querySelector('.pt').textContent = `${showSpeed(x.cpm)} · ${x.acc}%`;
           if (x.me) {
@@ -1928,17 +1930,7 @@ function wireLogo() {
    라이선스 시험이다. 누르는 동안 단추가 차오르고(움직임을 끄면 남은 초가 글자로 보인다),
    다 차기 전에 떼거나 단추 밖으로 나가면 없던 일이 된다. 키보드는 Space·Enter 를 누르고
    있으면 되고, 길게 누르기 어려우면 '라이선스 시험' 토글을 켜고 짧게 누른다 */
-const EXAM_HOLD_MS = 1200, EXAM_SECS = 120;
-/* 등급표 — 공통 조건은 120초 안에 완주. 위에서부터 처음 맞는 등급이다. E·D 의 오타는 F 의 10 을 물려받는다.
-   판정 함수는 relay/license.mjs 와 같은 규칙을 쓴다 */
-const EXAM_GRADES = [
-  { g: 'A', acc: 98, cpm: 600, miss: 1 },
-  { g: 'B', acc: 95, cpm: 500, miss: 3 },
-  { g: 'C', acc: 93, cpm: 400, miss: 5 },
-  { g: 'D', acc: 90, cpm: 300, miss: 10 },
-  { g: 'E', acc: 85, cpm: 200, miss: 10 },
-  { g: 'F', acc: 80, cpm: 0, miss: 10 },
-];
+const EXAM_HOLD_MS = 1200;
 let ranked = false;
 const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
@@ -2005,8 +1997,53 @@ function pickNote(msg) {
   const p = $('#modeNote');
   if (p) p.textContent = msg || '';
 }
-/* 라이선스 시험 진입 확인 창 */
-function openExam(mode) {
+/* 라이선스 시험 진입 창 — 다섯 면허를 아래에서 위로 늘어놓고 하나를 고른다(라디오 묶음, ↑↓ 로 옮긴다).
+   딴 면허 바로 위 하나까지만 열린다. 상태는 글자(합격·응시 가능·잠김)와 표시·테두리로 가른다 */
+const koOnly = lic => !!lic.chars && LANG !== 'ko';
+function condOf(lic) {
+  const p = [t('examLeft', { n: lic.secs })];
+  if (lic.chars) p.push(t('examDone'));
+  if (lic.cpm) p.push(showSpeed(lic.cpm));
+  p.push(`${t('accuracy')} ${lic.acc}%`);
+  if (lic.miss != null) p.push(t('examMissMax', { n: lic.miss }));
+  return p.join(' · ');
+}
+function paintLicenses(d, best, slug) {
+  const rows = $('#examRows'), have = best ? LICENSES.findIndex(l => l.id === best) : -1;
+  const state = (lic, i) => i <= have ? 'pass' : i > have + 1 || koOnly(lic) ? 'lock' : 'open';
+  const pick = id => {
+    d.dataset.tier = id;
+    rows.querySelectorAll('[role=radio]').forEach(b => {
+      const on = b.dataset.id === id;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    $('#examGo').disabled = false;
+    $('#examNote').textContent = '';
+  };
+  rows.replaceChildren(...LICENSES.map((lic, i) => {
+    const st = state(lic, i), b = document.createElement('button');
+    b.type = 'button'; b.className = 'lic-row'; b.dataset.id = lic.id; b.dataset.st = st;
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false'); b.tabIndex = -1;
+    if (st === 'lock') b.setAttribute('aria-disabled', 'true');
+    const course = koOnly(lic) ? t('examKoOnly')
+      : lic.chars ? `${t('courseSgg')} · ${t('examCourseSgg', { n: lic.chars })}`
+      : t('examCoursePick', { name: placeOf(slug) });
+    b.innerHTML = '<span class="lic-name"></span><span class="lic-state"></span><span class="lic-course"></span><span class="lic-cond"></span>';
+    b.querySelector('.lic-name').textContent = licName(lic.id);
+    b.querySelector('.lic-state').textContent = t({ pass: 'examPass', open: 'examOpen', lock: 'examLock' }[st]);
+    b.querySelector('.lic-course').textContent = course;
+    b.querySelector('.lic-cond').textContent = condOf(lic);
+    b.addEventListener('click', () => { if (st !== 'lock') pick(lic.id); });
+    return b;
+  }));
+  const ok = [...rows.children].filter(b => b.dataset.st !== 'lock');
+  const first = rows.querySelector(`[data-id="${LICENSES[Math.min(have + 1, LICENSES.length - 1)].id}"]`);
+  const sel = first && first.dataset.st !== 'lock' ? first : ok[ok.length - 1];
+  if (sel) pick(sel.dataset.id);
+  else { $('#examGo').disabled = true; rows.firstElementChild.tabIndex = 0; }
+}
+async function openExam(mode) {
   closePick();
   if (!token()) {
     pickNote(t('signinBtn'));
@@ -2016,18 +2053,19 @@ function openExam(mode) {
   const slug = rankedSlug();
   const d = $('#examGate');
   d.dataset.mode = mode;
+  delete d.dataset.tier;
   $('#examTitle').textContent = `${placeOf(slug)} · ${t(mode === 'ranked' ? 'rankedTab' : 'normalTab')}`;
-  $('#examLede').textContent = t('examLede', { n: EXAM_SECS });
-  const rows = $('#examRows');
-  rows.replaceChildren(...EXAM_GRADES.map(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="exam-badge">${r.g}</span></td><td>${r.acc}%</td><td>${r.cpm}</td><td>${r.miss}</td>`;
-    return tr;
-  }));
-  const goBtn = $('#examGo'), note = $('#examNote');
-  goBtn.disabled = false;
-  note.textContent = '';
+  $('#examLede').textContent = t('examLede');
+  $('#examNote').textContent = '';
+  $('#examRows').replaceChildren();
+  $('#examGo').disabled = true;
   d.showModal();
+  let best = null;
+  try { best = ((await ask('/license/me')).best || {})[mode] || null; } catch {}   // 못 읽으면 처음부터
+  if (d.open && d.dataset.mode === mode) {
+    paintLicenses(d, best, slug);
+    ($('#examRows').querySelector('[aria-checked=true]') || $('#examRows').firstElementChild)?.focus({ preventScroll: true });
+  }
 }
 function wireModePick() {
   const d = $('#modePick'), play = $('#navPlay'), toggle = $('#examToggle');
@@ -2070,20 +2108,41 @@ function wireModePick() {
     closePick(true);
   }, true);
   $('#examClose').addEventListener('click', () => $('#examGate').close());
+  /* 라디오 묶음: ↑↓←→ 로 열린 면허만 옮긴다 */
+  $('#examRows').addEventListener('keydown', e => {
+    const dir = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (!dir) return;
+    const open = [...$('#examRows').children].filter(b => b.dataset.st !== 'lock');
+    const at = open.indexOf(document.activeElement);
+    if (at < 0 || !open.length) return;
+    e.preventDefault();
+    const nx = open[(at + dir + open.length) % open.length];
+    nx.focus(); nx.click();
+  });
   $('#examGo').addEventListener('click', async () => {
     const d = $('#examGate');
     const mode = d.dataset.mode || 'normal';
-    const slug = rankedSlug();
-    const goBtn = $('#examGo');
+    const lic = LICENSES.find(l => l.id === d.dataset.tier);
+    if (!lic) return;
+    const slug = lic.chars ? 'kr-sgg' : rankedSlug();
+    const goBtn = $('#examGo'), note = $('#examNote');
     goBtn.disabled = true;
+    note.textContent = '';
     try {
-      const res = await ask('/license/start', { c: slug, mode, dev: DEV, lang: LANG });
+      const res = await ask('/license/start', { c: slug, mode, tier: lic.id, dev: DEV, lang: LANG });
       d.close();
-      start(slug, null, null, { mode, id: res.id });
-    } catch {
-      /* 서버 엔드포인트 응답이 없어도 로컬로 시험 진행 가능 */
-      d.close();
-      start(slug, null, null, { mode, id: 'exam-' + Date.now().toString(36) });
+      start(res.slug || slug, null, null, { mode, id: res.id, tier: res.tier || lic.id, names: res.names });
+    } catch (e) {
+      goBtn.disabled = false;
+      if (e.status === 403 && e.data && e.data.error === 'locked') {
+        note.textContent = t('examLocked', { name: licName(e.data.need) });
+      } else if (lic.chars) {
+        note.textContent = t('examNeedServer');   // 이름 묶음은 서버가 뽑는다 — 오프라인 판은 없다
+      } else {
+        /* 코스 면허는 중계기가 없어도 로컬로 칠 수 있다(기록은 남지 않는다) */
+        d.close();
+        start(slug, null, null, { mode, id: 'exam-' + Date.now().toString(36), tier: lic.id });
+      }
     }
   });
   $('#examGate').addEventListener('close', () => play.focus({ preventScroll: true }));
@@ -2344,9 +2403,7 @@ addEventListener('rt-finish', async ({ detail: g }) => {
         score: g.score,
         name: plain(localStorage.getItem(NAME_KEY) || '')
       });
-      if (res && res.sAwarded) {
-        say('examTitle');
-      }
+      if (G === g) examResult(res);   // 서버 판정으로 결과 칸을 고친다. 합격하면 다음 면허가 열렸다고 알린다
     } catch (err) {
       console.warn('License submission failed', err);
     }
