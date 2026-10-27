@@ -2443,6 +2443,8 @@ if (location.search.includes('rt=1')) {
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
   console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked') && $('#examToggle'), '모드 고르기: 일반전·경쟁전·라이선스 시험');
   console.assert($('#examGate') && $('#examRows'), '라이선스: 시험 진입 대화상자');
+  console.assert($('#rkTabRankedCasual') && $('#rkTabRankedLicense') && $('#rkTabNormalCasual') && $('#rkTabNormalLicense'), '순위표: 일반/라이선스 하위 탭');
+  console.assert($('#rankedSHolders') && $('#normalSHolders') && $('#rankedLicenseBests') && $('#normalLicenseBests'), '순위표: S자 명단 및 코스별 라이선스 순위표');
 }
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
