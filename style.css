@@ -296,6 +296,7 @@ i.dot{display:inline-block;width:.22em;height:.22em;border-radius:50%;background
 .i-arrow-left{--i:url(assets/arrow-back.svg?v=1.31)}
 .i-close{--i:url(assets/close.svg?v=1.31)}
 .i-chevron-left{--i:url(assets/chevron-left.svg?v=3.18)}
+.i-wand{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20 15 9M13 7l4 4'/><path d='M18 2v4M16 4h4M7 3v2M6 4h2M20 13v2M19 14h2' stroke-width='1.6'/></svg>")}
 /* 폰 지도 컨트롤 — 파일을 늘리지 않고 같은 마스크 결에 인라인 SVG 로 싣는다 */
 .i-fit{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5'/></svg>")}
 .i-aim{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='7'/><circle cx='12' cy='12' r='2.2' fill='black'/><path d='M12 2v3M12 19v3M2 12h3M19 12h3'/></svg>")}
@@ -1223,17 +1224,35 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 }
 :root[data-night] :is(#fbForm,#codesBox,#stylesBox){border:1px solid var(--grid)}
 .fb-head{display:flex;align-items:center;gap:12px}
-/* 내 스타일 — 연 단추 아래에 뜨는 판(popover). 자리·높이는 ranked.js 의 placeStyles 가 적는다.
-   뒤를 가리지 않으니 고르는 색이 뒤에도 바로 비친다 */
-#styles{position:fixed;inset:auto;margin:0;border:0;padding:0;background:none;color:var(--ink);
-  width:min(calc(100vw - 32px),368px);overflow:visible}
-#styles:popover-open{display:flex;flex-direction:column}
-#stylesBox{max-height:none;min-height:0;gap:12px;padding:16px 16px 14px}
-#stylesBox .fb-head h2{font-size:22px}
-#stylesBox .back{width:36px;height:36px}
+/* 내 스타일 — 오른쪽 아래 구석에서 올라오는 작은 판(popover). 뒤를 가리지 않으니 고르는 색이 뒤에도 바로 비친다.
+   열 때는 @starting-style 에서, 닫을 때는 :popover-open 이 빠지며 같은 길로 내려간다.
+   display·overlay 는 allow-discrete 를 longhand 로 태워야 나가는 쪽도 끝까지 보인다 */
+#styles{position:fixed;inset:auto 16px calc(16px + var(--dock-h,0px)) auto;margin:0;border:0;padding:0;background:none;color:var(--ink);
+  width:min(calc(100vw - 32px),320px);max-height:calc(100dvh - 32px - var(--dock-h,0px));overflow:visible;
+  opacity:0;transform:translateY(16px) scale(.97);transform-origin:100% 100%;
+  transition-property:opacity,transform,display,overlay;transition-duration:var(--slow);transition-timing-function:var(--ease-out);
+  transition-behavior:allow-discrete}
+#styles:popover-open{display:flex;flex-direction:column;opacity:1;transform:none}
+@starting-style{#styles:popover-open{opacity:0;transform:translateY(16px) scale(.97)}}
+#stylesBox{max-height:none;min-height:0;gap:10px;padding:12px 12px 10px;font-size:14px;border-radius:28px}
+/* 매끈한 모서리(squircle) — 되는 곳에서는 곡선이 완만해지니 반지름을 키워 같은 크기로 보이게 한다.
+   안쪽 카드는 바깥 반지름에서 여백(12px)을 뺀 값으로 맞춘다 */
+#stylesBox :is(.profile-card,.sty-edit){border-radius:16px;corner-shape:squircle}
+@supports (corner-shape:squircle){
+  #stylesBox{border-radius:40px;corner-shape:squircle}
+  #stylesBox :is(.profile-card,.sty-edit){border-radius:24px}
+}
+/* 두 탭 판을 한 칸에 겹친다 — 판 높이는 둘 중 큰 쪽이다. 가려진 판은 자리만 지키고 보이지도 눌리지도 않는다 */
+.sty-panels{display:grid;min-height:0}
+.sty-panels > .sty-panel{grid-area:1 / 1}
+#stylesBox .fb-head h2{font-size:18px}
+#stylesBox .back{width:32px;height:32px}
 #stylesBox .pg-say:empty{display:none}
 #stylesBox .sty-list{overflow:visible}
-#styles:popover-open #stylesBox{animation:rise-fade var(--fast) var(--ease-out)}
+/* 탭을 옮기면 새 판이 고른 탭 쪽에서 미끄러져 들어온다(게임은 왼쪽, 봇은 오른쪽) */
+.sty-panel:not([hidden]){animation:sty-in var(--slow) var(--ease-out)}
+#styPanelGame{--sty-from:-12px}
+@keyframes sty-in{from{opacity:0;transform:translateX(var(--sty-from,12px))}}
 .fb-head h2{flex:1;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1}
 .fb-lead{margin-top:-8px;color:var(--ink-soft);font-size:15px;line-height:1.6}
 .fb-kind{justify-content:flex-start}
@@ -1840,36 +1859,66 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .account-details > [href="#records"]{display:flex;margin-bottom:14px}
 /* 제목이 머리 위에 서고, 봇은 남은 칸 한가운데 선다. 크기는 --bot-scale(내 계정의 Size,
    홈 봇과 같은 값)을 따른다 */
-/* 내 펫 — 실제 크기(홈 봇과 같은 px, --bot-scale 을 따른다) < 확대 크기(고정)를 나란히
-   두고, 바로 밑의 알약 밀대로 홈 봇 크기를 바꾼다. 밀대의 꼬리가 '실제 크기'를 가리킨다 */
-.character-preview{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:16px 14px 18px;overflow:hidden;border:0;background:var(--profile-soft)}
-.character-title{font-size:11px;font-weight:800;letter-spacing:.02em;line-height:1.2;color:var(--ink);text-align:center}
-.pet-compare{display:grid;grid-template-columns:auto auto auto;justify-content:space-around;align-items:end;gap:6px;container-type:inline-size}
-.pet-fig{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;margin:0;min-width:0}
-.pet-fig figcaption{font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap}
-/* 작다(<) 표시 — 두 봇의 아랫단 쪽으로 내려 둔다 */
-.pet-lt{align-self:end;margin-bottom:34px;font-size:22px;color:var(--ink-soft)}
-.character-real{position:relative;flex:none;width:calc(80px * var(--bot-scale,1));height:calc(80px * var(--bot-scale,1));transition:width var(--fast) var(--ease-out),height var(--fast) var(--ease-out)}
+/* 내 펫 — 판 한가운데 홈 봇과 같은 px 로 선 봇(--bot-scale 을 따른다) 옆에 세로 알약 밀대를 둔다.
+   밀대는 말풍선처럼 왼쪽 꼭지로 봇을 가리킨다. 위로 올리면 커진다 */
+.character-preview{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:170px;padding:16px 14px;overflow:hidden;border:0;background:var(--profile-soft);
+  container-type:inline-size;--move:calc(var(--slow) * 2.2)}
+.character-real{grid-column:2;position:relative;flex:none;width:calc(80px * var(--bot-scale,1));height:calc(80px * var(--bot-scale,1));
+  transition:width var(--fast) var(--ease-out),height var(--fast) var(--ease-out),transform var(--move) var(--ease-out)}
 .character-real .buddy{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
-/* 알약 밀대 — 굵은 테의 알약 길 위에 알약 손잡이. 테 위로 난 삼각 꼭지가 '실제 크기'
-   글자 바로 아래에서 위를 가리킨다. 숫자(%)는 읽기 도구에 준다(aria-valuetext) */
-.pet-size{position:relative;display:flex;align-items:center;height:40px;padding:0 5px;border:2.5px solid var(--ink);border-radius:999px;background:var(--profile-soft)}
+/* 세로 알약 — 굵은 테의 길 위에 알약 손잡이. 숫자(%)는 읽기 도구에 준다(aria-valuetext) */
+.pet-size,.pet-shapes{justify-self:center;position:relative;display:flex;justify-content:center;width:40px;height:136px;padding:5px 0;border:2.5px solid var(--ink);border-radius:999px;background:var(--profile-soft)}
+.pet-size{grid-column:3}
+.pet-shapes{grid-column:1;grid-row:1;width:48px;padding:0}
 /* 꼭지 = 먹색 삼각(::before) 위에 길 색 삼각(::after)을 겹친 것. 안쪽 삼각이 테 선까지
-   덮어 테와 꼭지가 한 줄 윤곽으로 이어진다(이음새 없음). 두 삼각 모두 밑변이 테 안쪽
-   끝(top:0)에 닿는다 — 안쪽은 45° 빗변에서 테 두께 2.5px 만큼(×√2) 줄인다.
-   가로 자리 --tail-x 는 account.js 가 '실제 크기' 글자 가운데를 재어 넣는다 */
-.pet-size::before,.pet-size::after{
-  content:"";position:absolute;z-index:1;bottom:100%;left:var(--tail-x,25%);
-  transform:translateX(-50%);clip-path:polygon(50% 0,100% 100%,0 100%);pointer-events:none;
+   덮어 테와 꼭지가 한 줄 윤곽으로 이어진다. 안쪽은 1px 더 들어가 반 픽셀 선까지 덮는다 */
+.pet-size::before,.pet-size::after,.pet-shapes::before,.pet-shapes::after{
+  content:"";position:absolute;z-index:1;right:100%;top:50%;
+  transform:translateY(-50%);clip-path:polygon(0 50%,100% 0,100% 100%);pointer-events:none;
 }
-.pet-size::before{width:20px;height:10px;background:var(--ink)}
-/* 안쪽은 1px 더 내려(빗변은 그대로) 테 안쪽 끝의 반 픽셀 선까지 덮는다 */
-.pet-size::after{bottom:calc(100% - 1px);width:14.9px;height:7.45px;background:var(--profile-soft)}
-.pet-size input{position:relative;z-index:0;flex:1;min-width:0;height:30px;margin:0;background:none;-webkit-appearance:none;appearance:none;cursor:pointer}
-.pet-size input::-webkit-slider-runnable-track{height:30px;border-radius:999px;background:transparent}
-.pet-size input::-moz-range-track{height:30px;border-radius:999px;background:transparent}
-.pet-size input::-webkit-slider-thumb{-webkit-appearance:none;width:48px;height:30px;border:0;border-radius:999px;background:var(--ink)}
-.pet-size input::-moz-range-thumb{width:48px;height:30px;border:0;border-radius:999px;background:var(--ink)}
+.pet-size::before,.pet-shapes::before{width:10px;height:20px;background:var(--ink)}
+.pet-size::after,.pet-shapes::after{right:calc(100% - 1px);width:7.45px;height:14.9px;background:var(--profile-soft)}
+/* 왼쪽 알약은 꼭지가 오른쪽(봇 쪽)을 가리킨다 */
+.pet-shapes::before,.pet-shapes::after{right:auto;left:100%;clip-path:polygon(100% 50%,0 0,0 100%)}
+.pet-shapes::after{left:calc(100% - 1px)}
+/* 모양 목록 — 세로로 굴리고, 멈추면 ranked.js 가 가까운 모양을 골라 가운데(첫·끝 것은 끝)로 붙인다(CSS 스냅은 고른 뒤 옛 자리로 되튀어 쓰지 않는다). 위아래 여백은 고른 모양의 테두리가 알약 끝에 닿지 않을 만큼만 둔다 */
+.pet-shape-list{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;
+  padding-block:6px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
+  scroll-behavior:smooth;border-radius:999px}
+.pet-shape-list::-webkit-scrollbar{display:none}
+/* 모양은 늘 다 보인다 — 고른 것만 테두리 고리와 바탕으로 가른다 */
+.pet-shape-list .character-choice{width:36px;height:36px;border-radius:999px}
+.pet-wand{display:grid;place-items:center;color:var(--ink)}
+.pet-wand .i{width:20px;height:20px}
+/* 마법봉이 가운데면(data-gen, ranked.js 의 paintBotStyle) 모양 알약은 왼쪽 끝, 봇은 작아지며 오른쪽 끝으로 비키고
+   크기 밀대는 물러난다. 비운 가운데에 말풍선이 봇 쪽에서 피어나 꼭지로 봇을 가리킨다. 들어간 길로 그대로 되돌아 나온다.
+   자리는 칸(cqi) 기준이다 — 가운데 칸 폭은 봇 크기를 따르니 왼쪽 칸의 가운데는 (100cqi - 봇 폭) / 4.
+   물러난 쪽은 visibility 가 아니라 inert(ranked.js)로 막는다 — visibility 를 늦춰 바꾸면 탭을 옮길 때
+   판에서 물려받은 hidden 도 같이 늦어져 옆 탭에 비친다 */
+.pet-shapes,.pet-size{transition:transform var(--move) var(--ease-out),opacity var(--fast) var(--ease-out)}
+.character-preview[data-gen] .pet-shapes{transform:translateX(calc(24px - (100cqi - 80px * var(--bot-scale,1)) / 4))}
+.character-preview[data-gen] .character-real{transform:translateX(calc(50cqi - 28px)) scale(calc(.7 / var(--bot-scale,1)))}
+.character-preview[data-gen] .pet-size{opacity:0;transform:translateX(24px) scale(.9);pointer-events:none}
+.pet-chat{position:absolute;z-index:2;inset:auto 74px;top:50%;translate:0 -50%;display:flex;flex-direction:column;gap:8px;
+  padding:10px;border:2.5px solid var(--ink);border-radius:18px;corner-shape:squircle;background:var(--card);
+  opacity:0;pointer-events:none;transform:translateX(16px) scale(.94);transform-origin:100% 50%;
+  transition:transform var(--move) var(--ease-out),opacity var(--fast) var(--ease-out)}
+.character-preview[data-gen] .pet-chat{opacity:1;pointer-events:auto;transform:none}
+.pet-chat::before,.pet-chat::after{content:"";position:absolute;left:100%;top:50%;transform:translateY(-50%);clip-path:polygon(100% 50%,0 0,0 100%);pointer-events:none}
+.pet-chat::before{width:10px;height:20px;background:var(--ink)}
+.pet-chat::after{left:calc(100% - 1px);width:7.45px;height:14.9px;background:var(--card)}
+.pet-chat-say{margin:0;font-size:13px;line-height:1.45;font-weight:700}
+.pet-chat-say:empty{display:none}
+.pet-chat #botGenIn{min-height:96px;resize:none;font-size:13px;padding:8px 10px}
+.pet-chat #botGenBtn{min-height:36px}
+@media (prefers-reduced-motion:reduce){ .pet-shape-list{scroll-behavior:auto} }
+:root[data-motion="off"] .pet-shape-list{scroll-behavior:auto}
+.pet-size input{position:relative;z-index:0;width:30px;min-height:0;margin:0;background:none;-webkit-appearance:none;appearance:none;cursor:pointer;
+  writing-mode:vertical-lr;direction:rtl}
+.pet-size input::-webkit-slider-runnable-track{width:30px;height:100%;border-radius:999px;background:transparent}
+.pet-size input::-moz-range-track{width:30px;border-radius:999px;background:transparent}
+.pet-size input::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:48px;border:0;border-radius:999px;background:var(--ink)}
+.pet-size input::-moz-range-thumb{width:30px;height:48px;border:0;border-radius:999px;background:var(--ink)}
 .pet-size input:focus-visible{outline:0}
 .pet-size:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:3px}
 
@@ -2496,22 +2545,15 @@ button.sty-swatch:active{transform:scale(.94)}
 .sty-save:disabled{opacity:.55;cursor:default}
 /* 스타일 탭(게임 스타일 · 봇 스타일)과 봇 스타일 안쪽(기본 모양 · 만들기 · 초기화) — 모두 .pg-tabs / .sty-reset / .sty-save 알약 결을 그대로 쓴다 */
 #stylesBox .sty-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--card-inset);padding:4px;border-radius:999px}
-#stylesBox .sty-tabs [role="tab"],#stylesBox .sty-bot-modes [role="tab"]{
+#stylesBox .sty-tabs [role="tab"]{
   font-size:14px;font-weight:800;padding:6px 14px;min-height:34px;justify-content:center;text-align:center;
   transition:background var(--fast) var(--ease-out),color var(--fast) var(--ease-out),border-color var(--fast) var(--ease-out);
 }
 .sty-panel{display:flex;flex-direction:column;gap:12px;min-height:0}
-.sty-panel[hidden]{display:none}
-.sty-bot-card{display:flex;flex-direction:column;gap:12px;padding:12px}
-.sty-bot-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--profile-border)}
-#stylesBox .sty-bot-modes{display:inline-flex;align-items:center;gap:4px;background:var(--card-inset);padding:3px;border-radius:999px}
-#stylesBox .sty-bot-modes [role="tab"]{min-height:30px;padding:4px 12px;font-size:13px}
+.sty-panel[hidden]{display:flex;visibility:hidden}
+#styPanelBot .character-preview{flex:1}
 .sty-bot-reset{min-height:32px;padding:0 12px;font-size:13px}
 #botGenIn:focus-visible,#botGenBtn:focus-visible,.sty-bot-reset:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.sty-bot-view[hidden]{display:none}
-#styPanelBot .character-choice{width:42px;height:42px;border-radius:10px}
-#styPanelBot .colour-choices .character-choice{width:28px;height:28px}
-.sty-bot-gen{display:flex;flex-direction:column;gap:10px}
 #botGenIn{
   width:100%;min-height:78px;resize:vertical;box-sizing:border-box;
   font:inherit;font-size:14px;line-height:1.5;color:var(--ink);
@@ -2552,7 +2594,7 @@ button.sty-swatch:active{transform:scale(.94)}
   .rec-list .pt{grid-area:2 / 3}
   .rec-list .acc{grid-area:2 / 4}
   .sty-use,.sty-del,.sty-undo,.sty-reset,.sty-save{min-height:44px}
-  #stylesBox .sty-bot-modes [role="tab"],.sty-bot-reset{min-height:36px;padding:0 12px;font-size:13px}
+  .sty-bot-reset{min-height:36px;padding:0 12px;font-size:13px}
   .sty-del{width:44px;height:44px}
   .sty-list li{gap:10px 12px}
 }
@@ -2579,7 +2621,8 @@ body.rk-intro #regions .navbar .nav-logo{cursor:grab}
 .rk-layer{position:fixed;inset:0;z-index:6;pointer-events:none;transition:opacity var(--si-dur) var(--ease-out)}
 .rk-layer[hidden]{display:none}
 /* 로그인 덮개(제 봇이 따로 산다)와 플레이 중에는 봇이 물러난다 */
-body:is(.signing,:has(#play.on)) .rk-layer{opacity:0;visibility:hidden;pointer-events:none}
+/* 봇 스타일을 고르는 동안은 홈의 봇과 말풍선이 물러난다 — 판 안의 봇이 그 자리를 맡는다 */
+body:is(.signing,:has(#play.on),:has(#styles:popover-open #styPanelBot:not([hidden]))) .rk-layer{opacity:0;visibility:hidden;pointer-events:none}
 /* 처음 온 사람: 로고만 남기고 넵바까지 덮는다. 넵바를 봇 층보다 올려 봇이 로고 알약
    뒤에 반쯤 숨고, 막 위로 올라온 넵바의 다른 칸은 막만큼 어둡게 눌러 둔다(잠금은
    ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */

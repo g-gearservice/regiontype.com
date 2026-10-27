@@ -118,21 +118,10 @@ function closePage(now) {
   if (was === 'account') leftAccount();
 }
 
-/* ── 내 스타일 ── 덮개가 아니라 연 단추 바로 아래 뜨는 popover 다. 계정에서 열어도 계정이 그대로 남는다.
-   Esc·바깥 누르기(popover 가 한다)·닫기 단추로 닫히고, 초점은 연 단추로 돌아간다.
-   아래 자리가 모자라면 단추 위로 뒤집고, 단추가 안 보이면(봇·주소로 열 때) 위 가운데에 띄운다 */
+/* ── 내 스타일 ── 덮개가 아니라 오른쪽 아래 구석에서 올라오는 popover 다(자리는 style.css). 계정에서 열어도 계정이 그대로 남는다.
+   Esc·바깥 누르기(popover 가 한다)·닫기 단추로 닫히고, 초점은 연 단추로 돌아간다 */
 let styOpener = null;
 const styOpen = () => $('#styles').matches(':popover-open');
-function placeStyles() {
-  const d = $('#styles'), PAD = 16, GAP = 8;
-  const a = styOpener && styOpener !== document.body && styOpener.isConnected && styOpener.getClientRects().length ? styOpener.getBoundingClientRect() : null;
-  const w = d.offsetWidth, h = d.firstElementChild.scrollHeight;
-  let top = a ? a.bottom + GAP : PAD + 56;
-  if (a && innerHeight - top - PAD < Math.min(h, 320) && a.top - GAP - PAD > innerHeight - top - PAD) top = Math.max(PAD, a.top - GAP - h);
-  d.style.left = Math.round(a ? Math.min(Math.max(PAD, a.left), innerWidth - w - PAD) : (innerWidth - w) / 2) + 'px';
-  d.style.top = Math.round(top) + 'px';
-  d.style.maxHeight = Math.round((a && top < a.top ? a.top - GAP : innerHeight - PAD) - top) + 'px';
-}
 function openStyles(from, tab) {
   const d = $('#styles');
   if (styOpen()) {
@@ -148,7 +137,6 @@ function openStyles(from, tab) {
   else if (tab === 'game') pickStyTab($('#styTabGame'));
   else if (!$('#styPanelBot').hidden) mountBotStyle();
   d.showPopover();
-  placeStyles();
   (fingers() ? $('#styHead') : $('#styClose')).focus({ preventScroll: true });
 }
 
@@ -603,10 +591,12 @@ function savePick() {
 const KO = id => (id && t('ch_' + id) !== 'ch_' + id) ? t('ch_' + id) : '';
 const BOT_DEF = { shape: 'cercle', expression: 'curieux', colour: 'accent', gen: null };
 const botChar = { ...BOT_DEF };
+/* 마법봉이 가운데에 섰는가. 지은 모양을 입고 있으면 켜지고, 프리셋을 고르거나 판을 닫으면 꺼진다.
+   지은 모양이 아직 없어도 켤 수 있다 — 그때는 말풍선만 열고 모습은 그대로 둔다 */
+let botGenMode = false, botLastGen = null;
 const botLists = { shape: [], colour: [] };
-const botHexes = new Map();
 const botThumbs = new Map();
-let botMe = null, botReal = null, botMounted = false, botLookAim = null, botLooking = 0, botKeepT = 0;
+let botMe = null, botMounted = false, botLookAim = null, botLooking = 0, botKeepT = 0;
 
 function syncBotStyleFromStorage() {
   const f = readFace();
@@ -614,29 +604,56 @@ function syncBotStyleFromStorage() {
   botChar.expression = f.expression || BOT_DEF.expression;
   botChar.colour = f.colour || BOT_DEF.colour;
   botChar.gen = f.gen || null;
+  if (botChar.gen) { botGenMode = true; botLastGen = botChar.gen; }
   if (botMounted) paintBotStyle();
 }
 
 function paintBotStyle() {
-  const shLabel = $('#shapeLabel'), clLabel = $('#colourLabel');
-  if (shLabel) shLabel.textContent = botChar.shape === 'gen' ? t('botSubGen') : (KO(botChar.shape) || '');
-  if (clLabel) clLabel.textContent = KO(botChar.colour) || '';
-  document.querySelectorAll('#shapeChoices [data-shape]')
-    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shape === botChar.shape && !botChar.gen)));
-  document.querySelectorAll('#colourChoices [data-colour]')
-    .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.colour === botChar.colour)));
+  const btns = [...document.querySelectorAll('#shapeChoices [data-shape]')];
+  const on = btns.find(b => botGenMode ? b.dataset.shape === 'gen' : b.dataset.shape === botChar.shape && !botChar.gen);
+  $('#styPanelBot .character-preview').toggleAttribute('data-gen', botGenMode);
+  /* 물러난 쪽은 눌리지도 읽히지도 않게 한다(style.css 는 투명하게만 만든다) */
+  $('#styPanelBot .pet-size').inert = botGenMode;
+  $('#botViewGen').inert = !botGenMode;
+  btns.forEach(b => { b.setAttribute('aria-pressed', String(b === on)); b.tabIndex = b === (on || btns[0]) ? 0 : -1; });
+  if (on) centreShape(on);
   $('#character')?.setAttribute('aria-label',
     `${KO(botChar.colour)} ${botChar.shape === 'gen' ? t('botSubGen') : KO(botChar.shape)}`);
   if (!botMe) return;
-  for (const api of [botMe, botReal]) {
-    api.setShape(botChar.shape, botChar.gen);
-    api.setExpression(botChar.expression);
-    api.setColour(botChar.colour);
-  }
+  botMe.setShape(botChar.shape, botChar.gen);
+  botMe.setExpression(botChar.expression);
+  botMe.setColour(botChar.colour);
   for (const api of botThumbs.values()) {
     api.setExpression(botChar.expression);
     api.setColour(botChar.colour);
   }
+}
+
+/* 모양 알약 — 고른 모양을 가운데에 세운다. 첫 것(마법봉)과 끝 것만 맨 위·맨 아래 끝에 붙어 위아래에 빈칸이 없다.
+   그래서 첫 둘·끝 둘은 같은 굴림 자리를 나눠 쓴다 — 굴려서 끝에 닿으면 끝 것, 그 밖에서 멈추면 가장 가까운 가운데 자리의 것을 고른다.
+   shapeAim 은 우리가 굴리는 목적지다 — 거기 닿은 멈춤은 고르기가 아니고, 닿기 전의 멈춤(끊긴 미끄러짐)도 고르지 않는다 */
+let shapeAim = null;
+function shapeTop(box, i) {
+  const all = box.children, max = box.scrollHeight - box.clientHeight;
+  if (i <= 0) return 0;
+  if (i >= all.length - 1) return max;
+  const b = all[i];
+  return Math.round(Math.max(0, Math.min(max, b.offsetTop + b.offsetHeight / 2 - box.clientHeight / 2)));
+}
+function centreShape(b) {
+  const box = b.parentElement, top = shapeTop(box, [...box.children].indexOf(b));
+  if (Math.abs(box.scrollTop - top) <= 1 || shapeAim === top) return;
+  shapeAim = top;
+  box.scrollTo({ top });
+}
+function shapeAtCentre() {
+  const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop, max = box.scrollHeight - box.clientHeight;
+  if (!n) return null;
+  if (st <= .5) return all[0];
+  if (st >= max - .5) return all[n - 1];
+  let best = 1, d = Infinity;
+  for (let i = 1; i < n - 1; i++) { const dd = Math.abs(shapeTop(box, i) - st); if (dd < d) { d = dd; best = i; } }
+  return all[best];
 }
 
 async function saveBotProfile() {
@@ -665,7 +682,7 @@ async function saveBotProfile() {
   } catch {}
 }
 
-function keepBotStyle(msgKey = 'acctCharSaved') {
+function keepBotStyle(msgKey = null) {
   const out = { shape: botChar.shape, expression: botChar.expression, colour: botChar.colour };
   if (botChar.gen) out.gen = botChar.gen;
   try {
@@ -683,25 +700,13 @@ function botLookTick() {
   if (!styOpen() || $('#styPanelBot').hidden) return;
   const f = api => { if (botLookAim) api.lookToward(botLookAim[0], botLookAim[1]); else api.lookAway(); };
   if (botMe) f(botMe);
-  if (botReal) f(botReal);
   for (const api of botThumbs.values()) f(api);
-}
-
-function updateSizeTail() {
-  const size = $('#botSize'), realEl = $('#characterReal');
-  if (!size || !realEl) return;
-  const pill = size.parentElement, cap = realEl.nextElementSibling;
-  if (!pill || !cap) return;
-  const a = cap.getBoundingClientRect(), b = pill.getBoundingClientRect();
-  if (b.width) pill.style.setProperty('--tail-x', (a.left + a.width / 2 - b.left - parseFloat(getComputedStyle(pill).borderLeftWidth)) + 'px');
 }
 
 function mountBotStyle() {
   if (botMounted) {
     if (botMe) botMe.start();
-    if (botReal) botReal.start();
     syncBotStyleFromStorage();
-    updateSizeTail();
     return;
   }
   botMounted = true;
@@ -710,7 +715,6 @@ function mountBotStyle() {
   buddyKit.then(({ mountBuddy, TABLES }) => {
     botLists.shape = TABLES.shapes.map(x => x.id);
     botLists.colour = ['accent', ...TABLES.colours.map(x => x.id)];
-    for (const c of TABLES.colours) botHexes.set(c.id, c.hex);
     const saved = readFace();
     if (botLists.shape.includes(saved.shape) || saved.shape === 'gen') botChar.shape = saved.shape;
     if (botLists.colour.includes(saved.colour)) botChar.colour = saved.colour;
@@ -718,11 +722,22 @@ function mountBotStyle() {
 
     botMe = mountBuddy($('#character'), { calm, shape: botChar.shape, expression: botChar.expression, gen: botChar.gen });
     botMe.start();
-    botReal = mountBuddy($('#characterReal'), { calm, shape: botChar.shape, expression: botChar.expression, gen: botChar.gen });
-    botReal.start();
 
-    const shBox = $('#shapeChoices'), clBox = $('#colourChoices');
-    shBox.replaceChildren(); clBox.replaceChildren();
+    const shBox = $('#shapeChoices');
+    shBox.replaceChildren();
+    const wand = document.createElement('button');
+    wand.type = 'button'; wand.dataset.shape = 'gen';
+    wand.className = 'character-choice pet-wand';
+    wand.setAttribute('aria-label', t('botSubGen')); wand.setAttribute('aria-pressed', 'false');
+    wand.title = t('botSubGen');
+    wand.innerHTML = '<i class="i i-wand" aria-hidden="true"></i>';
+    wand.onclick = () => {
+      if (botGenMode) return centreShape(wand);
+      botGenMode = true;
+      if (botLastGen) { botChar.shape = 'gen'; botChar.gen = botLastGen; keepBotStyle(); }
+      paintBotStyle();
+    };
+    shBox.append(wand);
     for (const id of botLists.shape) {
       const label = KO(id) || id;
       const b = document.createElement('button');
@@ -734,22 +749,30 @@ function mountBotStyle() {
       api.setColour(botChar.colour);
       api.start();
       botThumbs.set(id, api);
-      b.onclick = () => { botChar.shape = id; botChar.gen = null; paintBotStyle(); keepBotStyle(); };
+      b.onclick = () => {
+        if (!botGenMode && botChar.shape === id && !botChar.gen) return centreShape(b);
+        botGenMode = false; botChar.shape = id; botChar.gen = null; paintBotStyle(); keepBotStyle();
+      };
       shBox.append(b);
     }
-    for (const id of botLists.colour) {
-      const label = KO(id) || id;
-      const b = document.createElement('button');
-      b.type = 'button'; b.dataset.colour = id;
-      b.className = 'character-choice' + (id === 'accent' ? ' is-accent-link' : '');
-      b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', 'false');
-      b.title = label;
-      b.style.background = id === 'accent' ? 'var(--accent)' : botHexes.get(id);
-      b.onclick = () => { botChar.colour = id; paintBotStyle(); keepBotStyle(); };
-      clBox.append(b);
-    }
+    /* scrollend 는 굴리기(미끄러짐 포함)가 다 끝나야 온다 — 없는 곳만 잠깐 멈춤으로 갈음한다 */
+    const settle = () => {
+      if (shapeAim != null) { if (Math.abs(shBox.scrollTop - shapeAim) <= 1) shapeAim = null; return; }
+      const b = shapeAtCentre(); if (b) b.click();
+    };
+    /* 사람이 손대면 우리 목적지는 버린다 */
+    for (const ev of ['wheel', 'touchstart', 'pointerdown']) shBox.addEventListener(ev, () => { shapeAim = null; }, { passive: true });
+    let still = 0;
+    if ('onscrollend' in shBox) shBox.onscrollend = settle;
+    else shBox.onscroll = () => { clearTimeout(still); still = setTimeout(settle, 140); };
+    shBox.onkeydown = e => {
+      if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+      e.preventDefault();
+      const all = [...shBox.children], i = all.indexOf(document.activeElement);
+      const next = all[e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : Math.min(all.length - 1, Math.max(0, i + (e.key === 'ArrowUp' ? -1 : 1)))];
+      next.click(); next.focus({ preventScroll: true });
+    };
     paintBotStyle();
-    requestAnimationFrame(() => { updateSizeTail(); if (styOpen()) placeStyles(); });
   }).catch(err => {
     console.error('[styles] 캐릭터 엔진', err);
     if ($('#character')) $('#character').textContent = t('acctCharFail');
@@ -765,18 +788,6 @@ function pickStyTab(tab) {
     document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
   });
   if (tab === $('#styTabBot')) mountBotStyle();
-  if (styOpen()) requestAnimationFrame(placeStyles);
-}
-
-function pickBotSubTab(tab) {
-  const tabs = [$('#botTabPreset'), $('#botTabGen')];
-  tabs.forEach(tb => {
-    const on = tb === tab;
-    tb.setAttribute('aria-selected', String(on));
-    tb.tabIndex = on ? 0 : -1;
-    document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
-  });
-  if (styOpen()) requestAnimationFrame(placeStyles);
 }
 
 async function generateBotLook(promptText) {
@@ -798,7 +809,7 @@ async function generateBotLook(promptText) {
     if (look) {
       act(look);
       saveBotProfile();
-      note.textContent = d.say || t('acctCharSaved');
+      note.textContent = d.say || '';
     } else {
       /* 모델이 look 을 안 실었으면 설명 문자열 해시로 즉석 생성 모양을 빚는다 */
       const h = [...promptText].reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
@@ -813,7 +824,7 @@ async function generateBotLook(promptText) {
       };
       act({ act: 'look', shape: 'gen', gen });
       saveBotProfile();
-      note.textContent = d.say || t('acctCharSaved');
+      note.textContent = d.say || '';
     }
   } catch (e) {
     note.textContent = t(e.status === 429 ? 'botBusy' : 'botChatFail');
@@ -837,17 +848,9 @@ function wireStyles() {
     const next = styTabs[e.key === 'Home' ? 0 : e.key === 'End' ? styTabs.length - 1 : (i + 1) % styTabs.length];
     pickStyTab(next); next.focus();
   });
-  const botTabs = [$('#botTabPreset'), $('#botTabGen')];
-  botTabs.forEach(tb => tb.addEventListener('click', () => pickBotSubTab(tb)));
-  $('#styles .sty-bot-modes').addEventListener('keydown', e => {
-    const i = botTabs.indexOf(document.activeElement);
-    if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    e.preventDefault();
-    const next = botTabs[e.key === 'Home' ? 0 : e.key === 'End' ? botTabs.length - 1 : (i + 1) % botTabs.length];
-    pickBotSubTab(next); next.focus();
-  });
   $('#botReset').addEventListener('click', () => {
     Object.assign(botChar, BOT_DEF);
+    botGenMode = false;
     const size = $('#botSize');
     if (size) {
       size.value = 100;
@@ -864,7 +867,7 @@ function wireStyles() {
     if (text) generateBotLook(text);
   });
   {
-    const size = $('#botSize'), realEl = $('#characterReal');
+    const size = $('#botSize');
     let v = 1;
     try { const sv = +localStorage.getItem('rt.botsize'); if (sv >= .7 && sv <= 1.3) v = sv; } catch {}
     size.value = Math.round(v * 100);
@@ -877,11 +880,6 @@ function wireStyles() {
     show();
     size.addEventListener('input', show);
     size.addEventListener('change', () => { try { localStorage.setItem('rt.botsize', String(size.value / 100)); } catch {} });
-    const pill = size.parentElement;
-    if (typeof ResizeObserver === 'function' && realEl && pill) {
-      const ro = new ResizeObserver(updateSizeTail);
-      ro.observe(realEl); ro.observe(pill);
-    }
   }
   addEventListener('pointermove', e => {
     if (!styOpen() || $('#styPanelBot').hidden) return;
@@ -905,15 +903,13 @@ function wireStyles() {
   d.addEventListener('toggle', e => {
     if (e.newState !== 'closed') return;
     styEdit = false;
+    botGenMode = false;
     paintTheme();   // 저장하지 않은 미리 보기를 거둔다
     /* 바깥의 다른 것을 눌러 닫혔으면 그 초점을 빼앗지 않는다 */
     const back = document.activeElement === document.body || d.contains(document.activeElement);
     if (back && styOpener && styOpener.isConnected) styOpener.focus({ preventScroll: true });
     styOpener = null;
   });
-  /* 뒤가 흐르거나 창이 바뀌면 단추를 따라간다 */
-  addEventListener('scroll', () => { if (styOpen()) placeStyles(); }, true);
-  addEventListener('resize', () => { if (styOpen()) placeStyles(); });
   /* 꾹 누르기(.5초) — 지우기 모드를 켠다. 뒤따르는 click 은 삼킨다. 마우스 오른쪽 단추도 같은 길 */
   let hold = 0, held = false;
   ul.addEventListener('pointerdown', e => {
