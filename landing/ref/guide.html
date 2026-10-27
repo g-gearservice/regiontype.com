@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 행정동 안내</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- 래퍼런스: cosmos.so/e/1038979217 (1972 뉴욕 지하철 안내, Massimo Vignelli).
+     노선마다 색 머리띠와 동그란 노선 표지, 그 아래 역 이름이 세로로 빽빽한 단 — 그 문법을 따른다.
+     노선 자리에 서울 자치구, 역 자리에 그 구의 행정동(data/<구>-dong.course.json, 코스 순서 그대로).
+     머리띠 색은 서울 다섯 생활권. 동 이름을 치면 그 줄에 표시가 붙는다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  :root{
+    --paper:#f1ede2; --ink:#121212; --muted:#5a574f; --rule:#121212;
+    --c1:#e2442f; --c2:#f2a51a; --c3:#2a8f4e; --c4:#2a62b8; --c5:#7a4fb2;
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink)}
+  body{font:500 12px/1.35 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  .band{background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding:18px 20px;flex-wrap:wrap}
+  .band h1{font:800 clamp(26px,4vw,52px)/1 var(--sans);letter-spacing:-.03em}
+  .band h1 span{display:block;font-weight:500;font-size:.42em;margin-top:6px;letter-spacing:0}
+  .band nav a{text-decoration:none;margin-left:16px;font-size:13px}
+  .band nav a:hover{text-decoration:underline}
+
+  .keys{display:flex;flex-wrap:wrap;gap:8px 18px;padding:12px 20px;border-bottom:2px solid var(--rule);align-items:center}
+  .keys span{display:inline-flex;align-items:center;gap:6px}
+  .keys span::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--c)}
+  .keys label{margin-left:auto;display:flex;gap:8px;align-items:center;font-weight:600}
+  .keys input{border:0;border-bottom:2px solid var(--ink);background:none;font:600 16px var(--sans);padding:3px 0;width:11em;outline:0}
+  .keys output{font-variant-numeric:tabular-nums;min-width:6em}
+
+  .cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0;border-left:1px solid var(--rule)}
+  .col{border-right:1px solid var(--rule);border-bottom:2px solid var(--rule)}
+  .col header{background:var(--c);color:#fff;padding:10px 10px 12px;display:flex;align-items:center;gap:8px;min-height:62px}
+  .col[data-z="c2"] header{color:var(--ink)}
+  .col header b{flex:none;width:36px;height:36px;border-radius:50%;background:#fff;color:var(--c);display:grid;place-items:center;font:900 16px var(--sans)}
+  .col header h2{font:800 17px/1.05 var(--sans);letter-spacing:-.02em}
+  .col header small{display:block;font:500 11px var(--sans);opacity:.9;margin-top:2px}
+  .col ol{list-style:none;padding:6px 0 10px}
+  .col li{padding:3px 10px;display:flex;justify-content:space-between;gap:6px;border-left:4px solid transparent}
+  .col li.on{border-left-color:var(--c);font-weight:700;background:color-mix(in srgb,var(--c) 14%,transparent)}
+  .col li.on::after{content:"✓"}
+  .col li.near{text-decoration:underline;text-underline-offset:2px}
+
+  footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 20px;color:var(--muted)}
+  footer a{text-decoration:none}
+</style>
+</head>
+<body>
+<div class="band">
+  <h1>서울 행정동 안내<span>regiontype — 지명을 치는 타자연습 · 25 자치구</span></h1>
+  <nav aria-label="주 메뉴"><a href="../../">치러 가기</a><a href="../../about/">소개</a><a href="index.html">시안 목록</a></nav>
+</div>
+<div class="keys">
+  <span style="--c:var(--c1)">도심권</span><span style="--c:var(--c2)">동북권</span><span style="--c:var(--c3)">서북권</span><span style="--c:var(--c4)">서남권</span><span style="--c:var(--c5)">동남권</span>
+  <label for="t">동 이름<input id="t" autocomplete="off" spellcheck="false" placeholder="합정동"></label>
+  <output id="out" aria-live="polite">0 / —</output>
+</div>
+<main class="cols" id="cols"></main>
+<footer><span>단 순서는 '서울 25개 자치구' 코스, 동 순서는 그 구의 동 코스 순서입니다.</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a></span></footer>
+
+<script>
+// 서울 생활권(2030 서울플랜의 다섯 권역)
+const ZONE={c1:['종로구','중구','용산구'],c2:['성동구','광진구','동대문구','중랑구','성북구','강북구','도봉구','노원구'],
+  c3:['은평구','서대문구','마포구'],c4:['양천구','강서구','구로구','금천구','영등포구','동작구','관악구'],c5:['서초구','강남구','송파구','강동구']};
+const zone=n=>Object.keys(ZONE).find(k=>ZONE[k].includes(n));
+const norm=s=>s.replace(/\s/g,'');
+const rows={};let total=0;const lit=new Set();
+Promise.all([fetch('../../data/seoul-gu.course.json').then(r=>r.json()),fetch('../../data/bus.json').then(r=>r.json())]).then(([course,bus])=>{
+  const slug={};bus.districts.forEach(d=>slug[d.name]=d.slug);
+  const box=document.getElementById('cols');
+  course.items.forEach(it=>{
+    const n=it.name,sec=document.createElement('section');sec.className="col";sec.dataset.z=zone(n);sec.style.setProperty('--c',`var(--${zone(n)})`);
+    sec.innerHTML=`<header><b aria-hidden="true">${n[0]}</b><div><h2>${n}</h2><small>…</small></div></header><ol></ol>`;
+    box.append(sec);
+    fetch(`../../data/${slug[n]}-dong.course.json`).then(r=>r.json()).then(c=>{
+      sec.querySelector('small').textContent=`${c.items.length} 행정동`;
+      const ol=sec.querySelector('ol');
+      c.items.forEach(d=>{const li=document.createElement('li');li.textContent=d.name;ol.append(li);(rows[d.name]=rows[d.name]||[]).push(li)});
+      total+=c.items.length;count();
+    });
+  });
+});
+function count(){document.getElementById('out').textContent=`${lit.size} / ${total}`}
+const t=document.getElementById('t');
+// 같은 이름의 동이 두 구에 있을 수 있다(예: 신사동) — 그러면 둘 다 표시한다
+const check=ev=>{
+  if(ev&&ev.isComposing)return;const v=norm(t.value);
+  Object.entries(rows).forEach(([k,ls])=>ls.forEach(li=>li.classList.toggle('near',!lit.has(k)&&v.length>1&&k.startsWith(v))));
+  if(rows[v]&&!lit.has(v)){lit.add(v);rows[v].forEach(li=>{li.classList.remove('near');li.classList.add('on')});t.value='';
+    rows[v][0].scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});count()}
+};
+t.addEventListener('input',check);t.addEventListener('compositionend',()=>setTimeout(check));
+</script>
+</body>
+</html>

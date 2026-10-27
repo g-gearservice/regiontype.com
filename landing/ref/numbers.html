@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 숫자 원</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- 래퍼런스: cosmos.so/e/1336157045 (숫자 원 격자).
+     가는 선 격자의 칸마다 회색 원 하나와 큰 숫자 하나, 원 하나만 파랗다 — 그 문법을 따른다.
+     원의 크기는 숫자의 크기다(넓이 ∝ 로그). 숫자는 데이터에서 센다:
+     행정동은 25개 구의 동 코스를 합치고, 말은 data/i18n.json 의 열쇠 수다. 나라는 *-admin 코스 수(46).
+     파란 원은 지금 이 페이지에서 친 이름 수다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#fafaf8; --ink:#111; --muted:#777; --rule:#d9d9d5; --disc:#d8d8d4; --blue:#2335ff;
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink)}
+  body{font:500 13px/1.4 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+  header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--rule)}
+  header nav a{margin-left:20px;text-decoration:none;color:var(--muted)}
+  header nav a:hover{color:var(--ink)}
+
+  /* 격자 — 네 칸 폭, 정사각 칸 */
+  .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-left:1px solid var(--rule)}
+  .cell{position:relative;aspect-ratio:1;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:16px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+  .disc{position:absolute;left:50%;top:50%;width:var(--d);aspect-ratio:1;border-radius:50%;background:var(--disc);transform:translate(-50%,-50%);transition:width .8s cubic-bezier(.23,1,.32,1)}
+  .cell.blue .disc{background:var(--blue)}
+  .cell > *:not(.disc){position:relative}
+  .big{font-weight:500;font-size:clamp(34px,5.4vw,84px);letter-spacing:-.04em;line-height:.9;font-variant-numeric:tabular-nums;text-align:right}
+  .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+  .lab b{color:var(--ink);font-weight:600}
+  .cell.text{justify-content:flex-start;gap:12px}
+  .cell.text h1{font-weight:500;font-size:clamp(22px,2.4vw,34px);letter-spacing:-.02em;line-height:1.1}
+  .cell.text p{color:#444;line-height:1.6;max-width:22em}
+  .cell.text a.go{margin-top:auto;align-self:flex-start;background:var(--ink);color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px}
+
+  .cell.input{justify-content:flex-end}
+  .cell.input input{width:100%;border:0;border-bottom:1px solid var(--ink);background:none;color:var(--ink);font:500 18px/1.4 var(--sans);padding:6px 0;outline:0}
+  .cell.input input::placeholder{color:var(--muted)}
+  .cell.input p{font-size:12px;color:var(--muted);margin-top:6px;min-height:1.4em}
+
+  footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 24px;font-size:12px;color:var(--muted)}
+  footer a{text-decoration:none}
+
+  @media (max-width:860px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} .big{font-size:clamp(34px,11vw,72px)} }
+  @media (prefers-reduced-motion:reduce){ .disc{transition:none} }
+</style>
+</head>
+<body>
+<header><b>regiontype</b><nav aria-label="주 메뉴"><a href="../../">플레이</a><a href="../../about/">소개</a><a href="../../compete/">경쟁전</a></nav></header>
+
+<main class="grid" id="grid">
+  <div class="cell text">
+    <h1>지명을 치는 타자연습.</h1>
+    <p>지도에 뜬 지역 이름을 직접 쳐서 익힙니다. 숫자는 지금 들어 있는 코스에서 셌습니다.</p>
+    <a class="go" href="../../">바로 치기</a>
+  </div>
+  <div class="cell" data-k="gu"><span class="disc"></span><div class="lab"><b>자치구</b><span>서울</span></div><div class="big">—</div></div>
+  <div class="cell" data-k="dong"><span class="disc"></span><div class="lab"><b>행정동</b><span>서울 25개 구</span></div><div class="big">—</div></div>
+  <div class="cell blue input" data-k="me">
+    <span class="disc"></span>
+    <div class="lab"><b>내가 친 구</b><span>이 페이지</span></div>
+    <div class="big" id="me">0</div>
+    <label for="t" style="position:absolute;left:-9999px">구 이름 입력</label>
+    <input id="t" autocomplete="off" spellcheck="false" placeholder="구 이름을 쳐 보세요">
+    <p id="msg" aria-live="polite"></p>
+  </div>
+  <div class="cell" data-k="nation"><span class="disc"></span><div class="lab"><b>나라</b><span>행정구역 코스</span></div><div class="big">—</div></div>
+  <div class="cell" data-k="lang"><span class="disc"></span><div class="lab"><b>화면 말</b><span>읽기를 접어 견줌</span></div><div class="big">—</div></div>
+  <div class="cell text">
+    <h1>숫자가 클수록 원이 큽니다.</h1>
+    <p>원의 넓이는 숫자의 로그를 따릅니다. 파란 원만 이 페이지에서 자랍니다 — 구 이름을 칠 때마다.</p>
+  </div>
+  <div class="cell" data-k="left"><span class="disc"></span><div class="lab"><b>남은 구</b><span>이 페이지</span></div><div class="big">25</div></div>
+</main>
+
+<footer><span>regiontype.com</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a></span></footer>
+
+<script>
+const norm=s=>s.replace(/\s/g,''),fmt=n=>n.toLocaleString('ko-KR');
+// 넓이가 로그를 따르도록 지름은 √log. 칸 폭의 98% 를 넘지 않는다
+const size=n=>Math.min(98,Math.sqrt(Math.log10(n+1)/Math.log10(1000))*96);
+function set(k,n){
+  const c=document.querySelector(`[data-k="${k}"]`);if(!c)return;
+  c.querySelector('.big').textContent=fmt(n);c.style.setProperty('--d',size(n)+'%');
+}
+set('nation',46);set('left',25);set('me',0);
+let names=[];const lit=new Set();
+Promise.all([
+  fetch('../../data/seoul-gu.course.json').then(r=>r.json()),
+  fetch('../../data/bus.json').then(r=>r.json()),
+  fetch('../../data/i18n.json').then(r=>r.json())
+]).then(([course,bus,i18n])=>{
+  names=course.items.map(i=>i.name);set('gu',names.length);
+  set('lang',Object.keys(i18n).length);
+  Promise.all(bus.districts.map(d=>fetch(`../../data/${d.slug}-dong.course.json`).then(r=>r.json()).then(c=>c.items.length)))
+    .then(a=>set('dong',a.reduce((s,x)=>s+x,0)));
+});
+const t=document.getElementById('t'),msg=document.getElementById('msg');
+const check=ev=>{
+  if(ev&&ev.isComposing)return;
+  const v=norm(t.value);
+  if(names.includes(v)&&!lit.has(v)){
+    lit.add(v);t.value='';msg.textContent=`${v} — 맞았습니다`;
+    set('me',lit.size);set('left',names.length-lit.size);
+    document.querySelector('[data-k="me"] .disc').style.setProperty('--d',(20+lit.size/names.length*78)+'%');
+  }else if(lit.has(v)){msg.textContent=`${v}는 이미 쳤습니다`}
+};
+document.querySelector('[data-k="me"] .disc').style.setProperty('--d','20%');
+t.addEventListener('input',check);t.addEventListener('compositionend',()=>setTimeout(check));
+</script>
+</body>
+</html>

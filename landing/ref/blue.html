@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 파란 판</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- 래퍼런스: cosmos.so/e/1610981495 (Pony Studio 웹사이트).
+     쨍한 파랑 한 장을 꽉 채운 흰 실선 지도, 그 위에 작은 흰 글자뿐 — 그 문법을 그대로 따른다.
+     실선은 서울 자치구의 경계다. 구 이름을 치면 그 구가 흰 판으로 덮이고 이름이 박힌다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --blue:#1d2bff; --ink:#fff; --soft:rgba(255,255,255,.7); --hair:rgba(255,255,255,.85);
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--blue);color:var(--ink)}
+  body{font:500 14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  :focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+  /* 첫 장 — 지도가 화면을 꽉 채우고, 글자는 네 귀퉁이에 */
+  .hero{position:relative;min-height:100svh;overflow:hidden}
+  .map{position:absolute;inset:0;width:100%;height:100%}
+  .map .edge{fill:none;stroke:var(--hair);stroke-width:1.2;vector-effect:non-scaling-stroke}
+  .map .gu{fill:#fff;opacity:0;transition:opacity .45s ease}
+  .map .gu.on{opacity:1}
+  .map .gu.hint{opacity:.22}
+  .map text{fill:var(--blue);font:600 15px var(--sans);text-anchor:middle;dominant-baseline:middle;opacity:0;transition:opacity .45s ease}
+  .map text.on{opacity:1}
+
+  .top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:20px 24px;gap:16px}
+  .brand{font-weight:600;font-size:15px}
+  .top nav a{text-decoration:none;margin-left:20px}
+  .top nav a:hover{text-decoration:underline}
+  .say{position:absolute;left:24px;bottom:24px;max-width:24em;font-size:clamp(22px,2.6vw,34px);line-height:1.15;letter-spacing:-.02em;font-weight:500}
+  .say small{display:block;margin-top:12px;font-size:14px;letter-spacing:0;color:var(--soft);font-weight:400;line-height:1.5}
+
+  .type{position:absolute;right:24px;bottom:24px;width:min(300px,calc(100% - 48px));background:var(--blue);padding:4px 0 0}
+  .type input{width:100%;background:none;border:0;border-bottom:1px solid #fff;color:#fff;font:500 18px/1.4 var(--sans);padding:6px 0;outline:0}
+  .type input::placeholder{color:var(--soft)}
+  .type p{font-size:12px;color:var(--soft);margin-top:6px;font-variant-numeric:tabular-nums}
+
+  /* 아래 — 같은 파랑, 흰 실선으로 나눈 세 칸 */
+  .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--hair)}
+  .row a{display:block;padding:24px 24px 64px;text-decoration:none;border-left:1px solid var(--hair)}
+  .row a:first-child{border-left:0}
+  .row a:hover,.row a:focus-visible{background:#fff;color:var(--blue);outline:0}
+  .row i{font-style:normal;font-size:12px;color:inherit;opacity:.75}
+  .row h2{font-weight:500;font-size:clamp(24px,3vw,40px);letter-spacing:-.02em;margin:8px 0}
+  .row p{max-width:22em;opacity:.85}
+  footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 24px;border-top:1px solid var(--hair);font-size:12px;color:var(--soft)}
+  footer a{text-decoration:none}
+
+  @media (max-width:720px){
+    .say{bottom:120px;left:16px;right:16px}
+    .type{left:16px;right:16px;width:auto}
+    .top{padding:16px}
+    .row{grid-template-columns:1fr}
+    .row a{border-left:0;border-top:1px solid var(--hair)}
+  }
+  @media (prefers-reduced-motion:reduce){ .map .gu,.map text{transition:none} }
+</style>
+</head>
+<body>
+
+<section class="hero" aria-label="서울 25개 자치구">
+  <svg class="map" id="map" preserveAspectRatio="xMidYMid slice" role="img" aria-label="서울 자치구 경계 지도"></svg>
+  <div class="top">
+    <span class="brand">regiontype</span>
+    <nav aria-label="주 메뉴"><a href="../../">플레이</a><a href="../../about/">소개</a><a href="../../community/">커뮤니티</a></nav>
+  </div>
+  <p class="say">지도에 뜬 지역 이름을 직접 쳐서 익힙니다.<small>서울 25개 자치구에서 423개 행정동까지, 그리고 마흔여섯 나라의 행정구역.</small></p>
+  <div class="type">
+    <label for="t" style="position:absolute;left:-9999px">구 이름 입력</label>
+    <input id="t" autocomplete="off" spellcheck="false" placeholder="구 이름 — 마포구">
+    <p id="msg" aria-live="polite"><span id="n">0</span> / 25 덮임</p>
+  </div>
+</section>
+
+<nav class="row" aria-label="갈래">
+  <a href="../../"><i>01</i><h2>연습</h2><p>코스를 고르고, 이름을 치고, 지도를 채웁니다.</p></a>
+  <a href="../../compete/"><i>02</i><h2>경쟁전</h2><p>같은 코스를 다른 사람과 겨룹니다.</p></a>
+  <a href="../../mimi/"><i>03</i><h2>mimi · 동네버스</h2><p>보드게임 지형과 버스 노선 위에서 지명을 칩니다.</p></a>
+</nav>
+
+<footer><span>regiontype.com</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a></span></footer>
+
+<script>
+const NS='http://www.w3.org/2000/svg',norm=s=>s.replace(/\s/g,'');
+const lit=new Set(),gus={};
+fetch('../../data/seoul-gu.geom.json').then(r=>r.json()).then(g=>{
+  const c=g.cell,W=g.cols*c,H=g.rows_n*c,map=document.getElementById('map');
+  // 지도 둘레에 파란 여백을 두어 '꽉 채운' 느낌만 남기고 잘리지는 않게
+  map.setAttribute('viewBox',`${-c*3} ${-c*2} ${W+c*6} ${H+c*4}`);
+  const at=(x,y)=>(g.grid[y]||'')[x]||'.';
+  const cells={};let d='';
+  for(let y=-1;y<=g.rows_n;y++)for(let x=-1;x<=g.cols;x++){
+    const ch=at(x,y);
+    if(ch!=='.'){const n=g.items[parseInt(ch,36)].name;(cells[n]=cells[n]||[]).push([x,y])}
+    if(ch!==at(x+1,y))d+=`M${(x+1)*c} ${y*c}v${c}`;     // 오른쪽 이웃과 다르면 세로 경계
+    if(ch!==at(x,y+1))d+=`M${x*c} ${(y+1)*c}h${c}`;     // 아래 이웃과 다르면 가로 경계
+  }
+  g.items.forEach(it=>{
+    const p=document.createElementNS(NS,'path');p.setAttribute('class','gu');
+    p.setAttribute('d',cells[it.name].map(([x,y])=>`M${x*c} ${y*c}h${c}v${c}h${-c}z`).join(''));
+    const t=document.createElementNS(NS,'text');t.setAttribute('x',it.c[0]);t.setAttribute('y',it.c[1]);t.textContent=it.name;
+    map.append(p,t);gus[it.name]={p,t};
+  });
+  const e=document.createElementNS(NS,'path');e.setAttribute('class','edge');e.setAttribute('d',d);map.append(e);
+});
+const t=document.getElementById('t'),n=document.getElementById('n');
+// 조합 중에는 견주지 않는다 — 글자가 다 조합된 뒤에 판정한다
+const check=ev=>{
+  if(ev&&ev.isComposing)return;
+  const v=norm(t.value);
+  Object.entries(gus).forEach(([k,o])=>o.p.classList.toggle('hint',!lit.has(k)&&v.length>0&&k.startsWith(v)));
+  if(gus[v]&&!lit.has(v)){lit.add(v);gus[v].p.classList.remove('hint');gus[v].p.classList.add('on');gus[v].t.classList.add('on');t.value='';n.textContent=lit.size}
+};
+t.addEventListener('input',check);t.addEventListener('compositionend',()=>setTimeout(check));
+</script>
+</body>
+</html>

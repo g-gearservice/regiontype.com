@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 오락실</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- 래퍼런스: cosmos.so/e/693139666 (BLOK Games 랜딩).
+     밤색 남보라 바탕, 네온 그라데이션의 굵은 픽셀 제호, 보라 알약 단추, 'Quick Play!' 아래 판 카드들 — 그 문법을 따른다.
+     가운데 그림은 한반도 픽셀(data/korea-pixels.json). 구 이름을 하나 칠 때마다 픽셀이 한 줌씩 네온으로 켜지고
+     점수가 오른다. 깜빡임은 prefers-reduced-motion 에서 멈춘다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter+Tight:wght@500;700&family=Noto+Sans+KR:wght@500;700;900&display=swap">
+<style>
+  :root{
+    --bg:#0c0a1d; --bg2:#15123a; --ink:#f4f1ff; --muted:#a49fd0;
+    --pink:#ff4fd8; --cyan:#3ff2ff; --lime:#c6ff3f; --violet:#7b4dff; --gold:#ffce3f;
+    --pixel:"Press Start 2P",ui-monospace,monospace;
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink)}
+  body{font:500 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(ellipse at 50% 0%,#2a1f6e 0%,transparent 60%),linear-gradient(transparent 0 1px,transparent 1px),linear-gradient(90deg,rgba(123,77,255,.08) 1px,transparent 1px),linear-gradient(rgba(123,77,255,.08) 1px,transparent 1px);
+    background-size:auto,auto,32px 32px,32px 32px}
+  a,button{color:inherit;font:inherit}
+  :focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+
+  header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;font:10px var(--pixel)}
+  header nav a{text-decoration:none;margin-left:18px;color:var(--muted)}
+  header nav a:hover{color:var(--lime)}
+
+  .hero{text-align:center;padding:24px 16px 40px}
+  .kicker{font:10px var(--pixel);color:var(--muted);letter-spacing:.08em}
+  .pill{display:inline-block;margin:16px 0 22px;background:var(--violet);color:#fff;font:10px var(--pixel);padding:10px 16px;border-radius:999px;box-shadow:0 0 0 3px #2c1c88,0 0 24px rgba(123,77,255,.6);text-decoration:none}
+  h1{font:clamp(36px,9vw,104px)/1.05 var(--pixel);letter-spacing:-.02em;
+    background:linear-gradient(180deg,var(--cyan) 0%,var(--pink) 55%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 0 #2b0d5c) drop-shadow(0 0 22px rgba(255,79,216,.45))}
+  h1 span{display:block;font-size:.42em;margin-top:.4em}
+  .lead{max-width:30em;margin:22px auto 0;color:var(--muted)}
+
+  .cab{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;max-width:1080px;margin:0 auto;padding:0 16px}
+  .screen{background:#08061a;border:4px solid #2c1c88;border-radius:18px;padding:20px;box-shadow:inset 0 0 40px rgba(63,242,255,.15),0 0 0 4px #0c0a1d,0 0 40px rgba(123,77,255,.35)}
+  .screen svg{width:100%;height:auto;display:block;max-height:520px}
+  .screen rect{fill:#1c1840}
+  .screen rect.on{fill:var(--c)}
+  .hud{display:flex;flex-direction:column;gap:16px}
+  .box{border:3px solid #2c1c88;border-radius:14px;padding:16px;background:var(--bg2)}
+  .box h2{font:10px var(--pixel);color:var(--muted);margin-bottom:10px}
+  .score{font:28px var(--pixel);color:var(--lime);font-variant-numeric:tabular-nums}
+  .box input{width:100%;background:#08061a;border:2px solid var(--violet);border-radius:8px;color:var(--ink);font:700 18px var(--sans);padding:10px 12px;outline:0}
+  .box input:focus{border-color:var(--lime)}
+  .box p{font-size:12px;color:var(--muted);margin-top:8px;min-height:1.5em}
+  .blink{animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  .quick{max-width:1080px;margin:56px auto 0;padding:0 16px}
+  .quick h2{font:clamp(18px,3vw,28px) var(--pixel);color:var(--gold);text-shadow:0 4px 0 #5c2b00;margin-bottom:20px}
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .card{display:block;text-decoration:none;border:3px solid var(--c);border-radius:14px;padding:16px 16px 22px;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);box-shadow:0 0 18px color-mix(in srgb,var(--c) 40%,transparent);transition:transform .2s ease}
+  .card:hover,.card:focus-visible{transform:translateY(-4px)}
+  .card i{font:9px var(--pixel);font-style:normal;color:var(--c)}
+  .card h3{font:900 22px var(--sans);margin:10px 0 6px}
+  .card p{color:var(--muted);font-size:13px}
+  footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:48px 24px 24px;font:9px var(--pixel);color:var(--muted)}
+  footer a{text-decoration:none}
+
+  @media (max-width:860px){ .cab{grid-template-columns:1fr} .cards{grid-template-columns:repeat(2,minmax(0,1fr))} header nav{display:none} }
+  @media (prefers-reduced-motion:reduce){ .blink{animation:none} .card{transition:none} }
+</style>
+</head>
+<body>
+<header><span>REGIONTYPE</span><nav aria-label="주 메뉴"><a href="../../about/">ABOUT</a><a href="../../compete/">RANKED</a><a href="../../community/">COMMUNITY</a></nav></header>
+
+<section class="hero">
+  <div class="kicker">PLACE-NAME TYPING GAME</div>
+  <a class="pill" href="../../">▶ PRESS START</a>
+  <h1>REGION<br>TYPE<span>— 지명 타자 —</span></h1>
+  <p class="lead">지도에 뜬 지역 이름을 직접 쳐서 익힙니다. 서울 25개 자치구부터 마흔여섯 나라까지.</p>
+</section>
+
+<section class="cab" aria-label="한 판">
+  <div class="screen"><svg id="map" role="img" aria-label="한반도 픽셀 지도 — 친 만큼 켜짐"></svg></div>
+  <div class="hud">
+    <div class="box"><h2>SCORE</h2><div class="score" id="score">000</div><p><span id="n">0</span> / 25 구</p></div>
+    <div class="box">
+      <h2><label for="t">INSERT NAME <span class="blink" aria-hidden="true">_</span></label></h2>
+      <input id="t" autocomplete="off" spellcheck="false" placeholder="강남구">
+      <p id="msg" aria-live="polite">서울 구 이름을 치면 픽셀이 켜집니다</p>
+    </div>
+  </div>
+</section>
+
+<section class="quick" aria-labelledby="h-q">
+  <h2 id="h-q">QUICK PLAY!</h2>
+  <div class="cards">
+    <a class="card" href="../../" style="--c:var(--cyan)"><i>STAGE 01</i><h3>연습</h3><p>코스를 골라 지도를 채운다.</p></a>
+    <a class="card" href="../../compete/" style="--c:var(--pink)"><i>STAGE 02</i><h3>경쟁전</h3><p>같은 코스, 다른 사람과.</p></a>
+    <a class="card" href="../../beta/crt/" style="--c:var(--lime)"><i>BONUS</i><h3>CRT</h3><p>인광 화면 위 구 지도.</p></a>
+    <a class="card" href="../../beta/bus/" style="--c:var(--gold)"><i>BONUS</i><h3>동네버스</h3><p>정류장 이름으로 노선을 탄다.</p></a>
+  </div>
+</section>
+
+<footer><span>© REGIONTYPE.COM</span><span><a href="../../policy/">PRIVACY</a> · <a href="../../terms/">TERMS</a></span></footer>
+
+<script>
+const NS='http://www.w3.org/2000/svg',norm=s=>s.replace(/\s/g,'');
+const pix=[];let names=[];const lit=new Set();
+const PAL=['#3ff2ff','#ff4fd8','#c6ff3f','#ffce3f','#7b4dff'];
+fetch('../../data/korea-pixels.json').then(r=>r.json()).then(p=>{
+  const s=document.getElementById('map');s.setAttribute('viewBox',`-1 -1 ${p.w+2} ${p.h+2}`);
+  p.rows.forEach((row,y)=>{let x=0;for(const [,num,k] of row.matchAll(/(\d*)([.xS])/g)){const len=+(num||1);
+    if(k!=='.')for(let i=0;i<len;i++){const r=document.createElementNS(NS,'rect');r.setAttribute('x',x+i+.08);r.setAttribute('y',y+.08);r.setAttribute('width',.84);r.setAttribute('height',.84);
+      r.style.setProperty('--c',PAL[(y>>2)%PAL.length]);s.appendChild(r);pix.push(r)}
+    x+=len}});
+  // 켜지는 순서를 미리 섞어 둔다 — 고정된 씨앗이라 새로 열어도 같다
+  let seed=7;pix.sort(()=>((seed=seed*16807%2147483647)/2147483647)-.5);
+});
+fetch('../../data/seoul-gu.course.json').then(r=>r.json()).then(c=>names=c.items.map(i=>i.name));
+const t=document.getElementById('t'),msg=document.getElementById('msg');
+const check=ev=>{
+  if(ev&&ev.isComposing)return;const v=norm(t.value);
+  if(names.includes(v)&&!lit.has(v)){
+    lit.add(v);t.value='';
+    const upto=Math.round(pix.length*lit.size/names.length);
+    pix.slice(0,upto).forEach(r=>r.classList.add('on'));
+    document.getElementById('score').textContent=String(lit.size*100).padStart(3,'0');
+    document.getElementById('n').textContent=lit.size;
+    msg.textContent=lit.size===names.length?'ALL CLEAR!':`${v} +100`;
+  }
+};
+t.addEventListener('input',check);t.addEventListener('compositionend',()=>setTimeout(check));
+</script>
+</body>
+</html>

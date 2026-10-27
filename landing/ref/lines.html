@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 다섯 노선</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- 래퍼런스: cosmos.so/e/1599212038 (JP Wright, Brand New Subway — Massimo Vignelli 헌정 포스터).
+     크림색 종이, 왼쪽에서 내려와 한 번에 꺾이는 굵은 평행 노선 다발, 오른쪽 위의 큰 산세리프 이름과
+     작은 글자 단 — 그 문법을 따른다. 노선 하나가 regiontype 의 갈래 하나다.
+     노선은 그 갈래로 가는 링크이고, 갈래 이름을 치면 그 노선이 굵어진다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  :root{
+    --paper:#efe9dc; --wall:#2b2b2b; --ink:#141414; --muted:#5d5a52;
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--wall)}
+  body{font:500 14px/1.45 var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;padding:40px 16px;display:flex;flex-direction:column;align-items:center;gap:20px;min-height:100svh}
+  a{color:inherit}
+  :focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+  .poster{width:min(760px,100%);background:var(--paper);box-shadow:0 30px 60px -20px rgba(0,0,0,.6);position:relative}
+  .poster svg{display:block;width:100%;height:auto}
+  .line path{fill:none;stroke-width:24;stroke-linecap:butt;transition:stroke-width .35s cubic-bezier(.23,1,.32,1)}
+  .line text{font:700 15px var(--sans);fill:#fff;letter-spacing:.02em}
+  .line.dim path{stroke-width:14}
+  .line.hot path{stroke-width:34}
+  .line:focus{outline:none}
+  .line:focus-visible path{stroke:var(--ink)}
+  .stop{fill:var(--paper);stroke:var(--ink);stroke-width:3}
+
+  .title{font:800 132px/1 var(--sans);letter-spacing:-.05em;fill:var(--ink)}
+  .sub{font:500 64px/1 var(--sans);letter-spacing:-.03em;fill:var(--muted)}
+  .col{font:500 13px var(--sans);fill:var(--ink)}
+  .col tspan.h{font-weight:700}
+
+  .type{width:min(760px,100%);display:flex;gap:12px;align-items:center;color:#ddd;font-size:13px}
+  .type input{flex:1;background:none;border:0;border-bottom:1px solid #888;color:#fff;font:500 18px/1.4 var(--sans);padding:6px 0;outline:0}
+  .type input:focus{border-bottom-color:#fff}
+  .type output{min-width:9em;text-align:right;color:#bbb}
+  footer{width:min(760px,100%);display:flex;justify-content:space-between;color:#999;font-size:12px}
+  footer a{text-decoration:none}
+  @media (prefers-reduced-motion:reduce){ .line path{transition:none} }
+</style>
+</head>
+<body>
+
+<div class="poster">
+  <svg viewBox="0 0 1000 1300" id="svg" role="group" aria-label="regiontype 노선도 — 갈래 다섯">
+    <text class="title" x="440" y="230">Region</text>
+    <text class="sub" x="446" y="306">Type</text>
+    <text class="col" x="446" y="380"><tspan class="h">지명을 치는 타자연습</tspan><tspan x="446" dy="20">지도에 뜬 지역 이름을</tspan><tspan x="446" dy="20">직접 쳐서 익힌다.</tspan></text>
+    <text class="col" x="660" y="380"><tspan class="h">서울</tspan><tspan x="660" dy="20">25 자치구</tspan><tspan x="660" dy="20">423 행정동</tspan></text>
+    <text class="col" x="820" y="380"><tspan class="h">세계</tspan><tspan x="820" dy="20">46 나라</tspan><tspan x="820" dy="20">26 화면 말</tspan></text>
+    <g id="lines"></g>
+    <text class="col" x="446" y="1270">regiontype.com</text>
+    <text class="col" x="954" y="1270" text-anchor="end">노선을 누르면 그 갈래로 갑니다</text>
+  </svg>
+</div>
+
+<div class="type">
+  <label for="t">갈래 이름</label>
+  <input id="t" autocomplete="off" spellcheck="false" placeholder="연습 · 경쟁전 · mimi · 동네버스 · 3D">
+  <output id="out" aria-live="polite"></output>
+</div>
+<footer><span>시안 — 래퍼런스 JP Wright</span><span><a href="index.html">시안 목록</a></span></footer>
+
+<script>
+// 갈래 다섯. 바깥 노선일수록 크게 돈다 — 한가운데(cx,cy)를 함께 쓰는 동심원 꺾임
+const L=[
+  {k:'연습',href:'../../',c:'#f0a03c'},
+  {k:'경쟁전',href:'../../compete/',c:'#c8322a'},
+  {k:'mimi',href:'../../mimi/',c:'#2d6fd1'},
+  {k:'동네버스',href:'../../beta/bus/',c:'#f6c037'},
+  {k:'3D',href:'../../beta/3dnavigation/',c:'#2f9a58'},
+];
+const NS='http://www.w3.org/2000/svg',g=document.getElementById('lines');
+const cx=420,cy=760,gap=30;
+L.forEach((l,i)=>{
+  const x=96+i*gap,r=cx-x,yEnd=cy+r;
+  const a=document.createElementNS(NS,'a');a.setAttribute('href',l.href);a.setAttribute('class','line');a.setAttribute('aria-label',`${l.k} 노선`);
+  const p=document.createElementNS(NS,'path');p.setAttribute('stroke',l.c);
+  p.setAttribute('d',`M${x} 0V${cy}A${r} ${r} 0 0 0 ${cx} ${yEnd}H1000`);
+  const t=document.createElementNS(NS,'text');t.setAttribute('x',980);t.setAttribute('y',yEnd+5);t.setAttribute('text-anchor','end');t.textContent=l.k;
+  if(l.c==='#f6c037')t.style.fill='#141414';   // 노랑 위 흰 글자는 읽히지 않는다
+  a.append(p,t);g.append(a);l.el=a;
+});
+// 역 — 다발 전체를 가로지르는 작은 막대가 아니라 맨 바깥 노선 위 점 몇 개
+[[96,240],[96,520],[600,cy+324],[800,cy+324]].forEach(([x,y])=>{const s=document.createElementNS(NS,'circle');s.setAttribute('class','stop');s.setAttribute('cx',x);s.setAttribute('cy',y);s.setAttribute('r',9);g.append(s)});
+
+const t=document.getElementById('t'),out=document.getElementById('out');
+const check=ev=>{
+  if(ev&&ev.isComposing)return;
+  const v=t.value.replace(/\s/g,'').toLowerCase();
+  const hit=L.filter(l=>v&&l.k.toLowerCase().startsWith(v));
+  L.forEach(l=>{l.el.classList.toggle('hot',hit.includes(l));l.el.classList.toggle('dim',v.length>0&&!hit.includes(l))});
+  out.textContent=hit.length===1?`${hit[0].k} — Enter 로 타기`:v?`${hit.length}개 노선`:'';
+};
+t.addEventListener('input',check);t.addEventListener('compositionend',()=>setTimeout(check));
+t.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing)return;const v=t.value.replace(/\s/g,'').toLowerCase();const hit=L.filter(l=>v&&l.k.toLowerCase().startsWith(v));if(hit.length===1)location.href=hit[0].href});
+</script>
+</body>
+</html>

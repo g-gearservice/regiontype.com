@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>regiontype — 관제판</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- 래퍼런스: cosmos.so/e/1610448372 (Petronex Dashboard).
+     옅은 회색 지도에 구역 하나만 주황으로 칠하고, 옆 카드에 큰 이름과 번호를 박는 관제판 — 그 문법을 따른다.
+     구역은 서울 자치구, 카드는 그 구의 행정동 코스(data/<구>-dong.course.json)를 그대로 읽는다.
+     ← → 로 넘기거나 구 이름을 친다 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --page:#c9cac6; --panel:#ececea; --land:#d6d7d3; --edge:#f7f7f5; --ink:#161616; --muted:#6b6b6b;
+    --hot:#f0561e; --hot-ink:#fff;
+    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
+    --mono:"IBM Plex Mono","Noto Sans KR",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--page);color:var(--ink)}
+  body{font:500 13px/1.45 var(--sans);-webkit-font-smoothing:antialiased;padding:32px 24px;min-height:100svh}
+  a,button{color:inherit;font:inherit}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  .frame{max-width:1240px;margin:0 auto;background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}
+  .bar{display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid #dcdcd8}
+  .bar b{font-weight:700;letter-spacing:-.01em}
+  .bar nav{display:flex;gap:4px;margin-left:12px}
+  .bar nav a{text-decoration:none;padding:6px 10px;border-radius:6px;color:var(--muted)}
+  .bar nav a[aria-current]{background:#fff;color:var(--ink)}
+  .bar label{margin-left:auto;display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:6px 10px;min-width:220px}
+  .bar input{border:0;outline:0;background:none;font:500 13px var(--sans);width:100%}
+  .bar label:focus-within{box-shadow:0 0 0 2px var(--ink)}
+
+  .body{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:620px}
+  .stage{position:relative;padding:24px}
+  .map{width:100%;height:100%;max-height:640px;display:block}
+  .map path.gu{fill:var(--land);stroke:var(--land);stroke-width:.6;cursor:pointer;transition:fill .3s ease,stroke .3s ease}
+  .map path.edge{fill:none;stroke:var(--edge);stroke-width:2.5;pointer-events:none}
+  .map path.gu.sel{stroke:var(--hot)} .map path.gu.done{stroke:#9d9e99}
+  .map path.gu:hover{fill:#c5c6c1}
+  .map path.gu.sel{fill:var(--hot)}
+  .map path.gu.done{fill:#9d9e99}
+  .map text{font:500 12px var(--sans);fill:var(--muted);text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+  .map text.sel{fill:var(--hot-ink);font-weight:700}
+  .legend{position:absolute;left:24px;bottom:24px;display:flex;gap:16px;font-size:12px;color:var(--muted)}
+  .legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px;background:var(--c);border:1px solid rgba(0,0,0,.2)}
+
+  .card{border-left:1px solid #dcdcd8;padding:24px;display:flex;flex-direction:column;gap:18px;background:#f4f4f2}
+  .code{font:500 12px var(--mono);color:var(--muted);display:flex;justify-content:space-between}
+  .name{font-weight:700;font-size:56px;line-height:.95;letter-spacing:-.04em}
+  .num{font:500 13px var(--mono);display:inline-flex;gap:8px;align-items:center}
+  .num b{background:var(--hot);color:var(--hot-ink);padding:2px 8px;border-radius:4px;font-weight:500}
+  .desc{color:#3b3b3b;line-height:1.6}
+  .stats{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #dcdcd8}
+  .stats div{padding:12px 0}
+  .stats div+div{border-left:1px solid #dcdcd8;padding-left:12px}
+  .stats small{display:block;color:var(--muted);font-size:11px}
+  .stats strong{font:600 28px/1.1 var(--sans);font-variant-numeric:tabular-nums}
+  .dongs{list-style:none;columns:2;column-gap:12px;font-size:12px;color:#3b3b3b;max-height:180px;overflow:auto}
+  .dongs li{padding:3px 0;border-bottom:1px dashed #d4d4d0;break-inside:avoid}
+  .go{margin-top:auto;display:flex;gap:8px}
+  .go a,.go button{flex:1;text-align:center;text-decoration:none;padding:12px;border-radius:8px;border:1px solid var(--ink);background:none;cursor:pointer}
+  .go a{background:var(--ink);color:#fff}
+
+  .note{max-width:1240px;margin:16px auto 0;color:#3b3b3b;font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .note a{text-decoration:none}
+
+  @media (max-width:900px){
+    body{padding:16px}
+    .body{grid-template-columns:1fr}
+    .card{border-left:0;border-top:1px solid #dcdcd8}
+    .bar nav{display:none}
+    .bar label{min-width:0;flex:1}
+    .legend{position:static;margin-top:8px;flex-wrap:wrap}
+  }
+  @media (prefers-reduced-motion:reduce){ .map path.gu{transition:none} }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="bar">
+    <b>regiontype</b>
+    <nav aria-label="주 메뉴"><a href="#" aria-current="page">코스</a><a href="../../compete/">경쟁전</a><a href="../../community/">커뮤니티</a><a href="../../about/">소개</a></nav>
+    <label><span aria-hidden="true">⌕</span><span style="position:absolute;left:-9999px">구 이름으로 찾기</span><input id="q" autocomplete="off" spellcheck="false" placeholder="구 이름을 쳐서 고르기"></label>
+  </div>
+  <div class="body">
+    <div class="stage">
+      <svg class="map" id="map" role="group" aria-label="서울 자치구 — 눌러서 고르기"></svg>
+      <div class="legend"><span style="--c:var(--hot)">고른 구</span><span style="--c:#9d9e99">친 구</span><span style="--c:var(--land)">아직</span></div>
+    </div>
+    <aside class="card" aria-live="polite">
+      <div class="code"><span id="slug">—</span><span>← → 로 넘김</span></div>
+      <div class="name" id="name">—</div>
+      <div class="num">코스 순서 <b id="ord">—</b> / 25</div>
+      <p class="desc" id="desc"></p>
+      <div class="stats">
+        <div><small>행정동</small><strong id="cnt">—</strong></div>
+        <div><small>친 구</small><strong id="done">0</strong></div>
+      </div>
+      <ul class="dongs" id="dongs" aria-label="행정동 목록"></ul>
+      <div class="go"><a id="play" href="../../">이 구 치기</a><button id="mark" type="button">친 걸로 표시</button></div>
+    </aside>
+  </div>
+</div>
+<p class="note"><span>서울 25개 자치구 · 423개 행정동 · 마흔여섯 나라</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a></span></p>
+
+<script>
+const NS='http://www.w3.org/2000/svg',norm=s=>s.replace(/\s/g,'');
+const $=id=>document.getElementById(id);
+let order=[],slug={},desc={},paths={},labels={},sel=0;const done=new Set();
+Promise.all(['seoul-gu.geom','seoul-gu.course','bus'].map(f=>fetch(`../../data/${f}.json`).then(r=>r.json()))).then(([g,course,bus])=>{
+  order=course.items.map(i=>i.name);
+  course.items.forEach(i=>desc[i.name]=i.meta&&i.meta.description||'');
+  bus.districts.forEach(d=>slug[d.name]=d.slug);   // 구 이름 → 파일 이름표
+  const c=g.cell,map=$('map'),cells={};
+  map.setAttribute('viewBox',`0 0 ${g.cols*c} ${g.rows_n*c}`);
+  g.grid.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch!=='.'){const n=g.items[parseInt(ch,36)].name;(cells[n]=cells[n]||[]).push([x,y])}}));
+  g.items.forEach(it=>{
+    const p=document.createElementNS(NS,'path');p.setAttribute('class','gu');
+    p.setAttribute('d',cells[it.name].map(([x,y])=>`M${x*c} ${y*c}h${c}v${c}h${-c}z`).join(''));
+    p.addEventListener('click',()=>pick(order.indexOf(it.name)));
+    const t=document.createElementNS(NS,'text');t.setAttribute('x',it.c[0]);t.setAttribute('y',it.c[1]);t.textContent=it.name.replace(/구$/,'');
+    map.append(p);labels[it.name]=t;paths[it.name]=p;
+  });
+  // 구 경계 — 이웃 칸과 구가 다를 때만 흰 선을 긋는다. 칸 사이 선은 그리지 않는다
+  const at=(x,y)=>(g.grid[y]||'')[x]||'.';let d='';
+  for(let y=-1;y<=g.rows_n;y++)for(let x=-1;x<=g.cols;x++){const ch=at(x,y);
+    if(ch!==at(x+1,y))d+=`M${(x+1)*c} ${y*c}v${c}`;if(ch!==at(x,y+1))d+=`M${x*c} ${(y+1)*c}h${c}`}
+  const e=document.createElementNS(NS,'path');e.setAttribute('class','edge');e.setAttribute('d',d);map.append(e);
+  g.items.forEach(it=>map.append(labels[it.name]));
+  pick(0);
+});
+function pick(i){
+  sel=(i+order.length)%order.length;const nm=order[sel];
+  Object.entries(paths).forEach(([k,p])=>{p.classList.toggle('sel',k===nm);p.classList.toggle('done',done.has(k)&&k!==nm);labels[k].classList.toggle('sel',k===nm)});
+  $('name').textContent=nm;$('ord').textContent=String(sel+1).padStart(2,'0');$('slug').textContent=`${slug[nm]}-dong`;
+  $('desc').textContent=desc[nm];$('cnt').textContent='…';$('dongs').innerHTML='';
+  $('mark').textContent=done.has(nm)?'표시 지우기':'친 걸로 표시';
+  fetch(`../../data/${slug[nm]}-dong.course.json`).then(r=>r.json()).then(c=>{
+    if(order[sel]!==nm)return;
+    $('cnt').textContent=c.items.length;
+    $('dongs').innerHTML=c.items.map(i=>`<li>${i.name}</li>`).join('');
+  });
+}
+$('mark').addEventListener('click',()=>{const nm=order[sel];done.has(nm)?done.delete(nm):done.add(nm);$('done').textContent=done.size;pick(sel)});
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight')pick(sel+1);if(e.key==='ArrowLeft')pick(sel-1);
+});
+const q=$('q');
+// 조합 중에는 견주지 않는다. 앞머리가 하나로 좁혀지면 그 구로 간다
+const find=ev=>{
+  if(ev&&ev.isComposing)return;const v=norm(q.value);if(!v)return;
+  const hit=order.filter(n=>n.startsWith(v));
+  if(hit.length===1||order.includes(v)){pick(order.indexOf(order.includes(v)?v:hit[0]))}
+};
+q.addEventListener('input',find);q.addEventListener('compositionend',()=>setTimeout(find));
+q.addEventListener('keydown',e=>{if(e.key==='Enter'){find();q.select()}});
+</script>
+</body>
+</html>
