@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.20">
+<link rel="stylesheet" href="style.css?v=5.26">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -602,7 +602,7 @@
 </section>
 
 <!-- 내 스타일 — 게임 스타일(프리셋·색 직접 고르기)과 봇 스타일(모양·색·크기·생성)을 한 판의 두 탭으로 나눈다(ranked.js).
-     popover 라 연 단추 바로 아래에 떠 있고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다.
+     popover 라 오른쪽 아래 구석에서 올라오고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다.
      프리셋 견본을 누르면 입고, 꾹 누르면 빨간 X 가 떠 지울 수 있다(키보드는 Delete).
      쓰는 것은 체크 표시와 테두리로 가른다(색만이 아니다). #styles 로 들어와도 연다 -->
 <div id="styles" popover role="dialog" aria-labelledby="styHead">
@@ -615,6 +615,8 @@
       <button type="button" role="tab" id="styTabGame" aria-controls="styPanelGame" aria-selected="true" data-i18n="styleTabGame">게임 스타일</button>
       <button type="button" role="tab" id="styTabBot" aria-controls="styPanelBot" aria-selected="false" tabindex="-1" data-i18n="styleTabBot">봇 스타일</button>
     </div>
+    <!-- 두 판을 한 칸에 겹쳐 둔다 — 탭을 옮겨도 판 높이가 그대로다(가려진 판은 자리만 지킨다) -->
+    <div class="sty-panels">
     <div id="styPanelGame" class="sty-panel" role="tabpanel" aria-labelledby="styTabGame" tabindex="0">
       <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
       <p class="pg-say" id="stySay" role="status"></p>
@@ -641,30 +643,19 @@
     </div>
     <div id="styPanelBot" class="sty-panel" role="tabpanel" aria-labelledby="styTabBot" tabindex="0" hidden>
       <div class="profile-card character-preview">
-        <div class="pet-compare">
-          <figure class="pet-fig"><div id="characterReal" class="character-real" aria-hidden="true"></div><figcaption data-i18n="acctReal">실제 크기</figcaption></figure>
-          <i class="i i-chevron-left pet-lt" aria-hidden="true"></i>
-          <figure class="pet-fig"><div id="character" class="character" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div><figcaption data-i18n="acctZoom">확대 크기</figcaption></figure>
-        </div>
+        <!-- 왼쪽 알약 — 맨 위 마법봉(지어 만들기) 아래로 봇 모양을 세로로 늘어놓는다. 굴려서 가운데에 멈춘 것을 입는다(누르거나 ↑↓ 도 된다).
+             마법봉이 가운데면 봇이 오른쪽으로 비키고 그 자리에 말풍선(지어 만들기)이 선다 -->
+        <div class="pet-shapes"><div class="pet-shape-list" id="shapeChoices" role="group" data-i18n-aria="acctShape" aria-label="모양"></div></div>
+        <div id="character" class="character-real" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div>
         <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" data-i18n-aria="acctBotSize" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
-      </div>
-      <div class="profile-card character-controls sty-bot-card">
-        <div class="sty-bot-bar">
-          <div class="pg-tabs sty-bot-modes" role="tablist" data-i18n-aria="styleTabBot" aria-label="봇 스타일">
-            <button type="button" role="tab" id="botTabPreset" aria-controls="botViewPreset" aria-selected="true" data-i18n="botSubPreset">Bot</button>
-            <button type="button" role="tab" id="botTabGen" aria-controls="botViewGen" aria-selected="false" tabindex="-1" data-i18n="botSubGen">Generate</button>
-          </div>
-          <button type="button" class="sty-reset sty-bot-reset" id="botReset" data-i18n="botReset">Reset</button>
-        </div>
-        <div id="botViewPreset" class="sty-bot-view" role="tabpanel" aria-labelledby="botTabPreset" tabindex="0">
-          <fieldset><legend class="profile-label"><span data-i18n="acctShape">모양</span> <span id="shapeLabel"></span></legend><div class="character-choices" id="shapeChoices"></div></fieldset>
-        </div>
-        <form id="botViewGen" class="sty-bot-view sty-bot-gen" role="tabpanel" aria-labelledby="botTabGen" tabindex="0" hidden>
+        <form id="botViewGen" class="pet-chat" inert>
+          <p class="pet-chat-say" id="botSay" role="status" aria-live="polite"></p>
           <textarea id="botGenIn" maxlength="160" rows="3" data-i18n-aria="botGenPh" aria-label="원하는 모양을 설명해 주세요…" data-i18n-ph="botGenPh" placeholder="원하는 모양을 설명해 주세요…"></textarea>
           <button type="submit" class="sty-save" id="botGenBtn" data-i18n="botGenBtn">Generate</button>
         </form>
       </div>
-      <p class="sty-note" id="botSay" role="status" aria-live="polite"></p>
+      <div class="sty-foot"><button type="button" class="sty-reset sty-bot-reset" id="botReset" data-i18n="botReset">Reset</button></div>
+    </div>
     </div>
   </div>
 </div>
@@ -827,10 +818,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.20"></script>
-<script src="app.js?v=5.20"></script>
-<script src="auth.js?v=5.20"></script>
-<script src="settings/settings.js?v=5.20"></script>
-<script src="ranked.js?v=5.20"></script>
+<script src="relay.js?v=5.26"></script>
+<script src="app.js?v=5.26"></script>
+<script src="auth.js?v=5.26"></script>
+<script src="settings/settings.js?v=5.26"></script>
+<script src="ranked.js?v=5.26"></script>
 </body>
 </html>
