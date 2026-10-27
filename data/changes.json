@@ -1,9 +1,16 @@
 [
   {
+<<<<<<< HEAD
     "v": "0.11.520",
     "date": "2026-10-27",
     "ko": "내 스타일이 팝업 대신 아래에서 올라오는 시트로 열리고, 봇 스타일에서 색 고르기를 없애 봇은 항상 강조색을 입습니다.",
     "en": "My styles now slides up from the bottom as a sheet, and the bot colour picker is gone — the bot always wears the accent colour."
+=======
+    "v": "0.11.519",
+    "date": "2026-10-27",
+    "ko": "순위 화면에 경쟁전·일반전별 '일반/라이선스' 하위 탭을 더하고(화살표 키로 이동), 라이선스 시험 중에는 지도·큐·타이핑 칸·힌트에서 지명이 보이지 않게 했습니다.",
+    "en": "Added General/License sub-tabs to the ranking screen for both Ranked and Normal (arrow-key navigable), and hid place names on the map, queue, typing box and hints during the license exam."
+>>>>>>> origin/main
   },
   {
     "v": "0.11.518",

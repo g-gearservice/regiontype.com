@@ -116,3 +116,42 @@ docs/PLAN-license.md: 시작하기 분기 UI 및 Long Press 시험 진입, 라�
 
 **다음:**
 - 4단계: 순위 화면(#ranking) 4칸 재편 (경쟁전 일반/라이선스, 일반전 일반/라이선스 하위 탭 및 키보드 조작).
+
+---
+
+### 2026-10-27 — 4단계: 순위 덮개 4칸 및 키보드 접근성 구현 완료
+
+**한 일:**
+- `index.html`:
+  - 순위 대화상자(`#ranking`)의 상위 탭(`[경쟁전]`, `[일반전]`) 하위에 모드별 2칸 서브탭 구조 추가:
+    - 경쟁전: `[일반]` (`#rkTabRankedCasual`), `[라이선스]` (`#rkTabRankedLicense`)
+    - 일반전: `[일반]` (`#rkTabNormalCasual`), `[라이선스]` (`#rkTabNormalLicense`)
+  - 각 탭 패널(`#rkRankedCasual`, `#rkRankedLicense`, `#rkNormalCasual`, `#rkNormalLicense`) 마크업 배치.
+  - 라이선스 패널 내부에 수도 플랜 S 달성자 명단(`#rankedSHolders`, `#normalSHolders`) 및 코스별 라이선스 상위 순위표(`#rankedLicenseBests`, `#normalLicenseBests`) 컨테이너 추가.
+- `style.css`:
+  - 모바일(`pointer: coarse` 또는 좁은 화면)에서 4단 가로 탭이 쪼그라들거나 줄바꿈되는 문제를 막기 위해 2단계 탭 계층(상위 탭 2개 + 하위 탭 2개) 구조 스타일(`.sub-tabs`, `.sub-tabs [role="tab"]`, `.pg-subpanel`) 적용.
+  - S 등급 배지(`.exam-badge[data-grade="S"]`)의 황금빛 테두리 및 텍스트 스타일 정의.
+- `data/i18n.json`:
+  - 26개 언어 전체에 4단계 키 추가 (`subCasual`, `subLicense`, `capitalS`, `sEmpty`, `licenseBests`, `subTabGroup`).
+- `ranked.js`:
+  - 범용 WAI-ARIA 탭 키보드 조작 헬퍼 `wireTabGroup(tabs, panels, onChange)` 구현:
+    - 좌/우 화살표(`ArrowLeft`, `ArrowRight`), `Home`, `End` 키를 통한 탭 전환 및 포커스 이동 지원.
+    - `aria-selected`, `tabindex` (선택된 탭 0, 비선택 -1), `hidden` 속성 동기화.
+    - 상위 탭 및 하위 서브탭 그룹에 각각 적용.
+  - `fillRanking`: 순위판 열람 시 현재 선택된 탭 및 서브탭에 맞춰 적절한 순위 데이터(래더, 캐주얼 개인 최고, 수도 플랜 S 달성자 및 코스별 라이선스 순위표)를 온디맨드로 조회 및 렌더링.
+  - `fillLicense`: `/license/top` API를 호출하여 S 달성자 카드와 코스별 라이선스 순위표(순위, 등급 배지, 닉네임, CPM, 정확도, 오타) 표시. 본인 기록일 경우 `me` 클래스 부여.
+  - `?rt=1` 자체검사 단언 추가: 서브탭 및 순위 컨테이너 요소 존재 확인.
+- `app.js` & `relay/worker.mjs`:
+  - 순위 조회 시 세션 확인 후 본인 기록 식별 플래그 전달.
+- `app.js` & `style.css`:
+  - **라이선스 시험 모드 구역(구, 동) 명 및 힌트 완전 은닉**:
+    - 지도 타일/텍스트: `#play.is-exam #map .tiles`, `#play.is-exam #map text` 숨김 처리 및 `aim()` 라벨 비활성화.
+    - 큐: `#play.is-exam .q-side` 숨김 및 `paintQueue()`에서 앞/뒤 구역 명 노출 차단.
+    - 타이핑 박스: `setTarget()`에서 `G.exam` 시 `.typing.hide` 강제 적용(아직 치지 않은 글자는 빈 블록으로 처리하여 지명 노출 차단).
+    - 설명 및 팁: `say()`에서 `G.exam` 시 본문 소개(`#fact span`) 표시 차단 및 `#play.is-exam .fact` 숨김.
+    - 가상 키보드: `kbHint()`에서 `G.exam` 시 다음 칠 자판 힌트 비활성화.
+
+**검사:**
+- `node --check app.js ranked.js relay/license.mjs relay/plans.mjs relay/worker.mjs relay/test.mjs`: 통과
+- `node relay/test.mjs`: 통과
+- `?rt=1`: 통과 (모든 DOM 및 등급 경계값 단언 검증)

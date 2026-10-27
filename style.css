@@ -2814,6 +2814,12 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 .exam-tag[hidden]{display:none}
 #play.is-exam.is-ranked .exam-tag{color:var(--rk-ink,#fff);background:var(--rk-on,var(--ranked))}
 
+/* 시험 모드: 구역(구, 동) 이름과 힌트를 일절 가린다 */
+#play.is-exam #map .tiles{display:none}
+#play.is-exam #map text{display:none}
+#play.is-exam .q-side{display:none}
+#play.is-exam .fact{display:none}
+
 /* 시험 모드 결과 줄 */
 .exam-res{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--card-inset);border-radius:12px;border:1px solid var(--grid);margin:6px 0;text-align:left}
 .exam-res[hidden]{display:none}
