@@ -175,7 +175,8 @@
     <!-- 구를 펼쳤을 때만 선다 — 서울 지도로 돌아간다(app.js paintBack) -->
     <button type="button" class="nav-item" id="navBack" data-i18n="back" hidden>뒤로</button>
     <a class="nav-item" href="settings/" data-i18n="options">설정</a>
-    <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start">시작하기</button>
+    <button type="button" class="nav-item is-play" id="navPlay" data-i18n="start" aria-describedby="playHint">시작하기</button>
+    <span id="playHint" hidden data-i18n="examHoldHint">꾹 누르면 라이선스 시험</span>
     <!-- 로그인은 홈 덮개를 연다. 로그인해 있으면 라벨과 길이 '내 계정' 으로 바뀐다 -->
     <a class="nav-item" id="signinLink" href="signin/" data-i18n="signinBtn">로그인</a>
   </nav>
@@ -756,17 +757,12 @@
 </dialog>
 
 <!-- 시작하기를 누르면 그 바로 위에 뜨는 고르기 판(popover, ranked.js wireModePick).
-     짧게 누르면 그 모드로, 꾹(1.2초) 누르면 그 모드의 라이선스 시험으로 간다. 키보드는 Space·Enter 를
-     누르고 있으면 되고, 길게 누르기 어려우면 '라이선스 시험' 토글을 켜고 짧게 누른다.
-     켜짐은 체크 글자와 테두리로도 보인다(색만이 아니다). Esc·바깥 누르기는 popover 가 닫는다 -->
+     누르면 그 모드로 간다. 라이선스는 시작하기 자체를 꾹 눌러 켠다(ranked.js).
+     Esc·바깥 누르기는 popover 가 닫는다 -->
 <div id="modePick" popover role="dialog" data-i18n-aria="modePick" aria-label="모드 고르기">
   <div class="mode-row">
-    <button type="button" class="mode-btn" id="modeNormal" aria-describedby="modeHint"><span data-i18n="normalTab">일반전</span></button>
-    <button type="button" class="mode-btn is-ranked" id="modeRanked" aria-describedby="modeHint"><span data-i18n="rankedTab">경쟁전</span></button>
-  </div>
-  <div class="mode-foot">
-    <button type="button" class="mode-exam" id="examToggle" aria-pressed="false" aria-describedby="modeHint"><span data-i18n="examToggle">라이선스 시험</span></button>
-    <p class="mode-hint" id="modeHint" data-i18n="examHoldHint">꾹 누르면 라이선스 시험</p>
+    <button type="button" class="mode-btn" id="modeNormal"><span data-i18n="normalTab">일반전</span></button>
+    <button type="button" class="mode-btn is-ranked" id="modeRanked"><span data-i18n="rankedTab">경쟁전</span></button>
   </div>
   <p class="mode-note" id="modeNote" role="status" aria-live="polite"></p>
 </div>

@@ -656,14 +656,35 @@ function placeShapeSlot(b) {
   const y = b.offsetTop + b.offsetHeight / 2 - shapeTop(box, [...box.children].indexOf(b)) - box.clientHeight / 2;
   box.parentElement.style.setProperty('--slot-y', Math.round(y) + 'px');
 }
+/* 멈춘 자리에서 고를 모양 — 가장 가까운 자리의 것. 다만 그게 고른 것 그대로인데 12px 넘게 밀었으면 민 쪽으로
+   한 칸 간다 — 아이폰 타이머처럼 조금 밀어도 되튀지 않고, 세게 밀어도 두 칸씩 튀지 않는다.
+   끝 둘은 굴림 자리를 나눠 쓰니 그 짝에서 출발했으면 짝으로 간다 */
 function shapeAtCentre() {
-  const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop, max = box.scrollHeight - box.clientHeight;
+  const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop;
   if (!n) return null;
-  if (st <= .5) return all[0];
-  if (st >= max - .5) return all[n - 1];
+  const on = [...all].findIndex(b => b.getAttribute('aria-pressed') === 'true');
+  const from = on >= 0 ? shapeTop(box, on) : st;
+  /* 고른 것 자리에 그대로 서 있으면 그대로다 — 나눠 쓰는 끝자리에서 짝으로 뒤집히지 않게 */
+  if (Math.abs(from - st) <= 1) return on >= 0 ? all[on] : null;
+  const dir = Math.sign(st - from);
+  if (dir > 0 && on === 0 && n > 2 && st < shapeTop(box, 2)) return all[1];
+  if (dir < 0 && on === n - 1 && n > 2 && st > shapeTop(box, n - 3)) return all[n - 2];
+  /* 굴러서 끝에 닿아도 끝 것이 아니라 그 앞(첫 모양·끝에서 둘째)에 선다 — 끝 것은 한 번 더 밀어야(shapeEdgeStep) 간다 */
   let best = 1, d = Infinity;
   for (let i = 1; i < n - 1; i++) { const dd = Math.abs(shapeTop(box, i) - st); if (dd < d) { d = dd; best = i; } }
+  if (best === on && Math.abs(st - from) >= 12) best = Math.min(n - 2, Math.max(1, on + dir));
   return all[best];
+}
+/* 끝에 닿아 더 굴러가지 않는데 그쪽으로 또 밀면 한 칸 옮긴다 — 첫 둘(마법봉·첫 모양)과 끝 둘은 같은 굴림
+   자리를 나눠 써서, 이게 없으면 첫 모양에서 위로 밀어도 아무 일이 없다(빨리 튕겨 올려야만 마법봉에 닿았다) */
+function shapeEdgeStep(dir, dry) {
+  const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop, max = box.scrollHeight - box.clientHeight;
+  const on = [...all].findIndex(b => b.getAttribute('aria-pressed') === 'true');
+  const to = st <= .5 && (dir < 0 ? on === 1 : on === 0) ? (dir < 0 ? 0 : 1)
+    : st >= max - .5 && (dir > 0 ? on === n - 2 : on === n - 1) ? (dir > 0 ? n - 1 : n - 2) : -1;
+  if (to < 0) return false;
+  if (!dry) all[to].click();
+  return true;
 }
 
 async function saveBotProfile() {
@@ -770,6 +791,62 @@ function mountBotStyle() {
       if (shapeAim != null) { if (Math.abs(shBox.scrollTop - shapeAim) <= 1) shapeAim = null; return; }
       const b = shapeAtCentre(); if (b) b.click();
     };
+    /* 끝에서 더 밀면 곧장 넘어가지 않고 모양들이 고무줄처럼 늘어나 따라오다가(--pull) 민 거리가
+       SHAPE_PULL 을 넘으면 한 칸 딸려 간다. 문턱 전에 놓으면 제자리로 되튄다.
+       끝 것(마법봉·마지막 모양)을 고른 동안은 고리도 그 모양에 붙어 함께 늘어난다(--slot-pull).
+       손가락은 넘어간 뒤에도 놓을 때까지 계속 늘어난다 — 넘어가는 순간 멈칫하지 않게(한 번 끄는 동안 한 칸만) */
+    const SHAPE_PULL = 36, wrap = shBox.parentElement;
+    let pull = 0, stepped = false, edgeQuiet = 0, letGo = 0, catching = 0, touchY = null;
+    const stretch = d => {
+      pull = d;
+      const px = (-Math.sign(d) * 40 * (1 - Math.exp(-Math.abs(d) / 40))).toFixed(1) + 'px';
+      const all = shBox.children, on = all[0]?.getAttribute('aria-pressed') === 'true' || all[all.length - 1]?.getAttribute('aria-pressed') === 'true';
+      wrap.classList.toggle('is-pulling', !!d);
+      wrap.style.setProperty('--pull', px);
+      wrap.style.setProperty('--slot-pull', on ? px : '0px');
+    };
+    const atEdge = dir => dir < 0 ? shBox.scrollTop <= .5 : shBox.scrollTop >= shBox.scrollHeight - shBox.clientHeight - .5;
+    /* 민 거리를 더한다. 옮길 데가 없거나 되돌려 밀면 놓아 준다. 문턱을 넘으면 옮기고 'moved' — 고리는 잠깐(is-catching)
+       미끄러져 새 모양에 가 붙은 뒤로는 손을 1:1 로 따른다. 옮긴 뒤엔 정말 굴림 끝일 때만 더 늘어난다
+       (마법봉에서 아래로 옮겼으면 그다음은 그냥 굴림이다) */
+    const tug = d => {
+      const dir = Math.sign(d);
+      if (!dir || !(stepped ? atEdge(dir) : pull || shapeEdgeStep(dir, true))) { stretch(0); return false; }
+      if (stepped || Math.abs(d) < SHAPE_PULL || !shapeEdgeStep(dir)) { stretch(d); return true; }
+      stepped = true;
+      wrap.classList.add('is-catching');
+      clearTimeout(catching);
+      catching = setTimeout(() => wrap.classList.remove('is-catching'), 180);
+      stretch(d);
+      return 'moved';
+    };
+    /* 휠·트랙패드. 새로 민 것(앞 휠과 250ms 넘게 떨어진 것)만 당기기 시작한다 — 굴러와 끝에 붙은 뒤에도
+       이어 오는 관성 휠이 넘기지 않게. 150ms 조용하면 놓은 것이다. 휠은 따라갈 손이 없으니 옮기면 곧장 놓고,
+       뒤따르는 휠은 200ms 조용해질 때까지 삼킨다 */
+    let lastWheel = -Infinity;
+    shBox.addEventListener('wheel', e => {
+      const fresh = e.timeStamp - lastWheel > 250;
+      lastWheel = e.timeStamp;
+      const r = edgeQuiet || ((pull || fresh) && tug((Math.sign(e.deltaY) === Math.sign(pull) ? pull : 0) + e.deltaY));
+      if (!r) return;
+      e.preventDefault();
+      clearTimeout(letGo);
+      if (edgeQuiet || r === 'moved') {
+        stretch(0);
+        stepped = false;
+        clearTimeout(edgeQuiet);
+        edgeQuiet = setTimeout(() => { edgeQuiet = 0; }, 200);
+      } else letGo = setTimeout(() => { stretch(0); stepped = false; }, 150);
+    }, { passive: false });
+    /* 손가락 — 끝에 닿은 자리부터 당긴 거리를 잰다 */
+    shBox.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+    shBox.addEventListener('touchmove', e => {
+      if (touchY == null) return;
+      const y = e.touches[0].clientY;
+      if (tug(touchY - y)) { if (e.cancelable) e.preventDefault(); }
+      else touchY = y;
+    }, { passive: false });
+    for (const ev of ['touchend', 'touchcancel']) shBox.addEventListener(ev, () => { touchY = null; stepped = false; stretch(0); }, { passive: true });
     /* 사람이 손대면 우리 목적지는 버린다 */
     for (const ev of ['wheel', 'touchstart', 'pointerdown']) shBox.addEventListener(ev, () => { shapeAim = null; }, { passive: true });
     let still = 0;
@@ -800,14 +877,48 @@ function pickStyTab(tab) {
   if (tab === $('#styTabBot')) mountBotStyle();
 }
 
+/* 할로윈 낱말 → 모델을 기다리지 않고 곧바로 입힐 프리셋. 앞의 것이 이긴다(할로윈·spooky 는 맨 끝의 덮개).
+   모델 답에 look 이 오면 그걸로 다듬는다 */
+const SPOOKY = [
+  [/호박|잭오랜턴|\bpumpkin|\bjack-?o/i, { shape: 'citrouille', colour: 'orange', expression: 'hilare' }],
+  [/유령|귀신|\bghost/i, { shape: 'goutte', colour: 'creme', expression: 'effraye' }],
+  [/박쥐|\bbats?\b/i, { shape: 'eclat', colour: 'encre', expression: 'mefiant' }],
+  [/마녀|\bwitch/i, { shape: 'triangle', colour: 'violet', expression: 'fier' }],
+  [/뱀파이어|드라큘라|흡혈귀|\bvampire|\bdracula/i, { shape: 'pentagone', colour: 'rouge', expression: 'mefiant' }],
+  [/해골|\bskull|\bskeleton/i, { shape: 'galet', colour: 'creme', expression: 'blase' }],
+  [/좀비|\bzombie/i, { shape: 'galet', colour: 'vert', expression: 'somnolent' }],
+  [/고양이|\bcats?\b/i, { shape: 'squircle', colour: 'encre', expression: 'curieux' }],
+  [/할로윈|핼러윈|\bhalloween|\bspooky/i, { shape: 'citrouille', colour: 'orange', expression: 'heureux' }],
+];
+function spookyLook(text) {
+  const hit = SPOOKY.find(([re]) => re.test(text));
+  return hit && { act: 'look', ...hit[1] };
+}
+
+/* 낱말도 모델 답도 없을 때 설명을 해시해 빚는 모양. 같은 설명이면 같은 모양이다 */
+function hashGen(text) {
+  const h = [...text].reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0) >>> 0;
+  return {
+    lobes: 3 + (h % 7),
+    amp: +((0.1 + ((h >>> 3) % 15) * 0.01) * ((h >>> 2) % 2 ? 1 : -1)).toFixed(2),
+    sharp: +(0.8 + ((h >>> 7) % 14) * 0.1).toFixed(2),
+    sx: +(0.9 + ((h >>> 11) % 5) * 0.05).toFixed(2),
+    sy: +(0.9 + ((h >>> 14) % 5) * 0.05).toFixed(2),
+    stem: /사과|체리|귤|열매|모자|꼭지|apple|cherry|fruit|hat|stem/i.test(text),
+  };
+}
+
 async function generateBotLook(promptText) {
   const btn = $('#botGenBtn'), inp = $('#botGenIn'), note = $('#botSay');
   if (!promptText || btn.disabled) return;
   btn.disabled = true; inp.disabled = true;
   btn.textContent = t('botGenBusy');
   note.textContent = t('botProgLook');
+  const quick = spookyLook(promptText);
+  let changed = !!quick;
+  if (quick) act(quick);
   try {
-    const askPrompt = `Generate a bot avatar look matching this description: "${promptText}". Use {"act":"look","shape":"...","colour":"...","gen":{...}} (use a preset shape like citrouille/etoile/coeur/fleur/trefle/nuage/eclat if it fits directly, or synthesize a custom shape with "gen" lobes/amp/sharp/sx/sy/rot/h2/h3/stem and matching colour).`;
+    const askPrompt = `Generate a bot avatar look matching this description: "${promptText}". Use {"act":"look","shape":"...","expression":"...","colour":"...","gen":{...}} (use a preset shape like citrouille/etoile/coeur/fleur/trefle/nuage/eclat if it fits directly, or synthesize a custom shape with "gen" lobes/amp/sharp/sx/sy/rot/h2/h3/stem and matching colour).`;
     const d = await ask('/bot/chat', {
       msgs: [{ role: 'user', content: askPrompt }],
       courses: botCourses(),
@@ -816,29 +927,15 @@ async function generateBotLook(promptText) {
       now: botNow(),
     }, true);
     const look = (d.do || []).find(a => a.act === 'look');
-    if (look) {
-      act(look);
-      saveBotProfile();
-      note.textContent = d.say || '';
-    } else {
-      /* 모델이 look 을 안 실었으면 설명 문자열 해시로 즉석 생성 모양을 빚는다 */
-      const h = [...promptText].reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
-      const abs = Math.abs(h);
-      const gen = {
-        lobes: 3 + (abs % 7),
-        amp: +((0.1 + ((abs >> 3) % 15) * 0.01) * (abs % 2 ? 1 : -1)).toFixed(2),
-        sharp: +(0.8 + ((abs >> 7) % 14) * 0.1).toFixed(2),
-        sx: +(0.9 + ((abs >> 11) % 5) * 0.05).toFixed(2),
-        sy: +(0.9 + ((abs >> 14) % 5) * 0.05).toFixed(2),
-        stem: /호박|사과|체리|귤|열매|모자|꼭지|할로윈|pumpkin|apple|fruit|halloween|stem/i.test(promptText),
-      };
-      act({ act: 'look', shape: 'gen', gen });
-      saveBotProfile();
-      note.textContent = d.say || '';
-    }
+    if (look) act(look);
+    else if (!quick) act({ act: 'look', shape: 'gen', gen: hashGen(promptText) });
+    changed = true;
+    note.textContent = d.say || '';
   } catch (e) {
-    note.textContent = t(e.status === 429 ? 'botBusy' : 'botChatFail');
+    /* 프리셋을 이미 입혔으면 그대로 둔다 — 모델이 못 다듬었을 뿐이다 */
+    note.textContent = quick ? '' : t(e.status === 429 ? 'botBusy' : 'botChatFail');
   } finally {
+    if (changed) saveBotProfile();
     btn.disabled = false; inp.disabled = false;
     btn.textContent = t('botGenBtn');
   }
@@ -914,6 +1011,7 @@ function wireStyles() {
     if (e.newState !== 'closed') return;
     styEdit = false;
     botGenMode = false;
+    document.body.classList.remove('rk-styling');
     paintTheme();   // 저장하지 않은 미리 보기를 거둔다
     /* 바깥의 다른 것을 눌러 닫혔으면 그 초점을 빼앗지 않는다 */
     const back = document.activeElement === document.body || d.contains(document.activeElement);
@@ -1658,7 +1756,8 @@ function wireChat() {
       }
       return;
     }
-    if (chip === 'styles') { openStyles(btn); return; }
+    /* 내 스타일을 여는 동안 봇과 말풍선은 물러난다(body.rk-styling) — 닫히면 대화째 돌아온다 */
+    if (chip === 'styles') { document.body.classList.add('rk-styling'); openStyles(btn); return; }
     if (chip === 'feedback') openFeedback();
   });
 }
@@ -1926,27 +2025,46 @@ function wireLogo() {
 
 /* ── 시작하기 → 일반전 / 경쟁전 ─────────────────────────
    시작하기를 누르면 그 바로 위에 고르기 판(#modePick)이 뜬다. 짧게 누르면 그 모드로 간다 —
-   경쟁전은 지금 고른 칸(없으면 전체 코스)으로 1대1 매칭이다. 꾹(1.2초) 누르면 그 모드의
-   라이선스 시험이다. 누르는 동안 단추가 차오르고(움직임을 끄면 남은 초가 글자로 보인다),
-   다 차기 전에 떼거나 단추 밖으로 나가면 없던 일이 된다. 키보드는 Space·Enter 를 누르고
-   있으면 되고, 길게 누르기 어려우면 '라이선스 시험' 토글을 켜고 짧게 누른다 */
+   경쟁전은 지금 고른 칸(없으면 전체 코스)으로 1대1 매칭이다.
+   라이선스는 시작하기를 꾹(1.2초) 눌러서만 켜진다(다시 꾹 누르면 꺼진다) — 예전에 꾹 눌러
+   경쟁전을 켜던 자리다. 누르는 동안 알약이 차오르고(움직임을 끄면 남은 초가 글자로 보인다),
+   다 차기 전에 떼거나 단추 밖으로 나가면 없던 일이 된다. 키보드는 Space 를 누르고 있으면 된다.
+   켜져도 아직 응시할 면허 고르기(openExam)는 띄우지 않는다 */
 const EXAM_HOLD_MS = 1200;
-let ranked = false;
+let ranked = false, licensed = false, swallowPlay = false;
 const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
   ranked = on;
   document.body.classList.toggle('rk-ready', on);
   if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
+  paintPlay();
+}
+function setLicensed(on) {
+  licensed = on;
+  document.body.classList.toggle('lic-ready', on);
+  paintPlay();
+}
+/* 시작하기 라벨 — 라이선스가 켜졌으면 '라이선스 시험'(색만이 아니라 글자로도 보인다) */
+function paintPlay() {
   const play = $('#navPlay');
-  play.dataset.i18n = on ? 'rankedStart' : 'start';
+  play.dataset.i18n = licensed ? 'examToggle' : ranked ? 'rankedStart' : 'start';
   play.textContent = t(play.dataset.i18n);
   relayoutNavShapes();
 }
 const pickOpen = () => $('#modePick').matches(':popover-open');
 const quietMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'off';
-/* 시작하기 바로 위, 그 가운데에 세운다. 폰은 시작하기가 tab-dock 안으로 옮겨 가도 그 자리를 잰다 */
+/* 데스크톱은 아래 알약을 통째로 덮는다 — 시작하기 알약이 둘로 갈라져 설정·계정 자리까지 벌어진다.
+   폰은 시작하기가 tab-dock 안으로 옮겨 가니 그 바로 위, 가운데에 세운다 */
 function placePick() {
-  const d = $('#modePick'), a = $('#navPlay').getBoundingClientRect(), PAD = 12, GAP = 10;
+  const d = $('#modePick'), bar = $('#navPlay').closest('.nav-bot');
+  d.classList.toggle('is-split', !!bar);
+  if (bar) {
+    const r = bar.getBoundingClientRect();
+    Object.assign(d.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    return;
+  }
+  d.style.width = d.style.height = '';
+  const a = $('#navPlay').getBoundingClientRect(), PAD = 12, GAP = 10;
   const w = d.offsetWidth, h = d.offsetHeight;
   d.style.left = Math.round(Math.min(Math.max(PAD, a.left + a.width / 2 - w / 2), innerWidth - w - PAD)) + 'px';
   d.style.top = Math.round(Math.max(PAD, a.top - GAP - h)) + 'px';
@@ -1992,7 +2110,6 @@ function wireHold(btn, onTap, onHold) {
     onTap();
   });
 }
-const examOn = () => $('#examToggle').getAttribute('aria-pressed') === 'true';
 function pickNote(msg) {
   const p = $('#modeNote');
   if (p) p.textContent = msg || '';
@@ -2068,10 +2185,9 @@ async function openExam(mode) {
   }
 }
 function wireModePick() {
-  const d = $('#modePick'), play = $('#navPlay'), toggle = $('#examToggle');
+  const d = $('#modePick'), play = $('#navPlay');
   const pick = mode => {
     closePick();
-    if (examOn()) { openExam(mode); return; }
     if (mode === 'ranked') {
       setRanked(true);
       go(rankedSlug());
@@ -2080,12 +2196,22 @@ function wireModePick() {
     setRanked(false);
     playNormal();
   };
-  wireHold($('#modeNormal'), () => pick('normal'), () => openExam('normal'));
-  wireHold($('#modeRanked'), () => pick('ranked'), () => openExam('ranked'));
-  toggle.addEventListener('click', () => {
-    toggle.setAttribute('aria-pressed', String(!examOn()));
-    d.classList.toggle('is-exam', examOn());
-  });
+  $('#modeNormal').addEventListener('click', () => pick('normal'));
+  $('#modeRanked').addEventListener('click', () => pick('ranked'));
+  /* 꾹 뒤에 따라오는 click 은 wireStart 가 삼킨다 — 거기서 먼저 받아 propagation 을 끊기 때문이다 */
+  ['pointerdown', 'keydown'].forEach(n => play.addEventListener(n, () => { swallowPlay = false; }));
+  wireHold(play, () => {}, () => { swallowPlay = true; setLicensed(!licensed); });
+  /* 시작하기 위에 올린 채 트랙패드를 핀치해도 켜고 끈다 — 크롬·파이어폭스는 ctrl+wheel, 사파리는 gesture 로 온다.
+     한 번 집는 동안 이벤트가 줄줄이 오니 300ms 조용해질 때까지 한 번만 친다. 화면 확대는 막는다 */
+  let pinchQuiet = 0;
+  const pinched = e => {
+    e.preventDefault();
+    if (!pinchQuiet) setLicensed(!licensed);
+    clearTimeout(pinchQuiet);
+    pinchQuiet = setTimeout(() => { pinchQuiet = 0; }, 300);
+  };
+  play.addEventListener('wheel', e => { if (e.ctrlKey) pinched(e); }, { passive: false });
+  ['gesturestart', 'gesturechange'].forEach(n => play.addEventListener(n, pinched));
   /* 시작하기가 판을 여닫는다 — popovertarget 이라 바깥 누르기로 닫힌 직후 다시 열리는 일이 없다.
      ranked.js 가 없으면 이 줄도 없으니 app.js 가 곧장 일반전을 친다 */
   play.setAttribute('popovertarget', 'modePick');
@@ -2093,6 +2219,7 @@ function wireModePick() {
     if (e.newState !== 'open') return;
     pickNote('');
     play.setAttribute('aria-expanded', 'true');
+    placePick();
   });
   d.addEventListener('toggle', e => {
     if (e.newState !== 'open') { play.setAttribute('aria-expanded', 'false'); return; }
@@ -2352,18 +2479,26 @@ function wireStart() {
       return;
     }
     if (!e.target.closest('#navPlay')) return;
+    /* 꾹 눌러 라이선스를 켜고 끈 뒤 손을 떼며 오는 click 은 판을 열지 않는다 */
+    if (swallowPlay) { swallowPlay = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
     /* 안내 도중에 시작하면 안내는 거기서 끝난다 — 판에서 돌아왔을 때 매달려 있지 않게 */
     quitTour();
     if (!touring) { hide(); doze(); }
     /* 일반 시작(app.js)은 막는다 — 시작하기는 고르기 판을 여닫는다(popovertarget) */
     e.stopImmediatePropagation();
+    if (document.body.matches('.signing, .setting, .paging')) return;
+    /* 라이선스가 켜져 있으면('라이선스 시험') 판 대신 지금 응시할 수 있는 면허 고르기를 연다.
+       봇이 경쟁전을 켜 뒀으면 경쟁전 면허다 */
+    if (licensed) { e.preventDefault(); openExam(ranked ? 'ranked' : 'normal'); return; }
     /* 봇이 켜 둔 경쟁전(rk-ready)이면 판을 열지 않고 곧장 겨룬다 */
-    if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
+    if (!ranked) return;
     e.preventDefault();
     go(rankedSlug());
   }, true);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && chatting) {
+      /* 내 스타일이 떠 있으면 Esc 는 그것부터 닫는다(popover 기본 동작) — 대화는 그 뒤에 */
+      if (styOpen()) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       endChat();
@@ -2493,6 +2628,10 @@ wireChat();
 wireStyles();
 paintTheme();   // 머리 스크립트가 붙일 rt.themeCss 를 지금 표로 다시 적는다
 if (location.search.includes('rt=1')) {
+  console.assert(spookyLook('유령 같은 봇')?.shape === 'goutte' && spookyLook('할로윈 호박')?.shape === 'citrouille' &&
+    spookyLook('combat robot') === undefined && spookyLook('맑은 하늘') === undefined, '봇 모양: 할로윈 낱말 프리셋');
+  console.assert(JSON.stringify(hashGen('별빛')) === JSON.stringify(hashGen('별빛')) &&
+    ['밤', 'x'.repeat(40), '🎃🦇'].every(x => { const g = hashGen(x); return g.lobes >= 3 && g.lobes <= 9 && Math.abs(g.amp) <= 0.28 && g.sharp <= 2.2; }), '봇 모양: 해시 폴백은 범위 안');
   console.assert(THEME.every(k => HEX.test(k.def) && (!k.on || HEX.test(k.on) || THEME.some(x => x.key === k.on))), '스타일: 표의 기본값·짝');
   console.assert(!themeLow({}).length, '스타일: 기본 색은 대비를 지킨다');
   console.assert(themeLow({ ink: '#e8edf0' })[0]?.key === 'bg' && themeLow({ accent: '#232c31' })[0]?.key === 'accent', '스타일: 대비 부족을 잡는다');
@@ -2502,7 +2641,7 @@ if (location.search.includes('rt=1')) {
   console.assert(hsl(0, 1, .5) === '#ff0000' && Math.round(hueOf('#00ff00')) === 120, '스타일: 색상환 셈');
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
-  console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked') && $('#examToggle'), '모드 고르기: 일반전·경쟁전·라이선스 시험');
+  console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked'), '모드 고르기: 일반전·경쟁전');
   console.assert($('#examGate') && $('#examRows'), '라이선스: 시험 진입 대화상자');
   console.assert($('#rkTabRankedCasual') && $('#rkTabRankedLicense') && $('#rkTabNormalCasual') && $('#rkTabNormalLicense'), '순위표: 일반/라이선스 하위 탭');
   console.assert($('#rankedSHolders') && $('#normalSHolders') && $('#rankedLicenseBests') && $('#normalLicenseBests'), '순위표: S자 명단 및 코스별 라이선스 순위표');

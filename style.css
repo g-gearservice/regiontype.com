@@ -1893,7 +1893,12 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .pet-shape-list .character-choice[aria-pressed="true"]{border-color:transparent;background:none}
 .pet-shape-slot{position:absolute;left:50%;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;
   border:2px solid var(--ink);border-radius:999px;background:var(--profile-border);pointer-events:none;
-  translate:0 var(--slot-y,0px);transition:translate var(--fast) var(--ease-out)}
+  translate:0 calc(var(--slot-y,0px) + var(--slot-pull,0px));transition:translate var(--move) var(--ease-out)}
+/* 끝에서 더 당기면 모양들이 손을 따라 늘어난다(--pull, ranked.js) — 놓으면 되튄다. 끝 것을 고른 동안은 고리도
+   붙어 같이 늘어난다(--slot-pull). 되튈 때 고리와 모양이 따로 놀지 않게 둘 다 같은 길이·같은 곡선으로 돌아온다 */
+.pet-shape-list>*{translate:0 var(--pull,0px);transition:translate var(--move) var(--ease-out)}
+.pet-shapes.is-pulling .pet-shape-list>*,.pet-shapes.is-pulling .pet-shape-slot{transition:none}
+.pet-shapes.is-pulling.is-catching .pet-shape-slot{transition:translate var(--fast) var(--ease-out)}
 .pet-wand{display:grid;place-items:center;color:var(--ink)}
 .pet-wand .i{width:20px;height:20px}
 /* 마법봉이 가운데면(data-gen, ranked.js 의 paintBotStyle) 모양 알약은 왼쪽 끝, 봇은 작아지며 오른쪽 끝으로 비키고
@@ -1917,9 +1922,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .pet-chat-say:empty{display:none}
 .pet-chat #botGenIn{min-height:96px;resize:none;font-size:13px;padding:8px 10px}
 .pet-chat #botGenBtn{min-height:36px}
-@media (prefers-reduced-motion:reduce){ .pet-shape-list{scroll-behavior:auto} .pet-shape-slot{transition:none} }
+@media (prefers-reduced-motion:reduce){ .pet-shape-list{scroll-behavior:auto} .pet-shape-slot,.pet-shape-list>*{transition:none} }
 :root[data-motion="off"] .pet-shape-list{scroll-behavior:auto}
-:root[data-motion="off"] .pet-shape-slot{transition:none}
+:root[data-motion="off"] .pet-shape-slot,:root[data-motion="off"] .pet-shape-list>*{transition:none}
 .pet-size input{position:relative;z-index:0;width:30px;min-height:0;margin:0;background:none;-webkit-appearance:none;appearance:none;cursor:pointer;
   writing-mode:vertical-lr;direction:rtl}
 .pet-size input::-webkit-slider-runnable-track{width:30px;height:100%;border-radius:999px;background:transparent}
@@ -2629,7 +2634,7 @@ body.rk-intro #regions .navbar .nav-logo{cursor:grab}
 .rk-layer[hidden]{display:none}
 /* 로그인 덮개(제 봇이 따로 산다)와 플레이 중에는 봇이 물러난다 */
 /* 봇 스타일을 고르는 동안은 홈의 봇과 말풍선이 물러난다 — 판 안의 봇이 그 자리를 맡는다 */
-body:is(.signing,:has(#play.on),:has(#styles:popover-open #styPanelBot:not([hidden]))) .rk-layer{opacity:0;visibility:hidden;pointer-events:none}
+body:is(.signing,.rk-styling,:has(#play.on),:has(#styles:popover-open #styPanelBot:not([hidden]))) .rk-layer{opacity:0;visibility:hidden;pointer-events:none}
 /* 처음 온 사람: 로고만 남기고 넵바까지 덮는다. 넵바를 봇 층보다 올려 봇이 로고 알약
    뒤에 반쯤 숨고, 막 위로 올라온 넵바의 다른 칸은 막만큼 어둡게 눌러 둔다(잠금은
    ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
@@ -2809,47 +2814,44 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 #modePick:popover-open{display:flex;flex-direction:column;gap:6px;animation:rise-fade var(--fast) var(--ease-out)}
 :root[data-night] #modePick{border:1px solid var(--grid)}
 .mode-row{display:flex;gap:6px}
-.mode-btn{position:relative;overflow:hidden;isolation:isolate;flex:1;
+.mode-btn{flex:1;
   font:inherit;font-size:22px;font-weight:800;line-height:1;white-space:nowrap;
   color:var(--ink);background:var(--card-inset);border:2px solid transparent;border-radius:999px;
   padding:16px 22px;cursor:pointer;touch-action:manipulation;
   -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
   transition:border-color var(--fast)}
-.mode-btn > span{position:relative;z-index:1}
 .mode-btn:hover{border-color:var(--ink-soft)}
 .mode-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-/* 꾹 누르는 동안 왼쪽에서부터 차오른다. 일반전은 브랜드 빛깔, 경쟁전은 경쟁전 빨강 */
-.mode-btn::before{content:'';position:absolute;inset:0;z-index:0;background:var(--accent);
-  transform-origin:left center;transform:scaleX(0)}
-.mode-btn.is-ranked::before{background:var(--rk-on,var(--ranked))}
-.mode-btn.is-holding::before{animation:mode-fill var(--hold-ms,1.2s) linear forwards}
-.mode-btn.is-holding{border-color:var(--ink)}
-.mode-btn.is-holding > span{color:var(--on-accent)}
-.mode-btn.is-ranked.is-holding > span{color:var(--rk-ink,#fff)}
-@keyframes mode-fill{to{transform:scaleX(1)}}
-/* 움직임을 끈 사람은 차오름 대신 남은 초를 글자로 본다 */
-.mode-btn[data-left]::after{content:attr(data-left);position:relative;z-index:1;display:none;
-  margin-left:8px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
-@media (prefers-reduced-motion:reduce){
-  .mode-btn.is-holding::before{animation:none;transform:scaleX(1);opacity:.35}
-  .mode-btn[data-left]::after{display:inline}
-}
-:root[data-motion="off"] .mode-btn.is-holding::before{animation:none;transform:scaleX(1);opacity:.35}
-:root[data-motion="off"] .mode-btn[data-left]::after{display:inline}
-.mode-foot{display:flex;align-items:center;gap:10px;padding:2px 6px 2px 2px}
-/* 라이선스 시험 토글 — 켜면 체크 글자와 테두리가 함께 선다(색만이 아니다) */
-.mode-exam{font:inherit;font-size:14px;font-weight:700;color:var(--ink);background:none;
-  border:2px solid var(--grid);border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap}
-.mode-exam::before{content:'○ '}
-.mode-exam[aria-pressed="true"]{border-color:var(--ink);background:var(--card-inset)}
-.mode-exam[aria-pressed="true"]::before{content:'✓ '}
-.mode-exam:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.mode-hint{font-size:13px;color:var(--ink-soft);white-space:nowrap}
 .mode-note{font-size:13px;font-weight:700;color:var(--ink);padding:0 8px 4px;max-width:36ch}
 .mode-note:empty{display:none}
-/* 토글을 켜면 두 단추가 시험 쪽이라는 걸 테두리로도 보인다 */
-#modePick.is-exam .mode-btn{border-style:dashed;border-color:var(--ink-soft)}
 @media (pointer:coarse){ .mode-btn{font-size:19px;padding:15px 18px} }
+/* 데스크톱 — 판이 아래 알약 위에 그대로 포개진다(placePick 이 그 상자를 적는다). 두 단추가 알약의
+   양쪽 절반을 채워 설정·계정 글자를 덮고, 시작하기 자리(가운데 절반 폭)에서 양옆으로 벌어진다.
+   막대가 .8 배율이라 글자도 그만큼 줄인다 */
+#modePick.is-split{max-width:none;background:var(--bar);box-shadow:none;border:0;padding:8px;border-radius:999px;animation:none}
+#modePick.is-split .mode-row{flex:1;gap:6px}
+#modePick.is-split .mode-btn{font-size:21px;padding:0 14px;border-radius:999px;
+  background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow)}
+#modePick.is-split .mode-btn.is-ranked{background:var(--rk-on,var(--ranked));color:var(--rk-ink,#fff)}
+#modePick.is-split .mode-btn:hover{border-color:var(--ink)}
+#modePick.is-split .mode-note{position:absolute;left:50%;translate:-50% 0;bottom:calc(100% + 8px);
+  background:var(--bar);border-radius:999px;box-shadow:var(--shadow);padding:6px 12px;max-width:none;white-space:nowrap}
+#modePick.is-split:popover-open .mode-btn:first-child{animation:split-l .38s var(--ease-out)}
+#modePick.is-split:popover-open .mode-btn:last-child{animation:split-r .38s var(--ease-out)}
+@keyframes split-l{from{translate:50% 0;scale:.5 1}}
+@keyframes split-r{from{translate:-50% 0;scale:.5 1}}
+@media (prefers-reduced-motion:reduce){ #modePick.is-split:popover-open .mode-btn{animation:none} }
+:root[data-motion="off"] #modePick.is-split:popover-open .mode-btn{animation:none}
+/* 시작하기를 꾹 누르는 동안 먹빛이 왼쪽에서 차오른다(ranked.js wireHold) — 다 차면 라이선스가 켜지고
+   라벨이 '라이선스 시험'으로 바뀐다. 폰의 ::before 는 재생 표시라 채움은 ::after 가 맡는다.
+   움직임을 끈 사람은 차오름 대신 반쯤 덮인 채로 기다린다 */
+#navPlay{overflow:hidden;isolation:isolate;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+#navPlay::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--ink);opacity:.28;
+  transform-origin:left center;transform:scaleX(0);pointer-events:none}
+#navPlay.is-holding::after{animation:play-fill var(--hold-ms,1.2s) linear forwards}
+@keyframes play-fill{to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){ #navPlay.is-holding::after{animation:none;transform:scaleX(1);opacity:.18} }
+:root[data-motion="off"] #navPlay.is-holding::after{animation:none;transform:scaleX(1);opacity:.18}
 
 /* 라이선스 시험 들어가기 */
 #examGate{border:0;padding:0;background:none;color:var(--ink);width:min(92vw,440px);max-width:none;margin:auto}
@@ -2864,7 +2866,7 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 .lic-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;text-align:left;font:inherit;color:var(--ink);
   background:var(--card);border:2px solid var(--grid);border-radius:8px;padding:10px 12px;cursor:pointer}
 .lic-row:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.lic-row[aria-checked="true"]{border-color:var(--ink);background:var(--card-inset);box-shadow:inset 5px 0 0 var(--ink)}
+.lic-row[aria-checked="true"]{border-color:var(--ink);background:var(--card-inset)}
 .lic-row[data-st="lock"]{border-style:dashed;color:var(--ink-soft);cursor:not-allowed}
 .lic-name{font-size:17px;font-weight:800}
 .lic-state{font-size:13px;font-weight:700;align-self:center}

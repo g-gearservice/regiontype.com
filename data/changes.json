@@ -1,5 +1,29 @@
 [
   {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "봇 스타일의 모양 만들기에 '유령'·'호박'·'박쥐'·'마녀' 같은 할로윈 낱말을 적으면 봇이 그 모습으로 곧바로 바뀌고, 답이 오면 더 다듬어집니다. 낱말에 맞는 게 없어도 같은 설명이면 늘 같은 모양이 나옵니다.",
+    "en": "In the bot shape generator, Halloween words like ghost, pumpkin, bat or witch now change the bot's look instantly, then the reply refines it. Other descriptions always give the same shape for the same words."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "봇 대화에서 '내 스타일' 칩을 누르면 봇과 말풍선이 물러나고 내 스타일만 뜹니다. Esc 를 누르면 내 스타일부터 닫히고 봇과 대화가 그대로 돌아옵니다.",
+    "en": "Tapping the My styles chip in the bot chat now steps the bot and its bubble aside. Esc closes My styles first and brings the bot and the chat back."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "봇 스타일의 모양 알약을 위로 굴리다 첫 모양에서 멈춰 마법봉에 닿지 않던 문제를 고쳤습니다. 이제 아이폰 타이머처럼 조금 밀어도 굴린 쪽으로 한 칸 넘어가고 두 칸씩 튀지 않으며, 끝에서 더 당기면 고무줄처럼 늘어나다가 마법봉·마지막 모양으로 딸려 갑니다.",
+    "en": "The bot shape pill no longer gets stuck on the first shape when scrolling up. Like the iPhone timer, a small scroll now moves one shape in that direction without overshooting by two, and pulling past the end stretches like a rubber band, then carries over to the wand or the last shape."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "시작하기를 누르면 그 알약이 양옆으로 갈라져 아래 막대를 덮으며 일반전·경쟁전 두 알약이 됩니다. 라이선스는 시작하기를 꾹 누르거나, 그 위에서 트랙패드를 핀치해야만 켜집니다(라벨이 '라이선스 시험'으로 바뀝니다). 다시 꾹 누르면 꺼집니다. 켜진 채로 누르면 지금 응시할 수 있는 라이선스를 고르는 창이 열립니다.",
+    "en": "Pressing Play now splits its pill in two across the bottom bar, into Casual and Ranked. The license is turned on only by holding Play or pinching the trackpad over it (its label changes to License test); hold again to turn it off. Pressing it while on opens the list of licenses you can take now."
+  },
+  {
     "v": "1.0.0",
     "date": "2026-10-27",
     "ko": "라이선스가 F~S 등급에서 프로게이머·기자·초급·중급·숙련 다섯 단계로 바뀌었습니다. 아래 단계를 따야 위가 열리고, 초급~숙련은 한글속기 3·2·1급의 1분당 요구 자수(270·300·320자)만큼 전국 시군구에서 볼 때마다 새로 뽑은 코스를 60초 안에 칩니다. 시험 중에는 지나온 곳이 왼쪽, 칠 칸이 가운데에 놓입니다.",
