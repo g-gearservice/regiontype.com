@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.26">
+<link rel="stylesheet" href="style.css?v=5.27">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -645,7 +645,7 @@
       <div class="profile-card character-preview">
         <!-- 왼쪽 알약 — 맨 위 마법봉(지어 만들기) 아래로 봇 모양을 세로로 늘어놓는다. 굴려서 가운데에 멈춘 것을 입는다(누르거나 ↑↓ 도 된다).
              마법봉이 가운데면 봇이 오른쪽으로 비키고 그 자리에 말풍선(지어 만들기)이 선다 -->
-        <div class="pet-shapes"><div class="pet-shape-list" id="shapeChoices" role="group" data-i18n-aria="acctShape" aria-label="모양"></div></div>
+        <div class="pet-shapes"><span class="pet-shape-slot" aria-hidden="true"></span><div class="pet-shape-list" id="shapeChoices" role="group" data-i18n-aria="acctShape" aria-label="모양"></div></div>
         <div id="character" class="character-real" role="img" data-i18n-aria="acctCharacter" aria-label="내 캐릭터"></div>
         <div class="pet-size"><input type="range" id="botSize" min="70" max="130" step="1" value="100" data-i18n-aria="acctBotSize" aria-label="홈 화면 봇 크기" aria-valuetext="100%"></div>
         <form id="botViewGen" class="pet-chat" inert>
@@ -818,10 +818,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.26"></script>
-<script src="app.js?v=5.26"></script>
-<script src="auth.js?v=5.26"></script>
-<script src="settings/settings.js?v=5.26"></script>
-<script src="ranked.js?v=5.26"></script>
+<script src="relay.js?v=5.27"></script>
+<script src="app.js?v=5.27"></script>
+<script src="auth.js?v=5.27"></script>
+<script src="settings/settings.js?v=5.27"></script>
+<script src="ranked.js?v=5.27"></script>
 </body>
 </html>

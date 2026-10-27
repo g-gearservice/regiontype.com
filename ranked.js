@@ -616,7 +616,7 @@ function paintBotStyle() {
   $('#styPanelBot .pet-size').inert = botGenMode;
   $('#botViewGen').inert = !botGenMode;
   btns.forEach(b => { b.setAttribute('aria-pressed', String(b === on)); b.tabIndex = b === (on || btns[0]) ? 0 : -1; });
-  if (on) centreShape(on);
+  if (on) { centreShape(on); placeShapeSlot(on); }
   $('#character')?.setAttribute('aria-label',
     `${KO(botChar.colour)} ${botChar.shape === 'gen' ? t('botSubGen') : KO(botChar.shape)}`);
   if (!botMe) return;
@@ -645,6 +645,14 @@ function centreShape(b) {
   if (Math.abs(box.scrollTop - top) <= 1 || shapeAim === top) return;
   shapeAim = top;
   box.scrollTo({ top });
+}
+/* 고른 자리 테는 알약 바탕에 박혀 가운데에 서 있다 — 모양이 그 밑을 지나간다.
+   첫 것·끝 것은 가운데까지 굴러오지 못하니 테가 그쪽 끝으로 옮겨 간다(굴림이 닿을 자리 기준) */
+function placeShapeSlot(b) {
+  const box = b.parentElement;
+  if (!box.clientHeight) return;
+  const y = b.offsetTop + b.offsetHeight / 2 - shapeTop(box, [...box.children].indexOf(b)) - box.clientHeight / 2;
+  box.parentElement.style.setProperty('--slot-y', Math.round(y) + 'px');
 }
 function shapeAtCentre() {
   const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop, max = box.scrollHeight - box.clientHeight;
