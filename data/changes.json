@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.519",
+    "date": "2026-10-27",
+    "ko": "순위 화면에 경쟁전·일반전별 '일반/라이선스' 하위 탭을 더하고(화살표 키로 이동), 라이선스 시험 중에는 지도·큐·타이핑 칸·힌트에서 지명이 보이지 않게 했습니다.",
+    "en": "Added General/License sub-tabs to the ranking screen for both Ranked and Normal (arrow-key navigable), and hid place names on the map, queue, typing box and hints during the license exam."
+  },
+  {
     "v": "0.11.518",
     "date": "2026-10-27",
     "ko": "가입 직후 도우미 봇이 처음 꺼내 달라고 조르는 동안 넵바의 로고와 알약 모양이 어둡게 덮이지 않고 애니메이션 손보다 위에 위치하도록 고쳤습니다.",

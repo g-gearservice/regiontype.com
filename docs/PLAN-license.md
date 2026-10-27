@@ -24,8 +24,8 @@
 - [x] **M1: 시작하기 분기와 꾹 누르기 (UI만, 서버 변경 없음)** — `#modePick` 팝오버, 1.2초 꾹 누르기 게이지 및 키보드/터치 지원, 시험 토글 대안, `#examGate` 진입 확인 창, i18n 26개 언어 반영 | 검사: `node --check`, `node relay/test.mjs`
 - [x] **M2: 시험 모드 판과 브라우저 판정** — 120초 고정 시험 판, `gradeOf` 판정, `#result` 등급 배지 | 검사: `?rt=1` 경계값 단언
 - [x] **M3: 저장, API, S 자동 부여 (relay)** — `tools/build_plans.py`, D1 스키마 및 마이그레이션 SQL, `/license/*` API | 검사: `node relay/test.mjs`
-- [ ] **M4: 순위 덮개 4칸** — 경쟁전/일반전 하위 탭 분리, 키보드 Tab/화살표 조작 | 검사: `?rt=1`, `node relay/test.mjs`
-- [ ] **끝: 자체검사 통과** — 검사: `?rt=1`, `node relay/test.mjs`
+- [x] **M4: 순위 덮개 4칸** — 경쟁전/일반전 하위 탭 분리, 키보드 Tab/화살표 조작 | 검사: `?rt=1`, `node relay/test.mjs`
+- [x] **끝: 자체검사 통과** — 검사: `?rt=1`, `node relay/test.mjs`
 
 ## 범위
 

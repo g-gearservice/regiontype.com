@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.18';
+const VER = '5.19';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž';
@@ -2493,6 +2493,11 @@ function link(svg, geom, items, cells) {
    '보임'에서는 윗줄이 지금 칠 곳, 아랫줄이 직전에 맞힌 곳의 설명이 된다. */
 function say(head, body, tip = '') {
   const f = $('#fact');
+  if (G && G.exam) {
+    if (head !== undefined) setTarget(head);
+    f.classList.remove('on');
+    return;
+  }
   /* 문서는 ltr 이라 아랍어 소개의 마침표가 앞으로 튄다 — 글마다 방향을 스스로 잡게 한다 */
   if (!f.firstElementChild) f.innerHTML = '<em class="tip" dir="auto"></em><span dir="auto"></span><small class="type-hint" id="typeHint" dir="auto" aria-hidden="true"></small>';
   f.querySelector('.tip').textContent = tip;
@@ -2519,8 +2524,8 @@ function paintQueue() {
   if (!G) return;
   const t = target();
   const i = t ? G.items.indexOf(t) : -1;
-  fillSide($('#qPrev'), i > 0 ? G.items[i - 1] : null, false);
-  fillSide($('#qNext'), i >= 0 ? G.items[i + 1] : null, !opt.hint);
+  fillSide($('#qPrev'), i > 0 ? G.items[i - 1] : null, !!G.exam);
+  fillSide($('#qNext'), i >= 0 ? G.items[i + 1] : null, !opt.hint || !!G.exam);
 }
 
 /* 칠 이름을 글자 하나씩 늘어놓는다. 이 자체가 입력창이다 —
@@ -2537,7 +2542,7 @@ function setTarget(name) {
     box.append(el);
   }
   $('#typing').classList.remove('bad');
-  $('#typing').classList.toggle('hide', !opt.hint);
+  $('#typing').classList.toggle('hide', !opt.hint || !!G.exam);
   paintTyped('');
 }
 
@@ -2777,7 +2782,7 @@ function aim() {
   $('#fact').classList.toggle('aim', !!t);
   G.items.forEach(i => {
     if (!i.label) return;
-    const show = i.claimed || (opt.hint && (!G.seq || i === t));
+    const show = !G.exam && (i.claimed || (opt.hint && (!G.seq || i === t)));
     i.label.classList.toggle('on', show);
   });
   aimCam();
@@ -3092,7 +3097,7 @@ function kbPaint() {
    다 쳤으면 확정(스페이스, 띄어 쓴 코스는 Enter). 경쟁전·설정에서 끄면 안 뜬다 */
 function kbHint() {
   KB.el.querySelectorAll('.kb-next').forEach(b => b.classList.remove('kb-next', 'kb-flick'));
-  if (KB.el.hidden || !opt.kbhint || !G || G.ranked || !G.want) return;
+  if (KB.el.hidden || !opt.kbhint || !G || G.ranked || G.exam || !G.want) return;
   /* 영어는 대소문자까지 짚는다 — 판정은 안 가려도 글자 칸 색칠(paintTyped)은 가린다 */
   /* 화면 말로 칠 때는 열쇠(소문자, 붙임표·띄어쓰기 없음)로 짚는다 — 다 치면 바로 넘어가 확정 키가 없다 */
   const form = s => TONGUE ? TONGUE.key(s)
