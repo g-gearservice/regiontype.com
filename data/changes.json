@@ -1,5 +1,11 @@
 [
   {
+    "v": "0.11.527",
+    "date": "2026-10-27",
+    "ko": "봇 모양 알약의 고른 자리 고리가 알약 바탕 가운데에 고정되고 모양이 그 밑을 굴러 지나가게 했습니다. 맨 위·맨 아래 끝의 모양을 고르면 고리가 그쪽 끝으로 옮겨 갑니다.",
+    "en": "The bot shape pill's selection ring now stays fixed in the middle while shapes scroll beneath it; picking the first or last shape slides the ring to that end."
+  },
+  {
     "v": "0.11.526",
     "date": "2026-10-27",
     "ko": "봇 모양 알약에서 고르지 않은 모양도 흐리게 가리지 않고 늘 또렷하게 보이게 했습니다. 고른 모양은 테두리 고리로 가릅니다.",

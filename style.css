@@ -1886,8 +1886,14 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   padding-block:6px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
   scroll-behavior:smooth;border-radius:999px}
 .pet-shape-list::-webkit-scrollbar{display:none}
-/* 모양은 늘 다 보인다 — 고른 것만 테두리 고리와 바탕으로 가른다 */
+/* 모양은 늘 다 보인다 — 고른 자리는 알약 바탕에 박힌 고리(.pet-shape-slot)가 가르고, 모양은 그 밑을 굴러 지나간다.
+   고리는 가운데에 서 있다가 첫 것·끝 것을 고르면 그쪽 끝으로 옮겨 간다(--slot-y, ranked.js 의 placeShapeSlot) */
+.pet-shape-list{z-index:1}
 .pet-shape-list .character-choice{width:36px;height:36px;border-radius:999px}
+.pet-shape-list .character-choice[aria-pressed="true"]{border-color:transparent;background:none}
+.pet-shape-slot{position:absolute;left:50%;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;
+  border:2px solid var(--ink);border-radius:999px;background:var(--profile-border);pointer-events:none;
+  translate:0 var(--slot-y,0px);transition:translate var(--fast) var(--ease-out)}
 .pet-wand{display:grid;place-items:center;color:var(--ink)}
 .pet-wand .i{width:20px;height:20px}
 /* 마법봉이 가운데면(data-gen, ranked.js 의 paintBotStyle) 모양 알약은 왼쪽 끝, 봇은 작아지며 오른쪽 끝으로 비키고
@@ -1911,8 +1917,9 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .pet-chat-say:empty{display:none}
 .pet-chat #botGenIn{min-height:96px;resize:none;font-size:13px;padding:8px 10px}
 .pet-chat #botGenBtn{min-height:36px}
-@media (prefers-reduced-motion:reduce){ .pet-shape-list{scroll-behavior:auto} }
+@media (prefers-reduced-motion:reduce){ .pet-shape-list{scroll-behavior:auto} .pet-shape-slot{transition:none} }
 :root[data-motion="off"] .pet-shape-list{scroll-behavior:auto}
+:root[data-motion="off"] .pet-shape-slot{transition:none}
 .pet-size input{position:relative;z-index:0;width:30px;min-height:0;margin:0;background:none;-webkit-appearance:none;appearance:none;cursor:pointer;
   writing-mode:vertical-lr;direction:rtl}
 .pet-size input::-webkit-slider-runnable-track{width:30px;height:100%;border-radius:999px;background:transparent}
