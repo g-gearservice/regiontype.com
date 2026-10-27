@@ -531,23 +531,26 @@ create table if not exists bot_calib (
 
 -- ── 라이선스 시험 ──────────────────────────────────────────
 -- 진행 중인 라이선스 시험 표. 한 사람 한 장.
+-- tier 는 응시 중인 면허 id, n 은 글자 수 면허가 뽑아 준 이름 개수(코스 면허는 0 — SIZE 를 본다).
 create table if not exists license_ticket (
   who  text primary key,
   id   text    not null,
   mode text    not null,         -- 'normal' | 'ranked'
   slug text    not null,
+  tier text    not null default '',
+  n    integer not null default 0,
   at   integer not null,
   dev  text    not null default 'pc',
   lang text    not null default 'ko'
 );
 
 -- 라이선스 코스별 최고 기록. (who, mode, slug) 당 한 줄.
--- 등급 순서: A > B > C > D > E > F. 같은 등급이면 cpm 이 높은 쪽으로 갱신한다.
+-- 면허 순서: gamer < reporter < basic < mid < expert. 더 높은 면허로만 갱신하고, 같은 면허면 cpm 이 높은 쪽으로 갱신한다.
 create table if not exists license (
   who    text    not null,
   mode   text    not null,         -- 'normal' | 'ranked'
-  slug   text    not null,
-  grade  text    not null,         -- 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+  slug   text    not null,         -- gamer·reporter 는 고른 코스, basic·mid·expert 는 'kr-sgg'
+  grade  text    not null,         -- 'gamer' | 'reporter' | 'basic' | 'mid' | 'expert'
   cpm    integer not null,
   acc    integer not null,
   misses integer not null,
@@ -560,7 +563,7 @@ create table if not exists license (
 create index if not exists license_top on license (mode, slug, grade asc, cpm desc, at asc);
 create index if not exists license_who on license (who, mode);
 
--- 수도(Capital) 플랜 26개 코스 전부 A 등급을 달성한 사람에게 주어지는 S 등급 기록.
+-- 옛 수도(Capital) S 등급 기록. 새 면허에서는 쓰지 않는다(옛 기록은 license_s_v1 로 옮겨 둔다).
 create table if not exists license_s (
   who  text    not null,
   mode text    not null,         -- 'normal' | 'ranked'
@@ -569,3 +572,27 @@ create table if not exists license_s (
   primary key (who, mode, plan)
 );
 create index if not exists license_s_at on license_s (mode, plan, at asc);
+
+-- 옛 F~A·S 기록 보관본. migrate-license-tiers.sql 이 옛 표를 여기로 옮긴다. 새 DB 에서는 빈 채로 남는다.
+-- 계정을 지울 때 같이 지우려고 who 칸을 둔다(ERASE).
+create table if not exists license_v1 (
+  who    text    not null,
+  mode   text    not null,
+  slug   text    not null,
+  grade  text    not null,
+  cpm    integer not null,
+  acc    integer not null,
+  misses integer not null,
+  dev    text    not null default 'pc',
+  lang   text    not null default 'ko',
+  name   text    not null default '',
+  at     integer not null,
+  primary key (who, mode, slug)
+);
+create table if not exists license_s_v1 (
+  who  text    not null,
+  mode text    not null,
+  plan text    not null default 'capital',
+  at   integer not null,
+  primary key (who, mode, plan)
+);

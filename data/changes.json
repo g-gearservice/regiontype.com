@@ -1,5 +1,11 @@
 [
   {
+    "v": "1.0.0",
+    "date": "2026-10-27",
+    "ko": "라이선스가 F~S 등급에서 프로게이머·기자·초급·중급·숙련 다섯 단계로 바뀌었습니다. 아래 단계를 따야 위가 열리고, 초급~숙련은 한글속기 3·2·1급의 1분당 요구 자수(270·300·320자)만큼 전국 시군구에서 볼 때마다 새로 뽑은 코스를 60초 안에 칩니다. 시험 중에는 지나온 곳이 왼쪽, 칠 칸이 가운데에 놓입니다.",
+    "en": "Licenses are now five steps instead of grades F–S: Pro gamer, Reporter, Basic, Intermediate and Expert. Each one unlocks the next. Basic to Expert give you a fresh course of districts from all of Korea every time, sized to the Korean stenography exam's per-minute character counts (270, 300, 320), to finish in 60 seconds. During an exam the place you just passed sits on the left and the blanks stay centered."
+  },
+  {
     "v": "0.11.527",
     "date": "2026-10-27",
     "ko": "봇 모양 알약의 고른 자리 고리가 알약 바탕 가운데에 고정되고 모양이 그 밑을 굴러 지나가게 했습니다. 맨 위·맨 아래 끝의 모양을 고르면 고리가 그쪽 끝으로 옮겨 갑니다.",

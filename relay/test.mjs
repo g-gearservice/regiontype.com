@@ -10,8 +10,8 @@ import { RULES, check, tally } from './security-rules.mjs';
 import { units, strokes, itemStrokes, diffKeys, judge, rng, pool, buildSet, newMatch, step, stats, progress, parseMsg } from './compete.mjs';
 import { NAMES } from './names.mjs';
 import { SET, SPRINT, TERRITORY, RANKED_POOL } from './compete-config.mjs';
-import { EXAM_GRADES, gradeOf, nextConditionOf } from './license.mjs';
-import { CAPITAL_COURSES } from './plans.mjs';
+import { LICENSES, TIER_WEIGHT, POOL_SLUG, failOf, pickPool } from './license.mjs';
+import { KR_SGG } from './pool.mjs';
 /* 검사는 대부분 '몸통' 만 흔든다 — 주인은 늘 같은 값으로 고정해 둔다 */
 const entry2 = (c, me = ME) => entry(c, me);
 
@@ -2657,47 +2657,50 @@ console.log('pin self-check done');
 
 /* ── 라이선스 시험 판정 검사 ── */
 {
-  assert.equal(EXAM_GRADES.length, 6, 'A부터 F까지 6개 등급');
-  assert.equal(gradeOf({ done: false, acc: 100, cpm: 1000, misses: 0 }), null, '완주 못 하면 등급 없음');
-  assert.equal(gradeOf({ done: true, acc: 98, cpm: 600, misses: 1 }), 'A');
-  assert.equal(gradeOf({ done: true, acc: 97, cpm: 600, misses: 1 }), 'B');
-  assert.equal(gradeOf({ done: true, acc: 98, cpm: 599, misses: 1 }), 'B');
-  assert.equal(gradeOf({ done: true, acc: 98, cpm: 600, misses: 2 }), 'B');
+  const L = Object.fromEntries(LICENSES.map(l => [l.id, l]));
+  const ok = (id, x) => failOf(L[id], { done: true, acc: 100, cpm: 1000, misses: 0, ...x });
+  assert.deepEqual(LICENSES.map(l => l.id), ['gamer', 'reporter', 'basic', 'mid', 'expert'], '낮은 면허부터');
+  assert.deepEqual(Object.keys(TIER_WEIGHT), LICENSES.map(l => l.id));
+  assert.equal(POOL_SLUG, 'kr-sgg');
+  assert.deepEqual(failOf(L.gamer, { done: false, acc: 100, cpm: 1000, misses: 0 }), { kind: 'done' }, '완주 못 하면 탈락');
+  // gamer: 400타 · 93% · 오타 5
+  assert.equal(ok('gamer', { cpm: 400, acc: 93, misses: 5 }), null);
+  assert.deepEqual(ok('gamer', { cpm: 400, acc: 93, misses: 6 }), { kind: 'miss', need: 5 });
+  assert.deepEqual(ok('gamer', { cpm: 399, acc: 93, misses: 5 }), { kind: 'cpm', need: 400 });
+  assert.deepEqual(ok('gamer', { cpm: 400, acc: 92, misses: 5 }), { kind: 'acc', need: 93 });
+  // reporter: 600타 · 98% · 오타 1
+  assert.equal(ok('reporter', { cpm: 600, acc: 98, misses: 1 }), null);
+  assert.deepEqual(ok('reporter', { cpm: 600, acc: 98, misses: 2 }), { kind: 'miss', need: 1 });
+  assert.deepEqual(ok('reporter', { cpm: 599, acc: 98, misses: 1 }), { kind: 'cpm', need: 600 });
+  assert.deepEqual(ok('reporter', { cpm: 600, acc: 97, misses: 1 }), { kind: 'acc', need: 98 });
+  assert.deepEqual(ok('reporter', { cpm: 599, acc: 97, misses: 2 }), { kind: 'miss', need: 1 }, '오타가 먼저 걸린다');
+  // 글자 수 면허: 완주 + 정확도 90% 뿐. 타수·오타는 보지 않는다
+  for (const id of ['basic', 'mid', 'expert']) {
+    assert.equal(ok(id, { cpm: 0, acc: 90, misses: 99 }), null, id);
+    assert.deepEqual(ok(id, { acc: 89 }), { kind: 'acc', need: 90 }, id);
+    assert.deepEqual(failOf(L[id], { done: false, acc: 100, cpm: 0, misses: 0 }), { kind: 'done' }, id);
+  }
+  assert.deepEqual(LICENSES.filter(l => l.chars).map(l => [l.id, l.secs, l.chars]), [['basic', 60, 270], ['mid', 60, 300], ['expert', 60, 320]]);
 
-  assert.equal(gradeOf({ done: true, acc: 95, cpm: 500, misses: 3 }), 'B');
-  assert.equal(gradeOf({ done: true, acc: 94, cpm: 500, misses: 3 }), 'C');
-  assert.equal(gradeOf({ done: true, acc: 95, cpm: 499, misses: 3 }), 'C');
-  assert.equal(gradeOf({ done: true, acc: 95, cpm: 500, misses: 4 }), 'C');
-
-  assert.equal(gradeOf({ done: true, acc: 93, cpm: 400, misses: 5 }), 'C');
-  assert.equal(gradeOf({ done: true, acc: 92, cpm: 400, misses: 5 }), 'D');
-  assert.equal(gradeOf({ done: true, acc: 93, cpm: 399, misses: 5 }), 'D');
-  assert.equal(gradeOf({ done: true, acc: 93, cpm: 400, misses: 6 }), 'D');
-
-  assert.equal(gradeOf({ done: true, acc: 90, cpm: 300, misses: 10 }), 'D');
-  assert.equal(gradeOf({ done: true, acc: 89, cpm: 300, misses: 10 }), 'E');
-  assert.equal(gradeOf({ done: true, acc: 90, cpm: 299, misses: 10 }), 'E');
-
-  assert.equal(gradeOf({ done: true, acc: 85, cpm: 200, misses: 10 }), 'E');
-  assert.equal(gradeOf({ done: true, acc: 84, cpm: 200, misses: 10 }), 'F');
-  assert.equal(gradeOf({ done: true, acc: 85, cpm: 199, misses: 10 }), 'F');
-
-  assert.equal(gradeOf({ done: true, acc: 80, cpm: 0, misses: 10 }), 'F');
-  assert.equal(gradeOf({ done: true, acc: 79, cpm: 1000, misses: 0 }), null, '정확도 80 미만은 탈락');
-  assert.equal(gradeOf({ done: true, acc: 100, cpm: 1000, misses: 11 }), null, '오타 11회 이상은 탈락');
-
-  assert.deepEqual(nextConditionOf({ done: false, acc: 99, cpm: 700, misses: 0 }), { kind: 'done' });
-  assert.deepEqual(nextConditionOf({ done: true, acc: 70, cpm: 300, misses: 15 }), { g: 'F', kind: 'miss', need: 10 });
-  assert.deepEqual(nextConditionOf({ done: true, acc: 75, cpm: 300, misses: 5 }), { g: 'F', kind: 'acc', need: 80 });
-  assert.deepEqual(nextConditionOf({ done: true, acc: 85, cpm: 150, misses: 5, grade: 'F' }), { g: 'E', kind: 'cpm', need: 200 });
-  assert.deepEqual(nextConditionOf({ done: true, acc: 98, cpm: 600, misses: 1, grade: 'A' }), { kind: 'max' });
+  // pickPool: 합이 꼭 맞고, 겹치지 않고, 같은 씨앗이면 같다
+  const mulberry = a => () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const stub = Array.from({ length: 300 }, (_, i) => '가나다라마바사아자차카타파하'.slice(i % 5, i % 5 + 2 + (i % 3)) + String.fromCharCode(0xAC00 + i));
+  for (const n of [270, 300, 320]) {
+    const got = pickPool(stub, n, mulberry(n));
+    assert.equal(got.reduce((s, x) => s + x.length, 0), n, `${n}자 합이 꼭 맞는다`);
+    assert.equal(new Set(got).size, got.length, '이름이 겹치지 않는다');
+    assert.deepEqual(pickPool(stub, n, mulberry(n)), got, '같은 씨앗이면 같은 묶음');
+    assert.notDeepEqual(pickPool(stub, n, mulberry(n + 1)), got, '씨앗이 다르면 다른 묶음');
+  }
+  assert.throws(() => pickPool(['가나'], 3), /pickPool/, '맞출 수 없으면 던진다');
+  assert.throws(() => pickPool(['가나'], 4), /pickPool/, '이름이 모자라도 던진다');
 
   const appJs = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-  assert.ok(appJs.includes("cpm: 600, miss: 1"), 'app.js 와 relay/license.mjs 의 기준이 일치');
+  assert.ok(appJs.includes("{ id: 'reporter', secs: 120, cpm: 600, acc: 98, miss: 1 },"), 'app.js 와 relay/license.mjs 의 기준이 일치 (frontend 의 LICENSES 표)');
   console.log('license self-check done');
 }
 
-/* ── 라이선스 API 및 수도 S 등급 판정 검사 ── */
+/* ── 라이선스 API 검사: 잠금 · 이름 묶음 · 시간 창 · 합격 ── */
 {
   const { DatabaseSync } = await import('node:sqlite');
   const db = new DatabaseSync(':memory:');
@@ -2709,25 +2712,7 @@ console.log('pin self-check done');
     all: async () => ({ results: db.prepare(q).all(...a).map(r => ({ ...r })) }),
     run: async () => { const res = db.prepare(q).run(...a); return { meta: { changes: Number(res.changes) } }; }
   });
-  const DB = {
-    prepare: q => stmt(q),
-    batch: async ss => {
-      const results = [];
-      db.exec('begin');
-      try {
-        for (const s of ss) {
-          const isSelect = /^\s*select/i.test(s.q);
-          if (isSelect) results.push(await s.all());
-          else results.push(await s.run());
-        }
-        db.exec('commit');
-        return results;
-      } catch (err) {
-        db.exec('rollback');
-        throw err;
-      }
-    }
-  };
+  const DB = { prepare: q => stmt(q) };
 
   const SESSION_KEY = 'k'.repeat(32);
   const me = 'a'.repeat(16);
@@ -2736,136 +2721,126 @@ console.log('pin self-check done');
   const authHeader = { authorization: `Bearer ${token}`, origin: 'https://regiontype.com' };
   const env = { DB, SESSION_KEY, RL_RK: { limit: async () => ({ success: true }) } };
 
-  const post = async (path, body, headers = authHeader) => {
-    const req = new Request('https://regiontype.gearservicevanguard.com' + path, {
-      method: 'POST',
-      headers: { ...headers, 'content-type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return relayWorker.fetch(req, env);
+  const post = (path, body, headers = authHeader) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, {
+    method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body)
+  }), env);
+  const get = (path, headers = authHeader) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, { method: 'GET', headers }), env);
+  const aged = (ms = 60000) => db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - ms, me);
+  const start = async (body, status = 201) => {
+    const r = await post('/license/start', { mode: 'normal', dev: 'pc', lang: 'ko', ...body });
+    assert.equal(r.status, status, `start ${JSON.stringify(body)}`);
+    return r.json();
   };
-  const get = async (path, headers = authHeader) => {
-    const req = new Request('https://regiontype.gearservicevanguard.com' + path, {
-      method: 'GET',
-      headers
-    });
-    return relayWorker.fetch(req, env);
+  const end = async (tk, body, status = 200) => {
+    const r = await post('/license/end', { id: tk.id, ...body });
+    assert.equal(r.status, status, `end ${JSON.stringify(body)}`);
+    return r.json();
   };
+  const SG = SIZE['seoul-gu'];
 
-  // 1. 비로그인 접근 차단
-  const unauth = await post('/license/start', { c: 'seoul-gu', mode: 'normal' }, { origin: 'https://regiontype.com' });
-  assert.equal(unauth.status, 401, '비로그인은 401');
+  // 1. 입구
+  assert.equal((await post('/license/start', { c: 'seoul-gu', tier: 'gamer' }, { origin: 'https://regiontype.com' })).status, 401, '비로그인은 401');
+  await start({ c: 'seoul-gu' }, 400);                        // tier 없음
+  await start({ c: 'seoul-gu', tier: 'S' }, 400);             // 없는 면허
+  await start({ c: 'nowhere-xyz', tier: 'gamer' }, 400);      // 없는 코스
 
-  // 2. 없는 코스 차단
-  const badCourse = await post('/license/start', { c: 'nowhere-xyz', mode: 'normal' });
-  assert.equal(badCourse.status, 400, '없는 코스는 400');
+  // 2. 잠금: gamer 부터
+  assert.deepEqual(await start({ c: 'seoul-gu', tier: 'reporter' }, 403), { ok: false, error: 'locked', need: 'gamer' });
+  assert.deepEqual(await start({ tier: 'basic' }, 403), { ok: false, error: 'locked', need: 'reporter' });
+  assert.equal(db.prepare('select count(*) as n from license_ticket').get().n, 0, '잠긴 시작은 표를 남기지 않는다');
 
-  // 3. 정상 티켓 발급
-  const startRes = await post('/license/start', { c: 'seoul-gu', mode: 'normal', dev: 'pc', lang: 'ko' });
-  assert.equal(startRes.status, 201, '티켓 발급 201');
-  const startData = await startRes.json();
-  assert.ok(startData.id, '티켓 id 발급');
-  assert.equal(startData.secs, 120, '120초 고정');
-
-  // DB 확인: license_ticket
+  // 3. gamer 시작 — 표에 tier·n
+  const g1 = await start({ c: 'seoul-gu', tier: 'gamer' });
+  assert.deepEqual({ ...g1, id: 1 }, { ok: true, id: 1, secs: 120, tier: 'gamer', slug: 'seoul-gu' }, '코스 면허는 이름 묶음이 없다');
   const tkRow = db.prepare('select * from license_ticket where who = ?').get(me);
-  assert.equal(tkRow.id, startData.id);
-  assert.equal(tkRow.slug, 'seoul-gu');
-  assert.equal(tkRow.mode, 'normal');
+  assert.deepEqual([tkRow.tier, tkRow.n, tkRow.slug, tkRow.mode], ['gamer', 0, 'seoul-gu', 'normal']);
 
-  // 4. 소요 시간 검증 (< 5초 차단)
-  const tooFast = await post('/license/end', { id: startData.id, hits: 25, tries: 25, cpm: 600, acc: 100 });
-  assert.equal(tooFast.status, 400, '5초 미만 제출은 거절');
+  // 4. 너무 빠른 제출은 400 이어도 표를 태우지 않는다
+  await end(g1, { hits: SG, tries: SG, cpm: 450, acc: 95 }, 400);
+  assert.ok(db.prepare('select 1 from license_ticket where id = ?').get(g1.id), '표가 남아 있다');
+  aged(); // 이제 정상 시간
+  const f1 = await end(g1, { hits: SG, tries: SG, cpm: 399, acc: 95 });
+  assert.deepEqual(f1, { ok: false, pass: false, tier: 'gamer', fail: { kind: 'cpm', need: 400 } });
+  assert.equal(db.prepare('select count(*) as n from license').get().n, 0, '불합격은 쓰지 않는다');
+  await end(g1, { hits: SG, tries: SG, cpm: 450, acc: 95 }, 409);   // 불합격이어도 표는 소비됐다
 
-  // 5. 완주 실패 제출 (hits < size)
-  const tkFailed = await (await post('/license/start', { c: 'seoul-gu', mode: 'normal' })).json();
-  db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - 60000, me);
-  const notDone = await post('/license/end', { id: tkFailed.id, hits: 10, tries: 10, cpm: 600, acc: 100 });
-  assert.equal(notDone.status, 200);
-  const notDoneData = await notDone.json();
-  assert.equal(notDoneData.ok, false);
-  assert.equal(notDoneData.grade, null);
-  assert.equal(notDoneData.done, false);
+  // 5. 너무 늦은 제출도 400, 완주 못 하면 fail.done
+  const g2 = await start({ c: 'seoul-gu', tier: 'gamer' });
+  aged(136000);
+  await end(g2, { hits: SG, tries: SG, cpm: 450, acc: 95 }, 400);
+  aged(60000);
+  assert.deepEqual((await end(g2, { hits: SG - 1, tries: SG - 1, cpm: 450, acc: 95 })).fail, { kind: 'done' });
 
-  // 티켓이 소비되었으므로 재제출 시 409
-  const replay = await post('/license/end', { id: tkFailed.id, hits: 25, tries: 25, cpm: 600, acc: 100 });
-  assert.equal(replay.status, 409, '소비된 티켓 재사용은 409');
+  // 6. gamer 합격 → reporter 가 열린다
+  const g3 = await start({ c: 'seoul-gu', tier: 'gamer' }); aged();
+  assert.deepEqual(await end(g3, { hits: SG, tries: SG + 5, cpm: 450, acc: 95 }), { ok: true, pass: true, tier: 'gamer', best: 'gamer' });
+  assert.equal(db.prepare('select grade from license where who = ? and slug = ?').get(me, 'seoul-gu').grade, 'gamer');
+  assert.deepEqual(await start({ tier: 'basic' }, 403), { ok: false, error: 'locked', need: 'reporter' }, 'gamer 만으로는 basic 못 연다');
+  assert.deepEqual(await start({ c: 'seoul-gu', tier: 'reporter', mode: 'ranked' }, 403), { ok: false, error: 'locked', need: 'gamer' }, '경쟁전은 따로 잠긴다');
 
-  // 6. 정상 A 등급 달성
-  const tk2 = await (await post('/license/start', { c: 'seoul-gu', mode: 'normal' })).json();
-  db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - 60000, me);
-  const finA = await post('/license/end', { id: tk2.id, hits: SIZE['seoul-gu'], tries: SIZE['seoul-gu'] + 1, cpm: 650, acc: 99 });
-  assert.equal(finA.status, 200);
-  const finAData = await finA.json();
-  assert.equal(finAData.ok, true);
-  assert.equal(finAData.grade, 'A');
-  assert.equal(finAData.isBest, true);
+  // 7. reporter: 값을 범위로 자르고, 높은 면허가 낮은 면허를 덮는다
+  const r1 = await start({ c: 'seoul-gu', tier: 'reporter' }); aged();
+  assert.deepEqual(await end(r1, { hits: SG, tries: SG + 1, cpm: 99999, acc: 500 }), { ok: true, pass: true, tier: 'reporter', best: 'reporter' });
+  let row = db.prepare('select * from license where who = ? and slug = ?').get(me, 'seoul-gu');
+  assert.deepEqual([row.grade, row.cpm, row.acc], ['reporter', 1500, 100], 'cpm 은 1500, acc 는 100 으로 자른다');
+  const r2 = await start({ c: 'seoul-gu', tier: 'reporter' }); aged();
+  assert.deepEqual((await end(r2, { hits: SG, tries: SG, cpm: 600, acc: 97 })).fail, { kind: 'acc', need: 98 });
+  const g4 = await start({ c: 'seoul-gu', tier: 'gamer' }); aged();
+  await end(g4, { hits: SG, tries: SG, cpm: 1000, acc: 100 });
+  assert.equal(db.prepare('select grade from license where who = ? and slug = ?').get(me, 'seoul-gu').grade, 'reporter', '낮은 면허가 높은 면허를 덮지 않는다');
+  // 같은 면허는 cpm 이 높을 때만 갱신 — 다른 코스에서 reporter 를 낮게 따고 올린다
+  const SD = SIZE['dobong-dong'];
+  const r3 = await start({ c: 'dobong-dong', tier: 'reporter' }); aged();
+  await end(r3, { hits: SD, tries: SD, cpm: 650, acc: 99 });
+  const r4 = await start({ c: 'dobong-dong', tier: 'reporter' }); aged();
+  await end(r4, { hits: SD, tries: SD, cpm: 610, acc: 99 });
+  assert.equal(db.prepare('select cpm from license where who = ? and slug = ?').get(me, 'dobong-dong').cpm, 650, '같은 면허는 낮은 cpm 으로 안 바뀐다');
+  const r5 = await start({ c: 'dobong-dong', tier: 'reporter' }); aged();
+  await end(r5, { hits: SD, tries: SD, cpm: 700, acc: 99 });
+  assert.equal(db.prepare('select cpm from license where who = ? and slug = ?').get(me, 'dobong-dong').cpm, 700, '같은 면허는 높은 cpm 으로 바뀐다');
 
-  // license 테이블 확인
-  const licRow = db.prepare('select * from license where who = ? and mode = ? and slug = ?').get(me, 'normal', 'seoul-gu');
-  assert.equal(licRow.grade, 'A');
-  assert.equal(licRow.cpm, 650);
-
-  // 7. 더 낮은 등급(B) 달성 시 기존 A 유지 (isBest: false)
-  const tk3 = await (await post('/license/start', { c: 'seoul-gu', mode: 'normal' })).json();
-  db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - 60000, me);
-  const finB = await post('/license/end', { id: tk3.id, hits: SIZE['seoul-gu'], tries: SIZE['seoul-gu'] + 2, cpm: 520, acc: 96 });
-  const finBData = await finB.json();
-  assert.equal(finBData.grade, 'B');
-  assert.equal(finBData.isBest, false);
-  assert.equal(db.prepare('select grade, cpm from license where who = ? and slug = ?').get(me, 'seoul-gu').grade, 'A', 'A 등급 유지');
-
-  // 8. 동일 A 등급 내에서 더 빠른 CPM(700) 갱신 (isBest: true)
-  const tk4 = await (await post('/license/start', { c: 'seoul-gu', mode: 'normal' })).json();
-  db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - 60000, me);
-  const finFaster = await post('/license/end', { id: tk4.id, hits: SIZE['seoul-gu'], tries: SIZE['seoul-gu'], cpm: 700, acc: 100 });
-  const finFasterData = await finFaster.json();
-  assert.equal(finFasterData.grade, 'A');
-  assert.equal(finFasterData.isBest, true);
-  assert.equal(db.prepare('select cpm from license where who = ? and slug = ?').get(me, 'seoul-gu').cpm, 700);
-
-  // 9. 수도 플랜 26개 전수 A 달성 및 S 등급 자동 수여 검증
-  // 나머지 25개 코스를 A 등급으로 채운다
-  const restCourses = CAPITAL_COURSES.filter(c => c !== 'seoul-gu');
-  assert.equal(restCourses.length, 25);
-  for (let i = 0; i < restCourses.length - 1; i++) {
-    const slug = restCourses[i];
-    db.prepare(`insert into license (who, mode, slug, grade, cpm, acc, misses, dev, lang, name, at)
-                values (?, 'normal', ?, 'A', 600, 99, 1, 'pc', 'ko', '테스터', ?)`).run(me, slug, Date.now());
+  // 8. 글자 수 면허: 이름 묶음, 합 = chars
+  const stages = [['basic', 270, null], ['mid', 300, null], ['expert', 320, null]];
+  assert.deepEqual(await start({ tier: 'mid' }, 403), { ok: false, error: 'locked', need: 'basic' }, '중급은 초급 다음');
+  for (const [tier, chars] of stages) {
+    const t = await start({ tier });
+    assert.equal(t.slug, 'kr-sgg'); assert.equal(t.secs, 60); assert.equal(t.tier, tier);
+    assert.equal(t.names.reduce((s, x) => s + x.length, 0), chars, `${tier} 이름 글자 합 = ${chars}`);
+    assert.equal(new Set(t.names).size, t.names.length, '이름 겹침 없음');
+    assert.ok(t.names.every(x => KR_SGG.includes(x)), '이름은 전국 시군구 풀에서');
+    const tr = db.prepare('select tier, n, slug from license_ticket where who = ?').get(me);
+    assert.deepEqual({ ...tr }, { tier, n: t.names.length, slug: 'kr-sgg' });
+    const n = t.names.length;
+    aged();
+    assert.deepEqual((await end(t, { hits: n - 1, tries: n - 1, cpm: 900, acc: 100 })).fail, { kind: 'done' }, 'n-1 은 미완주');
+    const t2 = await start({ tier }); aged();
+    assert.deepEqual((await end(t2, { hits: t2.names.length, tries: t2.names.length, cpm: 900, acc: 89 })).fail, { kind: 'acc', need: 90 });
+    const t3 = await start({ tier }); aged();
+    const n3 = t3.names.length;
+    assert.deepEqual(await end(t3, { hits: n3, tries: n3 + 40, cpm: 0, acc: 90 }), { ok: true, pass: true, tier, best: tier }, '타수·오타는 안 본다');
+    assert.equal(db.prepare('select grade from license where who = ? and mode = ? and slug = ?').get(me, 'normal', 'kr-sgg').grade, tier);
   }
-  // 25개까지는 아직 S 없음
-  assert.equal(db.prepare('select count(*) as n from license_s where who = ?').get(me).n, 0);
+  // 뽑을 때마다 다르다 (풀이 충분히 크면)
+  if (KR_SGG.length > 100) assert.notDeepEqual((await start({ tier: 'basic' })).names, (await start({ tier: 'basic' })).names, '볼 때마다 다르다');
 
-  // 마지막 26번째 코스 시험 완주
-  const lastSlug = restCourses[restCourses.length - 1];
-  const tkLast = await (await post('/license/start', { c: lastSlug, mode: 'normal' })).json();
-  db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - 60000, me);
-  const finLast = await post('/license/end', { id: tkLast.id, hits: SIZE[lastSlug], tries: SIZE[lastSlug], cpm: 620, acc: 100 });
-  const finLastData = await finLast.json();
-  assert.equal(finLastData.ok, true);
-  assert.equal(finLastData.grade, 'A');
-  assert.equal(finLastData.sAwarded, true, '수도 26개 A 달성으로 S 수여!');
-  assert.equal(finLastData.capitalA, 26);
+  // 9. /license/me
+  const meData = await (await get('/license/me')).json();
+  assert.deepEqual(meData.best, { ranked: null, normal: 'expert' });
+  assert.equal(meData.grades.normal['kr-sgg'], 'expert');
+  assert.equal(meData.grades.normal['seoul-gu'], 'reporter');
+  assert.deepEqual(meData.grades.ranked, {});
 
-  // DB 확인: license_s
-  const sRow = db.prepare("select * from license_s where who = ? and mode = 'normal' and plan = 'capital'").get(me);
-  assert.ok(sRow, 'license_s 에 기록 존재');
+  // 10. /license/top — 숙련 명단과 코스별 순위
+  db.prepare("insert into license (who, mode, slug, grade, cpm, acc, misses, name, at) values (?, 'normal', 'seoul-gu', 'gamer', 999, 99, 0, '남', 1)").run('b'.repeat(16));
+  db.prepare("insert into license (who, mode, slug, grade, cpm, acc, misses, name, at) values (?, 'normal', 'kr-sgg', 'mid', 1, 99, 0, '남', 1)").run('b'.repeat(16));
+  const top = await (await get('/license/top?mode=normal&c=seoul-gu')).json();
+  assert.equal(top.sHolders, undefined, 'sHolders 는 없다');
+  assert.equal(top.holders.length, 1, '숙련은 나뿐');
+  assert.ok(top.holders[0].me, '숙련 명단에 내가 있다');
+  assert.deepEqual(top.top.map(r => r.grade), ['reporter', 'gamer'], '면허 높은 순, 같으면 cpm');
+  const topPool = await (await get('/license/top?mode=normal&c=kr-sgg')).json();
+  assert.deepEqual(topPool.top.map(r => r.grade), ['expert', 'mid'], 'kr-sgg 순위도 받는다');
+  assert.deepEqual((await (await get('/license/top?mode=ranked')).json()).holders, [], '경쟁전엔 숙련자가 없다');
 
-  // 10. /license/me 확인
-  const meRes = await get('/license/me?mode=normal');
-  assert.equal(meRes.status, 200);
-  const meData = await meRes.json();
-  assert.equal(meData.capital.s, true);
-  assert.equal(meData.capital.aCount, 26);
-  assert.equal(meData.grades['seoul-gu'].grade, 'A');
-
-  // 11. /license/top 확인
-  const topRes = await get('/license/top?mode=normal&c=seoul-gu');
-  assert.equal(topRes.status, 200);
-  const topData = await topRes.json();
-  assert.ok(topData.sHolders.some(h => h.me), 'S 등급자 명단에 포함');
-  assert.ok(topData.top.some(r => r.me && r.grade === 'A'), '코스 상위 기록에 포함');
-
-  console.log('license D1 store and Capital S self-check done');
+  console.log('license D1 store self-check done');
 }
-

@@ -1,40 +1,43 @@
 /* ── 라이선스 시험 판정 ──
-   모든 등급 공통 조건: 120초 안에 완주 (done: true). 완주하지 못하면 등급 없음 (null).
-   A부터 F까지 위에서부터 순서대로 조건을 견주어 첫 번째로 부합하는 등급을 부여한다.
-   E·D의 오타 허용 기준은 F의 10회 이하를 물려받는다. */
-export const EXAM_GRADES = [
-  { g: 'A', acc: 98, cpm: 600, miss: 1 },
-  { g: 'B', acc: 95, cpm: 500, miss: 3 },
-  { g: 'C', acc: 93, cpm: 400, miss: 5 },
-  { g: 'D', acc: 90, cpm: 300, miss: 10 },
-  { g: 'E', acc: 85, cpm: 200, miss: 10 },
-  { g: 'F', acc: 80, cpm: 0, miss: 10 },
+   다섯 면허를 아래에서 위로 한 번에 하나씩 응시한다. 아래를 따야 위가 열린다.
+   gamer·reporter 는 고른 코스를 secs 안에 완주하고 타수·정확도·오타를 모두 넘겨야 한다.
+   basic·mid·expert 는 전국 시군구에서 뽑은 chars 자를 secs 안에 다 치면 합격이다 —
+   시간 안에 끝냈다는 것이 곧 그 자수를 낸 것이라 타수·오타는 따로 보지 않는다. */
+export const LICENSES = [
+  { id: 'gamer', secs: 120, cpm: 400, acc: 93, miss: 5 },
+  { id: 'reporter', secs: 120, cpm: 600, acc: 98, miss: 1 },
+  { id: 'basic', secs: 60, chars: 270, acc: 90 },
+  { id: 'mid', secs: 60, chars: 300, acc: 90 },
+  { id: 'expert', secs: 60, chars: 320, acc: 90 },
 ];
 
-export const GRADE_WEIGHT = { A: 6, B: 5, C: 4, D: 3, E: 2, F: 1 };
+export const TIER_WEIGHT = { gamer: 1, reporter: 2, basic: 3, mid: 4, expert: 5 };
 
-export function gradeOf({ done, acc, cpm, misses }) {
-  if (!done) return null;
-  for (const r of EXAM_GRADES) {
-    if (acc >= r.acc && cpm >= r.cpm && misses <= r.miss) return r.g;
-  }
+/* 글자 수로 뽑는 면허가 치는 코스. 코스 정원은 시험 때마다 달라서 SIZE 에 없다 */
+export const POOL_SLUG = 'kr-sgg';
+
+/* 합격이면 null, 아니면 처음 걸린 조건 */
+export function failOf(lic, { done, acc, cpm, misses }) {
+  if (!done) return { kind: 'done' };
+  if (lic.miss != null && misses > lic.miss) return { kind: 'miss', need: lic.miss };
+  if (lic.cpm && cpm < lic.cpm) return { kind: 'cpm', need: lic.cpm };
+  if (acc < lic.acc) return { kind: 'acc', need: lic.acc };
   return null;
 }
 
-export function nextConditionOf({ done, acc, cpm, misses, grade }) {
-  if (!done) return { kind: 'done' };
-  if (!grade) {
-    if (misses > 10) return { g: 'F', kind: 'miss', need: 10 };
-    return { g: 'F', kind: 'acc', need: 80 };
+/* 글자 수 합이 꼭 chars 인 이름 묶음. 섞어서 들어가는 것만 담고, 안 맞으면 다시 섞는다 */
+export function pickPool(pool, chars, rand = Math.random) {
+  for (let t = 0; t < 50; t++) {
+    const a = pool.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    const out = [];
+    let left = chars;
+    for (const nm of a) {
+      if (nm.length <= left) { out.push(nm); left -= nm.length; if (!left) return out; }
+    }
   }
-  const order = ['F', 'E', 'D', 'C', 'B', 'A'];
-  const idx = order.indexOf(grade);
-  if (idx < 0 || idx >= order.length - 1) return { kind: 'max' };
-  const next = order[idx + 1];
-  const req = EXAM_GRADES.find(x => x.g === next);
-  if (!req) return { kind: 'max' };
-  if (misses > req.miss) return { g: next, kind: 'miss', need: req.miss };
-  if (cpm < req.cpm) return { g: next, kind: 'cpm', need: req.cpm };
-  if (acc < req.acc) return { g: next, kind: 'acc', need: req.acc };
-  return { kind: 'max' };
+  throw new Error(`pickPool: ${chars}자를 맞출 수 없다`);
 }

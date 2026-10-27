@@ -664,7 +664,7 @@ function softApply() {
   applyI18n(over());
   paintUnit();
   $('#verBuild').textContent = VER;
-  $('#verPatch').textContent = VER.replace('.', '');   // 릴리스 C 자리는 VER 에서 점을 뺀 숫자
+  $('#verRel').textContent = REL;   // 릴리스(SemVer)는 app.js 의 REL
   /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */
   if (isDev() && !ui) { try { WORLD = await (window.RT_WORLD_P || grab('data/world.json')); } catch {} }
   wire();
