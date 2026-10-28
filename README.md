@@ -8,7 +8,7 @@
 
 # English
 
-A typing drill for place names. v0.7.323 (`VER=3.23`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v1.3.1 — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
 ## What's new in 0.9.380
 
@@ -366,17 +366,17 @@ Carried from earlier patches: the logo-dot feedback dialog, the settings grid to
 
 ## Version
 
-A release is `vA.B.C`.
+A release follows Semantic Versioning: `vMajor.Minor.Patch` (current: `v1.3.1`). The rule applies from `v1.0.0` on. It lives in `REL` in `app.js`; the settings version line and the update notice read it from there.
 
-- **A** — a large change: the structure is redrawn, or a new mode appears. Chosen by hand
-- **B** — a small change: an ordinary addition or fix, visible to a player but not on the scale of A. Chosen by hand
-- **C** — `VER` from `app.js` without the dot (`VER = '1.45'` → `v0.4.145`). Never chosen, only copied
+- **Major** — a change that breaks compatibility: a large structural rework, or a change to the relay API. Resets Minor and Patch to 0 (`1.5.2 → 2.0.0`)
+- **Minor** — a new feature that keeps compatibility. Resets Patch to 0 (`1.4.2 → 1.5.0`)
+- **Patch** — a compatible bug fix or hotfix. Goes up by 1 (`1.5.0 → 1.5.1`)
 
-Raising A resets B to zero. C always follows `VER`, so it never resets.
+Which part to raise is chosen by hand.
 
-`VER` — the number in parentheses on the settings version line — goes up by `0.01` on every change (`1.45 → 1.46`). The settings line reads C from it.
+`VER` in `app.js` is a build number for development, agents and local work only. For security it is never shown to players: the settings version line prints only the release, and adds the build number in parentheses only in development (`data-dev`, set on localhost). It runs separately from the release, never appears in a release name, and goes up by `0.01` on every change (`1.45 → 1.46`).
 
-Each release gets its own branch, `static-A.B.C` (`static-0.4.145`).
+Each release gets its own branch, `static-A.B.C` (`static-1.3.0`), and is merged into `main` to deploy.
 
 This README is written in English only.
 

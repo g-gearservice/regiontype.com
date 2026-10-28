@@ -663,7 +663,8 @@ function softApply() {
   LANG = pickLang();
   applyI18n(over());
   paintUnit();
-  $('#verBuild').textContent = VER;
+  /* 빌드 번호(VER)는 개발·로컬에서만 보인다 — 배포 화면에는 릴리스만 둔다(보안: 내부 빌드 정보를 드러내지 않는다) */
+  if (isDev()) { $('#verBuild').textContent = VER; $('#verBuildWrap').hidden = false; }
   $('#verRel').textContent = REL;   // 릴리스(SemVer)는 app.js 의 REL
   /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */
   if (isDev() && !ui) { try { WORLD = await (window.RT_WORLD_P || grab('data/world.json')); } catch {} }

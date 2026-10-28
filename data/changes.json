@@ -1,4 +1,5 @@
 [
+  {"v": "1.3.1", "date": "2026-10-28", "ko": "보안: 설정 > 버전 줄에 내부 빌드 번호가 더는 보이지 않습니다. 릴리스 번호만 보이고, 빌드 번호는 개발·로컬 환경에서만 보입니다.", "en": "Security: the Settings > Version line no longer shows the internal build number. Only the release number appears; the build number is shown in development and local environments only."},
   {"v": "1.3.0", "date": "2026-10-28", "ko": "소개 화면(/landing/)을 새로 만들었습니다. 서울 격자 지도가 스크롤을 따라 강북·한강·강남으로 갈라지고 차오르며, 소개·개발·스토리·플랜과 바로 쳐 보기가 한 장에 이어집니다. 위쪽 메뉴는 늘 보입니다.", "en": "The landing page (/landing/) has been rebuilt. A tiled map of Seoul splits and fills into north of the Han, the river and the south as you scroll, and the About, Development, Story and Plan sections and a quick typing try run down one page. The top menu now stays in view."},
   {
     "v": "1.2.0",
