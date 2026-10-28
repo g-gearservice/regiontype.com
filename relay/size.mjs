@@ -72,6 +72,7 @@ export const SIZE = {
   'jungnang-bdong': 6,
   'jungnang-dong': 16,
   'kr-admin': 17,
+  'kr-sgg': 250,
   'mapo-bdong': 26,
   'mapo-dong': 16,
   'mx-admin': 33,

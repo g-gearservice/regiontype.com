@@ -1,5 +1,125 @@
 [
   {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "봇 스타일의 모양 만들기에 '유령'·'호박'·'박쥐'·'마녀' 같은 할로윈 낱말을 적으면 봇이 그 모습으로 곧바로 바뀌고, 답이 오면 더 다듬어집니다. 낱말에 맞는 게 없어도 같은 설명이면 늘 같은 모양이 나옵니다.",
+    "en": "In the bot shape generator, Halloween words like ghost, pumpkin, bat or witch now change the bot's look instantly, then the reply refines it. Other descriptions always give the same shape for the same words."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "봇 대화에서 '내 스타일' 칩을 누르면 봇과 말풍선이 물러나고 내 스타일만 뜹니다. Esc 를 누르면 내 스타일부터 닫히고 봇과 대화가 그대로 돌아옵니다.",
+    "en": "Tapping the My styles chip in the bot chat now steps the bot and its bubble aside. Esc closes My styles first and brings the bot and the chat back."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "봇 스타일의 모양 알약을 위로 굴리다 첫 모양에서 멈춰 마법봉에 닿지 않던 문제를 고쳤습니다. 이제 아이폰 타이머처럼 조금 밀어도 굴린 쪽으로 한 칸 넘어가고 두 칸씩 튀지 않으며, 끝에서 더 당기면 고무줄처럼 늘어나다가 마법봉·마지막 모양으로 딸려 갑니다.",
+    "en": "The bot shape pill no longer gets stuck on the first shape when scrolling up. Like the iPhone timer, a small scroll now moves one shape in that direction without overshooting by two, and pulling past the end stretches like a rubber band, then carries over to the wand or the last shape."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
+    "ko": "시작하기를 누르면 그 알약이 양옆으로 갈라져 아래 막대를 덮으며 일반전·경쟁전 두 알약이 됩니다. 라이선스는 시작하기를 꾹 누르거나, 그 위에서 트랙패드를 핀치해야만 켜집니다(라벨이 '라이선스 시험'으로 바뀝니다). 다시 꾹 누르면 꺼집니다. 켜진 채로 누르면 지금 응시할 수 있는 라이선스를 고르는 창이 열립니다.",
+    "en": "Pressing Play now splits its pill in two across the bottom bar, into Casual and Ranked. The license is turned on only by holding Play or pinching the trackpad over it (its label changes to License test); hold again to turn it off. Pressing it while on opens the list of licenses you can take now."
+  },
+  {
+    "v": "1.0.0",
+    "date": "2026-10-27",
+    "ko": "라이선스가 F~S 등급에서 프로게이머·기자·초급·중급·숙련 다섯 단계로 바뀌었습니다. 아래 단계를 따야 위가 열리고, 초급~숙련은 한글속기 3·2·1급의 1분당 요구 자수(270·300·320자)만큼 전국 시군구에서 볼 때마다 새로 뽑은 코스를 60초 안에 칩니다. 시험 중에는 지나온 곳이 왼쪽, 칠 칸이 가운데에 놓입니다.",
+    "en": "Licenses are now five steps instead of grades F–S: Pro gamer, Reporter, Basic, Intermediate and Expert. Each one unlocks the next. Basic to Expert give you a fresh course of districts from all of Korea every time, sized to the Korean stenography exam's per-minute character counts (270, 300, 320), to finish in 60 seconds. During an exam the place you just passed sits on the left and the blanks stay centered."
+  },
+  {
+    "v": "0.11.527",
+    "date": "2026-10-27",
+    "ko": "봇 모양 알약의 고른 자리 고리가 알약 바탕 가운데에 고정되고 모양이 그 밑을 굴러 지나가게 했습니다. 맨 위·맨 아래 끝의 모양을 고르면 고리가 그쪽 끝으로 옮겨 갑니다.",
+    "en": "The bot shape pill's selection ring now stays fixed in the middle while shapes scroll beneath it; picking the first or last shape slides the ring to that end."
+  },
+  {
+    "v": "0.11.526",
+    "date": "2026-10-27",
+    "ko": "봇 모양 알약에서 고르지 않은 모양도 흐리게 가리지 않고 늘 또렷하게 보이게 했습니다. 고른 모양은 테두리 고리로 가릅니다.",
+    "en": "Every shape in the bot shape pill now stays fully visible instead of being dimmed; the current one is marked with a ring."
+  },
+  {
+    "v": "0.11.525",
+    "date": "2026-10-27",
+    "ko": "내 스타일에서 탭을 옮길 때 봇 스타일의 모양·크기 알약이 게임 스타일 위에 잠깐 남아 보이던 것을 고쳤습니다. 모양 알약의 표시는 다시 늘 가운데에 서고, 첫 것(마법봉)과 끝 것만 맨 위·맨 아래에 붙습니다.",
+    "en": "Fixed the bot shape and size pills briefly lingering over Game style when switching tabs in My Style. The shape pill's highlight stays centred again, moving to the very top or bottom only for the first (magic wand) and last shapes."
+  },
+  {
+    "v": "0.11.524",
+    "date": "2026-10-27",
+    "ko": "봇 모양 알약 위아래의 빈칸을 없앴습니다. 마법봉을 고르면 표시가 맨 위로, 마지막 모양을 고르면 맨 아래로 내려갑니다.",
+    "en": "Removed the empty space at both ends of the bot shape pill — the highlight rises to the top for the magic wand and drops to the bottom for the last shape."
+  },
+  {
+    "v": "0.11.523",
+    "date": "2026-10-27",
+    "ko": "내 스타일 판의 모서리를 더 둥글고 매끈하게 하고 두 탭의 높이를 맞췄습니다. 봇 스타일을 고르는 동안 홈의 봇은 물러나고, 모양 알약 맨 위 마법봉을 가운데에 두면 봇이 오른쪽으로 비키며 판 안에서 말로 모양을 지을 수 있습니다.",
+    "en": "My Style now has rounder, smoother corners and both tabs share one height. The home bot steps aside while you edit Bot style, and centring the magic wand at the top of the shape pill moves the bot right and opens a chat to describe a new shape."
+  },
+  {
+    "v": "0.11.522",
+    "date": "2026-10-27",
+    "ko": "봇 스타일의 모양 고르기를 봇 왼쪽의 세로 알약으로 옮겼습니다. 굴려서 가운데에 멈춘 모양을 입습니다.",
+    "en": "Moved the bot shape picker into a vertical pill left of the bot — scroll and the shape that stops in the middle is applied."
+  },
+  {
+    "v": "0.11.521",
+    "date": "2026-10-27",
+    "ko": "봇 스타일에서 색 고르기를 빼고, 봇 크기는 봇 옆에 선 세로 밀대로 바꿨습니다(위로 올리면 커집니다).",
+    "en": "Removed the colour picker from Bot style and replaced the size control with a vertical slider beside the bot (slide up to grow)."
+  },
+  {
+    "v": "0.11.520",
+    "date": "2026-10-27",
+    "ko": "내 스타일 판을 작게 줄여 오른쪽 아래에서 올라오게 하고, 열고 닫을 때와 탭을 옮길 때 부드럽게 움직이게 했습니다.",
+    "en": "My Style is now a smaller panel that rises from the bottom-right corner, with smooth open/close and tab-switch animations."
+  },
+  {
+    "v": "0.11.519",
+    "date": "2026-10-27",
+    "ko": "순위 화면에 경쟁전·일반전별 '일반/라이선스' 하위 탭을 더하고(화살표 키로 이동), 라이선스 시험 중에는 지도·큐·타이핑 칸·힌트에서 지명이 보이지 않게 했습니다.",
+    "en": "Added General/License sub-tabs to the ranking screen for both Ranked and Normal (arrow-key navigable), and hid place names on the map, queue, typing box and hints during the license exam."
+  },
+  {
+    "v": "0.11.518",
+    "date": "2026-10-27",
+    "ko": "가입 직후 도우미 봇이 처음 꺼내 달라고 조르는 동안 넵바의 로고와 알약 모양이 어둡게 덮이지 않고 애니메이션 손보다 위에 위치하도록 고쳤습니다.",
+    "en": "Fixed an issue where the navbar logo and pill shape appeared dimmed and sat behind the bot's peek animation while the bot first asks to be rescued."
+  },
+  {
+    "v": "0.11.517",
+    "date": "2026-10-27",
+    "ko": "내 스타일의 '봇 스타일' 탭에서 기본 모양·만들기·초기화 단추를 사이트의 알약 디자인과 통일하고, 모양이나 색을 골랐을 때 이전 모습으로 되돌아가던 문제를 고쳤습니다.",
+    "en": "Unified the preset/generate/reset buttons in the Bot style tab with the site's pill button design, and fixed shape and colour selections getting stuck on the previous look."
+  },
+  {
+    "v": "0.11.516",
+    "date": "2026-10-27",
+    "ko": "할로윈 호박을 비롯한 새 캐릭터 모양 일곱 가지를 더하고, 내 스타일 창을 '게임 스타일'과 '봇 스타일' 탭으로 나누어 봇 모양·색·크기·만들기와 강조색 연동 색상을 한자리에서 고를 수 있게 했습니다.",
+    "en": "Added 7 new character shapes including a Halloween pumpkin, and split the My styles modal into 'Game style' and 'Bot style' tabs with shape/size/generate controls and an accent-synced colour option."
+  },
+  {
+    "v": "0.11.515",
+    "date": "2026-10-27",
+    "ko": "도우미 봇이 홈뿐만 아니라 결과·순위·기록·내 계정·설정 화면에서도 같은 자리와 모습으로 함께 다니며 말을 걸거나 동작을 실행할 수 있게 했습니다.",
+    "en": "The helper bot now stays with you across Result, Ranking, Records, Account, and Settings screens with its position, look, and full chat and action capabilities."
+  },
+  {
+    "v": "0.11.514",
+    "date": "2026-10-27",
+    "ko": "설정에서 언어를 바꿨을 때 로그인 화면에도 바뀐 언어가 바로 반영되도록 고쳤습니다.",
+    "en": "Fixed the sign-in overlay so it updates to the newly selected language after changing the language in Settings."
+  },
+  {
+    "v": "0.11.512",
+    "date": "2026-10-26",
+    "ko": "목표 지역 비트 테두리 깜빡임 색상을 타이핑 하이라이트(커서) 색상과 같은 블루(#007aff, 야간 #6395ee)로 통일했습니다.",
+    "en": "Unified the target bead pulsing border color with the typing highlight and caret color (#007aff, nighttime #6395ee)."
+  },
+  {
     "v": "0.11.511",
     "date": "2026-10-26",
     "ko": "세 번째 베타 스타일 'CRT 터미널'을 열었습니다. 셸에서 서울의 구를 열면 그 구의 지도가 형광체 선으로 뜨고, 행정동 이름을 쳐서 Enter 로 확정합니다. 소개 화면 스타일 줄에도 카드를 붙였습니다.",

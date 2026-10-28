@@ -73,6 +73,8 @@
 
 import { sign, who as sessionWho, rand, hex, b64u, unb64u, mac, sha } from './auth.mjs';
 import { SIZE } from './size.mjs';
+import { LICENSES, TIER_WEIGHT, POOL_SLUG, failOf, pickPool } from './license.mjs';
+import { KR_SGG } from './pool.mjs';
 
 const REPO = 'g-gearservice/regiontype.com';
 const SITE = ['https://regiontype.com', 'https://www.regiontype.com'];
@@ -820,6 +822,145 @@ async function ladderTop(req, env, o) {
         where l.dev = ? and l.games >= ? order by l.lp desc, l.at asc limit 50`
     ).bind(dev, PLACE).all();
     return send(200, { top: seen(results, me), dev, place: PLACE, step: STEP }, o);
+  });
+}
+
+/* ── 라이선스 시험 ──────────────────────────────────────────
+   면허 다섯 개(LICENSES)를 아래에서 위로 하나씩 응시한다. 경쟁전·일반전 따로.
+   gamer·reporter 는 고른 코스, basic·mid·expert 는 전국 시군구에서 뽑은 이름 묶음이다.
+   합격은 합격·불합격 둘뿐이고, license 줄의 grade 에는 딴 면허 id 가 들어간다. */
+
+const clamp = (v, hi) => Math.min(hi, Math.max(0, Number(v) || 0));
+const licOf = id => LICENSES.find(l => l.id === id);
+
+/* 이 mode 에서 가진 가장 높은 면허 id (없으면 null) */
+const bestOf = rows => rows.reduce((b, r) => (TIER_WEIGHT[r.grade] || 0) > (TIER_WEIGHT[b] || 0) ? r.grade : b, null);
+
+export async function licenseStart(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '라이선스 시험은 로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const mode = c.mode === 'ranked' ? 'ranked' : 'normal';
+  const dev = devOf(c.dev), lang = langOf(c.lang);
+  const lic = typeof c.tier === 'string' ? licOf(c.tier) : null;
+  if (!lic) return reply(400, '없는 라이선스입니다.', o);
+  const chars = !!lic.chars;
+  const slug = chars ? POOL_SLUG : cut(c.c, 40);
+  if (!chars && !Object.hasOwn(SIZE, slug)) return reply(400, '시작할 수 없는 코스입니다.', o);
+  const ok = await pass(env.RL_RK, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    /* 바로 아래 면허 이상을 같은 mode 에서 가져야 연다 */
+    const idx = LICENSES.indexOf(lic);
+    if (idx > 0) {
+      const need = LICENSES[idx - 1].id;
+      const rows = await env.DB.prepare('select grade from license where who = ? and mode = ?').bind(me, mode).all();
+      if (!(rows.results || []).some(r => (TIER_WEIGHT[r.grade] || 0) >= TIER_WEIGHT[need]))
+        return send(403, { error: 'locked', need }, o);
+    }
+    const names = chars ? pickPool(KR_SGG, lic.chars) : undefined;
+    const id = rand(18), now = Date.now();
+    await env.DB.prepare(`insert into license_ticket (who, id, mode, slug, tier, n, dev, lang, at)
+                          values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          on conflict (who) do update set
+                            id = excluded.id, mode = excluded.mode, slug = excluded.slug,
+                            tier = excluded.tier, n = excluded.n,
+                            dev = excluded.dev, lang = excluded.lang, at = excluded.at`)
+      .bind(me, id, mode, slug, lic.id, names ? names.length : 0, dev, lang, now).run();
+    return send(201, { id, secs: lic.secs, tier: lic.id, slug, names }, o);
+  });
+}
+
+export async function licenseEnd(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const ok = await pass(env.RL_RK, ip(req));
+  if (ok !== true) return shut(ok, o);
+  return safely(o, async () => {
+    const now = Date.now(), id = cut(c.id, 40);
+    const tk = await env.DB.prepare('select tier, n, mode, slug, dev, lang, at from license_ticket where who = ? and id = ?')
+      .bind(me, id).first();
+    const lic = tk && licOf(tk.tier);
+    if (!lic) return reply(409, '끝낼 라이선스 시험이 없습니다.', o);
+    /* 시간 창은 표를 쓰기 전에 본다 — 너무 빠르거나 늦은 제출이 표를 태우지 않게 */
+    const took = now - tk.at;
+    if (took < 5000 || took > (lic.secs + 15) * 1000) return reply(400, '올릴 수 없는 시험 기록입니다.', o);
+    /* 표는 먼저 쓴다 — 같은 표로 두 번 올릴 수 없다 */
+    const gone = await env.DB.prepare('delete from license_ticket where who = ? and id = ?').bind(me, id).run();
+    if (!gone.meta?.changes) return reply(409, '끝낼 라이선스 시험이 없습니다.', o);
+
+    const hits = Number(c.hits) || 0, tries = Number(c.tries) || 0;
+    const cpm = clamp(c.cpm, 1500), acc = clamp(c.acc, 100);
+    const done = hits === (tk.n || SIZE[tk.slug]);
+    const misses = Math.max(0, tries - hits);
+    const fail = failOf(lic, { done, acc, cpm, misses });
+    if (fail) return send(200, { ok: false, pass: false, tier: lic.id, fail }, o);
+
+    const prev = await env.DB.prepare('select grade, cpm from license where who = ? and mode = ? and slug = ?')
+      .bind(me, tk.mode, tk.slug).first();
+    const newW = TIER_WEIGHT[lic.id], prevW = prev ? (TIER_WEIGHT[prev.grade] || 0) : 0;
+    if (!prev || newW > prevW || (newW === prevW && cpm > prev.cpm)) {
+      await env.DB.prepare(`insert into license (who, mode, slug, grade, cpm, acc, misses, dev, lang, name, at)
+                            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            on conflict (who, mode, slug) do update set
+                              grade = excluded.grade, cpm = excluded.cpm, acc = excluded.acc,
+                              misses = excluded.misses, dev = excluded.dev, lang = excluded.lang,
+                              name = excluded.name, at = excluded.at`)
+        .bind(me, tk.mode, tk.slug, lic.id, cpm, acc, misses, tk.dev, tk.lang, plain(c.name, CAP.name), now).run();
+    }
+    const rows = await env.DB.prepare('select grade from license where who = ? and mode = ?').bind(me, tk.mode).all();
+    return send(200, { ok: true, pass: true, tier: lic.id, best: bestOf(rows.results || []) }, o);
+  });
+}
+
+export async function licenseMe(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  return safely(o, async () => {
+    const rows = await env.DB.prepare('select mode, slug, grade from license where who = ?').bind(me).all();
+    const best = { ranked: null, normal: null }, grades = { ranked: {}, normal: {} };
+    for (const m of Object.keys(best)) {
+      const mine = (rows.results || []).filter(r => r.mode === m);
+      best[m] = bestOf(mine);
+      for (const r of mine) grades[m][r.slug] = r.grade;
+    }
+    return send(200, { best, grades }, o);
+  });
+}
+
+export async function licenseTop(req, env, o) {
+  const u = new URL(req.url);
+  const mode = u.searchParams.get('mode') === 'ranked' ? 'ranked' : 'normal';
+  const slug = u.searchParams.get('c');
+  const me = await sessionWho(env, req);
+  return safely(o, async () => {
+    /* 숙련(expert)을 딴 사람 — 먼저 딴 순 */
+    const holders = await env.DB.prepare(`
+      select l.who, l.at as s_at, coalesce(p.name, l.name, '') as name
+      from license l
+      left join profile p on p.who = l.who
+      where l.mode = ? and l.grade = 'expert'
+      order by l.at asc
+      limit 50
+    `).bind(mode).all();
+
+    let top = [];
+    if (slug && (Object.hasOwn(SIZE, slug) || slug === POOL_SLUG)) {
+      const cRows = await env.DB.prepare(`
+        select l.who, coalesce(p.name, l.name, '') as name, l.grade, l.cpm, l.acc, l.misses, l.at
+        from license l
+        left join profile p on p.who = l.who
+        where l.mode = ? and l.slug = ?
+        order by case l.grade ${LICENSES.map(l => `when '${l.id}' then ${TIER_WEIGHT[l.id]}`).join(' ')} else 0 end desc,
+                 l.cpm desc, l.at asc
+        limit 50
+      `).bind(mode, slug).all();
+      top = seen(cRows.results || [], me);
+    }
+    return send(200, { mode, holders: seen(holders.results || [], me), top }, o);
   });
 }
 
@@ -1633,7 +1774,8 @@ async function authIntro(req, env, o) {
    더하는 걸 잊으면 지웠다고 해놓고 남는다 — relay/test.mjs 가 schema.sql 과 대조해
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
 export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro', 'match_participants', 'match_logs', 'player_ratings',
-                      'passkey', 'recovery', 'mailbox', 'phonebox', 'twofa', 'pending', 'sso', 'post', 'reply', 'mark'];
+                      'passkey', 'recovery', 'mailbox', 'phonebox', 'twofa', 'pending', 'sso', 'post', 'reply', 'mark',
+                      'license_ticket', 'license', 'license_s', 'license_v1', 'license_s_v1'];
 
 async function authErase(req, env, o) {
   const me = await sessionWho(env, req);
@@ -1882,7 +2024,8 @@ export const BOT_SET = { night: ONOFF, sound: ONOFF, motion: ONOFF, grid: ONOFF,
                          unit: ['auto', 'cpm', 'wpm'], dong: ['admin', 'legal'], time: TIMES };
 /* 봇 모습. assets/bloub/engine.js 의 SHAPES·EXPRESSIONS·COLORS id 와 같다 — test.mjs 가 맞춰 본다 */
 export const BOT_LOOK = {
-  shape: ['cercle', 'galet', 'squircle', 'capsule', 'triangle', 'hexagone', 'nuage', 'goutte'],
+  shape: ['cercle', 'galet', 'squircle', 'capsule', 'triangle', 'hexagone', 'nuage', 'goutte',
+          'etoile', 'trefle', 'coeur', 'fleur', 'pentagone', 'eclat', 'citrouille'],
   expression: ['neutre', 'attentif', 'surpris', 'excite', 'heureux', 'hilare', 'colere', 'triste', 'effraye',
                'mefiant', 'confus', 'curieux', 'fier', 'timide', 'blase', 'somnolent'],
   colour: ['encre', 'brun', 'rouge', 'orange', 'ambre', 'vert', 'turquoise', 'bleu', 'violet', 'rose', 'gris', 'creme'],
@@ -1931,6 +2074,22 @@ const lum = hex => {
 };
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
 const HEX = /^#[0-9a-f]{6}$/i;
+export function botGen(g) {
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return null;
+  const num = (v, lo, hi, d) => Number.isFinite(+v) ? +Math.min(hi, Math.max(lo, +v)).toFixed(3) : d;
+  const out = {};
+  if (g.lobes != null) out.lobes = int(g.lobes, 0, 12);
+  if (g.amp != null) out.amp = num(g.amp, -0.28, 0.28, 0);
+  if (g.sharp != null) out.sharp = num(g.sharp, 0.5, 3, 1);
+  if (g.sx != null) out.sx = num(g.sx, 0.72, 1.28, 1);
+  if (g.sy != null) out.sy = num(g.sy, 0.72, 1.28, 1);
+  if (g.rot != null) out.rot = int(g.rot, -180, 180);
+  if (g.h2 != null) out.h2 = num(g.h2, -0.2, 0.2, 0);
+  if (g.h3 != null) out.h3 = num(g.h3, -0.2, 0.2, 0);
+  if (g.stem === true) out.stem = true;
+  return Object.keys(out).length ? out : null;
+}
+
 export function botTheme(a) {
   if (a?.reset === true) return { act: 'theme', reset: true };
   const t = { act: 'theme' };
@@ -1968,8 +2127,9 @@ export function botSystem({ courses, lang, name, now }) {
     `{"act":"post","tag":"<${TAGS.join('|')}>","title":"<up to ${CM.title} chars>","body":"<up to ${CM.body} chars>"} ` +
     'drafts a community post (brag, ask = question, idea, chat). It only fills the form; the user reviews and ' +
     'presses post. Write it in the user\'s voice from what they told you; never invent scores or facts.\n' +
-    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>"} changes how you look (any of the three): ' +
-    Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (ids are French words).\n' +
+    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>","gen":{"lobes":0..12,"amp":-0.28..0.28,"sharp":0.5..3,"sx":0.72..1.28,"sy":0.72..1.28,"rot":-180..180,"h2":-0.2..0.2,"h3":-0.2..0.2,"stem":true|false}} changes how you look (any of the fields): ' +
+    Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (colour can also be "accent" to sync with the highlight colour; ids are French words, citrouille = Halloween pumpkin with stem). ' +
+    'When asked to generate/create a custom avatar or shape not in the preset list, include "gen" in look (e.g. lobes=number of bumps/points, amp=bump depth, sharp=pointiness, sx/sy=width/height stretch, h2/h3=asymmetry, stem=top stem) along with matching colour.\n' +
     '{"act":"theme","name":"<short style name>","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site ' +
     'and saves the style under that name (2–4 words in the user\'s language) to the styles page: accent = highlight colour ' +
     '(must be light enough for dark text), block = main tile colour (must be dark enough for white text). ' +
@@ -2027,6 +2187,9 @@ export function botAct(text, courses) {
     }
     if (a?.act === 'look') {
       const l = Object.fromEntries(Object.entries(BOT_LOOK).filter(([k, v]) => v.includes(a[k])).map(([k]) => [k, a[k]]));
+      if (a.colour === 'accent') l.colour = 'accent';
+      const g = botGen(a.gen);
+      if (g) { l.gen = g; if (!l.shape) l.shape = 'gen'; }
       return Object.keys(l).length ? { act: 'look', ...l } : null;
     }
     if (a?.act === 'theme') return botTheme(a);
@@ -2289,6 +2452,13 @@ export default {
       if (path === '/played' && req.method === 'POST') return playedNormal(req, env, o);
       if (path === '/games' && req.method === 'GET') return myGames(req, env, o);
       if (path === '/ladder' && req.method === 'GET') return ladderTop(req, env, o);
+    }
+    if (path === '/license/start' || path === '/license/end' || path === '/license/me' || path === '/license/top') {
+      if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);
+      if (path === '/license/start' && req.method === 'POST') return licenseStart(req, env, o);
+      if (path === '/license/end' && req.method === 'POST') return licenseEnd(req, env, o);
+      if (path === '/license/me' && req.method === 'GET') return licenseMe(req, env, o);
+      if (path === '/license/top' && req.method === 'GET') return licenseTop(req, env, o);
     }
     if (path.startsWith('/match/') && req.method === 'POST') {
       if (!env.DB) return reply(503, '순위표는 아직 열리지 않았습니다.', o);

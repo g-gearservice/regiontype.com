@@ -10,7 +10,7 @@
 
    app.js 뒤에 실려 그 전역을 빌려 쓴다: t · token · asset · start · opt · clock ·
    calm · homeTitle · aimNavShape · relayoutNavShapes · plain · showSpeed · BOOTED ·
-   COURSE · PICK · G · board.
+   COURSE · PICK · G · board · LICENSES · licName · examResult.
    ponytail: 빌려 쓰는 게 이만큼 늘었다. 한 번 더 늘면 app.js 를 모듈로 나눈다. */
 (function () {
 'use strict';
@@ -18,6 +18,8 @@
 const $ = s => document.querySelector(s);
 const RELAY = self.RT_RELAY;   // relay.js
 const NAME_KEY = 'rt.name';
+/* relay/worker.mjs 의 plain(s, CAP.name) 과 같은 자 — 부르던 곳만 있고 정의가 없어 이름·라이선스 제출이 ReferenceError 로 죽었다 */
+const plain = s => String(s ?? '').trim().slice(0, 12).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
 /* 중계기와 같은 수다(worker.mjs 의 STEP · DIVS · PLACE). 티어 이름은 여기서만 짓는다.
    한 디비전이 STEP lp, 한 티어가 III·II·I 세 디비전이고 마스터만 하나다 */
 const STEP = 100, DIVS = 3, PLACE = 5, TIERS = 6;
@@ -48,12 +50,12 @@ async function ask(path, body, anon) {
   const r = await fetch(RELAY + path, body
     ? { method: 'POST', headers: head, body: JSON.stringify(body) } : { headers: head });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) { const e = new Error(d.msg || String(r.status)); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(d.msg || String(r.status)); e.status = r.status; e.data = d; throw e; }
   return d;
 }
 
 /* 코스 이름은 홈 칸에서 읽는다. 서울 코스는 머리글 이름이다 */
-const placeOf = slug => slug === COURSE.root ? homeTitle()
+const placeOf = slug => slug === 'kr-sgg' ? t('courseSgg') : slug === COURSE.root ? homeTitle()
   : (COURSE.tiles.find(x => x.slug === slug && !x.kid) || COURSE.tiles.find(x => x.slug === slug) || {}).label || slug;
 
 /* ── 덮개 여닫기 ─────────────────────────────────────────
@@ -70,7 +72,7 @@ function siDurMs() {
 function lockBack(on, el) {
   if (on) {
     inertWas = [...document.body.children]
-      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'styles', 'tabDock'].includes(n.id))
+      .filter(n => n !== el && n.tagName !== 'SCRIPT' && !['boot', 'signin', 'options', 'codes', 'feedback', 'styles', 'tabDock', 'rkLayer'].includes(n.id))
       .map(n => [n, n.inert]);
     inertWas.forEach(([n]) => { n.inert = true; });
   } else {
@@ -118,35 +120,30 @@ function closePage(now) {
   if (was === 'account') leftAccount();
 }
 
-/* ── 내 스타일 ── 덮개가 아니라 연 단추 바로 아래 뜨는 popover 다. 계정에서 열어도 계정이 그대로 남는다.
-   Esc·바깥 누르기(popover 가 한다)·닫기 단추로 닫히고, 초점은 연 단추로 돌아간다.
-   아래 자리가 모자라면 단추 위로 뒤집고, 단추가 안 보이면(봇·주소로 열 때) 위 가운데에 띄운다 */
+/* ── 내 스타일 ── 덮개가 아니라 오른쪽 아래 구석에서 올라오는 popover 다(자리는 style.css). 계정에서 열어도 계정이 그대로 남는다.
+   Esc·바깥 누르기(popover 가 한다)·닫기 단추로 닫히고, 초점은 연 단추로 돌아간다 */
 let styOpener = null;
 const styOpen = () => $('#styles').matches(':popover-open');
-function placeStyles() {
-  const d = $('#styles'), PAD = 16, GAP = 8;
-  const a = styOpener && styOpener !== document.body && styOpener.isConnected && styOpener.getClientRects().length ? styOpener.getBoundingClientRect() : null;
-  const w = d.offsetWidth, h = d.firstElementChild.scrollHeight;
-  let top = a ? a.bottom + GAP : PAD + 56;
-  if (a && innerHeight - top - PAD < Math.min(h, 320) && a.top - GAP - PAD > innerHeight - top - PAD) top = Math.max(PAD, a.top - GAP - h);
-  d.style.left = Math.round(a ? Math.min(Math.max(PAD, a.left), innerWidth - w - PAD) : (innerWidth - w) / 2) + 'px';
-  d.style.top = Math.round(top) + 'px';
-  d.style.maxHeight = Math.round((a && top < a.top ? a.top - GAP : innerHeight - PAD) - top) + 'px';
-}
-function openStyles(from) {
+function openStyles(from, tab) {
   const d = $('#styles');
-  if (styOpen()) return;
+  if (styOpen()) {
+    if (tab === 'bot') pickStyTab($('#styTabBot'));
+    else if (tab === 'game') pickStyTab($('#styTabGame'));
+    return;
+  }
   styOpener = from || document.activeElement;
   styleGone = null; $('#styNote').textContent = '';
+  if ($('#botSay')) $('#botSay').textContent = '';
   fillStyles();
+  if (tab === 'bot') pickStyTab($('#styTabBot'));
+  else if (tab === 'game') pickStyTab($('#styTabGame'));
+  else if (!$('#styPanelBot').hidden) mountBotStyle();
   d.showPopover();
-  placeStyles();
   (fingers() ? $('#styHead') : $('#styClose')).focus({ preventScroll: true });
 }
 
 /* ── 내 계정 ──────────────────────────────────────────
-   알맹이(account/account.js)는 처음 열 때 한 번 싣는다 — 계정 화면에 안 들어오는 사람은
-   캐릭터 견본 스물넷을 그릴 까닭이 없다. 다시 열면 로그인 상태만 새로 읽힌다.
+   알맹이(account/account.js)는 처음 열 때 한 번 싣는다 — 다시 열면 로그인 상태만 새로 읽힌다.
    닫고 나면 거기서 바꾼 것을 홈에 입힌다: 말·야간 등은 app.js 가 rt-opt 로 다시 읽고,
    봇은 고친 모습·색·이름을 입는다 */
 let accountJs = false;
@@ -157,13 +154,12 @@ function openAccount() {
   s.src = asset('account/account.js');
   document.body.append(s);
 }
-function leftAccount() {
-  dispatchEvent(new Event('rt-opt'));
+function syncHomeBot() {
   if (!bot) return;
   const face = readFace();
-  if (face.shape) bot.api.setShape(face.shape);
+  bot.api.setShape(face.shape || 'cercle', face.gen);
   if (face.expression) bot.api.setExpression(face.expression);
-  bot.api.setColour(face.colour);
+  bot.api.setColour(face.colour || 'accent');
   paintTint(bot.el.querySelector('.rk-bot-motion'));
   bot.el.setAttribute('aria-label', botName());
   /* 크기가 바뀌었으면 제자리(옮겨 둔 곳이나 로고 밑)에 다시 선다 */
@@ -171,6 +167,15 @@ function leftAccount() {
   sizeBot();
   if (was !== BOT && out && !touring && !intro) { if (spot) moveTo(...spot); else place(...(phone() ? underLogo() : cornerAt(corner))); }
 }
+function syncBotLook() {
+  syncBotStyleFromStorage();
+  syncHomeBot();
+}
+function leftAccount() {
+  dispatchEvent(new Event('rt-opt'));
+  syncBotLook();
+}
+addEventListener('rt-bot-look', syncBotLook);
 
 /* ── 순위 ─────────────────────────────────────────────── */
 function rankRow(i, name, right, me, lp) {
@@ -192,6 +197,25 @@ function rankRow(i, name, right, me, lp) {
   }
   return li;
 }
+function sLi(i, name, at, me) {
+  const li = document.createElement('li');
+  li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
+  li.querySelector('b').textContent = i + 1;
+  li.querySelector('.who').textContent = name;
+  const badge = document.createElement('span');
+  badge.className = 'exam-badge';
+  badge.dataset.grade = 'expert';
+  badge.textContent = licName('expert');
+  li.querySelector('.who').after(badge);
+  li.querySelector('.pt').textContent = at ? new Date(at).toLocaleDateString() : '';
+  if (me) {
+    li.classList.add('me');
+    const tag = document.createElement('span');
+    tag.className = 'tag'; tag.textContent = t('me');
+    li.querySelector('.who').after(tag);
+  }
+  return li;
+}
 let rankReq = 0;
 async function fillRanking() {
   const n = ++rankReq;
@@ -204,7 +228,7 @@ async function fillRanking() {
     lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, r.lp)));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
   } catch { if (n === rankReq) say.textContent = t('boardFail'); }
-  await Promise.all(['ranked', 'normal'].map(mode => fillBests(n, mode)));
+  await Promise.all(['ranked', 'normal'].map(mode => Promise.all([fillBests(n, mode), fillLicense(n, mode)])));
 }
 /* 코스별 최고 기록. 코스·시간마다 1위 한 줄씩이고, 펼치면 그 판의 순위표와 내 자리를 읽는다.
    경쟁전과 일반전은 따로 센다. 이 나라 코스만 보인다 — 다른 나라 코스는 이름을 못 읽는다.
@@ -244,22 +268,106 @@ async function fillBests(n, mode) {
   }));
   say.textContent = rows.length ? '' : t('ladderEmpty');
 }
-function wireTabs() {
-  const tabs = [$('#rkTabRanked'), $('#rkTabNormal')];
-  const pick = tab => tabs.forEach(tb => {
-    const on = tb === tab;
-    tb.setAttribute('aria-selected', String(on));
-    tb.tabIndex = on ? 0 : -1;
-    document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
-  });
+/* 라이선스 순위 — 숙련 라이선스 보유자 명단과 코스별 라이선스 최고 기록 */
+async function fillLicense(n, mode) {
+  const sList = $(`#${mode}SHolders`), sSay = $(`#${mode}SSay`);
+  const box = $(`#${mode}LicenseBests`), boxSay = $(`#${mode}LicenseBestsSay`);
+  sList.replaceChildren(); sSay.textContent = t('reading');
+  box.replaceChildren(); boxSay.textContent = t('reading');
+  let topData;
+  try {
+    topData = await ask(`/license/top?mode=${mode}`);
+  } catch {
+    if (n === rankReq) {
+      sSay.textContent = t('boardFail');
+      boxSay.textContent = t('boardFail');
+    }
+    return;
+  }
+  if (n !== rankReq) return;
+
+  // 1. 숙련 라이선스 보유자 명단
+  const sHolders = topData.holders || [];
+  sList.replaceChildren(...sHolders.map((h, i) => sLi(i, h.name || t('anon'), h.s_at, h.me)));
+  sSay.textContent = sHolders.length ? '' : t('holdersEmpty');
+
+  // 2. 코스별 라이선스 순위
+  const here = PICK ? PICK.slug : COURSE.root;
+  const courses = [COURSE.root, ...COURSE.tiles.map(x => x.slug), 'kr-sgg'].filter((s, i, a) => a.indexOf(s) === i);   // 자수 면허는 전국 시군구에서 친다
+
+  box.replaceChildren(...courses.map(slug => {
+    const det = document.createElement('details');
+    det.className = 'pg-best';
+    det.innerHTML = '<summary><span class="where"></span><span class="who"></span><span class="pt"></span></summary><ol class="ranks pg-ranks"></ol><p class="pg-say" role="status"></p>';
+    det.querySelector('.where').textContent = placeOf(slug);
+    let read = false;
+    det.addEventListener('toggle', async () => {
+      if (!det.open || read) return;
+      read = true;
+      const ol = det.querySelector('ol'), p = det.querySelector('p');
+      p.textContent = t('reading');
+      try {
+        const r = await ask(`/license/top?mode=${mode}&c=${encodeURIComponent(slug)}`);
+        const list = r.top || [];
+        ol.replaceChildren(...list.map((x, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
+          li.querySelector('b').textContent = i + 1;
+          li.querySelector('.who').textContent = x.name || t('anon');
+          const badge = document.createElement('span');
+          badge.className = 'exam-badge';
+          badge.dataset.grade = x.grade;
+          badge.textContent = LICENSES.some(l => l.id === x.grade) ? licName(x.grade) : x.grade;
+          li.querySelector('.who').after(badge);
+          li.querySelector('.pt').textContent = `${showSpeed(x.cpm)} · ${x.acc}%`;
+          if (x.me) {
+            li.classList.add('me');
+            const tag = document.createElement('span');
+            tag.className = 'tag'; tag.textContent = t('me');
+            li.querySelector('.who').after(tag);
+          }
+          return li;
+        }));
+        p.textContent = list.length ? '' : t('ladderEmpty');
+      } catch {
+        read = false;
+        p.textContent = t('boardFail');
+      }
+    });
+    if (slug === here) det.open = true;
+    return det;
+  }));
+  boxSay.textContent = courses.length ? '' : t('ladderEmpty');
+}
+function wireTabGroup(tablist, onSwap) {
+  if (!tablist) return () => {};
+  const tabs = [...tablist.querySelectorAll(':scope > [role="tab"]')];
+  const pick = tab => {
+    tabs.forEach(tb => {
+      const on = tb === tab;
+      tb.setAttribute('aria-selected', String(on));
+      tb.tabIndex = on ? 0 : -1;
+      const p = document.getElementById(tb.getAttribute('aria-controls'));
+      if (p) p.hidden = !on;
+    });
+    if (onSwap) onSwap(tab);
+  };
   tabs.forEach(tb => tb.addEventListener('click', () => pick(tb)));
-  $('#ranking .pg-tabs').addEventListener('keydown', e => {
+  tablist.addEventListener('keydown', e => {
     const i = tabs.indexOf(document.activeElement);
     if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
     e.preventDefault();
-    const next = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + 1) % tabs.length];
+    const next = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1
+      : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+      : (i + 1) % tabs.length];
     pick(next); next.focus();
   });
+  return pick;
+}
+function wireTabs() {
+  wireTabGroup($('#ranking > .pg-shell > .pg-tabs'));
+  wireTabGroup($('#rkRanked .sub-tabs'));
+  wireTabGroup($('#rkNormal .sub-tabs'));
 }
 
 /* ── 기록 ─────────────────────────────────────────────── */
@@ -330,7 +438,7 @@ function keepStyle(acts) {
   if (!th) return;
   const look = acts.find(a => a.act === 'look');
   const s = { id: Date.now().toString(36), name: th.name || '', at: Date.now(), ...pickTheme(th) };
-  if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour };
+  if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour, ...(look.gen ? { gen: look.gen } : {}) };
   for (const a of acts) if (a.act === 'set' && (a.key === 'night' || a.key === 'motion')) s[a.key] = a.value;
   writeStyles([s, ...readStyles().filter(x => !sameStyle(x, s))].slice(0, STYLE_MAX));
   if (styOpen()) fillStyles();
@@ -478,11 +586,418 @@ function savePick() {
   fillStyles();
   $('#styNote').textContent = t('styleSaved');
 }
+
+/* ── 봇 스타일 탭 (모양·색·크기·생성) ───────────────────────
+   모양·색의 id 는 엔진(assets/bloub)이 쥐고 있고 화면 이름은 data/i18n.json 의 ch_<id> 다.
+   표정 고르기는 따로 두지 않는다. 색 첫 단추('accent')는 현재 강조색(--accent)과 연동된다 */
+const KO = id => (id && t('ch_' + id) !== 'ch_' + id) ? t('ch_' + id) : '';
+const BOT_DEF = { shape: 'cercle', expression: 'curieux', colour: 'accent', gen: null };
+const botChar = { ...BOT_DEF };
+/* 마법봉이 가운데에 섰는가. 지은 모양을 입고 있으면 켜지고, 프리셋을 고르거나 판을 닫으면 꺼진다.
+   지은 모양이 아직 없어도 켤 수 있다 — 그때는 말풍선만 열고 모습은 그대로 둔다 */
+let botGenMode = false, botLastGen = null;
+const botLists = { shape: [], colour: [] };
+const botThumbs = new Map();
+let botMe = null, botMounted = false, botLookAim = null, botLooking = 0, botKeepT = 0;
+
+function syncBotStyleFromStorage() {
+  const f = readFace();
+  botChar.shape = f.shape || BOT_DEF.shape;
+  botChar.expression = f.expression || BOT_DEF.expression;
+  botChar.colour = f.colour || BOT_DEF.colour;
+  botChar.gen = f.gen || null;
+  if (botChar.gen) { botGenMode = true; botLastGen = botChar.gen; }
+  if (botMounted) paintBotStyle();
+}
+
+function paintBotStyle() {
+  const btns = [...document.querySelectorAll('#shapeChoices [data-shape]')];
+  const on = btns.find(b => botGenMode ? b.dataset.shape === 'gen' : b.dataset.shape === botChar.shape && !botChar.gen);
+  $('#styPanelBot .character-preview').toggleAttribute('data-gen', botGenMode);
+  /* 물러난 쪽은 눌리지도 읽히지도 않게 한다(style.css 는 투명하게만 만든다) */
+  $('#styPanelBot .pet-size').inert = botGenMode;
+  $('#botViewGen').inert = !botGenMode;
+  btns.forEach(b => { b.setAttribute('aria-pressed', String(b === on)); b.tabIndex = b === (on || btns[0]) ? 0 : -1; });
+  if (on) { centreShape(on); placeShapeSlot(on); }
+  $('#character')?.setAttribute('aria-label',
+    `${KO(botChar.colour)} ${botChar.shape === 'gen' ? t('botSubGen') : KO(botChar.shape)}`);
+  if (!botMe) return;
+  botMe.setShape(botChar.shape, botChar.gen);
+  botMe.setExpression(botChar.expression);
+  botMe.setColour(botChar.colour);
+  for (const api of botThumbs.values()) {
+    api.setExpression(botChar.expression);
+    api.setColour(botChar.colour);
+  }
+}
+
+/* 모양 알약 — 고른 모양을 가운데에 세운다. 첫 것(마법봉)과 끝 것만 맨 위·맨 아래 끝에 붙어 위아래에 빈칸이 없다.
+   그래서 첫 둘·끝 둘은 같은 굴림 자리를 나눠 쓴다 — 굴려서 끝에 닿으면 끝 것, 그 밖에서 멈추면 가장 가까운 가운데 자리의 것을 고른다.
+   shapeAim 은 우리가 굴리는 목적지다 — 거기 닿은 멈춤은 고르기가 아니고, 닿기 전의 멈춤(끊긴 미끄러짐)도 고르지 않는다 */
+let shapeAim = null;
+function shapeTop(box, i) {
+  const all = box.children, max = box.scrollHeight - box.clientHeight;
+  if (i <= 0) return 0;
+  if (i >= all.length - 1) return max;
+  const b = all[i];
+  return Math.round(Math.max(0, Math.min(max, b.offsetTop + b.offsetHeight / 2 - box.clientHeight / 2)));
+}
+function centreShape(b) {
+  const box = b.parentElement, top = shapeTop(box, [...box.children].indexOf(b));
+  if (Math.abs(box.scrollTop - top) <= 1 || shapeAim === top) return;
+  shapeAim = top;
+  box.scrollTo({ top });
+}
+/* 고른 자리 테는 알약 바탕에 박혀 가운데에 서 있다 — 모양이 그 밑을 지나간다.
+   첫 것·끝 것은 가운데까지 굴러오지 못하니 테가 그쪽 끝으로 옮겨 간다(굴림이 닿을 자리 기준) */
+function placeShapeSlot(b) {
+  const box = b.parentElement;
+  if (!box.clientHeight) return;
+  const y = b.offsetTop + b.offsetHeight / 2 - shapeTop(box, [...box.children].indexOf(b)) - box.clientHeight / 2;
+  box.parentElement.style.setProperty('--slot-y', Math.round(y) + 'px');
+}
+/* 멈춘 자리에서 고를 모양 — 가장 가까운 자리의 것. 다만 그게 고른 것 그대로인데 12px 넘게 밀었으면 민 쪽으로
+   한 칸 간다 — 아이폰 타이머처럼 조금 밀어도 되튀지 않고, 세게 밀어도 두 칸씩 튀지 않는다.
+   끝 둘은 굴림 자리를 나눠 쓰니 그 짝에서 출발했으면 짝으로 간다 */
+function shapeAtCentre() {
+  const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop;
+  if (!n) return null;
+  const on = [...all].findIndex(b => b.getAttribute('aria-pressed') === 'true');
+  const from = on >= 0 ? shapeTop(box, on) : st;
+  /* 고른 것 자리에 그대로 서 있으면 그대로다 — 나눠 쓰는 끝자리에서 짝으로 뒤집히지 않게 */
+  if (Math.abs(from - st) <= 1) return on >= 0 ? all[on] : null;
+  const dir = Math.sign(st - from);
+  if (dir > 0 && on === 0 && n > 2 && st < shapeTop(box, 2)) return all[1];
+  if (dir < 0 && on === n - 1 && n > 2 && st > shapeTop(box, n - 3)) return all[n - 2];
+  /* 굴러서 끝에 닿아도 끝 것이 아니라 그 앞(첫 모양·끝에서 둘째)에 선다 — 끝 것은 한 번 더 밀어야(shapeEdgeStep) 간다 */
+  let best = 1, d = Infinity;
+  for (let i = 1; i < n - 1; i++) { const dd = Math.abs(shapeTop(box, i) - st); if (dd < d) { d = dd; best = i; } }
+  if (best === on && Math.abs(st - from) >= 12) best = Math.min(n - 2, Math.max(1, on + dir));
+  return all[best];
+}
+/* 끝에 닿아 더 굴러가지 않는데 그쪽으로 또 밀면 한 칸 옮긴다 — 첫 둘(마법봉·첫 모양)과 끝 둘은 같은 굴림
+   자리를 나눠 써서, 이게 없으면 첫 모양에서 위로 밀어도 아무 일이 없다(빨리 튕겨 올려야만 마법봉에 닿았다) */
+function shapeEdgeStep(dir, dry) {
+  const box = $('#shapeChoices'), all = box.children, n = all.length, st = box.scrollTop, max = box.scrollHeight - box.clientHeight;
+  const on = [...all].findIndex(b => b.getAttribute('aria-pressed') === 'true');
+  const to = st <= .5 && (dir < 0 ? on === 1 : on === 0) ? (dir < 0 ? 0 : 1)
+    : st >= max - .5 && (dir > 0 ? on === n - 2 : on === n - 1) ? (dir > 0 ? n - 1 : n - 2) : -1;
+  if (to < 0) return false;
+  if (!dry) all[to].click();
+  return true;
+}
+
+async function saveBotProfile() {
+  if (!token()) return;
+  /* 내 계정 덮개(account.js)를 부르지 않고 직접 올린다 — openAccount() 는 /auth/me 를 다시 읽어
+     방금 고른 rt.character 를 서버의 옛 face 로 덮어쓰는 경합을 일으킨다 */
+  try {
+    const me = await ask('/auth/me');
+    const p = me?.profile || {};
+    const name = readName() || p.name || '';
+    if (!name) return;
+    const f = readFace();
+    const shape = (f.shape && f.shape !== 'gen') ? f.shape : 'cercle';
+    const expression = f.expression || 'curieux';
+    const colour = f.colour || 'accent';
+    await ask('/auth/profile', {
+      name,
+      bio: localStorage.getItem('rt.bio') ?? p.bio ?? '',
+      face: [shape, expression, colour].join(','),
+      lang: JSON.parse(localStorage.getItem('rt.opt') || '{}').lang || p.lang || 'auto',
+      handle: p.handle || '',
+      botname: localStorage.getItem('rt.botname') ?? p.botname ?? '',
+      push: !!p.push,
+      shut: !!p.shut,
+    });
+  } catch {}
+}
+
+function keepBotStyle(msgKey = null) {
+  const out = { shape: botChar.shape, expression: botChar.expression, colour: botChar.colour };
+  if (botChar.gen) out.gen = botChar.gen;
+  try {
+    sessionStorage.setItem('rt.charDirty', '1');
+    localStorage.setItem('rt.character', JSON.stringify(out));
+  } catch { return; }
+  syncHomeBot();
+  if ($('#botSay') && msgKey) $('#botSay').textContent = t(msgKey);
+  clearTimeout(botKeepT);
+  botKeepT = setTimeout(saveBotProfile, 400);
+}
+
+function botLookTick() {
+  botLooking = 0;
+  if (!styOpen() || $('#styPanelBot').hidden) return;
+  const f = api => { if (botLookAim) api.lookToward(botLookAim[0], botLookAim[1]); else api.lookAway(); };
+  if (botMe) f(botMe);
+  for (const api of botThumbs.values()) f(api);
+}
+
+function mountBotStyle() {
+  if (botMounted) {
+    if (botMe) botMe.start();
+    syncBotStyleFromStorage();
+    return;
+  }
+  botMounted = true;
+  syncBotStyleFromStorage();
+  const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
+  buddyKit.then(({ mountBuddy, TABLES }) => {
+    botLists.shape = TABLES.shapes.map(x => x.id);
+    botLists.colour = ['accent', ...TABLES.colours.map(x => x.id)];
+    const saved = readFace();
+    if (botLists.shape.includes(saved.shape) || saved.shape === 'gen') botChar.shape = saved.shape;
+    if (botLists.colour.includes(saved.colour)) botChar.colour = saved.colour;
+    if (saved.gen) botChar.gen = saved.gen;
+
+    botMe = mountBuddy($('#character'), { calm, shape: botChar.shape, expression: botChar.expression, gen: botChar.gen });
+    botMe.start();
+
+    const shBox = $('#shapeChoices');
+    shBox.replaceChildren();
+    const wand = document.createElement('button');
+    wand.type = 'button'; wand.dataset.shape = 'gen';
+    wand.className = 'character-choice pet-wand';
+    wand.setAttribute('aria-label', t('botSubGen')); wand.setAttribute('aria-pressed', 'false');
+    wand.title = t('botSubGen');
+    wand.innerHTML = '<i class="i i-wand" aria-hidden="true"></i>';
+    wand.onclick = () => {
+      if (botGenMode) return centreShape(wand);
+      botGenMode = true;
+      if (botLastGen) { botChar.shape = 'gen'; botChar.gen = botLastGen; keepBotStyle(); }
+      paintBotStyle();
+    };
+    shBox.append(wand);
+    for (const id of botLists.shape) {
+      const label = KO(id) || id;
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.shape = id;
+      b.className = 'character-choice';
+      b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', 'false');
+      b.title = label;
+      const api = mountBuddy(b, { still: true, calm, shape: id, expression: botChar.expression });
+      api.setColour(botChar.colour);
+      api.start();
+      botThumbs.set(id, api);
+      b.onclick = () => {
+        if (!botGenMode && botChar.shape === id && !botChar.gen) return centreShape(b);
+        botGenMode = false; botChar.shape = id; botChar.gen = null; paintBotStyle(); keepBotStyle();
+      };
+      shBox.append(b);
+    }
+    /* scrollend 는 굴리기(미끄러짐 포함)가 다 끝나야 온다 — 없는 곳만 잠깐 멈춤으로 갈음한다 */
+    const settle = () => {
+      if (shapeAim != null) { if (Math.abs(shBox.scrollTop - shapeAim) <= 1) shapeAim = null; return; }
+      const b = shapeAtCentre(); if (b) b.click();
+    };
+    /* 끝에서 더 밀면 곧장 넘어가지 않고 모양들이 고무줄처럼 늘어나 따라오다가(--pull) 민 거리가
+       SHAPE_PULL 을 넘으면 한 칸 딸려 간다. 문턱 전에 놓으면 제자리로 되튄다.
+       끝 것(마법봉·마지막 모양)을 고른 동안은 고리도 그 모양에 붙어 함께 늘어난다(--slot-pull).
+       손가락은 넘어간 뒤에도 놓을 때까지 계속 늘어난다 — 넘어가는 순간 멈칫하지 않게(한 번 끄는 동안 한 칸만) */
+    const SHAPE_PULL = 36, wrap = shBox.parentElement;
+    let pull = 0, stepped = false, edgeQuiet = 0, letGo = 0, catching = 0, touchY = null;
+    const stretch = d => {
+      pull = d;
+      const px = (-Math.sign(d) * 40 * (1 - Math.exp(-Math.abs(d) / 40))).toFixed(1) + 'px';
+      const all = shBox.children, on = all[0]?.getAttribute('aria-pressed') === 'true' || all[all.length - 1]?.getAttribute('aria-pressed') === 'true';
+      wrap.classList.toggle('is-pulling', !!d);
+      wrap.style.setProperty('--pull', px);
+      wrap.style.setProperty('--slot-pull', on ? px : '0px');
+    };
+    const atEdge = dir => dir < 0 ? shBox.scrollTop <= .5 : shBox.scrollTop >= shBox.scrollHeight - shBox.clientHeight - .5;
+    /* 민 거리를 더한다. 옮길 데가 없거나 되돌려 밀면 놓아 준다. 문턱을 넘으면 옮기고 'moved' — 고리는 잠깐(is-catching)
+       미끄러져 새 모양에 가 붙은 뒤로는 손을 1:1 로 따른다. 옮긴 뒤엔 정말 굴림 끝일 때만 더 늘어난다
+       (마법봉에서 아래로 옮겼으면 그다음은 그냥 굴림이다) */
+    const tug = d => {
+      const dir = Math.sign(d);
+      if (!dir || !(stepped ? atEdge(dir) : pull || shapeEdgeStep(dir, true))) { stretch(0); return false; }
+      if (stepped || Math.abs(d) < SHAPE_PULL || !shapeEdgeStep(dir)) { stretch(d); return true; }
+      stepped = true;
+      wrap.classList.add('is-catching');
+      clearTimeout(catching);
+      catching = setTimeout(() => wrap.classList.remove('is-catching'), 180);
+      stretch(d);
+      return 'moved';
+    };
+    /* 휠·트랙패드. 새로 민 것(앞 휠과 250ms 넘게 떨어진 것)만 당기기 시작한다 — 굴러와 끝에 붙은 뒤에도
+       이어 오는 관성 휠이 넘기지 않게. 150ms 조용하면 놓은 것이다. 휠은 따라갈 손이 없으니 옮기면 곧장 놓고,
+       뒤따르는 휠은 200ms 조용해질 때까지 삼킨다 */
+    let lastWheel = -Infinity;
+    shBox.addEventListener('wheel', e => {
+      const fresh = e.timeStamp - lastWheel > 250;
+      lastWheel = e.timeStamp;
+      const r = edgeQuiet || ((pull || fresh) && tug((Math.sign(e.deltaY) === Math.sign(pull) ? pull : 0) + e.deltaY));
+      if (!r) return;
+      e.preventDefault();
+      clearTimeout(letGo);
+      if (edgeQuiet || r === 'moved') {
+        stretch(0);
+        stepped = false;
+        clearTimeout(edgeQuiet);
+        edgeQuiet = setTimeout(() => { edgeQuiet = 0; }, 200);
+      } else letGo = setTimeout(() => { stretch(0); stepped = false; }, 150);
+    }, { passive: false });
+    /* 손가락 — 끝에 닿은 자리부터 당긴 거리를 잰다 */
+    shBox.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+    shBox.addEventListener('touchmove', e => {
+      if (touchY == null) return;
+      const y = e.touches[0].clientY;
+      if (tug(touchY - y)) { if (e.cancelable) e.preventDefault(); }
+      else touchY = y;
+    }, { passive: false });
+    for (const ev of ['touchend', 'touchcancel']) shBox.addEventListener(ev, () => { touchY = null; stepped = false; stretch(0); }, { passive: true });
+    /* 사람이 손대면 우리 목적지는 버린다 */
+    for (const ev of ['wheel', 'touchstart', 'pointerdown']) shBox.addEventListener(ev, () => { shapeAim = null; }, { passive: true });
+    let still = 0;
+    if ('onscrollend' in shBox) shBox.onscrollend = settle;
+    else shBox.onscroll = () => { clearTimeout(still); still = setTimeout(settle, 140); };
+    shBox.onkeydown = e => {
+      if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+      e.preventDefault();
+      const all = [...shBox.children], i = all.indexOf(document.activeElement);
+      const next = all[e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : Math.min(all.length - 1, Math.max(0, i + (e.key === 'ArrowUp' ? -1 : 1)))];
+      next.click(); next.focus({ preventScroll: true });
+    };
+    paintBotStyle();
+  }).catch(err => {
+    console.error('[styles] 캐릭터 엔진', err);
+    if ($('#character')) $('#character').textContent = t('acctCharFail');
+  });
+}
+
+function pickStyTab(tab) {
+  const tabs = [$('#styTabGame'), $('#styTabBot')];
+  tabs.forEach(tb => {
+    const on = tb === tab;
+    tb.setAttribute('aria-selected', String(on));
+    tb.tabIndex = on ? 0 : -1;
+    document.getElementById(tb.getAttribute('aria-controls')).hidden = !on;
+  });
+  if (tab === $('#styTabBot')) mountBotStyle();
+}
+
+/* 할로윈 낱말 → 모델을 기다리지 않고 곧바로 입힐 프리셋. 앞의 것이 이긴다(할로윈·spooky 는 맨 끝의 덮개).
+   모델 답에 look 이 오면 그걸로 다듬는다 */
+const SPOOKY = [
+  [/호박|잭오랜턴|\bpumpkin|\bjack-?o/i, { shape: 'citrouille', colour: 'orange', expression: 'hilare' }],
+  [/유령|귀신|\bghost/i, { shape: 'goutte', colour: 'creme', expression: 'effraye' }],
+  [/박쥐|\bbats?\b/i, { shape: 'eclat', colour: 'encre', expression: 'mefiant' }],
+  [/마녀|\bwitch/i, { shape: 'triangle', colour: 'violet', expression: 'fier' }],
+  [/뱀파이어|드라큘라|흡혈귀|\bvampire|\bdracula/i, { shape: 'pentagone', colour: 'rouge', expression: 'mefiant' }],
+  [/해골|\bskull|\bskeleton/i, { shape: 'galet', colour: 'creme', expression: 'blase' }],
+  [/좀비|\bzombie/i, { shape: 'galet', colour: 'vert', expression: 'somnolent' }],
+  [/고양이|\bcats?\b/i, { shape: 'squircle', colour: 'encre', expression: 'curieux' }],
+  [/할로윈|핼러윈|\bhalloween|\bspooky/i, { shape: 'citrouille', colour: 'orange', expression: 'heureux' }],
+];
+function spookyLook(text) {
+  const hit = SPOOKY.find(([re]) => re.test(text));
+  return hit && { act: 'look', ...hit[1] };
+}
+
+/* 낱말도 모델 답도 없을 때 설명을 해시해 빚는 모양. 같은 설명이면 같은 모양이다 */
+function hashGen(text) {
+  const h = [...text].reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0) >>> 0;
+  return {
+    lobes: 3 + (h % 7),
+    amp: +((0.1 + ((h >>> 3) % 15) * 0.01) * ((h >>> 2) % 2 ? 1 : -1)).toFixed(2),
+    sharp: +(0.8 + ((h >>> 7) % 14) * 0.1).toFixed(2),
+    sx: +(0.9 + ((h >>> 11) % 5) * 0.05).toFixed(2),
+    sy: +(0.9 + ((h >>> 14) % 5) * 0.05).toFixed(2),
+    stem: /사과|체리|귤|열매|모자|꼭지|apple|cherry|fruit|hat|stem/i.test(text),
+  };
+}
+
+async function generateBotLook(promptText) {
+  const btn = $('#botGenBtn'), inp = $('#botGenIn'), note = $('#botSay');
+  if (!promptText || btn.disabled) return;
+  btn.disabled = true; inp.disabled = true;
+  btn.textContent = t('botGenBusy');
+  note.textContent = t('botProgLook');
+  const quick = spookyLook(promptText);
+  let changed = !!quick;
+  if (quick) act(quick);
+  try {
+    const askPrompt = `Generate a bot avatar look matching this description: "${promptText}". Use {"act":"look","shape":"...","expression":"...","colour":"...","gen":{...}} (use a preset shape like citrouille/etoile/coeur/fleur/trefle/nuage/eclat if it fits directly, or synthesize a custom shape with "gen" lobes/amp/sharp/sx/sy/rot/h2/h3/stem and matching colour).`;
+    const d = await ask('/bot/chat', {
+      msgs: [{ role: 'user', content: askPrompt }],
+      courses: botCourses(),
+      lang: document.documentElement.lang,
+      name: botName(),
+      now: botNow(),
+    }, true);
+    const look = (d.do || []).find(a => a.act === 'look');
+    if (look) act(look);
+    else if (!quick) act({ act: 'look', shape: 'gen', gen: hashGen(promptText) });
+    changed = true;
+    note.textContent = d.say || '';
+  } catch (e) {
+    /* 프리셋을 이미 입혔으면 그대로 둔다 — 모델이 못 다듬었을 뿐이다 */
+    note.textContent = quick ? '' : t(e.status === 429 ? 'botBusy' : 'botChatFail');
+  } finally {
+    if (changed) saveBotProfile();
+    btn.disabled = false; inp.disabled = false;
+    btn.textContent = t('botGenBtn');
+  }
+}
+
 function wireStyles() {
   $('#styPick').addEventListener('input', e => { previewPick(); if (e.target.name === 'accent') fillSug(); });
   $('#stySave').addEventListener('click', savePick);
   const d = $('#styles'), ul = $('#styList');
   $('#styClose').addEventListener('click', () => d.hidePopover());
+  const styTabs = [$('#styTabGame'), $('#styTabBot')];
+  styTabs.forEach(tb => tb.addEventListener('click', () => pickStyTab(tb)));
+  $('#styles .sty-tabs').addEventListener('keydown', e => {
+    const i = styTabs.indexOf(document.activeElement);
+    if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const next = styTabs[e.key === 'Home' ? 0 : e.key === 'End' ? styTabs.length - 1 : (i + 1) % styTabs.length];
+    pickStyTab(next); next.focus();
+  });
+  $('#botReset').addEventListener('click', () => {
+    Object.assign(botChar, BOT_DEF);
+    botGenMode = false;
+    const size = $('#botSize');
+    if (size) {
+      size.value = 100;
+      size.setAttribute('aria-valuetext', '100%');
+      document.documentElement.style.setProperty('--bot-scale', 1);
+      try { localStorage.setItem('rt.botsize', '1'); } catch {}
+    }
+    paintBotStyle();
+    keepBotStyle();
+  });
+  $('#botViewGen').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('#botGenIn').value.trim();
+    if (text) generateBotLook(text);
+  });
+  {
+    const size = $('#botSize');
+    let v = 1;
+    try { const sv = +localStorage.getItem('rt.botsize'); if (sv >= .7 && sv <= 1.3) v = sv; } catch {}
+    size.value = Math.round(v * 100);
+    const show = () => {
+      size.setAttribute('aria-valuetext', size.value + '%');
+      document.documentElement.style.setProperty('--bot-scale', size.value / 100);
+      try { localStorage.setItem('rt.botsize', String(size.value / 100)); } catch {}
+      dispatchEvent(new Event('rt-bot-look'));
+    };
+    show();
+    size.addEventListener('input', show);
+    size.addEventListener('change', () => { try { localStorage.setItem('rt.botsize', String(size.value / 100)); } catch {} });
+  }
+  addEventListener('pointermove', e => {
+    if (!styOpen() || $('#styPanelBot').hidden) return;
+    botLookAim = [e.clientX, e.clientY];
+    botLooking ||= requestAnimationFrame(botLookTick);
+  }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => {
+    if (!styOpen() || $('#styPanelBot').hidden) return;
+    botLookAim = null;
+    botLooking ||= requestAnimationFrame(botLookTick);
+  });
   /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 popover 의 기본 동작이라 그대로 산다.
      지우기 모드에서는 Esc 가 먼저 그 모드만 끈다. 견본에서 Delete·Backspace 는 곧 지우기(꾹 누르기의 키보드 짝) */
   d.addEventListener('keydown', e => {
@@ -495,15 +1010,14 @@ function wireStyles() {
   d.addEventListener('toggle', e => {
     if (e.newState !== 'closed') return;
     styEdit = false;
+    botGenMode = false;
+    document.body.classList.remove('rk-styling');
     paintTheme();   // 저장하지 않은 미리 보기를 거둔다
     /* 바깥의 다른 것을 눌러 닫혔으면 그 초점을 빼앗지 않는다 */
     const back = document.activeElement === document.body || d.contains(document.activeElement);
     if (back && styOpener && styOpener.isConnected) styOpener.focus({ preventScroll: true });
     styOpener = null;
   });
-  /* 뒤가 흐르거나 창이 바뀌면 단추를 따라간다 */
-  addEventListener('scroll', () => { if (styOpen()) placeStyles(); }, true);
-  addEventListener('resize', () => { if (styOpen()) placeStyles(); });
   /* 꾹 누르기(.5초) — 지우기 모드를 켠다. 뒤따르는 click 은 삼킨다. 마우스 오른쪽 단추도 같은 길 */
   let hold = 0, held = false;
   ul.addEventListener('pointerdown', e => {
@@ -621,8 +1135,8 @@ function makeBot() {
     el.append(motion);
     bubble.before(el);
     const face = readFace();
-    const api = mountBuddy(motion, { calm, shape: face.shape, expression: face.expression });
-    if (face.colour) api.setColour(face.colour);
+    const api = mountBuddy(motion, { calm, shape: face.shape || 'cercle', expression: face.expression || 'curieux', gen: face.gen });
+    api.setColour(face.colour || 'accent');
     paintTint(motion);
     const ring = $('#rkRing');
     ring.setAttribute('viewBox', api.node.getAttribute('viewBox'));
@@ -652,8 +1166,8 @@ const docked = () => !!bot && bot.el.parentNode === $('#sheetBot');
    말풍선의 '다음'도 눌리지 않는다. 상태바 칸은 Safari 가 fixed 를 그리지 않는다 */
 function room() {
   if (!phone()) return [0, innerHeight];
-  const d = $('#tabDock');
-  return [logo().getBoundingClientRect().top, d && d.offsetHeight ? d.getBoundingClientRect().top - 8 : innerHeight];
+  const d = $('#tabDock'), lr = logo().getBoundingClientRect();
+  return [lr.height > 0 && lr.top >= 0 ? lr.top : 16, d && d.offsetHeight ? d.getBoundingClientRect().top - 8 : innerHeight];
 }
 const clampXY = (x, y) => {
   const [top, low] = room();
@@ -804,11 +1318,13 @@ function hide() {
 function cornerAt(i) {
   /* 좁은 창(폰 폭)에서는 위 귀퉁이가 지도 머리(도봉·노원)를 덮는다 — 아래 막대 위 두 곳에만 앉는다 */
   if (narrow() && i < 2) i += 2;
-  const top = $('#regions .navbar').getBoundingClientRect().bottom + 12;
+  const nr = $('#regions .navbar').getBoundingClientRect();
+  const top = nr.height > 0 && nr.bottom > 12 ? nr.bottom + 12 : 84;
   const x = i % 2 ? innerWidth - BOT - 20 : 20;
   /* 아래 막대와 겹치는 아래 귀퉁이는 막대 위로 올린다 */
   const dock = $(fingers() ? '#tabDock' : '#regions .nav-bot').getBoundingClientRect();
-  const low = x < dock.right && x + BOT > dock.left ? dock.top - BOT - 8 : innerHeight - BOT - 24;
+  const low = dock.height > 0 && dock.top < innerHeight && x < dock.right && x + BOT > dock.left
+    ? dock.top - BOT - 8 : innerHeight - BOT - 24;
   return [x, i < 2 ? top : Math.min(innerHeight - BOT - 24, low)];
 }
 const narrow = () => !phone() && innerWidth < 760;
@@ -818,9 +1334,10 @@ const narrow = () => !phone() && innerWidth < 760;
 const GREET_W = 300, GREET_H = 72;
 function greetSpot() {
   if (phone()) return null;
-  const dots = [...document.querySelectorAll('#courseBtns .course-map')]
-    .filter(el => parseFloat(getComputedStyle(el).opacity) >= .5)
-    .flatMap(el => [...el.querySelectorAll('circle')].map(c => c.getBoundingClientRect()));
+  const dots = document.body.matches('.signing, .setting, .paging') ? []
+    : [...document.querySelectorAll('#courseBtns .course-map')]
+        .filter(el => parseFloat(getComputedStyle(el).opacity) >= .5)
+        .flatMap(el => [...el.querySelectorAll('circle')].map(c => c.getBoundingClientRect()));
   if (!dots.length) return null;
   const hits = (l, t, r, b) => dots.some(d => d.left < r && d.right > l && d.top < b && d.bottom > t);
   const clampX = x => Math.max(16, Math.min(innerWidth - GREET_W - 16, x));
@@ -838,6 +1355,7 @@ let greetSide = null;
 /* 제 발로 나온 봇이 서는 곳 — 로고 바로 밑 가운데 */
 function underLogo() {
   const r = logo().getBoundingClientRect();
+  if (!(r.height > 0 && r.bottom > 0)) return [innerWidth / 2 - BOT / 2, 60];
   return [Math.max(16, Math.min(innerWidth - BOT - 16, r.left + r.width / 2 - BOT / 2)), r.bottom + 8];
 }
 /* 로고 점 자리 — 로고를 채우는 원(style.css 의 .nav-logo::before)이 여기서 커진다 */
@@ -913,6 +1431,7 @@ async function summon() {
    발끝을 로고 아랫변에 맞춰 두면 거기서 미끄러져 내려온다 */
 function behind() {
   const r = logo().getBoundingClientRect();
+  if (!(r.height > 0 && r.bottom > 0)) return [innerWidth / 2 - BOT / 2, -BOT];
   return [r.left + r.width / 2 - BOT / 2, fingers() ? r.bottom - BOT : r.top + r.height / 2 - BOT / 2];
 }
 /* 로고 한가운데에 작게 숨은 채 선다. 로고 점이 로고를 채우고(rk-emerge) 넵바가 봇 층
@@ -995,7 +1514,8 @@ function botCourses() {
 function botNow() {
   let o = {};
   try { o = JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch {}
-  return { opt: { ...DEF, ...o }, page: page || 'home', signed: !!token(), named: !!readName(), dev: DEV,
+  const nowPage = document.body.classList.contains('setting') ? 'settings' : (page || 'home');
+  return { opt: { ...DEF, ...o }, page: nowPage, signed: !!token(), named: !!readName(), dev: DEV,
            rec: token() ? botRec.v : null };
 }
 /* 내 전적 — 기록 화면과 같은 /games 를 대화 한 번에 많아야 1분에 한 번 읽는다. 못 읽으면 없이 묻는다 */
@@ -1052,10 +1572,15 @@ function paintTheme(draft) {
   if (!el) { el = document.createElement('style'); el.id = 'rtTheme'; document.head.append(el); }
   el.textContent = css;
   if (!draft) try { css ? localStorage.setItem('rt.themeCss', css) : localStorage.removeItem('rt.themeCss'); } catch {}
+  if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
 }
 const PAGE_LINK = { settings: 'settings/', community: 'community/', about: 'about/' };
+function leaveOver() {
+  if (page) closePage(true);
+  if (document.body.classList.contains('setting')) dispatchEvent(new Event('rt-tab-swap'));
+}
 function act(a) {
-  if (a.act === 'duel' && botCourses().some(x => x.slug === a.course)) { go(a.course, true); return; }
+  if (a.act === 'duel' && botCourses().some(x => x.slug === a.course)) { leaveOver(); go(a.course, true); return; }
   if (a.act === 'post') {
     /* 초안만 — 커뮤니티 화면이 받아 글쓰기 칸에 채워 열고, 올리기는 사람이 누른다 */
     try { sessionStorage.setItem('rt.cmDraft', JSON.stringify({ tag: a.tag, title: a.title, body: a.body })); } catch { return; }
@@ -1065,7 +1590,12 @@ function act(a) {
   if (a.act === 'look') {
     const face = readFace();
     for (const k of ['shape', 'expression', 'colour']) if (a[k]) face[k] = a[k];
-    try { localStorage.setItem('rt.character', JSON.stringify(face)); } catch { return; }
+    if (a.gen) { face.gen = a.gen; if (!a.shape) face.shape = 'gen'; }
+    else if (a.shape && a.shape !== 'gen') delete face.gen;
+    try {
+      sessionStorage.setItem('rt.charDirty', '1');
+      localStorage.setItem('rt.character', JSON.stringify(face));
+    } catch { return; }
     leftAccount();
     return;
   }
@@ -1078,6 +1608,7 @@ function act(a) {
     return;
   }
   if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
+    leaveOver();
     /* 경쟁전은 꾹 누른 시작하기와 같은 길(go) — 로그인·이름이 없으면 봇이 그걸 조른다 */
     if (a.ranked) { go(a.course); return; }
     hide();
@@ -1087,10 +1618,19 @@ function act(a) {
     /* 설정 통의 주인은 settings.js 다 — 거기서 저장하고 화면에 알린다 */
     dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { [a.key]: a.value } }));
   } else if (a.act === 'open') {
-    if (PAGES.includes(a.page)) { openPage(a.page); return; }
+    if (PAGES.includes(a.page)) {
+      if (document.body.classList.contains('setting')) dispatchEvent(new Event('rt-tab-swap'));
+      openPage(a.page);
+      return;
+    }
     if (a.page === 'styles') { openStyles(document.body); return; }
     if (a.page === 'feedback') { openFeedback(); return; }
-    if (a.page === 'home') { closePage(); return; }
+    if (a.page === 'home') {
+      if (page) closePage();
+      if (document.body.classList.contains('setting')) ($('#optClose') || { click: () => dispatchEvent(new Event('rt-tab-swap')) }).click();
+      if ($('#result').classList.contains('on')) $('#result [data-go="regions"]')?.click();
+      return;
+    }
     if (a.page === 'signin') { $('#signinLink').click(); return; }
     /* 설정은 제 손(settings.js)이 링크 click 을 받아 덮개로 연다 */
     const link = PAGE_LINK[a.page] && document.querySelector(`#regions a[href="${PAGE_LINK[a.page]}"], #tabDock a[href="${PAGE_LINK[a.page]}"]`);
@@ -1202,6 +1742,7 @@ function wireChat() {
     if (!btn || !chatting) return;
     const chip = btn.dataset.chip;
     if (chip === 'ranked') {
+      leaveOver();
       setRanked(true);
       go(rankedSlug());
       return;
@@ -1215,7 +1756,8 @@ function wireChat() {
       }
       return;
     }
-    if (chip === 'styles') { openStyles(btn); return; }
+    /* 내 스타일을 여는 동안 봇과 말풍선은 물러난다(body.rk-styling) — 닫히면 대화째 돌아온다 */
+    if (chip === 'styles') { document.body.classList.add('rk-styling'); openStyles(btn); return; }
     if (chip === 'feedback') openFeedback();
   });
 }
@@ -1481,43 +2023,256 @@ function wireLogo() {
   skip.addEventListener('click', quitTour);
 }
 
-/* ── 경쟁전 ────────────────────────────────────────────
-   시작하기를 꾹(0.6초) 누르면 켜진다 — 누르는 동안 알약이 봇의 빛깔로 차오르고, 다 차면
-   '경쟁전 시작'으로 바뀐다. 한 번 더 누르면 지금 고른 칸(없으면 전체 코스)으로 겨룬다.
-   다시 꾹 누르거나 Esc 면 풀린다. 키보드는 Space 를 누르고 있으면 된다 */
-const HOLD_MS = 600;
-let ranked = false, press = 0, swallowPlay = false;
+/* ── 시작하기 → 일반전 / 경쟁전 ─────────────────────────
+   시작하기를 누르면 그 바로 위에 고르기 판(#modePick)이 뜬다. 짧게 누르면 그 모드로 간다 —
+   경쟁전은 지금 고른 칸(없으면 전체 코스)으로 1대1 매칭이다.
+   라이선스는 시작하기를 꾹(1.2초) 눌러서만 켜진다(다시 꾹 누르면 꺼진다) — 예전에 꾹 눌러
+   경쟁전을 켜던 자리다. 누르는 동안 알약이 차오르고(움직임을 끄면 남은 초가 글자로 보인다),
+   다 차기 전에 떼거나 단추 밖으로 나가면 없던 일이 된다. 키보드는 Space 를 누르고 있으면 된다.
+   켜져도 아직 응시할 면허 고르기(openExam)는 띄우지 않는다 */
+const EXAM_HOLD_MS = 1200;
+let ranked = false, licensed = false, swallowPlay = false;
 const rankedSlug = () => PICK ? PICK.slug : COURSE.root;
 function setRanked(on) {
   ranked = on;
   document.body.classList.toggle('rk-ready', on);
   if (bot) paintTint(bot.el.querySelector('.rk-bot-motion'));
+  paintPlay();
+}
+function setLicensed(on) {
+  licensed = on;
+  document.body.classList.toggle('lic-ready', on);
+  paintPlay();
+}
+/* 시작하기 라벨 — 라이선스가 켜졌으면 '라이선스 시험'(색만이 아니라 글자로도 보인다) */
+function paintPlay() {
   const play = $('#navPlay');
-  play.dataset.i18n = on ? 'rankedStart' : 'start';
+  play.dataset.i18n = licensed ? 'examToggle' : ranked ? 'rankedStart' : 'start';
   play.textContent = t(play.dataset.i18n);
   relayoutNavShapes();
 }
-function wirePlayHold() {
-  const play = $('#navPlay');
-  const cancel = () => { clearTimeout(press); press = 0; document.body.classList.remove('rk-charging'); };
-  const begin = () => {
-    if (press) return;
-    swallowPlay = false;
-    document.body.classList.add('rk-charging');
-    press = setTimeout(() => {
-      cancel();
-      swallowPlay = true;
-      setRanked(!ranked);
-      if (ranked) say('rkArmed', { name: placeOf(rankedSlug()) });
-      else if (!touring) hide();
-    }, HOLD_MS);
+const pickOpen = () => $('#modePick').matches(':popover-open');
+const quietMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'off';
+/* 데스크톱은 아래 알약을 통째로 덮는다 — 시작하기 알약이 둘로 갈라져 설정·계정 자리까지 벌어진다.
+   폰은 시작하기가 tab-dock 안으로 옮겨 가니 그 바로 위, 가운데에 세운다 */
+function placePick() {
+  const d = $('#modePick'), bar = $('#navPlay').closest('.nav-bot');
+  d.classList.toggle('is-split', !!bar);
+  if (bar) {
+    const r = bar.getBoundingClientRect();
+    Object.assign(d.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    return;
+  }
+  d.style.width = d.style.height = '';
+  const a = $('#navPlay').getBoundingClientRect(), PAD = 12, GAP = 10;
+  const w = d.offsetWidth, h = d.offsetHeight;
+  d.style.left = Math.round(Math.min(Math.max(PAD, a.left + a.width / 2 - w / 2), innerWidth - w - PAD)) + 'px';
+  d.style.top = Math.round(Math.max(PAD, a.top - GAP - h)) + 'px';
+}
+function closePick(back) {
+  if (!pickOpen()) return;
+  $('#modePick').hidePopover();
+  if (back) $('#navPlay').focus({ preventScroll: true });
+}
+/* 꾹 누르기 하나. 짧으면 onTap, 다 차면 onHold. 꾹 뒤에 따라오는 click 은 삼킨다 */
+function wireHold(btn, onTap, onHold) {
+  let timer = 0, tick = 0, held = false, t0 = 0;
+  const stop = () => {
+    clearTimeout(timer); clearInterval(tick); timer = tick = 0;
+    btn.classList.remove('is-holding');
+    delete btn.dataset.left;
   };
-  play.addEventListener('pointerdown', e => { if (!e.button) begin(); });
-  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(n => play.addEventListener(n, cancel));
-  play.addEventListener('keydown', e => { if (e.key === ' ' && !e.repeat) begin(); });
-  play.addEventListener('keyup', e => { if (e.key === ' ') cancel(); });
-  /* 손가락으로 꾹 누르면 뜨는 메뉴를 막는다 */
-  play.addEventListener('contextmenu', e => e.preventDefault());
+  const step = () => {
+    const left = Math.max(0, Math.ceil((EXAM_HOLD_MS - (Date.now() - t0)) / 1000));
+    btn.dataset.left = t('examLeft', { n: left });
+  };
+  const begin = () => {
+    if (timer) return;
+    held = false; t0 = Date.now();
+    btn.style.setProperty('--hold-ms', EXAM_HOLD_MS + 'ms');
+    btn.classList.add('is-holding');
+    if (quietMotion()) step();
+    tick = setInterval(() => { if (quietMotion()) step(); }, 100);
+    timer = setTimeout(() => {
+      stop();
+      held = true;
+      try { navigator.vibrate?.(20); } catch {}
+      onHold();
+    }, EXAM_HOLD_MS);
+  };
+  btn.addEventListener('pointerdown', e => { if (!e.button) begin(); });
+  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(n => btn.addEventListener(n, stop));
+  btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) begin(); });
+  ['keyup', 'blur'].forEach(n => btn.addEventListener(n, stop));
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  btn.addEventListener('click', e => {
+    if (held) { held = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
+    onTap();
+  });
+}
+function pickNote(msg) {
+  const p = $('#modeNote');
+  if (p) p.textContent = msg || '';
+}
+/* 라이선스 시험 진입 창 — 다섯 면허를 아래에서 위로 늘어놓고 하나를 고른다(라디오 묶음, ↑↓ 로 옮긴다).
+   딴 면허 바로 위 하나까지만 열린다. 상태는 글자(합격·응시 가능·잠김)와 표시·테두리로 가른다 */
+const koOnly = lic => !!lic.chars && LANG !== 'ko';
+function condOf(lic) {
+  const p = [t('examLeft', { n: lic.secs })];
+  if (lic.chars) p.push(t('examDone'));
+  if (lic.cpm) p.push(showSpeed(lic.cpm));
+  p.push(`${t('accuracy')} ${lic.acc}%`);
+  if (lic.miss != null) p.push(t('examMissMax', { n: lic.miss }));
+  return p.join(' · ');
+}
+function paintLicenses(d, best, slug) {
+  const rows = $('#examRows'), have = best ? LICENSES.findIndex(l => l.id === best) : -1;
+  const state = (lic, i) => i <= have ? 'pass' : i > have + 1 || koOnly(lic) ? 'lock' : 'open';
+  const pick = id => {
+    d.dataset.tier = id;
+    rows.querySelectorAll('[role=radio]').forEach(b => {
+      const on = b.dataset.id === id;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    $('#examGo').disabled = false;
+    $('#examNote').textContent = '';
+  };
+  rows.replaceChildren(...LICENSES.map((lic, i) => {
+    const st = state(lic, i), b = document.createElement('button');
+    b.type = 'button'; b.className = 'lic-row'; b.dataset.id = lic.id; b.dataset.st = st;
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false'); b.tabIndex = -1;
+    if (st === 'lock') b.setAttribute('aria-disabled', 'true');
+    const course = koOnly(lic) ? t('examKoOnly')
+      : lic.chars ? `${t('courseSgg')} · ${t('examCourseSgg', { n: lic.chars })}`
+      : t('examCoursePick', { name: placeOf(slug) });
+    b.innerHTML = '<span class="lic-name"></span><span class="lic-state"></span><span class="lic-course"></span><span class="lic-cond"></span>';
+    b.querySelector('.lic-name').textContent = licName(lic.id);
+    b.querySelector('.lic-state').textContent = t({ pass: 'examPass', open: 'examOpen', lock: 'examLock' }[st]);
+    b.querySelector('.lic-course').textContent = course;
+    b.querySelector('.lic-cond').textContent = condOf(lic);
+    b.addEventListener('click', () => { if (st !== 'lock') pick(lic.id); });
+    return b;
+  }));
+  const ok = [...rows.children].filter(b => b.dataset.st !== 'lock');
+  const first = rows.querySelector(`[data-id="${LICENSES[Math.min(have + 1, LICENSES.length - 1)].id}"]`);
+  const sel = first && first.dataset.st !== 'lock' ? first : ok[ok.length - 1];
+  if (sel) pick(sel.dataset.id);
+  else { $('#examGo').disabled = true; rows.firstElementChild.tabIndex = 0; }
+}
+async function openExam(mode) {
+  closePick();
+  if (!token()) {
+    pickNote(t('signinBtn'));
+    openPage('account');
+    return;
+  }
+  const slug = rankedSlug();
+  const d = $('#examGate');
+  d.dataset.mode = mode;
+  delete d.dataset.tier;
+  $('#examTitle').textContent = `${placeOf(slug)} · ${t(mode === 'ranked' ? 'rankedTab' : 'normalTab')}`;
+  $('#examLede').textContent = t('examLede');
+  $('#examNote').textContent = '';
+  $('#examRows').replaceChildren();
+  $('#examGo').disabled = true;
+  d.showModal();
+  let best = null;
+  try { best = ((await ask('/license/me')).best || {})[mode] || null; } catch {}   // 못 읽으면 처음부터
+  if (d.open && d.dataset.mode === mode) {
+    paintLicenses(d, best, slug);
+    ($('#examRows').querySelector('[aria-checked=true]') || $('#examRows').firstElementChild)?.focus({ preventScroll: true });
+  }
+}
+function wireModePick() {
+  const d = $('#modePick'), play = $('#navPlay');
+  const pick = mode => {
+    closePick();
+    if (mode === 'ranked') {
+      setRanked(true);
+      go(rankedSlug());
+      return;
+    }
+    setRanked(false);
+    playNormal();
+  };
+  $('#modeNormal').addEventListener('click', () => pick('normal'));
+  $('#modeRanked').addEventListener('click', () => pick('ranked'));
+  /* 꾹 뒤에 따라오는 click 은 wireStart 가 삼킨다 — 거기서 먼저 받아 propagation 을 끊기 때문이다 */
+  ['pointerdown', 'keydown'].forEach(n => play.addEventListener(n, () => { swallowPlay = false; }));
+  wireHold(play, () => {}, () => { swallowPlay = true; setLicensed(!licensed); });
+  /* 시작하기 위에 올린 채 트랙패드를 핀치해도 켜고 끈다 — 크롬·파이어폭스는 ctrl+wheel, 사파리는 gesture 로 온다.
+     한 번 집는 동안 이벤트가 줄줄이 오니 300ms 조용해질 때까지 한 번만 친다. 화면 확대는 막는다 */
+  let pinchQuiet = 0;
+  const pinched = e => {
+    e.preventDefault();
+    if (!pinchQuiet) setLicensed(!licensed);
+    clearTimeout(pinchQuiet);
+    pinchQuiet = setTimeout(() => { pinchQuiet = 0; }, 300);
+  };
+  play.addEventListener('wheel', e => { if (e.ctrlKey) pinched(e); }, { passive: false });
+  ['gesturestart', 'gesturechange'].forEach(n => play.addEventListener(n, pinched));
+  /* 시작하기가 판을 여닫는다 — popovertarget 이라 바깥 누르기로 닫힌 직후 다시 열리는 일이 없다.
+     ranked.js 가 없으면 이 줄도 없으니 app.js 가 곧장 일반전을 친다 */
+  play.setAttribute('popovertarget', 'modePick');
+  d.addEventListener('beforetoggle', e => {
+    if (e.newState !== 'open') return;
+    pickNote('');
+    play.setAttribute('aria-expanded', 'true');
+    placePick();
+  });
+  d.addEventListener('toggle', e => {
+    if (e.newState !== 'open') { play.setAttribute('aria-expanded', 'false'); return; }
+    placePick();
+    $('#modeNormal').focus({ preventScroll: true });
+  });
+  play.setAttribute('aria-expanded', 'false');
+  addEventListener('resize', () => { if (pickOpen()) placePick(); });
+  /* 판이 떠 있는 동안 Esc 는 판만 닫는다 — 홈의 Esc(고른 칸 풀기)까지 가지 않게 먼저 받는다 */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !pickOpen()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    closePick(true);
+  }, true);
+  $('#examClose').addEventListener('click', () => $('#examGate').close());
+  /* 라디오 묶음: ↑↓←→ 로 열린 면허만 옮긴다 */
+  $('#examRows').addEventListener('keydown', e => {
+    const dir = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (!dir) return;
+    const open = [...$('#examRows').children].filter(b => b.dataset.st !== 'lock');
+    const at = open.indexOf(document.activeElement);
+    if (at < 0 || !open.length) return;
+    e.preventDefault();
+    const nx = open[(at + dir + open.length) % open.length];
+    nx.focus(); nx.click();
+  });
+  $('#examGo').addEventListener('click', async () => {
+    const d = $('#examGate');
+    const mode = d.dataset.mode || 'normal';
+    const lic = LICENSES.find(l => l.id === d.dataset.tier);
+    if (!lic) return;
+    const slug = lic.chars ? 'kr-sgg' : rankedSlug();
+    const goBtn = $('#examGo'), note = $('#examNote');
+    goBtn.disabled = true;
+    note.textContent = '';
+    try {
+      const res = await ask('/license/start', { c: slug, mode, tier: lic.id, dev: DEV, lang: LANG });
+      d.close();
+      start(res.slug || slug, null, null, { mode, id: res.id, tier: res.tier || lic.id, names: res.names });
+    } catch (e) {
+      goBtn.disabled = false;
+      if (e.status === 403 && e.data && e.data.error === 'locked') {
+        note.textContent = t('examLocked', { name: licName(e.data.need) });
+      } else if (lic.chars) {
+        note.textContent = t('examNeedServer');   // 이름 묶음은 서버가 뽑는다 — 오프라인 판은 없다
+      } else {
+        /* 코스 면허는 중계기가 없어도 로컬로 칠 수 있다(기록은 남지 않는다) */
+        d.close();
+        start(slug, null, null, { mode, id: 'exam-' + Date.now().toString(36), tier: lic.id });
+      }
+    }
+  });
+  $('#examGate').addEventListener('close', () => play.focus({ preventScroll: true }));
 }
 
 let quitNote = '';
@@ -1710,21 +2465,45 @@ function oppWatch(rk) {
 function wireStart() {
   /* 캡처 단계에서 먼저 받는다 — app.js 의 일반 시작·Esc 보다 앞선다 */
   document.addEventListener('click', e => {
-    if (e.target.closest('#again') && G && G.ranked) {
-      e.stopImmediatePropagation();
-      go(G.slug);
+    if (e.target.closest('#again')) {
+      if (!touring) { hide(); doze(); }
+      if (G && G.exam) {
+        e.stopImmediatePropagation();
+        openExam(G.exam.mode);
+        return;
+      }
+      if (G && G.ranked) {
+        e.stopImmediatePropagation();
+        go(G.slug);
+      }
       return;
     }
     if (!e.target.closest('#navPlay')) return;
-    /* 꾹 누른 뒤 손을 떼며 오는 click 은 시작이 아니다 */
+    /* 꾹 눌러 라이선스를 켜고 끈 뒤 손을 떼며 오는 click 은 판을 열지 않는다 */
     if (swallowPlay) { swallowPlay = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
     /* 안내 도중에 시작하면 안내는 거기서 끝난다 — 판에서 돌아왔을 때 매달려 있지 않게 */
     quitTour();
-    if (!ranked || document.body.matches('.signing, .setting, .paging')) return;
+    if (!touring) { hide(); doze(); }
+    /* 일반 시작(app.js)은 막는다 — 시작하기는 고르기 판을 여닫는다(popovertarget) */
     e.stopImmediatePropagation();
+    if (document.body.matches('.signing, .setting, .paging')) return;
+    /* 라이선스가 켜져 있으면('라이선스 시험') 판 대신 지금 응시할 수 있는 면허 고르기를 연다.
+       봇이 경쟁전을 켜 뒀으면 경쟁전 면허다 */
+    if (licensed) { e.preventDefault(); openExam(ranked ? 'ranked' : 'normal'); return; }
+    /* 봇이 켜 둔 경쟁전(rk-ready)이면 판을 열지 않고 곧장 겨룬다 */
+    if (!ranked) return;
+    e.preventDefault();
     go(rankedSlug());
   }, true);
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && chatting) {
+      /* 내 스타일이 떠 있으면 Esc 는 그것부터 닫는다(popover 기본 동작) — 대화는 그 뒤에 */
+      if (styOpen()) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      endChat();
+      return;
+    }
     if (e.key !== 'Escape' || !regionsOn()) return;
     if (document.body.matches('.signing, .setting, .paging')) return;
     if (!ranked) return;
@@ -1747,6 +2526,24 @@ addEventListener('rt-finish', async ({ detail: g }) => {
   const line = $('#rLp');
   line.textContent = '';
   line.classList.remove('bad');
+  if (g.exam) {
+    /* 라이선스 시험 판을 서버에 제출한다 */
+    try {
+      const res = await ask('/license/end', {
+        id: g.exam.id,
+        hits: g.hits,
+        tries: g.tries,
+        cpm: g.cpm,
+        acc: g.acc,
+        score: g.score,
+        name: plain(localStorage.getItem(NAME_KEY) || '')
+      });
+      if (G === g) examResult(res);   // 서버 판정으로 결과 칸을 고친다. 합격하면 다음 면허가 열렸다고 알린다
+    } catch (err) {
+      console.warn('License submission failed', err);
+    }
+    return;
+  }
   /* 일반전 판은 app.js 의 board() 가 올린다 — 그래야 그 판의 순위표를 한 번에 받는다 */
   if (!token() || !g.ranked) return;
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
@@ -1797,12 +2594,15 @@ document.addEventListener('click', e => {
   if (a && a.getAttribute('href') === '#styles') { e.preventDefault(); openStyles(a); }
   if (e.target.closest('[data-pg-close]')) closePage();
 });
+const botFocusable = () => layer.hidden ? [] : [...layer.querySelectorAll(
+  'a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]'
+)].filter(n => !n.closest('[hidden]') && n.getClientRects().length);
 addEventListener('keydown', e => {
   if (!page || ($('#feedback') && $('#feedback').open)) return;
   if (e.key === 'Escape') { e.preventDefault(); return closePage(); }
   if (e.key !== 'Tab') return;
-  const items = [...over(page).querySelectorAll('a[href], button:not([disabled]), [tabindex="0"]')]
-    .filter(n => !n.closest('[hidden]') && n.getClientRects().length).concat(dockTabs());
+  const items = [...over(page).querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex="0"]')]
+    .filter(n => !n.closest('[hidden]') && n.getClientRects().length).concat(botFocusable(), dockTabs());
   if (!items.length) return;
   const first = items[0], last = items[items.length - 1];
   if (e.shiftKey && (document.activeElement === first || !items.includes(document.activeElement))) {
@@ -1821,13 +2621,17 @@ addEventListener('rt-tab-swap', () => closePage(true));
 
 wireTabs();
 wireLogo();
-wirePlayHold();
+wireModePick();
 wireStart();
 wireMatch();
 wireChat();
 wireStyles();
 paintTheme();   // 머리 스크립트가 붙일 rt.themeCss 를 지금 표로 다시 적는다
 if (location.search.includes('rt=1')) {
+  console.assert(spookyLook('유령 같은 봇')?.shape === 'goutte' && spookyLook('할로윈 호박')?.shape === 'citrouille' &&
+    spookyLook('combat robot') === undefined && spookyLook('맑은 하늘') === undefined, '봇 모양: 할로윈 낱말 프리셋');
+  console.assert(JSON.stringify(hashGen('별빛')) === JSON.stringify(hashGen('별빛')) &&
+    ['밤', 'x'.repeat(40), '🎃🦇'].every(x => { const g = hashGen(x); return g.lobes >= 3 && g.lobes <= 9 && Math.abs(g.amp) <= 0.28 && g.sharp <= 2.2; }), '봇 모양: 해시 폴백은 범위 안');
   console.assert(THEME.every(k => HEX.test(k.def) && (!k.on || HEX.test(k.on) || THEME.some(x => x.key === k.on))), '스타일: 표의 기본값·짝');
   console.assert(!themeLow({}).length, '스타일: 기본 색은 대비를 지킨다');
   console.assert(themeLow({ ink: '#e8edf0' })[0]?.key === 'bg' && themeLow({ accent: '#232c31' })[0]?.key === 'accent', '스타일: 대비 부족을 잡는다');
@@ -1835,6 +2639,12 @@ if (location.search.includes('rt=1')) {
   console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
   console.assert(['#000000', '#ffffff', '#f0a03c', '#2266cc', '#ff0000', '#7a7a7a'].every(a => styleIdeas(a).every(s => !themeLow(s).length)), '스타일: 추천은 늘 대비를 지킨다');
   console.assert(hsl(0, 1, .5) === '#ff0000' && Math.round(hueOf('#00ff00')) === 120, '스타일: 색상환 셈');
+  console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
+  console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
+  console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked'), '모드 고르기: 일반전·경쟁전');
+  console.assert($('#examGate') && $('#examRows'), '라이선스: 시험 진입 대화상자');
+  console.assert($('#rkTabRankedCasual') && $('#rkTabRankedLicense') && $('#rkTabNormalCasual') && $('#rkTabNormalLicense'), '순위표: 일반/라이선스 하위 탭');
+  console.assert($('#rankedSHolders') && $('#normalSHolders') && $('#rankedLicenseBests') && $('#normalLicenseBests'), '순위표: S자 명단 및 코스별 라이선스 순위표');
 }
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
@@ -1846,9 +2656,9 @@ window.RT_BOOT_BOT = async () => {
   await makeBot();
   if (!bot) return;
   const face = readFace();
-  if (face.shape) bot.api.setShape(face.shape);
+  bot.api.setShape(face.shape || 'cercle', face.gen);
   if (face.expression) bot.api.setExpression(face.expression);
-  bot.api.setColour(face.colour);
+  bot.api.setColour(face.colour || 'accent');
   paintTint(bot.el.querySelector('.rk-bot-motion'));
   bot.el.setAttribute('aria-label', botName());
 };
