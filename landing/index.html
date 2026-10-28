@@ -942,7 +942,7 @@ function drawChanges() {
     ul.appendChild(li);
   }
 }
-fetch('../../data/changes.json?v=5.45').then(r => r.json()).then(list => { CHANGES = list; drawChanges(); }).catch(() => drawChanges());
+fetch('../../data/changes.json?v=5.46').then(r => r.json()).then(list => { CHANGES = list; drawChanges(); }).catch(() => drawChanges());
 
 /* 말이 바뀌면 스크립트가 쓴 말을 다시 쓴다. 쳐 보기 안내줄은 칠한 수를 그 말로 */
 addEventListener('rt-landing-i18n', () => {
