@@ -54,7 +54,6 @@
   /* 격자 지도 — 칸 하나가 1 단위 */
   .mark{display:block;width:100%;height:auto;overflow:visible}
   .mark rect{fill:var(--fg)}
-  .mark .river{fill:none;stroke:var(--fg);stroke-width:.9;stroke-linecap:round;stroke-linejoin:round}
 
   /* 머리 — 붙어 있다가 내려 읽을 때는 비켜선다 */
   header{position:sticky;top:0;z-index:10;transition:translate .35s var(--ease-out)}
@@ -91,27 +90,35 @@
   .hero{position:relative}
   .js .hero{--step:70svh;height:calc(100svh + 6 * var(--step));margin-top:-72px}
   .stage{container-type:inline-size;padding:96px 0 48px}
-  .js .stage{position:sticky;top:0;height:100svh;padding:72px 0 0;display:grid;align-content:center}
-  .lens{--lw:min(100cqw - 2 * var(--gutter), max(240px, (100svh - 72px - 2 * var(--gutter) - var(--top) - var(--under)) * 32 / 27));
-    --top:min(9cqw, 9svh); --under:190px;
-    width:var(--lw);margin:var(--top) auto 0;position:relative;container-type:inline-size}
-  /* 아래 문장 자리까지 한 덩어리로 가운데 놓는다 */
-  .js .lens{margin-bottom:var(--under)}
-  .word{position:absolute;left:50%;top:0;translate:-50% -58%;z-index:2;white-space:nowrap;pointer-events:none;
-    font-size:calc((min(100vw, var(--max)) - 2 * var(--gutter)) * .225);font-weight:500;letter-spacing:-.055em;line-height:.95;color:var(--fg);
+  .js .stage{position:sticky;top:0;height:100svh;padding:72px 0 40px;display:grid;align-content:center}
+  /* 지도 위에 띠 하나(--r)를 비워 둔다. 첫 장면에서는 제호가 그 띠에 앉아 지도와 겹치지 않고,
+     제호가 빠진 뒤에는 지도가 띠만큼 올라가 아래 문장이 같은 자리를 쓴다 */
+  .stage{--wf:min((min(100vw, var(--max)) - 2 * var(--gutter)) * .225, 17svh);--wgap:calc(var(--wf) * .16 + 8px);
+    --r:max(var(--wf) + var(--wgap), 170px)}
+  .lens{--lw:min(100cqw - 2 * var(--gutter), max(240px, (100svh - 72px - 2 * var(--gutter) - var(--r) - 40px) * 32 / 27));
+    width:var(--lw);margin:var(--r) auto 0;position:relative;container-type:inline-size;transition:translate .9s var(--ease-in-out)}
+  .stage:not([data-scene="0"]) .lens{translate:0 calc(var(--r) * -.5)}
+  .stage:is([data-scene="3"],[data-scene="4"],[data-scene="5"]) .lens{translate:0 calc(var(--r) * -1)}
+  .word{position:absolute;left:50%;top:0;translate:-50% calc(-100% - var(--wgap));z-index:2;white-space:nowrap;pointer-events:none;
+    font-size:var(--wf);font-weight:500;letter-spacing:-.055em;line-height:.95;color:var(--fg);
     transition:opacity .6s var(--ease-out),filter .6s var(--ease-out),translate .9s var(--ease-in-out)}
   .word span{display:inline-block;animation:letter-in .7s var(--ease-out) both;animation-delay:calc(var(--i) * 40ms)}
   .lens .mark{animation:blur-up 1.1s var(--ease-out) .1s backwards}
   .half{transform-box:fill-box;transition:transform 1s var(--ease-out),opacity .6s var(--ease-out)}
   .hero .half.n{transform:translateY(calc(var(--p,0) * -64%))}
   .hero .half.s{transform:translateY(calc(var(--p,0) * 64%))}
-  .hero .river{opacity:0;stroke-dasharray:1;stroke-dashoffset:1;transition:opacity .6s var(--ease-out),stroke-dashoffset 1.2s var(--ease-out)}
+  .hero .river{transition:opacity .6s var(--ease-out)}
+  .hero .river .join{opacity:0;transition:opacity .25s var(--ease-out) calc(var(--i) * 14ms)}
+  /* 반쪽이 갈라지는 장면에서는 가운데 문장과 겹치지 않게 강 칸이 잠시 빠진다 */
+  .stage:is([data-scene="1"],[data-scene="2"]) .river{opacity:0}
   .stage:is([data-scene="1"],[data-scene="2"]){--p:1}
-  .stage:not([data-scene="0"]) .word{opacity:0;filter:blur(16px);translate:-50% -90%}
+  .stage:not([data-scene="0"]) .word{opacity:0;filter:blur(16px);translate:-50% calc(-100% - var(--wgap) - 40px)}
   .stage:is([data-scene="3"],[data-scene="4"],[data-scene="5"]) .half{opacity:var(--dim)}
+  /* 땅 칸은 어느 장면에서도 움직이지 않는다. 한강 장면은 강 칸 사이 틈을 메워 한 줄로 이을 뿐이다 */
+  .stage:is([data-scene="3"],[data-scene="4"],[data-scene="5"]) .river .join{opacity:1}
   .stage[data-scene="3"] .half.n,.stage[data-scene="5"] .half.s{opacity:1}
-  .stage:is([data-scene="3"],[data-scene="5"]) .river{opacity:var(--dim);stroke-dashoffset:0}
-  .stage[data-scene="4"] .river{opacity:1;stroke-dashoffset:0}
+  .stage:is([data-scene="3"],[data-scene="5"]) .river{opacity:var(--dim)}
+  .stage[data-scene="4"] .river{opacity:1}
   .copy{text-align:center}
   .copy .big{font-size:clamp(32px,8.6cqw,128px);font-weight:500;letter-spacing:-.045em;line-height:.98}
   .copy .body{font-size:clamp(17px,2.8cqw,40px);letter-spacing:-.01em;line-height:1.45;text-wrap:balance}
@@ -263,7 +270,8 @@
 
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important}
-    .half,.word,.copy,.panel,.hero .river,.ex .course path,header{transition-property:opacity!important;transition-duration:.2s!important}
+    .half,.word,.copy,.panel,.hero .river,.ex .course path,header,.lens{transition-property:opacity!important;transition-duration:.2s!important}
+    .hero .river .join{transition-delay:0s!important}
     .hero .half.n,.hero .half.s{transform:none}
     .stage:is([data-scene="1"],[data-scene="2"]) .half{opacity:var(--dim)}
     .js [data-reveal]{transform:none!important}
@@ -456,51 +464,81 @@ const cell = (g, x, y, s = .86) => el('rect', { x: x + (1 - s) / 2, y: y + (1 - 
 /* 제호 글자를 하나씩 띄운다 */
 document.querySelector('.word').innerHTML = [...'regiontype'].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('');
 
+/* 서울 격자와 코스 순서. data/seoul-gu.geom.json · seoul-gu.course.json 에서 옮겨 적었다 —
+   지도가 데이터 요청을 기다리지 않고 첫 화면에 바로 서고, 파일로 열어도 보이게.
+   tools/ 가 그 두 파일을 다시 찍으면 여기도 같이 옮긴다 */
+const SEOUL = {
+  grid: ["...................f............", "...................fffeee.......", ".................ggfffeee.......", ".................ggfffeee.......", ".............dd.gggfffeee.......", "...........dddd..gggffeeee......", "...........dddddhggggeeeeee.....", "...........dddoohhhgggeeee......", "..........ddddooohhgghhiiii.....", "..........ddddooohhhhhhjiii.....", "...9......dddccoohhhhjjiiii.....", "..9999...bdccccoooohjjjjii......", ".999999bbbbccccooooojjjjik...000", ".9999999bbbbcccnnnnnllljkk.00000", "999999999bbbbbbmmnnllllkkkk00000", "..9.a999a66bbbbmmmmllllkkk1000..", ".....a99a66666mmmmm222kkkk1000..", ".....aaaa66666mmmm32222111110...", ".....a8a886655553333222111111...", "....88888866555553332222111111..", "....888..865444553332222221111..", "....88...77444455333322222211...", ".........7744444433333333221....", ".........77444444..3.3333.......", "..........77.444.....3333.......", "..........7..4.......333........", "................................"],
+  names: ["강동구", "송파구", "강남구", "서초구", "관악구", "동작구", "영등포구", "금천구", "구로구", "강서구", "양천구", "마포구", "서대문구", "은평구", "노원구", "도봉구", "강북구", "성북구", "중랑구", "동대문구", "광진구", "성동구", "용산구", "중구", "종로구"],
+  order: ["강서구", "양천구", "구로구", "금천구", "영등포구", "마포구", "서대문구", "은평구", "종로구", "중구", "용산구", "동작구", "관악구", "서초구", "강남구", "송파구", "강동구", "광진구", "성동구", "동대문구", "중랑구", "노원구", "도봉구", "강북구", "성북구"],
+};
+
 /* 격자를 칸 목록으로 */
 function model(g) {
   const cells = [];
   g.grid.forEach((row, y) => [...row].forEach((ch, x) => {
     if (ch === '.') return;
-    const name = g.items[A.indexOf(ch)].name;
+    const name = g.names[A.indexOf(ch)];
     cells.push({ x, y, name, north: NORTH.has(name) });
   }));
   return { w: g.grid[0].length, h: g.grid.length, cells };
 }
 
-/* 한강 — 칸 열마다 강북 맨 아래와 강남 맨 위 사이를 이어 부드럽게 편다 */
-function riverPath(m) {
-  const nb = {}, st = {};
-  for (const c of m.cells) {
-    if (c.north) nb[c.x] = Math.max(nb[c.x] ?? -1, c.y + 1);
-    else st[c.x] = Math.min(st[c.x] ?? 99, c.y);
-  }
-  let pts = [];
-  for (let x = 0; x < m.w; x++) {
-    const a = nb[x], b = st[x];
-    if (a == null && b == null) continue;
-    pts.push([x + .5, a != null && b != null ? (a + b) / 2 : (a ?? b)]);
-  }
-  for (let k = 0; k < 3; k++) pts = pts.map((p, i) => [p[0], ((pts[i - 1] || p)[1] + p[1] * 2 + (pts[i + 1] || p)[1]) / 4]);
-  let d = `M${pts[0][0] - .5} ${pts[0][1]}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
-    d += ` Q${pts[i][0]} ${pts[i][1]} ${mx} ${my}`;
-  }
-  const last = pts[pts.length - 1];
-  return d + ` L${last[0] + .5} ${last[1]}`;
+/* 한강 — 강북과 강남은 열마다 같은 줄에서 맞닿는 계단이다. 강북을 한 칸 띄운 자리에 땅과 같은 크기의
+   강 칸을 한 칸 두께로 놓는다. 계단이 꺾이는 곳은 칸끼리 모서리로만 닿으므로, 낮은 쪽 열의 강남 맨 윗칸을
+   꺾인 높이만큼 강 칸으로 바꿔 ㄴ자로 잇는다. 좌표는 강북을 한 칸 올린 것으로 돌려준다 */
+function riverCells(m) {
+  const base = {};
+  for (const c of m.cells) if (!c.north) base[c.x] = Math.min(base[c.x] ?? 99, c.y);
+  const xs = Object.keys(base).map(Number).sort((a, b) => a - b);
+  const out = [], wet = new Set(), seen = new Set();
+  // 한 칸짜리 봉우리는 오를 때와 내릴 때 같은 칸을 두 번 넣으므로 한 번만 담는다
+  const push = (x, y) => { const k = x + ',' + y; if (!seen.has(k)) { seen.add(k); out.push([x, y]); } };
+  xs.forEach((x, i) => {
+    const bx = base[x], nx = xs[i + 1];
+    push(x, bx - 1);
+    if (nx == null) return;
+    const bn = base[nx];
+    for (let y = bx; y <= bn - 1; y++) { push(x, y); wet.add(x + ',' + y); }     // 오른쪽이 내려간다 — 이 열에서 내려가 둔다
+    for (let y = bx - 1; y >= bn; y--) { push(nx, y); wet.add(nx + ',' + y); }   // 오른쪽이 올라간다 — 다음 열에서 올라간다
+  });
+  return { out, wet };
+}
+
+/* 한강 자리를 지도에 박아 둔다 — 어느 장면, 어느 지도든 같은 배치를 쓴다.
+   강남을 한 칸 내리고(격자 맨 아랫줄이 비어 있어 viewBox 안에 든다) 강 자리로 바뀐 강남 칸은 뺀다.
+   강 칸은 river 에 따로 두되 어느 지도에서나 땅 칸과 똑같이 그린다. 한강 장면에서만 강 칸끼리 이어 드러낸다 */
+function withRiver(m) {
+  const { out, wet } = riverCells(m);
+  const cells = m.cells
+    .filter(c => c.north || !wet.has(c.x + ',' + c.y))
+    .map(c => c.north ? c : { ...c, y: c.y + 1 });
+  return { ...m, cells, river: out.map(([x, y]) => [x, y + 1]) };
 }
 
 function drawHero(svg, m) {
   const n = el('g', { class: 'half n' }, svg), s = el('g', { class: 'half s' }, svg);
   for (const c of m.cells) cell(c.north ? n : s, c.x, c.y);
-  el('path', { class: 'river', d: riverPath(m), pathLength: 1 }, svg);
+  // 강 칸은 평소 땅 칸과 똑같이 보인다. 한강 장면에서만 이웃한 강 칸 사이 틈(.join)이 서쪽부터 메워져 한 줄로 이어진다
+  const river = el('g', { class: 'river' }, svg), out = m.river;
+  const has = new Set(out.map(([x, y]) => x + ',' + y)), on = (x, y) => has.has(x + ',' + y);
+  const lo = .92, gap = .16, len = .86;   // 틈 메움은 이음매가 비치지 않게 양쪽 칸에 조금씩 걸친다
+  const join = (i, a) => el('rect', { ...a, class: 'join' }, river).style.setProperty('--i', i);
+  out.forEach(([x, y], i) => {
+    cell(river, x, y);
+    if (on(x + 1, y)) join(i, { x: x + lo, y: y + .07, width: gap, height: len });
+    if (on(x, y + 1)) join(i, { x: x + .07, y: y + lo, width: len, height: gap });
+    if (on(x + 1, y) && on(x, y + 1) && on(x + 1, y + 1)) join(i, { x: x + lo, y: y + lo, width: gap, height: gap });
+  });
 }
 
 function drawExplorer(svg, m, order) {
   const full = el('g', { class: 'full' }, svg), dong = el('g', { class: 'dong' }, svg), course = el('g', { class: 'course' }, svg);
-  for (const c of m.cells) {
-    cell(full, c.x, c.y);
-    for (const [dx, dy] of [[0, 0], [.5, 0], [0, .5], [.5, .5]]) cell(dong, c.x + dx, c.y + dy, .4);
+  // 강 칸도 땅과 같이 그려 어느 지도든 같은 모양이 되게 한다
+  for (const [x, y] of [...m.cells.map(c => [c.x, c.y]), ...m.river]) {
+    cell(full, x, y);
+    // 한 칸을 넷으로 — 바깥 테두리는 온 칸(0.07~0.93)과 같게, 안쪽은 0.04 띄운다
+    for (const dx of [0, .45]) for (const dy of [0, .45]) el('rect', { x: x + .07 + dx, y: y + .07 + dy, width: .41, height: .41, rx: .07 }, dong);
   }
   // 구마다 칸의 무게중심을 코스 순서대로 잇는다
   const sum = {};
@@ -518,6 +556,7 @@ function drawPlain(svg, m, byName) {
     const r = cell(svg, c.x, c.y);
     if (byName) (byName[c.name] ||= []).push(r);
   }
+  for (const [x, y] of m.river) cell(svg, x, y);   // 강 칸은 어느 구에도 속하지 않는다
 }
 
 /* 첫 화면 장면 — 무대를 붙박고, 스크롤한 만큼 장면 번호를 넘긴다 */
@@ -584,17 +623,12 @@ t.addEventListener('input', check);
 t.addEventListener('compositionend', () => setTimeout(check));
 t.addEventListener('keyup', e => { if (e.key === 'Enter') check(); });
 
-/* 데이터 */
-Promise.all([
-  fetch('../../data/seoul-gu.geom.json').then(r => r.json()),
-  fetch('../../data/seoul-gu.course.json').then(r => r.json()),
-]).then(([g, c]) => {
-  const m = model(g), order = c.items.map(i => i.name);
-  drawHero(document.getElementById('heroMark'), m);
-  drawExplorer(ex, m, order);
-  drawPlain(document.getElementById('tryMark'), m, byName);
-  drawPlain(document.getElementById('endMark'), m);
-});
+/* 지도 넷 */
+const seoul = withRiver(model(SEOUL));
+drawHero(document.getElementById('heroMark'), seoul);
+drawExplorer(ex, seoul, SEOUL.order);
+drawPlain(document.getElementById('tryMark'), seoul, byName);
+drawPlain(document.getElementById('endMark'), seoul);
 
 // 염창 한 줄은 코스 데이터에서 다시 읽는다 — 손으로 적은 문장과 어긋나지 않게
 fetch('../../data/gangseo-dong.course.json').then(r => r.json()).then(c => {
@@ -608,7 +642,8 @@ fetch('../../data/changes.json?v=5.11').then(r => r.json()).then(list => {
   for (const ch of list.slice(0, 5)) {
     const li = document.createElement('li');
     const [yy, mm, dd] = ch.date.split('-');
-    const first = ch.ko.split(/(?<=\.)\s/)[0];
+    // 첫 문장만. 뒤보기(?<=) 는 옛 Safari 에서 스크립트 전체를 멈추므로 쓰지 않는다
+    const first = (ch.ko.match(/^.*?\.(?=\s|$)/) || [ch.ko])[0];
     li.innerHTML = `<span class="d"></span><p class="tt"></p><span class="who"></span><span class="st"><span class="quiet"><span class="dot"></span>반영</span></span>`;
     li.querySelector('.d').textContent = `${mm}.${dd}.${yy.slice(2)}`;
     li.querySelector('.tt').textContent = first;
