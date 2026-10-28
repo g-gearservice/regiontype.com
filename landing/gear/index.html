@@ -55,13 +55,12 @@
   .mark{display:block;width:100%;height:auto;overflow:visible}
   .mark rect{fill:var(--fg)}
 
-  /* 머리 — 붙어 있다가 내려 읽을 때는 비켜선다 */
-  header{position:sticky;top:0;z-index:10;transition:translate .35s var(--ease-out)}
+  /* 머리 — 로고·이름·갈래·플레이가 든 바. 어느 스크롤에서도 맨 위에 붙어 있는다 */
+  header{position:sticky;top:0;z-index:10}
   header::before{content:"";position:absolute;inset:0 0 -48px;pointer-events:none;z-index:-1;
     background:linear-gradient(color-mix(in srgb,var(--bg) 70%,transparent) 50%,transparent);
     -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
     -webkit-mask:linear-gradient(#000 55%,transparent);mask:linear-gradient(#000 55%,transparent)}
-  .nav-up header:not(:focus-within){translate:0 -100%}
   .bar{display:flex;justify-content:space-between;align-items:center;gap:0 16px;padding-block:12px;min-height:72px}
   .home{display:flex;align-items:center;gap:10px;padding:11px 11px 11px 0;text-decoration:none;font-weight:600;letter-spacing:-.03em;font-size:18px}
   .home svg{width:26px;height:20px}
@@ -73,7 +72,16 @@
   nav.main .cta{margin-left:8px;padding:11px 20px}
   .cta:active{transform:scale(.97)}
   @media (hover:hover) and (pointer:fine){ nav.main a:not(.cta):hover{text-decoration:underline} .cta:hover{opacity:.85} }
-  @media (max-width:520px){ nav.main{font-size:15px} nav.main a{padding-inline:6px} nav.main .cta{margin-left:4px;padding-inline:14px} .home span{display:none} }
+  /* 좁은 화면에서도 이름을 감추지 않고 한 줄에 담는다 */
+  @media (max-width:520px){
+    .bar{gap:0 8px}
+    .home{gap:6px;padding-right:4px;font-size:15px} .home svg{width:20px;height:16px}
+    nav.main{font-size:14px} nav.main a{padding-inline:5px} nav.main .cta{margin-left:4px;padding:9px 12px}
+  }
+  @media (max-width:360px){
+    .bar{gap:0 4px} .home{gap:5px;padding-right:0;font-size:14px} .home svg{width:18px;height:14px}
+    nav.main{font-size:13px} nav.main a{padding-inline:3px} nav.main .cta{margin-left:3px;padding:8px 10px}
+  }
 
   /* 가장자리 흐림 — 래퍼런스의 겹친 backdrop 띠. 손가락 기기에서는 끈다 */
   .edge{position:fixed;z-index:9;pointer-events:none;display:grid}
@@ -93,7 +101,7 @@
   .js .stage{position:sticky;top:0;height:100svh;padding:72px 0 40px;display:grid;align-content:center}
   /* 지도 위에 띠 하나(--r)를 비워 둔다. 첫 장면에서는 제호가 그 띠에 앉아 지도와 겹치지 않고,
      제호가 빠진 뒤에는 지도가 띠만큼 올라가 아래 문장이 같은 자리를 쓴다 */
-  .stage{--wf:min((min(100vw, var(--max)) - 2 * var(--gutter)) * .225, 17svh);--wgap:calc(var(--wf) * .16 + 8px);
+  .stage{--wf:min((min(100vw, var(--max)) - 2 * var(--gutter)) * .225, 17svh);--wgap:calc(var(--wf) * .3 + 12px);
     --r:max(var(--wf) + var(--wgap), 170px)}
   .lens{--lw:min(100cqw - 2 * var(--gutter), max(240px, (100svh - 72px - 2 * var(--gutter) - var(--r) - 40px) * 32 / 27));
     width:var(--lw);margin:var(--r) auto 0;position:relative;container-type:inline-size;transition:translate .9s var(--ease-in-out)}
@@ -252,15 +260,13 @@
   .btn-line{display:inline-flex;align-items:center;padding:16px 29px;font-size:17px;font-weight:500;border:1px solid var(--fg);border-radius:999px;text-decoration:none}
   @media (hover:hover) and (pointer:fine){ .btn-line:hover{background:var(--fg);color:var(--bg)} }
 
-  footer{font-size:13px;color:var(--soft);display:grid;overflow:hidden}
-  footer>*{grid-area:1/1;align-self:start}
-  footer .row{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 24px;padding-top:12px}
+  /* 맨 아래 흐림 띠(.edge.bot, 96px)에 글자가 걸리지 않게 바닥에 그만큼 여유를 둔다 */
+  footer{font-size:13px;color:var(--soft);padding-bottom:96px}
+  footer .row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 24px;padding-top:12px}
   footer .row b{color:var(--fg);font-weight:600;letter-spacing:-.03em}
   footer nav{display:flex;flex-wrap:wrap;gap:0 22px}
   footer nav a{padding-block:12px;text-decoration:none}
   @media (hover:hover) and (pointer:fine){ footer nav a:hover{text-decoration:underline;text-underline-offset:.2em} }
-  .crop{overflow:hidden;height:30vw;margin-top:64px}
-  .crop .mark{width:96vw;margin:0 auto}
 
   /* 나타나기 */
   .js [data-reveal]{opacity:0;transform:translateY(16px)}
@@ -270,7 +276,7 @@
 
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important}
-    .half,.word,.copy,.panel,.hero .river,.ex .course path,header,.lens{transition-property:opacity!important;transition-duration:.2s!important}
+    .half,.word,.copy,.panel,.hero .river,.ex .course path,.lens{transition-property:opacity!important;transition-duration:.2s!important}
     .hero .river .join{transition-delay:0s!important}
     .hero .half.n,.hero .half.s{transform:none}
     .stage:is([data-scene="1"],[data-scene="2"]) .half{opacity:var(--dim)}
@@ -444,7 +450,6 @@
     <span>© 2026 <b>regiontype</b></span>
     <nav aria-label="바닥 메뉴"><a href="#intro">소개</a><a href="#dev">개발</a><a href="#story">스토리</a><a href="#plan">플랜</a><a href="../../policy/">개인정보</a><a href="../../terms/">약관</a><a href="#top">맨 위로 ↑</a></nav>
   </div>
-  <div class="crop" aria-hidden="true"><svg class="mark" id="endMark" viewBox="0 0 32 27"></svg></div>
 </footer>
 
 <script>
@@ -568,12 +573,7 @@ function onScroll() {
   const scene = Math.max(0, Math.min(5, Math.floor((y + step * .35) / step)));
   if (stage.dataset.scene !== String(scene)) stage.dataset.scene = scene;
 }
-let lastY = scrollY;
 addEventListener('scroll', () => {
-  // 내려 읽을 때는 머리가 비켜서고, 올리면 돌아온다. 첫 화면 안에서는 늘 보인다
-  const y = scrollY;
-  document.documentElement.classList.toggle('nav-up', y > lastY && y > hero.offsetHeight - 80);
-  lastY = y;
   if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
 addEventListener('resize', onScroll);
@@ -623,12 +623,11 @@ t.addEventListener('input', check);
 t.addEventListener('compositionend', () => setTimeout(check));
 t.addEventListener('keyup', e => { if (e.key === 'Enter') check(); });
 
-/* 지도 넷 */
+/* 지도 셋 — 첫 화면, 소개, 쳐 보기 */
 const seoul = withRiver(model(SEOUL));
 drawHero(document.getElementById('heroMark'), seoul);
 drawExplorer(ex, seoul, SEOUL.order);
 drawPlain(document.getElementById('tryMark'), seoul, byName);
-drawPlain(document.getElementById('endMark'), seoul);
 
 // 염창 한 줄은 코스 데이터에서 다시 읽는다 — 손으로 적은 문장과 어긋나지 않게
 fetch('../../data/gangseo-dong.course.json').then(r => r.json()).then(c => {
