@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.41';
+const VER = '5.42';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
 const REL = '1.2.0';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
@@ -2315,10 +2315,10 @@ async function start(slug, only, rk, exam) {
              aliases: byChars ? [] : [...new Set([...(it.aliases || []), ...also])], claimed: false };   // 자수 면허는 전체 이름만 센다
   });
   /* 한국어가 아닌 화면 말이면 칸에 보이는 그 말의 이름을 친다. 표에 없는 칸(나라 코스·
-     한자가 없는 동)은 제 이름과 제 별칭 그대로다 */
+     한자가 없는 동)은 제 이름을 치는 꼴(typeForm)로 — 띄어쓰기 있는 이름도 붙여 친다. 별칭은 그대로다 */
   TONGUE = getTongue(LANG, read);
   if (TONGUE) items.forEach(it => {
-    if (!names || !names[`${slug}/${it.name}`]) return;
+    if (!names || !names[`${slug}/${it.name}`]) { it.say = typeForm(it.name); return; }
     it.say = typeForm(placeName(names, slug, it.name));
     const short = typeForm(placeName(names, slug, it.name, true));
     it.alts = short !== it.say ? [short] : [];
@@ -2943,6 +2943,12 @@ function tongueInput(inp, val, composing) {
   if (composing || !/\s/.test(val)) return;   // 스페이스 전에는 판단하지 않는다
   /* 순서형에서 남의 이름(Сонбук-дон)이 목표(Сонбук-дон 1-га)의 앞머리면 그 스페이스는 이름 안의 띄어쓰기다 */
   if (G.seq && r && !r.bad) { const fit = matchTongue(val, G.items, true); if (fit && fit !== target()) return; }
+  /* 띄어쓰기 있는 이름(Qasr Al-Nile·Святошинський район)의 스페이스는 이름 안의 것이다 — 아직 맞는 칸이
+     없고 어느 칸의 이름으로 오타 없이 이어지는 중이면 판정하지 않는다. 다 치고 스페이스, 또는 Enter 로 확정 */
+  if (val.trim()) {
+    const cand = G.seq ? [target()] : G.items.filter(it => !it.claimed);
+    if (!matchTongue(val, cand, true) && cand.some(it => (/\s/.test(it.name) || /\s/.test(sayOf(it))) && !TONGUE.walk(val, TONGUE.key(sayOf(it))).bad)) return;
+  }
   inp.value = '';
   judge(val);
 }
@@ -3931,6 +3937,18 @@ if (location.search.includes('rt=1')) {
   console.assert(inp.value === 'Сонбук-дон ' && !G.bad, '순서형: 남의 이름이 목표의 앞머리면 스페이스는 이름 안의 띄어쓰기');
   box.innerHTML = html;
   TONGUE = de;
+  /* 띄어쓰기 있는 이름은 치는 꼴로 붙여 보이고, 이름 안의 스페이스는 판정하지 않는다 */
+  const qas = [{ name: 'Qasr Al-Nile', say: typeForm('Qasr Al-Nile'), alts: [], claimed: false }], hold = { value: 'qasr ' };
+  console.assert(typeForm('Qasr Al-Nile') === 'qasralnile' && matchTongue('qasr al-nile', qas, true) === qas[0], '띄어쓰기 있는 이름도 붙여 치면 맞는다');
+  G = { seq: true, idx: 0, items: qas, want: qas[0].say, parts: de.split(qas[0].say), typed: 0, ok: 0, bad: 0, chars: 0, part: 0, t0: 0 };
+  tongueInput(hold, hold.value, false);
+  console.assert(hold.value === 'qasr ' && !G.bad, '순서형: 띄어쓰기 있는 이름의 앞머리 뒤 스페이스는 이름 안의 것 — 판정하지 않는다');
+  box.innerHTML = html;
+  const nm = [{ name: 'New Mexico', say: typeForm('New Mexico'), alts: [], claimed: false }, { name: 'New York', say: typeForm('New York'), alts: [], claimed: false }], hold2 = { value: 'new ' };
+  G = { seq: false, items: nm, want: '', parts: [], typed: 0, ok: 0, bad: 0, chars: 0, part: 0, t0: 0 };
+  tongueInput(hold2, hold2.value, false);
+  console.assert(hold2.value === 'new ' && !nm.some(x => x.claimed), '자유형: 띄어쓰기 있는 이름 둘의 앞머리 뒤 스페이스도 판정하지 않는다');
+  box.innerHTML = html;
   const tgu = [{ name: '강서구', say: 'Gangseo-gu', alts: ['Gangseo'], claimed: false },
               { name: '중구', say: 'Jung-gu', alts: ['Jung'], claimed: false },
               { name: '중랑구', say: 'Jungnang-gu', alts: ['Jungnang'], claimed: false }];

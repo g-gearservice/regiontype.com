@@ -2,6 +2,7 @@
 
 서울은 손대지 않는다 — 이미 seoul-gu 가 수도 코스다. 한 줄 소개는 빈 칸이다.
 받은 OSM 원본은 /tmp/rt-geo/capital/ 에 둔다. 다시 돌릴 때 Overpass 를 또 묻지 않는다.
+OSM 에 없는 말의 지역 이름은 Wikidata 라벨로 메운다 — 받은 것은 같은 곳 wikidata/ 에 둔다.
 
     python3 tools/build_capital.py data/          # 전부
     python3 tools/build_capital.py data/ JP       # 한 나라
@@ -203,8 +204,40 @@ def typing_name(tags, iso, strip):
     return name.replace('·', ',')
 
 
+def wd_labels(qid):
+    """Wikidata 개체의 말별 라벨 {언어: 이름}. 못 받으면 {} — OSM 이름만으로 간다."""
+    if not re.fullmatch(r'Q\d+', qid):   # OSM 태그는 누구나 고친다 — 캐시 경로에 그대로 넣지 않는다
+        return {}
+    path = CACHE / 'wikidata' / f'{qid}.json'
+    if path.exists():
+        return json.loads(path.read_text())
+    url = ('https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&format=json&ids='
+           + urllib.parse.quote(qid))
+    for n in range(4):
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': UA})
+            res = json.load(urllib.request.urlopen(req, timeout=60))
+            labels = res['entities'][qid]['labels']     # 없는 개체는 'missing' 이라 KeyError
+            break
+        except Exception as e:
+            print(f'  다시 {qid} (wikidata): {e}', file=sys.stderr)
+            time.sleep(5)
+    else:
+        print(f'경고: Wikidata 라벨 실패 {qid} — OSM 이름만 쓴다', file=sys.stderr)
+        return {}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(labels, ensure_ascii=False))
+    return labels
+
+
 def titles(tags):
     t = {l: tags[f'name:{l}'] for l in UI_LANGS if tags.get(f'name:{l}')}
+    # OSM 이 먼저다. 빈 말만 Wikidata 의 같은 언어 코드 라벨로 — mul 이나 다른 말로 돌려 쓰지 않는다
+    if tags.get('wikidata') and any(l not in t for l in UI_LANGS):
+        labels = wd_labels(tags['wikidata'])
+        for l in UI_LANGS:
+            if l not in t and labels.get(l, {}).get('value'):
+                t[l] = labels[l]['value']
     t.setdefault('en', tags.get('name:en') or tags.get('name'))
     return t
 
