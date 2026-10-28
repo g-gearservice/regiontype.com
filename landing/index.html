@@ -14,17 +14,19 @@
 <meta property="og:locale" content="ko_KR">
 <meta property="og:site_name" content="regiontype">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F2F2F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0E0E" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../../favicon/white.png?v=5.10">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../../favicon/dark.png?v=5.10">
 <link rel="icon" type="image/png" sizes="any" href="../../favicon/dark.png?v=5.10">
-<!-- 공개 주소 /landing/. 초안 /landing/proto/ 는 같은 화면이고 검색에 올리지 않는다.
-     줄 문법(맨 위 작은 한 줄, 굵고 큰 낱말, 작은 그림, +)은 그대로다.
-     소개·스토리는 스크롤하면 문장이 바뀌고, 개발은 페이지와 같은 바탕이다.
-     스타일은 3D 내비게이션·동네버스·CRT 터미널, 플레이는 게임을 그 자리에 띄우고, 플랜은 가격이 미정이다.
-     색은 기기 테마(prefers-color-scheme)를 따른다. 소개 문장과 염창 한 줄은 소개 페이지·코스 데이터에 있는 말이다.
-     상대 경로 ../../ 는 /landing/proto/ 에서 사이트 루트이고, /landing/ 에서는 원점 위로 더 올라가지 못해 같은 루트로 풀린다. -->
+<!-- 공개 주소 /landing/ — 로그인하지 않은 방문자가 처음 보는 소개 화면.
+     래퍼런스는 gdotgear.services (g.gearservice 팀 사이트, paper-black).
+     종이 회색 바탕에 검정 하나, Pretendard 500 의 아주 큰 소문자(-0.045em), 마크 하나가 스크롤을 끌고 가는 문법을 따른다.
+     래퍼런스의 '두 호와 렌즈' 자리에 게임의 서울 격자 지도(data/seoul-gu.geom.json)를 놓았다 —
+     위 반쪽은 강북 14구, 아래 반쪽은 강남 11구, 그 사이 렌즈는 한강이다.
+     넵바는 소개·개발·스토리·플랜. 문장은 이전 소개 화면과 CLAUDE.md 에 있는 말이고, 지어낸 소개는 없다.
+     상태는 색만이 아니라 글자(반영·진행 중·준비 중)로도 보인다. prefers-reduced-motion 이면 움직임을 거둔다.
+     상대 경로 ../../ 는 /landing/ 에서 원점 위로 더 올라가지 못해 사이트 루트로 풀린다. -->
 <script>
 /* 입장. 이미 로그인한 사람은 홈으로. 이 화면을 다른 문서 안에 끼운 경우는 그대로 둔다. */
 (() => {
@@ -39,580 +41,721 @@
 })();
 document.documentElement.classList.add('js');
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root{
-    --bg:#fff; --ink:#0d0d0d; --rule:#0d0d0d; --muted:#5c5c5c; --line:rgba(13,13,13,.16); --chip:#f3f3f3;
-    --sans:"Inter Tight","Noto Sans KR",system-ui,sans-serif;
-    --mono:"IBM Plex Mono","Noto Sans KR",ui-monospace,monospace;
-    --accent:#f0a03c; --accent-deep:#e07a3a; --on-accent:#232c31; --ranked:#c8322a;
-    --ease:cubic-bezier(.23,1,.32,1);
-    --bar:40px;
-    color-scheme:light;
+    --bg:#F2F2F2; --fg:#000; --soft:#3D3D3D; --line:#CFCFCF; --panel:#fff;
+    --accent:#000; --on-accent:#F2F2F2;
+    --t-data:#00C575; --t-make:#FCAE17; --t-ship:#9F0000; --pg-bg:#FCAE17; --pg-fg:#000;
+    --dim:.16;
+    --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --gutter:clamp(20px,3.4vw,48px); --max:1440px;
+    --fs-display:clamp(48px,7.4vw,112px); --fs-name:clamp(52px,9.5vw,148px);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-in-out:cubic-bezier(.77,0,.175,1);
+    --ease-soft:cubic-bezier(.4,0,.2,1);   /* 첫 화면 장면 전환 — 천천히 출발해 부드럽게 선다 */
+    color-scheme:light dark;
   }
   @media (prefers-color-scheme:dark){
-    :root{
-      --bg:#141414; --ink:#f2f2f2; --rule:#f2f2f2; --muted:#b3b3b3; --line:rgba(242,242,242,.2); --chip:#1c1c1c;
-      color-scheme:dark;
-    }
+    :root{--bg:#0E0E0E; --fg:#F2F2F2; --soft:#B4B4B4; --line:#2E2E2E; --panel:#1A1A1A; --accent:#F2F2F2; --on-accent:#0E0E0E; --t-ship:#E0443A; --dim:.2}
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{background:var(--bg);color:var(--ink)}
-  body{font:500 16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
-  a{color:inherit;text-decoration:none}
-  button,input{font:inherit;color:inherit}
-  button{background:none;border:0;cursor:pointer;text-align:left}
-  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  h1.sr{font-size:clamp(80px,14vw,220px)}
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-padding-top:72px}
+  @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+  body{margin:0;background:var(--bg);color:var(--fg);font:400 16px/1.6 var(--font);-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-x:clip}
+  h1,h2,h3,p,ul,ol,blockquote,figure{margin:0}
+  ul,ol{padding:0;list-style:none}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+  .sr{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}
+  .wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--gutter)}
+  .h2{font-size:var(--fs-display);font-weight:500;letter-spacing:-.045em;line-height:.98}
+  .lede{color:var(--soft);font-size:17px;line-height:1.75}
+  .label{font-size:13px;color:var(--soft)}
+  code{font-family:var(--mono);font-size:.88em}
+  .eyebrow{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--soft)}
+  .eyebrow i{display:block;width:28px;height:1px;background:var(--fg);transform-origin:0}
 
-  .meta{position:sticky;top:0;z-index:5;background:var(--bg);display:grid;grid-template-columns:auto auto 1fr auto auto;
-    gap:28px;align-items:center;padding:10px 12px 8px;font-size:14px;font-weight:700;line-height:1.3;text-transform:uppercase;letter-spacing:.01em}
-  .meta .mid{justify-self:center}
-  .meta .mid button{text-transform:uppercase}
-  .meta .mid button[aria-pressed="true"]{text-decoration:underline;text-underline-offset:2px}
-  .ring{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;vertical-align:-1px;margin-left:6px}
-  .play-cta{background:var(--ink);color:var(--bg);border-radius:999px;padding:6px 12px}
+  /* 격자 지도 — 칸 하나가 1 단위 */
+  .mark{display:block;width:100%;height:auto;overflow:visible}
+  .mark rect{fill:var(--fg)}
 
-  .menu{list-style:none;padding:0 12px}
-  .row{border-bottom:1.5px solid transparent;transition:border-color .3s ease;scroll-margin-top:var(--bar)}
-  .row.open{border-bottom-color:var(--rule)}
-  .row-title{margin:0;font-size:clamp(56px,10.4vw,168px);font-weight:900;line-height:.98;letter-spacing:-.045em}
-  .head{display:flex;align-items:center;gap:clamp(10px,1.2vw,18px);width:100%;padding:2px 0}
-  .nm{font:inherit;letter-spacing:inherit;white-space:nowrap}
-  .en{font:800 14px/1 var(--sans);text-transform:uppercase;align-self:flex-start;margin-top:1.4em;letter-spacing:.02em}
-  .th{display:flex;gap:clamp(6px,.8vw,12px);align-items:center;margin-left:4px}
-  .t{height:clamp(44px,6.8vw,104px);aspect-ratio:1;flex:none;display:grid;place-items:center;overflow:hidden;font-weight:700;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink)}
-  .sign{margin:0 .2em 0 auto;width:1em;height:1em;display:grid;place-items:center;flex:none;font:400 clamp(28px,4vw,60px)/1 var(--sans);transition:transform .4s var(--ease)}
-  .row.open .sign{transform:rotate(45deg)}
-  @media (hover:hover) and (pointer:fine){ .head:hover .nm{text-decoration:underline;text-decoration-thickness:.05em;text-underline-offset:.08em} }
-
-  .drawer{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s var(--ease)}
-  .row.open .drawer{grid-template-rows:1fr}
-  .drawer > div{overflow:hidden;min-height:0}
-  /* 소개·스토리의 문장은 뷰포트에 붙어 스크롤을 탄다. 붙으려면 조상에 overflow:hidden 이 있으면 안 된다.
-     그 두 줄은 높이 애니메이션을 끄고, 열렸을 때만 넘침을 풀어 문장이 화면 위에 남게 한다 */
-  .row.tall .drawer{transition:none}
-  .row.tall.open .drawer > div{overflow:visible}
-  .panel{margin:10px 0 22px;border-radius:2px;font-weight:400}
-
-  .t-dot{background:var(--ink);border-color:var(--ink)}
-  .t-dot svg{width:86%;height:86%}
-  .t-num{font:900 clamp(14px,2.2vw,34px)/1 var(--sans);letter-spacing:-.04em;background:var(--chip)}
-  .t-term{font:500 11px/1.15 var(--mono);place-items:start;padding:8px 7px;text-align:left;white-space:pre}
-  .t-ver{font:600 clamp(14px,1.6vw,18px)/1 var(--mono)}
-  .t-ico svg{width:58%;height:58%}
-  .t-book{font:600 clamp(14px,1.9vw,28px)/1 var(--sans);background:var(--chip)}
-  .t-quote,.t-ink{background:var(--ink);color:var(--bg);font:500 clamp(14px,1.5vw,18px)/1.3 var(--sans)}
-  /* 플레이 줄의 세 칸 자리. 링크는 펼침 버튼 밖에 둔다. */
-  #play > .row-title{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;column-gap:clamp(10px,1.2vw,18px)}
-  #play > .row-title > .head{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;grid-row:1;align-items:center;width:auto;min-width:0}
-  #play > .row-title > .head .nm{grid-column:1}
-  #play > .row-title > .head .en{grid-column:2}
-  #play > .row-title > .head .sign{grid-column:4;margin-left:0}
-  #play .play-site{grid-column:3;grid-row:1;justify-self:start;align-self:center;position:relative;z-index:1;display:inline-flex;align-items:center;gap:.35em;padding:.5em 1em;border-radius:999px;background:var(--ink);color:var(--bg);font:700 clamp(14px,1.5vw,20px)/1 var(--sans);text-decoration:none;white-space:nowrap}
-  #play .play-site:hover{opacity:.85}
-  @media (max-width:860px){
-    #play > .row-title{grid-template-columns:auto minmax(0,1fr) auto}
-    #play > .row-title > .head .sign{grid-column:3}
-    #play .play-site{grid-column:2}
+  /* 머리 — 로고·이름·갈래·플레이가 든 바. 어느 스크롤에서도 맨 위에 붙어 있는다 */
+  header{position:sticky;top:0;z-index:10}
+  header::before{content:"";position:absolute;inset:0 0 -48px;pointer-events:none;z-index:-1;
+    background:linear-gradient(color-mix(in srgb,var(--bg) 70%,transparent) 50%,transparent);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    -webkit-mask:linear-gradient(#000 55%,transparent);mask:linear-gradient(#000 55%,transparent)}
+  .bar{display:flex;justify-content:space-between;align-items:center;gap:0 16px;padding-block:12px;min-height:72px}
+  .home{display:flex;align-items:center;gap:10px;padding:11px 11px 11px 0;text-decoration:none;font-weight:600;letter-spacing:-.03em;font-size:18px}
+  .home svg{width:26px;height:20px}
+  .home rect{fill:var(--fg)}
+  nav.main{display:flex;align-items:center;gap:0 2px;font-size:17px}
+  nav.main a{padding:12px 10px;text-decoration:none;text-underline-offset:.2em}
+  nav.main a[aria-current]{text-decoration:underline}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border-radius:999px;font-weight:500;text-decoration:none;transition:opacity .15s ease,transform .16s var(--ease-out)}
+  nav.main .cta{margin-left:8px;padding:11px 20px}
+  .cta:active{transform:scale(.97)}
+  @media (hover:hover) and (pointer:fine){ nav.main a:not(.cta):hover{text-decoration:underline} .cta:hover{opacity:.85} }
+  /* 좁은 화면에서도 이름을 감추지 않고 한 줄에 담는다 */
+  @media (max-width:520px){
+    .bar{gap:0 8px}
+    .home{gap:6px;padding-right:4px;font-size:15px} .home svg{width:20px;height:16px}
+    nav.main{font-size:14px} nav.main a{padding-inline:5px} nav.main .cta{margin-left:4px;padding:9px 12px}
   }
-  @media (max-width:370px){
-    #play > .row-title{grid-template-rows:auto auto;row-gap:2px}
-    #play .play-site{grid-column:1 / -1;grid-row:2}
+  @media (max-width:360px){
+    .bar{gap:0 4px} .home{gap:5px;padding-right:0;font-size:14px} .home svg{width:18px;height:14px}
+    nav.main{font-size:13px} nav.main a{padding-inline:3px} nav.main .cta{margin-left:3px;padding:8px 10px}
   }
 
-  /* 스크롤 설명 — 칸은 뷰포트에 붙어 있고, 긴 궤도를 지나며 문장만 바뀐다 */
-  .js .reel{height:calc(var(--n, 5) * 58vh + 100svh);position:relative}
-  .js .stage{position:sticky;top:var(--bar);min-height:calc(100svh - var(--bar));display:flex;flex-direction:column;justify-content:center}
-  .js .beats{display:grid;position:relative}
-  .js .beat{grid-area:1/1;opacity:0;pointer-events:none}
-  .js .beat:not(.on){position:absolute;width:100%;visibility:hidden}
-  .js .beat.on{opacity:1;pointer-events:auto;position:relative}
-  .idx{display:flex;gap:14px;margin-bottom:18px;list-style:none}
-  .step{font:800 14px/1 var(--sans);letter-spacing:.06em;color:var(--muted)}
-  .step.on{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
-  .beat h3,.style-card h3{font-size:clamp(32px,4.6vw,64px);font-weight:800;letter-spacing:-.035em;line-height:1.12}
-  .beat h3{max-width:14em}
-  .beat .fig{font:900 clamp(64px,9vw,112px)/.88 var(--sans);letter-spacing:-.055em;font-variant-numeric:tabular-nums}
-  .beat p{margin-top:16px;font:400 clamp(16px,1.35vw,19px)/1.7 var(--sans);max-width:36em}
-  .scroll-hint{display:none;margin-top:28px;font:700 14px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .js .scroll-hint{display:block}
-  .route-fig{margin-top:22px}
-  .route-fig svg{width:min(100%,320px);height:auto;display:block}
-  .route-fig figcaption{margin-top:8px;font:700 14px/1.3 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-  .dot-gu{fill:var(--ink)}
-  .route{fill:none;stroke:var(--accent-deep);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
-  .route-dot{fill:var(--accent-deep)}
+  /* 가장자리 흐림 — 래퍼런스의 겹친 backdrop 띠. 손가락 기기에서는 끈다 */
+  .edge{position:fixed;z-index:9;pointer-events:none;display:grid}
+  .edge i{grid-area:1/1}
+  .edge.bot{left:0;right:0;bottom:0;height:96px;--dir:to top}
+  /* 옆 띠는 글 여백(--gutter) 안에만 둬 글자를 번지게 하지 않는다 */
+  .edge.lft{top:0;bottom:0;left:0;width:var(--gutter);--dir:to right}
+  .edge.rgt{top:0;bottom:0;right:0;width:var(--gutter);--dir:to left}
+  .edge i:nth-child(1){backdrop-filter:blur(1px);-webkit-mask:linear-gradient(var(--dir),#000 40%,transparent 60%);mask:linear-gradient(var(--dir),#000 40%,transparent 60%)}
+  .edge i:nth-child(2){backdrop-filter:blur(4px);-webkit-mask:linear-gradient(var(--dir),#000 20%,transparent 40%);mask:linear-gradient(var(--dir),#000 20%,transparent 40%)}
+  .edge i:nth-child(3){backdrop-filter:blur(16px);-webkit-mask:linear-gradient(var(--dir),#000 0%,transparent 20%);mask:linear-gradient(var(--dir),#000 0%,transparent 20%)}
+  @media (pointer:coarse){ .edge{display:none} }
 
-  /* 개발 — 페이지와 같은 바탕. 검은 판을 깔지 않는다 */
-  .p-dev{color:var(--ink);font:400 15px/1.65 var(--mono);padding:8px 0 12px;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px 40px}
-  .p-dev .k{font:500 14px/1 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:28px 0 12px}
-  .p-dev .k:first-child{margin-top:0}
-  .p-dev .cm{color:var(--muted)}
-  .p-dev pre{font:inherit;white-space:pre-wrap;margin-bottom:18px}
-  .p-dev .big{font:500 clamp(28px,3.4vw,50px)/1.05 var(--mono);letter-spacing:-.02em;margin-bottom:6px}
-  .p-dev .log{list-style:none;max-height:430px;overflow:auto;border-top:1px solid var(--line);scrollbar-color:var(--line) transparent}
-  .p-dev .log li{display:grid;grid-template-columns:7em 7em 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
-  .p-dev .log time{color:var(--muted)}
-  .p-dev .bar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
-  .p-dev .bar input{flex:1;min-width:0;background:transparent;border:1px solid var(--line);color:var(--ink);padding:8px 10px;font:inherit;outline:0;border-radius:2px}
-  .p-dev .bar input::placeholder{color:var(--muted)}
-  .p-dev .bar input:focus{border-color:var(--ink)}
-  .p-dev .caret{display:inline-block;width:.55em;height:1em;background:var(--ink);vertical-align:-2px;animation:blink 1s steps(1) infinite}
-  @keyframes blink{50%{opacity:0}}
+  /* ── 첫 화면: 붙박인 무대에서 장면이 바뀐다 ── */
+  .hero{position:relative}
+  .js .hero{--step:50svh;height:calc(100svh + 6 * var(--step));margin-top:-72px}
+  .stage{container-type:inline-size;padding:96px 0 48px}
+  .js .stage{position:sticky;top:0;height:100svh;padding:72px 0 40px;display:grid;align-content:center}
+  /* 지도 위에 띠 하나(--r)를 비워 둔다. 첫 장면에서는 제호가 그 띠에 앉아 지도와 겹치지 않고,
+     제호가 빠진 뒤에는 지도가 띠만큼 올라가 아래 문장이 같은 자리를 쓴다 */
+  .stage{--wf:min((min(100vw, var(--max)) - 2 * var(--gutter)) * .225, 17svh);--wgap:calc(var(--wf) * .3 + 12px);
+    --r:max(var(--wf) + var(--wgap), 170px)}
+  .lens{--lw:min(100cqw - 2 * var(--gutter), max(240px, (100svh - 72px - 2 * var(--gutter) - var(--r) - 40px) * 32 / 27));
+    width:var(--lw);margin:var(--r) auto 0;position:relative;container-type:inline-size;transition:translate .65s var(--ease-soft)}
+  .stage:not([data-scene="0"]) .lens{translate:0 calc(var(--r) * -.5)}
+  .stage:is([data-scene="3"],[data-scene="4"],[data-scene="5"]) .lens{translate:0 calc(var(--r) * -1)}
+  .word{position:absolute;left:50%;top:0;translate:-50% calc(-100% - var(--wgap));z-index:2;white-space:nowrap;pointer-events:none;
+    font-size:var(--wf);font-weight:500;letter-spacing:-.055em;line-height:.95;color:var(--fg);
+    transition:opacity .5s var(--ease-soft),filter .5s var(--ease-soft),translate .65s var(--ease-soft)}
+  .word span{display:inline-block;animation:letter-in .7s var(--ease-out) both;animation-delay:calc(var(--i) * 40ms)}
+  .lens .mark{animation:blur-up 1.1s var(--ease-out) .1s backwards}
+  .half{transform-box:fill-box;transition:transform .85s var(--ease-soft),opacity .5s var(--ease-soft)}
+  .hero .half.n{transform:translateY(calc(var(--p,0) * -64%))}
+  .hero .half.s{transform:translateY(calc(var(--p,0) * 64%))}
+  .hero .river{transition:opacity .5s var(--ease-soft)}
+  /* 한강 장면에서만 강 칸 가운데를 잇는 선 — 소개의 코스 선과 같은 굵기·그리기.
+     장면을 떠날 때는 흐려지지 않고 그린 길을 거꾸로 되감아(0.8초) 지운 뒤에야 사라진다 */
+  .hero .rline{fill:none;stroke:var(--fg);stroke-width:.42;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:0;
+    transition:stroke-dashoffset .8s var(--ease-soft),opacity .1s linear .8s}
+  .stage[data-scene="4"] .rline{opacity:1;stroke-dashoffset:0;transition:stroke-dashoffset 1.4s var(--ease-soft),opacity .1s linear}
+  /* 강북·강남에서 넘어올 때는 반쪽이 되감기는 동안(0.8초) 기다렸다가 선을 긋는다 */
+  .stage[data-scene="4"]:is([data-from="3"],[data-from="5"]) .rline{transition:stroke-dashoffset 1.4s var(--ease-soft) .8s,opacity .1s linear .8s}
+  /* 한강에서 강남으로 넘어올 때는 선 되감기가 끝난 뒤에 설명을 띄운다 */
+  .stage[data-scene="5"][data-from="4"] [data-copy="5"]{transition-delay:.8s}
+  /* 반쪽이 갈라지는 장면에서는 가운데 문장과 겹치지 않게 강 칸이 잠시 빠진다 — 가운데 칸부터 바깥쪽으로(--rd)
+     작아지며 사라지고, 다시 붙을 때는 반쪽이 거의 닫힌 뒤(.4초) 같은 차례로 커지며 나타난다 */
+  .hero .river rect{transform-box:fill-box;transform-origin:center;
+    transition:opacity .45s var(--ease-soft),transform .45s var(--ease-soft);transition-delay:calc(.4s + var(--rd, 0) * .45s)}
+  .stage:is([data-scene="1"],[data-scene="2"]) .river rect{opacity:0;transform:scale(.3);transition-delay:calc(var(--rd, 0) * .45s)}
+  .stage:is([data-scene="1"],[data-scene="2"]){--p:1}
+  .stage:not([data-scene="0"]) .word{opacity:0;filter:blur(16px);translate:-50% calc(-100% - var(--wgap) - 40px)}
+  /* 땅 칸은 어느 장면에서도 움직이지 않는다. 강북·강남·한강 장면에서는 칸 하나하나가 회색(--dim)으로 깔리고,
+     비추는 반쪽만 서쪽→동쪽으로 검게 차오른다(--fx: 그 반쪽 서쪽 끝에서 몇 열째, --fmax: 반쪽의 열 수, 0.65초에 걸쳐).
+     그 장면을 떠날 때는 같은 길을 동쪽→서쪽으로 되감아(0.8초) 회색으로 돌아간다 */
+  .hero .half rect{transition:opacity .5s var(--ease-soft)}
+  .stage:is([data-scene="3"],[data-scene="4"],[data-scene="5"]) .half rect{opacity:var(--dim)}
+  .stage[data-scene="3"] .half.n rect,.stage[data-scene="5"]:not(.leave) .half.s rect{
+    animation:fill-up .3s var(--ease-soft) both;animation-delay:calc(.2s + var(--fx, 0) / var(--fmax, 1) * .65s)}
+  /* 한강 선이 되감기는 동안 기다렸다가 차오른다 */
+  .stage[data-scene="3"][data-from="4"] .half.n rect,.stage[data-scene="5"][data-from="4"]:not(.leave) .half.s rect{
+    animation-delay:calc(.8s + var(--fx, 0) / var(--fmax, 1) * .65s)}
+  .stage[data-scene="4"][data-from="3"] .half.n rect,.stage[data-scene="4"][data-from="5"] .half.s rect,.stage[data-scene="5"].leave .half.s rect{
+    animation:fill-down .35s var(--ease-soft) both;animation-delay:calc((1 - var(--fx, 0) / var(--fmax, 1)) * .45s)}
+  @keyframes fill-up{from{opacity:var(--dim)}to{opacity:1}}
+  @keyframes fill-down{from{opacity:1}to{opacity:var(--dim)}}
+  .stage:is([data-scene="3"],[data-scene="4"],[data-scene="5"]) .river{opacity:var(--dim)}
+  .copy{text-align:center}
+  .copy .big{font-size:clamp(32px,8.6cqw,128px);font-weight:500;letter-spacing:-.045em;line-height:.98}
+  .copy .body{font-size:clamp(17px,2.8cqw,40px);letter-spacing:-.01em;line-height:1.45;text-wrap:balance}
+  .copy .k{font-size:13px;color:var(--soft)}
+  .copy .n{font-size:clamp(34px,6cqw,84px);font-weight:500;letter-spacing:-.045em;line-height:1;margin:6px 0 10px}
+  .copy .b{color:var(--soft);font-size:16px;line-height:1.6;text-wrap:balance;max-width:30em;margin:0 auto}
+  html:not(.js) .copy{margin-top:40px}
+  .js .copy{position:absolute;left:50%;width:min(100%,calc(100vw - 2 * var(--gutter)));translate:-50% -50%;top:50%;pointer-events:none;
+    opacity:0;transform:translateY(10px);transition:opacity .4s var(--ease-soft),transform .5s var(--ease-soft)}
+  .js .copy.mid{width:78%}
+  .js .copy.under{top:100%;translate:-50% 0;padding-top:clamp(16px,3svh,28px)}
+  .stage[data-scene="1"] [data-copy="1"],.stage[data-scene="2"] [data-copy="2"],.stage[data-scene="3"] [data-copy="3"],
+  .stage[data-scene="4"] [data-copy="4"],.stage[data-scene="5"] [data-copy="5"]{opacity:1;transform:none;transition-duration:.5s,.6s}
+  .hint{position:absolute;left:50%;bottom:28px;translate:-50% 0;font-size:13px;color:var(--soft);transition:opacity .3s}
+  html:not(.js) .hint,.stage:not([data-scene="0"]) .hint{opacity:0}
+  @keyframes letter-in{0%{opacity:0;transform:translateY(14%)}to{opacity:1;transform:none}}
+  @keyframes blur-up{0%{opacity:0;filter:blur(16px);transform:translateY(48px)}to{opacity:1;filter:none;transform:none}}
 
-  /* 스타일 — 3D 내비게이션, 동네버스, CRT 터미널 */
-  .styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:8px 0}
-  .style-card{display:flex;flex-direction:column;gap:12px;min-height:100%;padding:22px;border:1.5px solid var(--ink);border-radius:18px}
-  .style-card svg{width:72px;height:72px}
-  .style-card .k{font:800 14px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .style-card h3{line-height:1.05}
-  .style-card p{font:400 16px/1.65 var(--sans);max-width:36em}
-  .sigline{display:flex;align-items:center;gap:8px;font:700 14px/1 var(--sans)}
-  .swatch{width:14px;height:14px;display:inline-block;flex:none}
-  .swatch.nav{background:#007aff}
-  .swatch.bus{background:#f6c037;border-radius:50%;box-shadow:inset 0 0 0 3px var(--ink)}
-  .swatch.crt{background:#5dff8a;box-shadow:inset 0 0 0 3px #050805}
-  .style-card .more{margin-top:auto;font:800 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px}
-  @media (hover:hover) and (pointer:fine){ .style-card:hover h3{text-decoration:underline;text-underline-offset:.08em} }
-
-  /* 플레이 — gdotgear.services 의 live 칸. 흐린 게임 위에 play */
-  .embed-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:14px}
-  .embed-title{font:800 clamp(28px,4vw,48px)/1 var(--sans);letter-spacing:-.03em;text-decoration:underline;text-underline-offset:5px}
-  .embed-head p{max-width:22em;text-align:right;font:500 16px/1.5 var(--sans);color:var(--muted)}
-  .embed-frame{position:relative;height:min(70vh,680px);min-height:380px;border-radius:28px;overflow:hidden;background:var(--chip)}
-  .embed-frame iframe{position:absolute;inset:-18px;width:calc(100% + 36px);height:calc(100% + 36px);border:0;filter:blur(16px);pointer-events:none;background:var(--chip)}
-  .embed.is-live iframe{inset:0;width:100%;height:100%;filter:none;pointer-events:auto}
-  .live-btn{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;
-    background:var(--ink);color:var(--bg);border-radius:999px;padding:12px 18px;font:700 16px/1 var(--sans)}
-  .embed.is-live .live-btn{left:16px;top:16px;bottom:auto;transform:none}
-  /* 인라인 svg 의 hidden 은 HTML 전용 UA 규칙이라 그대로 그려진다 */
-  .live-btn svg[hidden]{display:none !important}
-  .embed-out{position:absolute;z-index:2;right:16px;bottom:14px;font:600 14px/1 var(--sans);color:var(--ink);
-    background:color-mix(in srgb,var(--bg) 88%,transparent);border-radius:999px;padding:6px 10px}
-  .embed.is-live .embed-out{bottom:18px}
-
-  /* 플랜 — 세 칸이 가로로 선다. 월·연은 미정. 버튼은 아직 고를 수 없다.
-     이 화면은 _redirects 의 /landing/ 가 연다. 데이터 파일을 읽지 않는다. */
-  .plan-board{background:var(--chip);border-radius:22px;padding:16px 16px 18px}
-  .plan-note{padding:0 4px 14px;font:600 16px/1.5 var(--sans);color:var(--muted)}
-  .plans{display:flex;flex-flow:row nowrap;gap:12px;list-style:none;align-items:stretch;overflow-x:auto}
-  .plans > li{flex:1 0 220px;min-width:0;display:flex;flex-direction:column;gap:14px;padding:18px 16px;border-radius:16px;background:var(--bg);border:1.5px solid var(--line)}
-  .plans h3{font:800 clamp(20px,2vw,26px)/1.2 var(--sans);letter-spacing:-.02em}
-  .plan-rows{display:flex;flex-direction:column;gap:12px}
-  .plan-rows div{display:flex;flex-direction:column;gap:4px}
-  .plan-rows dt{font:600 14px/1.3 var(--sans);color:var(--muted)}
-  .plan-rows dd{font:500 16px/1.5 var(--sans)}
-  .plan-btn{margin-top:auto;align-self:flex-start;padding:8px 12px;border-radius:999px;border:1.5px solid var(--ink);
-    background:transparent;color:var(--ink);-webkit-text-fill-color:var(--ink);font:700 14px/1 var(--sans);cursor:not-allowed;opacity:1}
-
-  footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 12px;font-size:14px;font-weight:700;text-transform:uppercase;border-top:1.5px solid var(--ink);margin-top:10px}
-  footer a{text-decoration:underline;text-underline-offset:2px}
-
-  @media (max-width:860px){
-    .meta{grid-template-columns:1fr auto;gap:8px 16px}
-    .meta .date,.meta .mid,#ver{display:none}
-    .th .t:nth-child(n+3){display:none}
-    .en{display:none}
-    .p-dev,.styles{grid-template-columns:minmax(0,1fr)}
-    .p-dev .log li{grid-template-columns:1fr;gap:2px}
-    .embed-head{flex-direction:column;align-items:flex-start}
-    .embed-head p{text-align:left}
-    .embed-frame{min-height:320px}
+  /* ── 소개: 왼쪽 판을 내려 읽으면 오른쪽 지도가 바뀐다 ── */
+  section.intro{border-top:1px solid var(--line)}
+  .intro .head{display:flex;flex-direction:column;gap:20px;padding-top:clamp(72px,9vw,128px)}
+  .intro .head .lede{max-width:560px}
+  .explorer{display:grid;grid-template-columns:minmax(0,520px) minmax(0,1fr);gap:clamp(40px,5vw,96px);padding-bottom:clamp(48px,6vw,96px)}
+  .panel{min-height:78svh;display:flex;flex-direction:column;justify-content:center;gap:22px;transition:opacity .45s var(--ease-out),filter .45s var(--ease-out)}
+  .js .panel:not(.is-now){opacity:.28;filter:blur(2px)}
+  .panel .num{font-size:var(--fs-name);font-weight:500;letter-spacing:-.05em;line-height:.95;font-variant-numeric:tabular-nums}
+  .panel h3{font-size:clamp(24px,2.4vw,34px);font-weight:500;letter-spacing:-.03em;line-height:1.2}
+  .panel p{font-size:17px;line-height:1.75}
+  .items{display:flex;flex-direction:column;gap:12px;font-size:17px;line-height:1.5}
+  .items li{display:flex;align-items:center;gap:14px}
+  .items b{font-weight:600}
+  .items svg{flex:none;width:16px;height:12px}
+  .items rect{fill:var(--fg)}
+  .ex-stage{position:sticky;top:88px;height:calc(100svh - 120px);display:grid;place-items:center;align-self:start}
+  .ex-stage figure{width:100%;max-width:860px;position:relative}
+  .ex-stage figcaption{margin-top:18px;text-align:center}
+  .ex .full,.ex .dong,.ex .course{transition:opacity .5s var(--ease-soft)}
+  .ex .dong{opacity:0}
+  .ex .course{opacity:0}
+  .ex .course path{fill:none;stroke:var(--fg);stroke-width:.42;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.4s var(--ease-soft)}
+  .ex .course rect.end{fill:var(--bg);stroke:var(--fg);stroke-width:.3}
+  .ex .course text{font:600 1.05px var(--font);fill:var(--fg);paint-order:stroke;stroke:var(--bg);stroke-width:.35}
+  .ex[data-show="dong"] .full{opacity:0}
+  .ex[data-show="dong"] .dong{opacity:1}
+  .ex[data-show="course"] .full{opacity:var(--dim)}
+  .ex[data-show="course"] .course{opacity:1}
+  .ex[data-show="course"] .course path{stroke-dashoffset:0}
+  /* 좁은 화면에서는 옆 지도를 붙박지 않는다 — 붙박으면 올라오는 글이 그 밑으로 가려진다.
+     대신 판마다 제 지도를 하나씩 품어 글과 함께 흘러간다 */
+  .ex-mini{display:none}
+  /* 판 지도는 화면에 들어올 때마다(.play) 그 판의 이야기대로 한 번 움직인다. 칸마다 --x(열)만큼 늦어 서쪽부터 번진다.
+     .play 가 빠지면 전환 없이 처음 모습으로 돌아가 다음에 다시 움직일 준비를 한다 */
+  .ex-mini.play rect{transition:opacity .3s var(--ease-out) calc(var(--x,0) * 15ms)}
+  .ex-mini[data-show="full"] .full rect{opacity:0}
+  .ex-mini[data-show="full"].play .full rect{opacity:1}
+  .ex-mini[data-show="dong"] :is(.full,.dong){opacity:1}
+  .ex-mini[data-show="dong"] .dong rect{opacity:0}
+  .ex-mini[data-show="dong"].play .full rect{opacity:0}
+  .ex-mini[data-show="dong"].play .dong rect{opacity:1}
+  .ex-mini[data-show="course"]:not(.play) .course path{stroke-dashoffset:1;transition:none}
+  @media (max-width:899px){
+    .explorer{grid-template-columns:1fr;gap:0}
+    .ex-stage{display:none}
+    .ex-mini{display:block;max-width:340px}
+    .panel{min-height:auto;padding-block:48px}
+    .js .panel:not(.is-now){opacity:1;filter:none}
   }
-  @media (max-width:480px){ .th .t:nth-child(n+2){display:none} .menu{padding:0 8px} }
+
+  /* ── 개발: 여섯 걸음 ── */
+  section.dev{border-block:1px solid var(--line)}
+  .dev .in{display:flex;flex-direction:column;gap:clamp(40px,5vw,72px);padding-block:clamp(120px,14vw,200px)}
+  .dev .head{display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center}
+  .dev .head .lede{max-width:560px}
+  .steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:48px 0}
+  .steps li{display:flex;flex-direction:column;gap:16px;min-width:0;padding-right:20px}
+  .steps .n{font-size:clamp(48px,5.6vw,96px);font-weight:500;letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums}
+  .rule{display:block;height:4px;transform-origin:0;background:var(--c)}
+  .rule.thick{height:8px}
+  .steps h3{font-size:clamp(22px,1.9vw,28px);font-weight:500;letter-spacing:-.03em;line-height:1.15}
+  .steps .desc{color:var(--soft);font-size:16px;line-height:1.65}
+  .steps .who{font-size:13px;color:var(--soft);display:flex;align-items:center;gap:8px}
+  .steps .who::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c);flex:none}
+  .stack{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--fg)}
+  .stack div{padding:22px 20px 0 0;display:flex;flex-direction:column;gap:6px}
+  .stack b{font-size:17px;font-weight:500;letter-spacing:-.02em}
+  @media (max-width:1099px){ .steps{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media (max-width:640px){ .steps{grid-template-columns:repeat(2,minmax(0,1fr))} .stack{grid-template-columns:1fr} }
+
+  /* ── 스토리: 줄마다 큰 한 문장 ── */
+  .story .in{display:flex;flex-direction:column;gap:clamp(36px,4.4vw,64px);padding-block:clamp(56px,6vw,96px)}
+  .story .head{display:flex;flex-direction:column;gap:20px}
+  .chapters{border-bottom:1px solid var(--line)}
+  .chapters li{--pad:clamp(24px,3vw,40px);padding-block:var(--pad);border-top:1px solid var(--fg);display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 48px}
+  .chapters li+li{border-top-color:var(--line)}
+  .chapters .t{flex:2 1 440px;display:flex;gap:clamp(16px,2vw,32px);align-items:baseline}
+  .chapters .t small{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums;flex:none;width:2.4em}
+  .chapters h3{font-size:clamp(30px,4.4vw,64px);font-weight:500;letter-spacing:-.045em;line-height:1.05}
+  .chapters .meta{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px;font-size:17px;line-height:1.65;padding-top:.5em}
+  .salt{display:grid;grid-template-columns:auto 1fr;gap:4px 20px;align-items:end;padding:22px 24px;background:var(--panel);border:1px solid var(--line);border-radius:24px}
+  .salt b{grid-row:span 2;font-size:clamp(44px,5vw,72px);font-weight:500;letter-spacing:-.05em;line-height:.9}
+  .salt span{font-size:13px;color:var(--soft)}
+  .salt blockquote{grid-column:1/-1;margin-top:14px;font-size:16px;line-height:1.65}
+
+  /* ── 플랜: 기록부 ── */
+  section.plan{border-top:1px solid var(--line)}
+  .plan .in{display:flex;flex-wrap:wrap;align-items:flex-start;gap:40px 64px;padding-block:clamp(56px,6vw,96px)}
+  .plan .head{flex:1 1 340px;display:flex;flex-direction:column;gap:20px;min-width:0}
+  .plan .head p{max-width:360px;color:var(--soft);font-size:16px;line-height:1.75}
+  .lists{flex:2 1 560px;min-width:0;display:flex;flex-direction:column;gap:48px}
+  .log{border-top:1px solid var(--fg)}
+  .log>li{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;padding-block:22px;border-bottom:1px solid var(--line)}
+  .log .d{flex:0 0 76px;font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
+  .log .shape{flex:none;width:64px;height:36px}
+  .log .shape rect{fill:var(--fg)}
+  .log .shape rect.o{fill:var(--line)}
+  .log .tt{flex:1 1 260px;min-width:0;font-size:22px;letter-spacing:-.02em;line-height:1.3}
+  .log .tt small{display:block;font-size:14px;letter-spacing:0;color:var(--soft);margin-top:2px}
+  .log.recent .tt{font-size:17px;letter-spacing:-.01em;color:var(--soft)}
+  .log .who{flex:0 0 120px;font-size:13px;color:var(--soft)}
+  .log .st{flex:0 0 96px;display:flex}
+  .sub{font-size:13px;color:var(--soft);margin-bottom:12px;display:flex;justify-content:space-between;gap:12px}
+  .sub a{text-underline-offset:.2em}
+  .quiet{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--soft)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--fg);flex:none}
+  .pill{display:inline-block;white-space:nowrap;border-radius:999px;font-size:13px;font-weight:600}
+  .pill.prog{background:var(--pg-bg);color:var(--pg-fg);padding:5px 14px}
+  .pill.plan{border:1px solid var(--fg);padding:4px 13px}
+  @media (max-width:640px){ .log .d{flex-basis:auto} .log .who{flex-basis:auto} .log .st{flex-basis:auto} }
+
+  /* ── 플레이 ── */
+  section.play{border-top:1px solid var(--line);overflow:hidden}
+  .play .in{display:flex;flex-direction:column;align-items:center;text-align:center;gap:28px;padding-block:clamp(120px,15vw,240px) clamp(56px,7vw,104px)}
+  .play .lede{max-width:520px}
+  .try{width:min(100%,420px);display:flex;flex-direction:column;gap:14px;align-items:center}
+  .try .mark{max-width:300px}
+  .try .mark rect{fill:var(--line);transition:fill .3s var(--ease-out)}
+  .try .mark rect.on{fill:var(--fg)}
+  .try label{font-size:13px;color:var(--soft)}
+  .try input{width:100%;font:500 20px var(--font);letter-spacing:-.02em;text-align:center;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:14px 22px;outline:0}
+  .try input:focus-visible{border-color:var(--fg);outline:2px solid var(--fg);outline-offset:2px}
+  .try output{font-size:13px;color:var(--soft);min-height:1.6em;font-variant-numeric:tabular-nums}
+  .actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+  .actions .cta{padding:17px 30px;font-size:17px}
+  .btn-line{display:inline-flex;align-items:center;padding:16px 29px;font-size:17px;font-weight:500;border:1px solid var(--fg);border-radius:999px;text-decoration:none}
+  @media (hover:hover) and (pointer:fine){ .btn-line:hover{background:var(--fg);color:var(--bg)} }
+
+  /* 맨 아래 흐림 띠(.edge.bot, 96px)에 글자가 걸리지 않게 바닥에 그만큼 여유를 둔다 */
+  footer{font-size:13px;color:var(--soft);padding-bottom:96px}
+  footer .row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 24px;padding-top:12px}
+  footer .row b{color:var(--fg);font-weight:600;letter-spacing:-.03em}
+  footer nav{display:flex;flex-wrap:wrap;gap:0 22px}
+  footer nav a{padding-block:12px;text-decoration:none}
+  @media (hover:hover) and (pointer:fine){ footer nav a:hover{text-decoration:underline;text-underline-offset:.2em} }
+
+  /* 나타나기 */
+  .js [data-reveal]{opacity:0;transform:translateY(16px)}
+  .js [data-reveal].is-in{opacity:1;transform:none;transition:opacity .6s var(--ease-out) calc(var(--i,0) * 60ms),transform .6s var(--ease-out) calc(var(--i,0) * 60ms)}
+  .js [data-reveal] .rule,.js .eyebrow[data-reveal] i{transform:scaleX(0)}
+  .js [data-reveal].is-in .rule,.js .eyebrow[data-reveal].is-in i{transform:none;transition:transform .7s var(--ease-out) calc(var(--i,0) * 60ms + .15s)}
+
   @media (prefers-reduced-motion:reduce){
-    .drawer,.sign,.row{transition:none}
-    .p-dev .caret{animation:none}
-    .js .reel{height:auto}
-    .js .stage{position:static;min-height:0;display:block}
-    .js .beats{display:block}
-    .js .beat,.js .beat:not(.on){opacity:1;grid-area:auto;pointer-events:auto;margin-top:36px;position:static;visibility:visible;width:auto}
-    .step,.step.on{color:var(--ink);text-decoration:none}
-    .scroll-hint{display:none}
-    .embed-frame iframe{transition:none}
+    *,*::before,*::after{animation:none!important}
+    .half,.word,.copy,.panel,.hero .river,.hero .rline,.ex .course path,.lens{transition-property:opacity!important;transition-duration:.2s!important}
+    .hero .half.n,.hero .half.s{transform:none}
+    .stage:is([data-scene="1"],[data-scene="2"]) .half{opacity:var(--dim)}
+    /* 차오름 애니메이션이 꺼지면 비추는 반쪽을 바로 검게 둔다 */
+    .stage[data-scene="3"] .half.n rect,.stage[data-scene="5"]:not(.leave) .half.s rect{opacity:1}
+    .hero .river rect{transform:none!important;transition-delay:0s!important}
+    .js [data-reveal]{transform:none!important}
+    .js [data-reveal] .rule,.js .eyebrow[data-reveal] i{transform:none!important}
+    .js .panel:not(.is-now){filter:none}
+    .ex-mini rect,.ex-mini .course path{transition:none!important}
   }
 </style>
 </head>
 <body>
+<a class="sr" href="#intro">본문으로 건너뛰기</a>
 
-<header class="meta">
-  <a href="../../">regiontype</a>
-  <span class="date" id="date"></span>
-  <span class="mid" role="group" aria-label="펼치기">↓<button type="button" id="openAll" aria-pressed="false">모두 펼치기</button> / <button type="button" id="closeAll" aria-pressed="true">접기</button></span>
-  <span id="ver">v—</span>
-  <span><a class="play-cta" href="#play" id="goPlay">바로 플레이</a><span class="ring" aria-hidden="true"></span></span>
+<header>
+  <div class="wrap bar">
+    <a class="home" href="#top" aria-label="regiontype, 맨 위로">
+      <svg viewBox="0 0 13 10" aria-hidden="true"><rect x="0" y="0" width="3" height="3" rx=".6"/><rect x="4" y="0" width="3" height="3" rx=".6"/><rect x="8" y="1" width="3" height="3" rx=".6"/><rect x="2" y="6" width="3" height="3" rx=".6"/><rect x="6" y="7" width="3" height="3" rx=".6"/><rect x="10" y="6" width="3" height="3" rx=".6"/></svg>
+      <span>regiontype</span>
+    </a>
+    <nav class="main" aria-label="주 메뉴">
+      <a href="#intro">소개</a><a href="#dev">개발</a><a href="#story">스토리</a><a href="#plan">플랜</a>
+      <a class="cta" href="#play">플레이</a>
+    </nav>
+  </div>
 </header>
+<div class="edge bot" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="edge lft" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="edge rgt" aria-hidden="true"><i></i><i></i><i></i></div>
 
-<h1 class="sr">regiontype — 지명을 치는 타자연습</h1>
+<main>
+<section class="hero" id="top" aria-labelledby="h-top">
+  <h1 class="sr" id="h-top">regiontype — 지명을 치는 타자연습</h1>
+  <div class="stage" data-scene="0">
+    <div class="lens">
+      <p class="word" aria-hidden="true"></p>
+      <svg class="mark" id="heroMark" viewBox="0 0 32 27" role="img" aria-label="서울 25개 자치구 격자 지도. 위는 강북, 아래는 강남, 사이는 한강"></svg>
+      <div class="copy mid" data-copy="1"><p class="big">지명을 치면,<br>지도가 남는다.</p></div>
+      <div class="copy mid" data-copy="2"><p class="body">지도에 뜬 지역 이름을 손으로 직접 칩니다. 본 것과 아는 것은 다릅니다.</p></div>
+      <div class="copy under" data-copy="3"><p class="k">위 반쪽 · 한강 북쪽</p><p class="n">강북 14구</p><p class="b">은평구·마포구에서 노원구·도봉구까지.</p></div>
+      <div class="copy under" data-copy="4"><p class="k">가운데 · 렌즈</p><p class="n">한강</p><p class="b">강서구에서 성북구까지 도는 코스는 한강을 세 번 건넙니다.</p></div>
+      <div class="copy under" data-copy="5"><p class="k">아래 반쪽 · 한강 남쪽</p><p class="n">강남 11구</p><p class="b">강서구·구로구에서 송파구·강동구까지.</p></div>
+    </div>
+    <p class="hint" aria-hidden="true">↓ 내려서 읽기</p>
+  </div>
+</section>
 
-<ol class="menu">
-  <li class="row tall" id="about">
-    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-about">
-      <span class="nm">소개</span><span class="en">About</span>
-      <span class="th" aria-hidden="true"><span class="t t-dot" id="th-map"></span><span class="t t-num">423</span><span class="t t-num" style="background:var(--accent);color:var(--on-accent);border-color:transparent">25</span></span>
-      <span class="sign" aria-hidden="true">+</span>
-    </button></h2>
-    <div class="drawer" id="d-about" role="region" aria-label="소개"><div><div class="panel">
-      <div class="reel" data-reel style="--n:5">
-        <div class="stage">
-          <ol class="idx" aria-hidden="true"><li class="step on">01</li><li class="step">02</li><li class="step">03</li><li class="step">04</li><li class="step">05</li></ol>
-          <div class="beats">
-            <article class="beat on">
-              <h3>지명을 치면, 지도가 남는다.</h3>
-              <p>지도에 뜬 지역 이름을 손으로 직접 칩니다.</p>
-            </article>
-            <article class="beat">
-              <h3>본 것과 아는 것은 다릅니다.</h3>
-              <p>눈으로 훑으면 "봤다"에서 끝납니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
-            </article>
-            <article class="beat">
-              <p class="fig">25</p>
-              <h3>서울 자치구에서 시작합니다.</h3>
-              <p>첫 판은 서울 25개 자치구입니다. 홈에서 치는 판은 서울이고, 지도 데이터에는 46개 나라의 행정구역이 있습니다. 서울 밖은 미리보기입니다.</p>
-            </article>
-            <article class="beat">
-              <p class="fig">423</p>
-              <h3>구를 열면 행정동입니다.</h3>
-              <p>전부 합치면 423곳입니다. 주민센터 하나가 맡는 단위이고, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
-            </article>
-            <article class="beat">
-              <h3>코스는 이어진 길입니다.</h3>
-              <p>서쪽 끝 강서구에서 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대입니다. 가나다순이면 강남·강동·강북·강서가 한꺼번에 몰립니다.</p>
-              <figure class="route-fig">
-                <svg id="route" viewBox="0 0 1000 822" role="img" aria-label="강서구에서 성북구까지 시계 방향으로 도는 자치구 코스"></svg>
-                <figcaption>자치구 코스 — 강서구에서 성북구까지</figcaption>
-              </figure>
-            </article>
-          </div>
-          <p class="scroll-hint">스크롤하면 다음 문장</p>
-        </div>
+<section class="intro" id="intro" aria-labelledby="h-intro">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow" data-reveal><i></i>소개</p>
+      <h2 class="h2" id="h-intro" data-reveal style="--i:1">본 것과<br>아는 것은 다릅니다.</h2>
+      <p class="lede" data-reveal style="--i:2">눈으로 훑으면 "봤다"에서 끝납니다. 철자를 하나씩 옮기려면 이름을 통째로 붙들고 있어야 합니다. 강서구를 칠 때 커서가 서울 서쪽 끝에 가 있으면, 다음번엔 이름만 들어도 그쪽으로 눈이 갑니다.</p>
+    </div>
+    <div class="explorer">
+      <div class="panels">
+        <article class="panel" data-panel="full">
+          <svg class="mark ex ex-mini" viewBox="0 0 32 27" data-show="full" aria-hidden="true"></svg>
+          <p class="num">25</p>
+          <h3>서울 자치구에서 시작합니다.</h3>
+          <p>첫 판은 서울 25개 자치구입니다. 홈에서 치는 판은 서울이고, 지도 데이터에는 46개 나라의 행정구역이 있습니다. 서울 밖은 미리보기입니다.</p>
+          <ul class="items"><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect width="4" height="3" rx=".5"/></svg><span><b>서울</b> · 25개 자치구</span></li><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect width="4" height="3" rx=".5"/></svg><span><b>지도 데이터</b> · 46개 나라의 행정구역</span></li><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect width="4" height="3" rx=".5"/></svg><span><b>서울 밖</b> · 미리보기</span></li></ul>
+        </article>
+        <article class="panel" data-panel="dong">
+          <svg class="mark ex ex-mini" viewBox="0 0 32 27" data-show="dong" aria-hidden="true"></svg>
+          <p class="num">423</p>
+          <h3>구를 열면 행정동입니다.</h3>
+          <p>전부 합치면 423곳입니다. 주민센터 하나가 맡는 단위이고, 이 숫자는 앱이 쓰는 데이터 기준입니다.</p>
+          <ul class="items"><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect width="1.6" height="1.2" rx=".3"/><rect x="2.4" width="1.6" height="1.2" rx=".3"/><rect y="1.8" width="1.6" height="1.2" rx=".3"/><rect x="2.4" y="1.8" width="1.6" height="1.2" rx=".3"/></svg><span><b>행정동</b> · 423곳</span></li><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect width="1.6" height="1.2" rx=".3"/><rect x="2.4" width="1.6" height="1.2" rx=".3"/><rect y="1.8" width="1.6" height="1.2" rx=".3"/><rect x="2.4" y="1.8" width="1.6" height="1.2" rx=".3"/></svg><span><b>단위</b> · 동주민센터 하나가 맡는 구역</span></li><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect width="1.6" height="1.2" rx=".3"/><rect x="2.4" width="1.6" height="1.2" rx=".3"/><rect y="1.8" width="1.6" height="1.2" rx=".3"/><rect x="2.4" y="1.8" width="1.6" height="1.2" rx=".3"/></svg><span><b>법정동</b> · 설정에서 바꿔 칠 수 있음</span></li></ul>
+        </article>
+        <article class="panel" data-panel="course">
+          <svg class="mark ex ex-mini" viewBox="0 0 32 27" data-show="course" aria-hidden="true"></svg>
+          <p class="num">→</p>
+          <h3>코스는 이어진 길입니다.</h3>
+          <p>서쪽 끝 강서구에서 시계 방향으로 한 바퀴 돌아 성북구에서 끝납니다. 순서 자체가 지리를 외우는 뼈대입니다. 가나다순이면 강남·강동·강북·강서가 한꺼번에 몰립니다.</p>
+          <ul class="items"><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect y="1" width="4" height="1" rx=".5"/></svg><span><b>시작</b> · 강서구</span></li><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect y="1" width="4" height="1" rx=".5"/></svg><span><b>끝</b> · 성북구</span></li><li><svg viewBox="0 0 4 3" aria-hidden="true"><rect y="1" width="4" height="1" rx=".5"/></svg><span><b>한강</b> · 세 번 건넘</span></li></ul>
+        </article>
       </div>
-    </div></div></div>
-  </li>
+      <div class="ex-stage">
+        <figure>
+          <svg class="mark ex" id="exMark" viewBox="0 0 32 27" data-show="full" role="img" aria-label="서울 격자 지도"></svg>
+          <figcaption class="label" id="exCap" aria-live="polite">서울 25개 자치구</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <li class="row" id="dev">
-    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-dev">
-      <span class="nm">개발</span><span class="en">Development</span>
-      <span class="th" aria-hidden="true"><span class="t t-term">$ python3
-  -m http
-  .server
-▍</span><span class="t t-ver" id="th-ver">v—</span><span class="t t-term">?rt=1
-ok</span></span>
-      <span class="sign" aria-hidden="true">+</span>
-    </button></h2>
-    <div class="drawer" id="d-dev" role="region" aria-label="개발"><div><div class="panel p-dev">
+<section class="dev" id="dev" aria-labelledby="h-dev">
+  <div class="wrap in">
+    <div class="head">
+      <p class="eyebrow" data-reveal><i></i>개발</p>
+      <h2 class="h2" id="h-dev" data-reveal style="--i:1">단순하게 만듭니다.</h2>
+      <p class="lede" data-reveal style="--i:2">설치할 것도, 복잡한 장치도 없습니다. 지도는 도구가 만들고, 판정은 한곳에서 맡고, 검사는 두 가지뿐입니다.</p>
+    </div>
+    <!-- 개발을 모르는 사람이 읽는 자리라 파일 이름·명령어는 적지 않는다. 각 걸음의 원문은 CLAUDE.md 에 있다 -->
+    <ol class="steps">
+      <li data-reveal style="--i:0;--c:var(--t-data)"><span class="n">01</span><span class="rule"></span><h3>지도를 만듭니다</h3><p class="desc">구와 동의 경계·이름은 손으로 그리지 않고 도구로 뽑아 지도와 코스로 만듭니다. 고칠 일이 생기면 지도가 아니라 도구를 고칩니다.</p><span class="who">지도</span></li>
+      <li data-reveal style="--i:1;--c:var(--t-data)"><span class="n">02</span><span class="rule"></span><h3>읽기를 붙입니다</h3><p class="desc">화면을 다른 나라 말로 바꿔도 칠 수 있게, 지명마다 그 말의 읽는 법을 붙입니다. 일본어는 히라가나로, 중국어는 병음으로 칩니다.</p><span class="who">읽기</span></li>
+      <li data-reveal style="--i:2;--c:var(--t-make)"><span class="n">03</span><span class="rule"></span><h3>판정합니다</h3><p class="desc">친 글자가 어느 지명인지 바로 가려냅니다. 줄임말은 그 말로 시작하는 남은 이름이 하나뿐일 때만 인정합니다.</p><span class="who">판정</span></li>
+      <li data-reveal style="--i:3;--c:var(--t-make)"><span class="n">04</span><span class="rule"></span><h3>그립니다</h3><p class="desc">화면은 파일 두 장으로 그립니다. 색과 간격은 한곳에 모아 두고 꺼내 씁니다.</p><span class="who">화면</span></li>
+      <li data-reveal style="--i:4;--c:var(--t-make)"><span class="n">05</span><span class="rule"></span><h3>검사합니다</h3><p class="desc">판정이 맞게 도는지, 순위·경쟁전 서버가 제대로 답하는지 — 이 두 가지를 검사합니다.</p><span class="who">검사</span></li>
+      <li data-reveal style="--i:5;--c:var(--t-ship)"><span class="n">06</span><span class="rule thick"></span><h3>내보냅니다</h3><p class="desc">버전마다 작업 가지를 따로 내어 고치고, 끝나면 본 줄기에 합쳐 사이트에 올립니다.</p><span class="who">배포</span></li>
+    </ol>
+    <div class="stack" data-reveal>
+      <div><span class="label">하는 곳</span><b>설치 없이 브라우저에서 바로</b></div>
+      <div><span class="label">경쟁전</span><b>한 판마다 서버가 지켜보며 판정</b></div>
+      <div><span class="label">실력</span><b>판마다 오르내리는 실력 점수</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="story" id="story" aria-labelledby="h-story">
+  <div class="wrap in">
+    <div class="head">
+      <p class="eyebrow" data-reveal><i></i>스토리</p>
+      <h2 class="h2" id="h-story" data-reveal style="--i:1">남는 쪽은<br>손이었습니다.</h2>
+    </div>
+    <ol class="chapters">
+      <li data-reveal><div class="t"><small>01</small><h3>읽어서는 이름이 남지 않았습니다.</h3></div><div class="meta"><p>지도에서 구 이름을 눈으로 따라가도 자리와 철자가 따로 놀았습니다. 남는 쪽은 손이었습니다.</p></div></li>
+      <li data-reveal><div class="t"><small>02</small><h3>타자의 방식을 지명에 가져왔습니다.</h3></div><div class="meta"><p>다음 글자를 치려면 이름을 통째로 붙들고 있어야 합니다. 설치 없이, 가입하지 않아도 지도에서 고르고 칩니다.</p></div></li>
+      <li data-reveal><div class="t"><small>03</small><h3>처음 길은 서울 한 바퀴였습니다.</h3></div><div class="meta"><p>무작위 목록은 지리가 아닙니다. 서쪽 끝 강서구에서 이웃한 구를 따라 시계 방향으로 성북구까지 잇습니다. 구 안의 동도 같은 방식으로 이웃을 따라갑니다.</p></div></li>
+      <li data-reveal><div class="t"><small>04</small><h3>사람이 드나드는 동을 골랐습니다.</h3></div><div class="meta"><p>법정동은 땅에 붙은 이름이고, 행정동은 동주민센터 하나가 맡는 구역입니다. 플레이하는 423곳은 행정동입니다. 설정에서는 법정동으로 바꿔 칠 수도 있습니다.</p></div></li>
+      <li data-reveal><div class="t"><small>05</small><h3>한 줄 소개는 자료에 있는 것만 올립니다.</h3></div><div class="meta">
+        <figure class="salt"><b>염창</b><span>소금 창고</span><span>鹽倉 · 강서구</span><blockquote id="salt">염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다.</blockquote></figure>
+      </div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="plan" id="plan" aria-labelledby="h-plan">
+  <div class="wrap in">
+    <div class="head">
+      <p class="eyebrow" data-reveal><i></i>플랜</p>
+      <h2 class="h2" id="h-plan" data-reveal style="--i:1">앞으로.</h2>
+      <p data-reveal style="--i:2">지금은 서울을 무료로 칩니다. 지도 범위에 따라 플랜이 셋으로 나뉠 예정이고, 월·연 가격은 미정입니다. 아직 고를 수 없습니다.</p>
+    </div>
+    <div class="lists">
       <div>
-        <p class="k">regiontype.com / main</p>
-        <p class="big" id="dev-ver">v—</p>
-        <pre class="cm" id="dev-ver-note"># 릴리스 이름 vA.B.C — C 는 app.js 의 VER 에서 점을 뺀 숫자</pre>
-        <p class="k">stack</p>
-        <pre>정적 파일뿐이다. 빌드 단계도, 패키지 매니저도,
-프레임워크도 없다.</pre>
-        <pre>$ python3 -m http.server 3000   <span class="cm"># 실행</span>
-$ open localhost:3000/?rt=1      <span class="cm"># 판정 엔진 자체검사</span>
-$ node relay/test.mjs            <span class="cm"># 중계기 검사</span></pre>
-        <pre>.
-├── app.js        <span class="cm"># 단일 파일. 핵심은 matchInput()</span>
-├── style.css     <span class="cm"># 단일 파일. 색·간격은 커스텀 프로퍼티</span>
-├── data/         <span class="cm"># tools/*.py 가 찍은 지도·코스</span>
-├── relay/        <span class="cm"># Cloudflare Worker — 순위·경쟁전</span>
-└── mimi/ beta/   <span class="cm"># 실험 갈래</span></pre>
-        <pre class="cm"># 경쟁전 판정은 Durable Objects 가 맡고,
-# 실력은 Glicko-2 로 매긴다. <span class="caret" aria-hidden="true"></span></pre>
-      </div>
-      <div>
-        <p class="k">바뀐 것</p>
-        <div class="bar"><label class="sr" for="grep">바뀐 것 찾기</label><span>$</span><input id="grep" placeholder="검색" autocomplete="off" spellcheck="false"><span class="cm" id="hits"></span></div>
-        <ol class="log" id="log"></ol>
-      </div>
-    </div></div></div>
-  </li>
-
-  <li class="row" id="style">
-    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-style">
-      <span class="nm">스타일</span><span class="en">Style</span>
-      <span class="th" aria-hidden="true">
-        <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg></span>
-        <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg></span>
-        <span class="t t-ico"><svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg></span>
-        <span class="t t-num">베타</span>
-      </span>
-      <span class="sign" aria-hidden="true">+</span>
-    </button></h2>
-    <div class="drawer" id="d-style" role="region" aria-label="스타일"><div><div class="panel">
-      <div class="styles">
-        <a class="style-card" href="../../beta/3dnavigation/">
-          <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 92 29v42L50 94 8 71V29Z" fill="currentColor"/></svg>
-          <p class="k">베타 · 01</p>
-          <h3>3D 내비게이션</h3>
-          <p>실제 지도 위에 3D 건물과 길을 얹습니다. 동 경계는 코스 데이터와 같은 자리를 씁니다. 화면은 시스템 색과 맑은 유리 판으로 읽힙니다.</p>
-          <p class="sigline"><i class="swatch nav" aria-hidden="true"></i>시스템 파랑</p>
-          <span class="more">베타 열기</span>
-        </a>
-        <a class="style-card" href="../../beta/bus/">
-          <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="16"/></svg>
-          <p class="k">베타 · 02</p>
-          <h3>동네버스</h3>
-          <p>정류장 이름을 치면 버스가 그 정류장으로 가서 손님을 실어 나릅니다. 25개 자치구가 행정동 코스 순서로 늘어서 있습니다. 노선은 노랑이고, 정류장은 고리입니다.</p>
-          <p class="sigline"><i class="swatch bus" aria-hidden="true"></i>노선 노랑</p>
-          <span class="more">베타 열기</span>
-        </a>
-        <a class="style-card" href="../../beta/crt/">
-          <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="16" width="80" height="62" rx="12" fill="none" stroke="currentColor" stroke-width="10"/><rect x="26" y="34" width="14" height="26" fill="currentColor"/></svg>
-          <p class="k">베타 · 03</p>
-          <h3>CRT 터미널</h3>
-          <p>셸에서 구를 열면 그 구의 지도가 형광체 선으로 떠오릅니다. 프롬프트에 행정동 이름을 쳐서 Enter 로 확정합니다. 녹색·앰버·백색 형광체를 고를 수 있습니다.</p>
-          <p class="sigline"><i class="swatch crt" aria-hidden="true"></i>형광 녹색</p>
-          <span class="more">베타 열기</span>
-        </a>
-      </div>
-    </div></div></div>
-  </li>
-
-  <li class="row tall" id="story">
-    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-story">
-      <span class="nm">스토리</span><span class="en">Story</span>
-      <span class="th" aria-hidden="true"><span class="t t-book">염창</span><span class="t t-quote">소금 창고</span><span class="t t-ink">鹽倉</span></span>
-      <span class="sign" aria-hidden="true">+</span>
-    </button></h2>
-    <div class="drawer" id="d-story" role="region" aria-label="스토리"><div><div class="panel">
-      <div class="reel" data-reel style="--n:5">
-        <div class="stage">
-          <ol class="idx" aria-hidden="true"><li class="step on">01</li><li class="step">02</li><li class="step">03</li><li class="step">04</li><li class="step">05</li></ol>
-          <div class="beats">
-            <article class="beat on">
-              <h3>읽어서는 이름이 남지 않았습니다.</h3>
-              <p>지도에서 구 이름을 눈으로 따라가도 자리와 철자가 따로 놀았습니다. 남는 쪽은 손이었습니다.</p>
-            </article>
-            <article class="beat">
-              <h3>타자의 방식을 지명에 가져왔습니다.</h3>
-              <p>다음 글자를 치려면 이름을 통째로 붙들고 있어야 합니다. 설치 없이, 가입하지 않아도 지도에서 고르고 칩니다.</p>
-            </article>
-            <article class="beat">
-              <h3>처음 길은 서울 한 바퀴였습니다.</h3>
-              <p>무작위 목록은 지리가 아닙니다. 서쪽 끝 강서구에서 이웃한 구를 따라 시계 방향으로 성북구까지 잇습니다. 구 안의 동도 같은 방식으로 이웃을 따라갑니다. 가나다순이면 강남·강동·강북·강서가 한 덩어리가 됩니다.</p>
-            </article>
-            <article class="beat">
-              <h3>사람이 드나드는 동을 골랐습니다.</h3>
-              <p>법정동은 땅에 붙은 이름이고, 행정동은 동주민센터 하나가 맡는 구역입니다. 플레이하는 423곳은 행정동입니다. 설정에서는 법정동으로 바꿔 칠 수도 있습니다.</p>
-            </article>
-            <article class="beat">
-              <h3>한 줄 소개는 자료에 있는 것만 올립니다.</h3>
-              <p>염창(鹽倉)은 소금 창고. 서해에서 배로 올라온 소금을 여기 쌓아 도성으로 보냈다. 강서구의 동쪽 끝이다.</p>
-            </article>
-          </div>
-          <p class="scroll-hint">스크롤하면 다음 문장</p>
-        </div>
-      </div>
-    </div></div></div>
-  </li>
-
-  <li class="row" id="play">
-    <h2 class="row-title">
-      <button class="head" type="button" aria-expanded="false" aria-controls="d-play">
-        <span class="nm">플레이</span><span class="en">Play</span>
-        <span class="sign" aria-hidden="true">+</span>
-      </button>
-      <a class="play-site" href="../../#home" target="_blank" rel="noopener" aria-label="regiontype.com 바로가기 (새 탭)">바로가기 <span aria-hidden="true">↗</span></a>
-    </h2>
-    <div class="drawer" id="d-play" role="region" aria-label="플레이"><div><div class="panel">
-      <div class="embed" id="embed">
-        <div class="embed-head">
-          <a class="embed-title" href="../../#home" target="_blank" rel="noopener">regiontype.com <span aria-hidden="true">↗</span></a>
-          <p>지명을 직접 쳐서 익히는 타자연습.</p>
-        </div>
-        <div class="embed-frame">
-          <iframe id="game" title="regiontype 게임" data-src="../../"></iframe>
-          <button type="button" class="live-btn" id="liveBtn" aria-pressed="false">
-            <svg class="ico-play" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true"><path d="M1 1.2 11 7 1 12.8Z" fill="currentColor"/></svg>
-            <svg class="ico-pause" viewBox="0 0 12 14" width="12" height="14" aria-hidden="true" hidden><path d="M1 1h3.2v12H1Zm6.8 0H11v12H7.8Z" fill="currentColor"/></svg>
-            <span class="live-label">play</span>
-          </button>
-          <a class="embed-out" href="../../#home" target="_blank" rel="noopener">새 탭에서 열기 <span aria-hidden="true">↗</span></a>
-        </div>
-      </div>
-    </div></div></div>
-  </li>
-
-  <li class="row" id="plans">
-    <h2 class="row-title"><button class="head" type="button" aria-expanded="false" aria-controls="d-plans">
-      <span class="nm">플랜</span><span class="en">Plan</span>
-      <span class="th" aria-hidden="true"><span class="t t-num">수도</span><span class="t t-num">전국</span><span class="t t-num">세계</span></span>
-      <span class="sign" aria-hidden="true">+</span>
-    </button></h2>
-    <div class="drawer" id="d-plans" role="region" aria-label="플랜"><div><div class="panel">
-      <div class="plan-board">
-        <p class="plan-note">월·연 가격은 미정입니다. 아직 고를 수 없습니다.</p>
-        <ul class="plans">
-          <li>
-            <h3>Capital (수도), 무료</h3>
-            <dl class="plan-rows">
-              <div><dt>월</dt><dd>미정</dd></div>
-              <div><dt>연</dt><dd>미정</dd></div>
-              <div><dt>지도 범위</dt><dd>지원하는 모든 나라의 수도(서울, 도쿄, 파리, 워싱턴 D.C. 등)</dd></div>
-            </dl>
-            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
-          </li>
-          <li>
-            <h3>Nation (전국)</h3>
-            <dl class="plan-rows">
-              <div><dt>월</dt><dd>미정</dd></div>
-              <div><dt>연</dt><dd>미정</dd></div>
-              <div><dt>지도 범위</dt><dd>고른 나라 하나의 전국</dd></div>
-            </dl>
-            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
-          </li>
-          <li>
-            <h3>World (세계)</h3>
-            <dl class="plan-rows">
-              <div><dt>월</dt><dd>미정</dd></div>
-              <div><dt>연</dt><dd>미정</dd></div>
-              <div><dt>지도 범위</dt><dd>모든 나라의 전국</dd></div>
-            </dl>
-            <button type="button" class="plan-btn" disabled>아직 지원하지 않아요</button>
-          </li>
+        <p class="sub"><span>플랜</span><span>상태는 글자로도 적었습니다</span></p>
+        <ul class="log">
+          <li data-reveal style="--i:0"><span class="d">무료</span><svg class="shape" viewBox="0 0 16 9" aria-hidden="true"><rect x="6.5" y="3" width="3" height="3" rx=".6"/></svg><p class="tt">Capital · 수도<small>지원하는 모든 나라의 수도 — 서울, 도쿄, 파리, 워싱턴 D.C. 등</small></p><span class="who">월 · 연 무료</span><span class="st"><span class="pill plan">준비 중</span></span></li>
+          <li data-reveal style="--i:1"><span class="d">미정</span><svg class="shape" viewBox="0 0 16 9" aria-hidden="true"><rect x="3" y="0" width="3" height="3" rx=".6"/><rect x="6.5" y="0" width="3" height="3" rx=".6"/><rect x="6.5" y="3.5" width="3" height="3" rx=".6"/><rect x="10" y="3.5" width="3" height="3" rx=".6"/><rect x="6.5" y="7" width="3" height="2" rx=".6" class="o"/></svg><p class="tt">Nation · 전국<small>고른 나라 하나의 전국</small></p><span class="who">월 · 연 미정</span><span class="st"><span class="pill plan">준비 중</span></span></li>
+          <li data-reveal style="--i:2"><span class="d">미정</span><svg class="shape" viewBox="0 0 16 9" aria-hidden="true"><rect x="0" y="0" width="3" height="3" rx=".6"/><rect x="3.5" y="0" width="3" height="3" rx=".6"/><rect x="9.5" y="0" width="3" height="3" rx=".6"/><rect x="13" y="0" width="3" height="3" rx=".6"/><rect x="3.5" y="3.5" width="3" height="3" rx=".6"/><rect x="7" y="3.5" width="3" height="3" rx=".6"/><rect x="13" y="3.5" width="3" height="3" rx=".6"/><rect x="0" y="7" width="3" height="2" rx=".6"/><rect x="9.5" y="7" width="3" height="2" rx=".6"/></svg><p class="tt">World · 세계<small>모든 나라의 전국</small></p><span class="who">월 · 연 미정</span><span class="st"><span class="pill plan">준비 중</span></span></li>
+          <li data-reveal style="--i:3"><span class="d">앱</span><svg class="shape" viewBox="0 0 16 9" aria-hidden="true"><rect x="3" y="0" width="10" height="7" rx="1"/><rect x="1" y="7.6" width="14" height="1.4" rx=".6"/></svg><p class="tt">regiontype for mac<small>macOS 앱</small></p><span class="who">macOS</span><span class="st"><span class="pill prog">진행 중</span></span></li>
         </ul>
       </div>
-    </div></div></div>
-  </li>
-</ol>
+      <div>
+        <p class="sub"><span>최근 바뀐 것</span><a href="../../about/">전부 보기 ↗</a></p>
+        <ul class="log recent" id="recent" aria-live="polite"><li><span class="d">—</span><p class="tt">바뀐 것을 불러오는 중…</p></li></ul>
+      </div>
+    </div>
+  </div>
+</section>
 
-<footer><span>regiontype.com</span><span><a href="../../policy/">개인정보</a> · <a href="../../terms/">약관</a> · <a href="../../community/">커뮤니티</a></span></footer>
+<section class="play" id="play" aria-labelledby="h-play">
+  <div class="wrap in">
+    <p class="eyebrow" data-reveal><i></i>플레이</p>
+    <h2 class="h2" id="h-play" data-reveal style="--i:1">한 번 쳐 보세요.</h2>
+    <p class="lede" data-reveal style="--i:2">설치 없이, 가입하지 않아도 지도에서 고르고 칩니다. 여기서는 서울 자치구 이름을 치면 그 칸이 칠해집니다.</p>
+    <div class="try" data-reveal style="--i:3">
+      <svg class="mark" id="tryMark" viewBox="0 0 32 27" role="img" aria-label="친 자치구가 칠해지는 서울 격자 지도"></svg>
+      <label for="t">자치구 이름 — 예: 강서구</label>
+      <input id="t" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="강서구" enterkeyhint="done">
+      <output id="msg" for="t" aria-live="polite">0 / 25</output>
+    </div>
+    <div class="actions" data-reveal style="--i:4">
+      <a class="cta" href="../../#home" target="_blank" rel="noopener">바로 플레이 ↗</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span>© 2026 <b>regiontype</b></span>
+    <nav aria-label="바닥 메뉴"><a href="#intro">소개</a><a href="#dev">개발</a><a href="#story">스토리</a><a href="#plan">플랜</a><a href="../../policy/">개인정보</a><a href="../../terms/">약관</a><a href="#top">맨 위로 ↑</a></nav>
+  </div>
+</footer>
 
 <script>
-const NS='http://www.w3.org/2000/svg', $=id=>document.getElementById(id);
-const el=(tag,attrs={},parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.append(e);return e};
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const d=new Date();$('date').textContent=`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-const bar=()=>{document.documentElement.style.setProperty('--bar',document.querySelector('.meta').offsetHeight+'px')};
-bar();addEventListener('resize',bar);
+const NS = 'http://www.w3.org/2000/svg';
+const A = '0123456789abcdefghijklmnopqrstuvwxyz';
+// 한강 북쪽 14구. 나머지 11구가 강남이다
+const NORTH = new Set(['종로구','중구','용산구','성동구','광진구','동대문구','중랑구','성북구','강북구','도봉구','노원구','은평구','서대문구','마포구']);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const el = (tag, attrs, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const cell = (g, x, y, s = .86) => el('rect', { x: x + (1 - s) / 2, y: y + (1 - s) / 2, width: s, height: s, rx: s * .16 }, g);
 
-// 스크롤 궤도. 문장 칸이 화면 위에 붙어 있는 동안 지나간 비율로 지금 문장을 고른다
-const reels=[...document.querySelectorAll('[data-reel]')];
-function syncReels(){
-  const header=document.querySelector('.meta').offsetHeight;
-  for(const reel of reels){
-    const beats=[...reel.querySelectorAll('.beat')];
-    const steps=[...reel.querySelectorAll('.step')];
-    const n=beats.length;
-    if(!n)continue;
-    let i=0;
-    if(!reduce && reel.offsetHeight>0){
-      const stage=reel.querySelector('.stage');
-      const top=reel.getBoundingClientRect().top;
-      const travel=reel.offsetHeight-stage.offsetHeight;
-      const p=travel<=0?0:Math.min(1,Math.max(0,(header-top)/travel));
-      i=Math.min(n-1,Math.floor(p*n));
-      if(p>=1)i=n-1;
-    }
-    beats.forEach((b,k)=>b.classList.toggle('on',k===i));
-    steps.forEach((s,k)=>s.classList.toggle('on',k===i));
-    reel.dataset.i=String(i);
-  }
+/* 제호 글자를 하나씩 띄운다 */
+document.querySelector('.word').innerHTML = [...'regiontype'].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('');
+
+/* 서울 격자와 코스 순서. data/seoul-gu.geom.json · seoul-gu.course.json 에서 옮겨 적었다 —
+   지도가 데이터 요청을 기다리지 않고 첫 화면에 바로 서고, 파일로 열어도 보이게.
+   tools/ 가 그 두 파일을 다시 찍으면 여기도 같이 옮긴다 */
+const SEOUL = {
+  grid: ["...................f............", "...................fffeee.......", ".................ggfffeee.......", ".................ggfffeee.......", ".............dd.gggfffeee.......", "...........dddd..gggffeeee......", "...........dddddhggggeeeeee.....", "...........dddoohhhgggeeee......", "..........ddddooohhgghhiiii.....", "..........ddddooohhhhhhjiii.....", "...9......dddccoohhhhjjiiii.....", "..9999...bdccccoooohjjjjii......", ".999999bbbbccccooooojjjjik...000", ".9999999bbbbcccnnnnnllljkk.00000", "999999999bbbbbbmmnnllllkkkk00000", "..9.a999a66bbbbmmmmllllkkk1000..", ".....a99a66666mmmmm222kkkk1000..", ".....aaaa66666mmmm32222111110...", ".....a8a886655553333222111111...", "....88888866555553332222111111..", "....888..865444553332222221111..", "....88...77444455333322222211...", ".........7744444433333333221....", ".........77444444..3.3333.......", "..........77.444.....3333.......", "..........7..4.......333........", "................................"],
+  names: ["강동구", "송파구", "강남구", "서초구", "관악구", "동작구", "영등포구", "금천구", "구로구", "강서구", "양천구", "마포구", "서대문구", "은평구", "노원구", "도봉구", "강북구", "성북구", "중랑구", "동대문구", "광진구", "성동구", "용산구", "중구", "종로구"],
+  order: ["강서구", "양천구", "구로구", "금천구", "영등포구", "마포구", "서대문구", "은평구", "종로구", "중구", "용산구", "동작구", "관악구", "서초구", "강남구", "송파구", "강동구", "광진구", "성동구", "동대문구", "중랑구", "노원구", "도봉구", "강북구", "성북구"],
+};
+
+/* 격자를 칸 목록으로 */
+function model(g) {
+  const cells = [];
+  g.grid.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === '.') return;
+    const name = g.names[A.indexOf(ch)];
+    cells.push({ x, y, name, north: NORTH.has(name) });
+  }));
+  return { w: g.grid[0].length, h: g.grid.length, cells };
 }
-let raf=0;
-const onScroll=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;syncReels()})};
-addEventListener('scroll',onScroll,{passive:true});
-addEventListener('resize',onScroll);
 
-// 펼침. 한 번에 한 줄만 열고, 주소의 #이름 으로 바로 연다
-const rows=[...document.querySelectorAll('.row')];
-function setOpen(row,open){
-  row.classList.toggle('open',open);
-  row.querySelector('.head').setAttribute('aria-expanded',String(open));
-  if(open&&row.id==='play')ensureFrame();
-}
-rows.forEach(r=>r.querySelector('.head').addEventListener('click',()=>{
-  const open=!r.classList.contains('open');
-  rows.forEach(x=>x!==r&&setOpen(x,false));
-  setOpen(r,open);
-  history.replaceState(null,'',open?'#'+r.id:location.pathname);
-  if(open){
-    r.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
-    requestAnimationFrame(syncReels);
-  }
-}));
-$('openAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,true));$('openAll').setAttribute('aria-pressed','true');$('closeAll').setAttribute('aria-pressed','false');requestAnimationFrame(syncReels)});
-$('closeAll').addEventListener('click',()=>{rows.forEach(r=>setOpen(r,false));setLive(false);$('openAll').setAttribute('aria-pressed','false');$('closeAll').setAttribute('aria-pressed','true')});
-const fromHash=()=>{const h=location.hash.slice(1);if(h&&$(h)&&$(h).classList.contains('row')){rows.forEach(x=>setOpen(x,x.id===h));requestAnimationFrame(syncReels)}};
-addEventListener('hashchange',fromHash);
-
-// 플레이 칸. 게임은 흐리게 띄워 두고, play 를 눌러야 그 안에서 칠 수 있다
-const frame=$('game');
-function ensureFrame(){if(!frame.getAttribute('src'))frame.src=frame.dataset.src}
-function setLive(on){
-  if(on)ensureFrame();
-  $('embed').classList.toggle('is-live',on);
-  const b=$('liveBtn');
-  b.setAttribute('aria-pressed',on?'true':'false');
-  b.querySelector('.live-label').textContent=on?'pause':'play';
-  // SVGElement.hidden 은 속성에 반영되지 않아 아이콘이 같이 남는다
-  b.querySelector('.ico-play').toggleAttribute('hidden', on);
-  b.querySelector('.ico-pause').toggleAttribute('hidden', !on);
-}
-$('liveBtn').addEventListener('click',()=>setLive(!$('embed').classList.contains('is-live')));
-$('goPlay').addEventListener('click',e=>{
-  e.preventDefault();
-  rows.forEach(x=>setOpen(x,x.id==='play'));
-  history.replaceState(null,'','#play');
-  setLive(true);
-  $('play').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
-});
-addEventListener('keydown',e=>{
-  if(e.key==='Escape' && $('embed').classList.contains('is-live') && document.activeElement!==frame)setLive(false);
-});
-
-// 버전: app.js 의 VER 에서 읽는다. C 자리는 VER 에서 점을 뺀 숫자
-fetch('../../app.js').then(r=>r.text()).then(t=>{
-  const m=t.match(/const VER\s*=\s*'([\d.]+)'/);if(!m)return;
-  const c=m[1].replace('.','');
-  return fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
-    const ab=(list[0]&&list[0].v||'0.0.0').split('.').slice(0,2).join('.');
-    const v=`v${ab}.${c}`;
-    $('ver').textContent=v;$('th-ver').textContent=v;$('dev-ver').textContent=v;
-    $('dev-ver-note').textContent=`# VER = '${m[1]}' — C 자리는 VER 에서 점을 뺀 숫자다`;
+/* 한강 — 강북과 강남은 열마다 같은 줄에서 맞닿는 계단이다. 강북을 한 칸 띄운 자리에 땅과 같은 크기의
+   강 칸을 한 칸 두께로 놓는다. 계단이 꺾이는 곳은 칸끼리 모서리로만 닿으므로, 낮은 쪽 열의 강남 맨 윗칸을
+   꺾인 높이만큼 강 칸으로 바꿔 ㄴ자로 잇는다. 좌표는 강북을 한 칸 올린 것으로 돌려준다 */
+function riverCells(m) {
+  const base = {};
+  for (const c of m.cells) if (!c.north) base[c.x] = Math.min(base[c.x] ?? 99, c.y);
+  const xs = Object.keys(base).map(Number).sort((a, b) => a - b);
+  const out = [], path = [], wet = new Set(), seen = new Set();
+  // 한 칸짜리 봉우리는 오를 때와 내릴 때 같은 칸을 두 번 지난다. 칸(out)에는 한 번만 담고,
+  // 선이 지나는 차례(path)에는 두 번 다 남겨 선이 대각선으로 건너뛰지 않게 한다
+  const push = (x, y) => { path.push([x, y]); const k = x + ',' + y; if (!seen.has(k)) { seen.add(k); out.push([x, y]); } };
+  xs.forEach((x, i) => {
+    const bx = base[x], nx = xs[i + 1];
+    push(x, bx - 1);
+    if (nx == null) return;
+    const bn = base[nx];
+    for (let y = bx; y <= bn - 1; y++) { push(x, y); wet.add(x + ',' + y); }     // 오른쪽이 내려간다 — 이 열에서 내려가 둔다
+    for (let y = bx - 1; y >= bn; y--) { push(nx, y); wet.add(nx + ',' + y); }   // 오른쪽이 올라간다 — 다음 열에서 올라간다
   });
-}).catch(()=>{});
+  return { out, path, wet };
+}
 
-// 소개 썸네일과 코스 길 — 서울 자치구 격자
-Promise.all(['seoul-gu.geom','seoul-gu.course'].map(f=>fetch(`../../data/${f}.json`).then(r=>r.json()))).then(([g,course])=>{
-  const by={};
-  g.grid.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==='.')return;const n=g.items[parseInt(ch,36)].name;(by[n]=by[n]||[]).push([x,y])}));
-  const order=course.items.map(i=>i.name), center=Object.fromEntries(g.items.map(i=>[i.name,i.c]));
-  const cell=g.cell, r=cell*.36;
-  const ts=el('svg',{viewBox:`0 0 ${g.w} ${g.h}`},$('th-map'));
-  Object.values(by).flat().forEach(([x,y])=>el('circle',{cx:x*cell+cell/2,cy:y*cell+cell/2,r,fill:'var(--bg)'},ts));
-  const rs=$('route');
-  Object.values(by).flat().forEach(([x,y])=>el('circle',{class:'dot-gu',cx:x*cell+cell/2,cy:y*cell+cell/2,r:cell*.3},rs));
-  const pts=order.map(n=>center[n]).filter(Boolean);
-  el('polyline',{class:'route',points:pts.map(p=>p.join(',')).join(' ')},rs);
-  pts.forEach((p,i)=>el('circle',{class:'route-dot',cx:p[0],cy:p[1],r:i===0||i===pts.length-1?13:7},rs));
-}).catch(()=>{});
+/* 한강 자리를 지도에 박아 둔다 — 어느 장면, 어느 지도든 같은 배치를 쓴다.
+   강남을 한 칸 내리고(격자 맨 아랫줄이 비어 있어 viewBox 안에 든다) 강 자리로 바뀐 강남 칸은 뺀다.
+   강 칸은 river 에 따로 두되 어느 지도에서나 땅 칸과 똑같이 그린다. 한강 장면에서만 그 위에 선을 긋는다 */
+function withRiver(m) {
+  const { out, path, wet } = riverCells(m);
+  const cells = m.cells
+    .filter(c => c.north || !wet.has(c.x + ',' + c.y))
+    .map(c => c.north ? c : { ...c, y: c.y + 1 });
+  const down = ([x, y]) => [x, y + 1];
+  return { ...m, cells, river: out.map(down), riverPath: path.map(down) };
+}
 
-// 개발: 바뀐 것 목록
-fetch('../../data/changes.json').then(r=>r.json()).then(list=>{
-  const log=$('log');
-  const draw=q=>{
-    const rs=list.filter(e=>!q||(e.ko||'').includes(q)||(e.en||'').includes(q)||e.v.includes(q)).slice(0,60);
-    log.replaceChildren(...rs.map(e=>{
-      const li=document.createElement('li');
-      const v=document.createElement('span');v.className='v';v.textContent='v'+e.v;
-      const t=document.createElement('time');t.dateTime=e.date;t.textContent=e.date;
-      const p=document.createElement('span');p.textContent=e.ko;
-      li.append(v,t,p);return li;
-    }));
-    $('hits').textContent=q?`${rs.length}건`:`${list.length}건`;
-  };
-  draw('');
-  $('grep').addEventListener('input',e=>draw(e.target.value.trim()));
-}).catch(()=>{});
+function drawHero(svg, m) {
+  const n = el('g', { class: 'half n' }, svg), s = el('g', { class: 'half s' }, svg);
+  // 강북 칸마다 강북 서쪽 끝에서 몇 열째인지(--fx) — 강북 14구 장면에서 왼쪽부터 차오르는 차례
+  // 칸마다 제 반쪽 서쪽 끝에서 몇 열째인지(--fx), 반쪽마다 열 수(--fmax) — 차오르고 되감기는 차례
+  const span = half => { const xs = m.cells.filter(c => c.north === half).map(c => c.x); return [Math.min(...xs), Math.max(...xs)]; };
+  const [nw, ne] = span(true), [sw, se] = span(false);
+  n.style.setProperty('--fmax', ne - nw);
+  s.style.setProperty('--fmax', se - sw);
+  for (const c of m.cells) cell(c.north ? n : s, c.x, c.y).style.setProperty('--fx', c.x - (c.north ? nw : sw));
+  // 강 칸은 어느 장면에서나 땅 칸과 똑같은 픽셀이다. 한강 장면에서만 그 칸들 가운데를 서쪽부터 잇는 선이 그어진다
+  const river = el('g', { class: 'river' }, svg);
+  // --rd: 지도 가운데 열에서 얼마나 먼지(0~1) — 벌어질 때 가운데부터 사라지는 차례
+  for (const [x, y] of m.river) cell(river, x, y).style.setProperty('--rd', (Math.abs(x + .5 - 16) / 16).toFixed(2));
+  el('path', { class: 'rline', d: 'M' + m.riverPath.map(([x, y]) => (x + .5) + ' ' + (y + .5)).join(' L'), pathLength: 1 }, svg);
+}
 
-fromHash();
-syncReels();
+/* 두 칸 사이의 곧은 선을 칸 계단으로 옮긴다(가로·세로로만 한 칸씩). 매 걸음마다 곧은 선에 더 가까운 쪽으로
+   — 가로로 갈지 세로로 갈지 — 고른다. 픽셀 그림에서 사선을 긋는 방식이라, 모양은 곧은 꺾은선 그대로 남는다 */
+function pixelLine(a, b) {
+  const dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]), sx = Math.sign(b[0] - a[0]), sy = Math.sign(b[1] - a[1]);
+  const out = [];
+  let [x, y] = a, ix = 0, iy = 0;
+  while (ix < dx || iy < dy) {
+    if (iy >= dy || (ix < dx && (ix + .5) / dx < (iy + .5) / dy)) { x += sx; ix++; } else { y += sy; iy++; }
+    out.push([x, y]);
+  }
+  return out;
+}
+
+function drawExplorer(svg, m, order) {
+  const full = el('g', { class: 'full' }, svg), dong = el('g', { class: 'dong' }, svg), course = el('g', { class: 'course' }, svg);
+  // 강 칸도 땅과 같이 그려 어느 지도든 같은 모양이 되게 한다
+  for (const [x, y] of [...m.cells.map(c => [c.x, c.y]), ...m.river]) {
+    cell(full, x, y).style.setProperty('--x', x);   // --x 는 판 지도가 서쪽부터 움직이는 순서
+    // 한 칸을 넷으로 — 바깥 테두리는 온 칸(0.07~0.93)과 같게, 안쪽은 0.04 띄운다
+    for (const dx of [0, .45]) for (const dy of [0, .45]) el('rect', { x: x + .07 + dx, y: y + .07 + dy, width: .41, height: .41, rx: .07 }, dong).style.setProperty('--x', x);
+  }
+  // 처음 모델처럼 구마다 무게중심을 코스 순서대로 곧게 잇되, 그 곧은 선을 칸 계단으로 옮겨 픽셀 지도와 결을 맞춘다.
+  // 꺾이는 자리는 무게중심이 든 칸이다
+  const sum = {};
+  for (const c of m.cells) { const s = sum[c.name] ||= [0, 0, 0]; s[0] += c.x + .5; s[1] += c.y + .5; s[2]++; }
+  const stops = order.filter(n => sum[n]).map(n => [Math.floor(sum[n][0] / sum[n][2]), Math.floor(sum[n][1] / sum[n][2])]);
+  const walk = [stops[0]];
+  for (let i = 1; i < stops.length; i++) walk.push(...pixelLine(stops[i - 1], stops[i]));
+  // 곧게 이어지는 칸은 하나로 묶어 꺾이는 칸만 남긴다
+  const turns = walk.filter((p, i) => i === 0 || i === walk.length - 1 ||
+    (p[0] - walk[i - 1][0]) !== (walk[i + 1][0] - p[0]) || (p[1] - walk[i - 1][1]) !== (walk[i + 1][1] - p[1]));
+  el('path', { d: 'M' + turns.map(([x, y]) => (x + .5) + ' ' + (y + .5)).join(' L'), pathLength: 1 }, course);
+  [[stops[0], order[0]], [stops[stops.length - 1], order[order.length - 1]]].forEach(([[x, y], name]) => {
+    el('rect', { class: 'end', x: x + .12, y: y + .12, width: .76, height: .76, rx: .18 }, course);
+    el('text', { x: x + .5, y: y - .6, 'text-anchor': 'middle' }, course).textContent = name;
+  });
+}
+
+function drawPlain(svg, m, byName) {
+  for (const c of m.cells) {
+    const r = cell(svg, c.x, c.y);
+    if (byName) (byName[c.name] ||= []).push(r);
+  }
+  for (const [x, y] of m.river) cell(svg, x, y);   // 강 칸은 어느 구에도 속하지 않는다
+}
+
+/* 첫 화면 장면 — 무대를 붙박고, 스크롤한 만큼 장면 번호를 넘긴다 */
+const hero = document.querySelector('.hero'), stage = hero.querySelector('.stage');
+let ticking = false;
+// 소개가 화면 아래로 들어오기 시작하면 첫 화면은 떠나는 중(.leave) — 검게 칠한 강남 반쪽을 회색으로 되돌린다
+const introEl = document.getElementById('intro');
+// 장면마다 같은 스크롤 거리(한 스텝 = 화면 높이의 50%, CSS 의 --step 과 같다) — 스크롤한 만큼 장면이 일정하게 넘어간다
+const STEP = .5;
+function onScroll() {
+  ticking = false;
+  const step = innerHeight * STEP, y = -hero.getBoundingClientRect().top;
+  const scene = Math.max(0, Math.min(5, Math.floor(y / step)));
+  // 전환은 CSS 가 맡는다. 빨리 넘겨도 끊지 않는다 — 진행 중인 전환은 지금 자리에서 새 목표로 이어서 휜다
+  if (stage.dataset.scene !== String(scene)) {
+    stage.dataset.from = stage.dataset.scene;   // 어느 장면에서 왔는지 — 한강→강남 되감기 순서에 쓴다
+    stage.dataset.scene = scene;
+  }
+  const leave = introEl.getBoundingClientRect().top < innerHeight;
+  // 소개에서 다시 올라오면 한강을 거치지 않았으니 기다리지 않고 바로 차오르게 한다
+  if (!leave && stage.classList.contains('leave')) stage.dataset.from = 'out';
+  stage.classList.toggle('leave', leave);
+}
+addEventListener('scroll', () => {
+  if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+}, { passive: true });
+addEventListener('resize', onScroll);
+onScroll();
+
+/* 나타나기 */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+}), { rootMargin: '0px 0px -12% 0px' });
+document.querySelectorAll('[data-reveal]').forEach(e => io.observe(e));
+
+/* 소개 — 가운데 줄에 걸린 판이 지도를 고른다 */
+const ex = document.getElementById('exMark'), exCap = document.getElementById('exCap');
+const CAP = { full: '서울 25개 자치구', dong: '구를 열면 행정동 — 423곳', course: '자치구 코스 — 강서구에서 성북구까지' };
+const panels = [...document.querySelectorAll('.panel')];
+const pio = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  panels.forEach(p => p.classList.toggle('is-now', p === e.target));
+  ex.dataset.show = e.target.dataset.panel;
+  exCap.textContent = CAP[e.target.dataset.panel];
+}), { rootMargin: '-45% 0px -45% 0px' });
+panels.forEach(p => pio.observe(p));
+panels[0].classList.add('is-now');
+// 좁은 화면의 판 지도 — 40% 넘게 보이면 움직이고, 화면 밖으로 완전히 나가야 처음 모습으로 돌아간다
+const mio = new IntersectionObserver(es => es.forEach(e => {
+  if (e.intersectionRatio >= .4) e.target.classList.add('play');
+  else if (!e.isIntersecting) e.target.classList.remove('play');
+}), { threshold: [0, .4] });
+document.querySelectorAll('.ex-mini').forEach(s => mio.observe(s));
+
+/* 넵바 — 지금 읽는 갈래에 표시 */
+const links = [...document.querySelectorAll('nav.main a:not(.cta)')];
+const sio = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  links.forEach(a => a.toggleAttribute('aria-current', a.hash === '#' + e.target.id));
+}), { rootMargin: '-40% 0px -55% 0px' });
+['top', 'intro', 'dev', 'story', 'plan', 'play'].forEach(id => sio.observe(document.getElementById(id)));
+
+/* 쳐 보기 — 이름이 통째로 맞을 때만 칠한다. 조합 중에는 건드리지 않는다 */
+const byName = {}, done = new Set();
+const t = document.getElementById('t'), msg = document.getElementById('msg');
+function check(ev) {
+  if (ev && ev.isComposing) return;
+  const v = t.value.replace(/\s/g, '');
+  if (!byName[v]) return;
+  if (done.has(v)) { msg.textContent = `${v}는 이미 칠했습니다 · ${done.size} / 25`; t.value = ''; return; }
+  done.add(v);
+  byName[v].forEach(r => r.classList.add('on'));
+  t.value = '';
+  msg.textContent = done.size === 25 ? '25 / 25 — 서울을 다 칠했습니다' : `${v} · ${done.size} / 25`;
+}
+t.addEventListener('input', check);
+t.addEventListener('compositionend', () => setTimeout(check));
+t.addEventListener('keyup', e => { if (e.key === 'Enter') check(); });
+
+/* 지도 셋 — 첫 화면, 소개, 쳐 보기 */
+const seoul = withRiver(model(SEOUL));
+drawHero(document.getElementById('heroMark'), seoul);
+drawExplorer(ex, seoul, SEOUL.order);
+document.querySelectorAll('.ex-mini').forEach(s => drawExplorer(s, seoul, SEOUL.order));   // 좁은 화면용, 판마다 고정된 한 장
+drawPlain(document.getElementById('tryMark'), seoul, byName);
+
+// 염창 한 줄은 코스 데이터에서 다시 읽는다 — 손으로 적은 문장과 어긋나지 않게
+fetch('../../data/gangseo-dong.course.json').then(r => r.json()).then(c => {
+  const it = c.items.find(i => i.name === '염창동');
+  if (it && it.meta && it.meta.description) document.getElementById('salt').textContent = it.meta.description;
+}).catch(() => {});
+
+fetch('../../data/changes.json?v=5.42').then(r => r.json()).then(list => {
+  const ul = document.getElementById('recent');
+  ul.innerHTML = '';
+  for (const ch of list.slice(0, 5)) {
+    const li = document.createElement('li');
+    const [yy, mm, dd] = ch.date.split('-');
+    // 첫 문장만. 뒤보기(?<=) 는 옛 Safari 에서 스크립트 전체를 멈추므로 쓰지 않는다
+    const first = (ch.ko.match(/^.*?\.(?=\s|$)/) || [ch.ko])[0];
+    li.innerHTML = `<span class="d"></span><p class="tt"></p><span class="who"></span><span class="st"><span class="quiet"><span class="dot"></span>반영</span></span>`;
+    li.querySelector('.d').textContent = `${mm}.${dd}.${yy.slice(2)}`;
+    li.querySelector('.tt').textContent = first;
+    li.querySelector('.who').textContent = 'v' + ch.v;
+    ul.appendChild(li);
+  }
+}).catch(() => { document.getElementById('recent').innerHTML = '<li><p class="tt">바뀐 것을 불러오지 못했습니다.</p></li>'; });
 </script>
 </body>
 </html>
