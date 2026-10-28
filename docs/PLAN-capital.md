@@ -68,6 +68,13 @@ world.json 의 46개 나라마다 수도 안쪽 구획(구·구역·자치구)�
   nz·jp 는 첫 이름+스페이스로 G.hits 1. eg 첫 칸 'Qasr Al-Nile' 은 화면 말이 한국어가 아니면 이름 속 스페이스에서 판정돼 틀린다
   (it.say 가 없어 typeForm 꼴이 안 보임. 'qasralnile ' 은 맞음, 한국어 화면은 Enter 로 맞음). 띄어쓴 이름이 있는 수도 32/44, us-admin 'New Mexico' 도 같다.
   그래서 '끝' 은 아직 안 친다.
+- 2026-10-28 띄어쓴 이름: 표에 없는 칸도 it.say = typeForm(이름)(start), 그리고 tongueInput 이 맞는 칸이 아직 없고
+  띄어쓴 칸의 앞머리로 이어지는 중이면 스페이스에서 판정하지 않는다 — typeForm 이 못 접는 아랍·키릴·그리스·괄호 이름
+  (ae 25·ua 10·gr 7·bg 4·ie 16·br 1)도 같은 길로 고쳐진다. ?rt=1 에 순서형·자유형 assert.
+- 2026-10-28 지역 제목: UI 26말 × 44곳 = 1144 칸 중 539 칸이 빈다(nb 는 거의 모두). titles() 가 OSM 다음으로 부모 경계의
+  wikidata 라벨(같은 언어 코드만, mul 안 씀)로 메우게 했다 — 캐시 /tmp/rt-geo/capital/wikidata/. 클라우드에서 overpass·wikidata·
+  geoboundaries 가 네트워크 정책으로 막혀 다시 찍지 못했다. world.json 은 아직 옛 제목이다.
+- 2026-10-28 카이로 아랍어 이름: geoBoundaries 파일을 받을 수 없어 확인 못 함. 지어내지 않고 라틴 표기로 둔다.
 
 ---
 *만든 날: 2026-10-27*
