@@ -736,6 +736,18 @@ async function plan(s){
 const DOT=20, LV=[{k:16,max:13},{k:4,min:13,max:15.5},{k:1,min:15.5}], SWELL=.07;
 let waveT=1+SWELL, waveRaf=0, passed=-1;
 const lvIds=i=>LV.map((_,l)=>'r'+i+'-'+l);
+/* 점은 원이 아니라 벌집 칸 같은 육각형이다. 색을 갈아 칠하도록 거리장(SDF) 그림으로 한 번 만들어 둔다 —
+   한 변까지의 거리를 알파에 담고, 가장자리를 .75 에 맞춘다. 그림 64px 에 반지름 24px, 화면에서는 반지름 12px */
+const HEX_R=12;
+function hexImage(){
+  const n=64,c=n/2,r=HEX_R*2,d=new Uint8ClampedArray(n*n*4),ap=r*Math.sqrt(3)/2;
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    const px=Math.abs(x+.5-c),py=Math.abs(y+.5-c);   // 꼭짓점이 위아래인 육각형
+    const inside=ap-Math.max(px,px*.5+py*Math.sqrt(3)/2);
+    d[(y*n+x)*4+3]=Math.max(0,Math.min(255,(.75+inside/32)*255));
+  }
+  return {width:n,height:n,data:d};
+}
 function dotsOf(geom){
   const seg=[];let tot=0;
   for(let i=1;i<geom.length;i++){const d=hav(geom[i-1],geom[i]);seg.push(d);tot+=d}
@@ -753,11 +765,10 @@ function dotPaint(i){
   const col=on&&passed>=0?['step',u,T('route'),passed,T('route-alt')]:T(on?'route':'route-alt');
   lvIds(i).forEach(id=>{
     if(!map.getLayer(id))return;
-    map.setPaintProperty(id,'circle-radius',['interpolate',['linear'],['zoom'],11,['*',3,w],17,['*',7,w]]);
-    map.setPaintProperty(id,'circle-opacity',['step',u,1,t,0]);
-    map.setPaintProperty(id,'circle-stroke-opacity',['step',u,1,t,0]);
-    map.setPaintProperty(id,'circle-color',col);
-    map.setPaintProperty(id,'circle-stroke-color',T(on?'route-case':'route-alt-case'));
+    map.setLayoutProperty(id,'icon-size',['interpolate',['linear'],['zoom'],11,['*',3/HEX_R,w],17,['*',7/HEX_R,w]]);
+    map.setPaintProperty(id,'icon-opacity',['step',u,1,t,0]);
+    map.setPaintProperty(id,'icon-color',col);
+    map.setPaintProperty(id,'icon-halo-color',T(on?'route-case':'route-alt-case'));
   });
 }
 function wave(){
@@ -785,8 +796,11 @@ function drawRoutes(){
   const keep=routes;clearRoutes();routes=keep;   // clearRoutes 가 routes 를 비우니 들고 있다가 되돌린다
   routes.forEach((r,i)=>{
     map.addSource('r'+i,{type:'geojson',data:dotsOf(r.geom)});
-    LV.forEach((lv,l)=>map.addLayer({id:'r'+i+'-'+l,type:'circle',source:'r'+i,minzoom:lv.min||0,maxzoom:lv.max||24,
-      filter:['>=',['get','lv'],LV.length-1-l],paint:{'circle-stroke-width':1,'circle-pitch-alignment':'map'}},'dong-label'));
+    if(!map.hasImage('hex'))map.addImage('hex',hexImage(),{pixelRatio:2,sdf:true});
+    LV.forEach((lv,l)=>map.addLayer({id:'r'+i+'-'+l,type:'symbol',source:'r'+i,minzoom:lv.min||0,maxzoom:lv.max||24,
+      filter:['>=',['get','lv'],LV.length-1-l],
+      layout:{'icon-image':'hex','icon-allow-overlap':true,'icon-ignore-placement':true,'icon-pitch-alignment':'map','icon-rotation-alignment':'map'},
+      paint:{'icon-halo-width':1}},'dong-label'));
   });
   bubbles=routes.map((r,i)=>{
     const p=r.geom[Math.floor((r.geom.length-1)*(0.25+i*0.22))];
