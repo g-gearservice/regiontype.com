@@ -169,6 +169,10 @@ document.documentElement.classList.add('js');
   /* 한강 선이 되감기는 동안 기다렸다가 차오른다 */
   .stage[data-scene="3"][data-from="4"] .half.n rect,.stage[data-scene="5"][data-from="4"]:not(.leave) .half.s rect{
     animation-delay:calc(.8s + var(--fx, 0) / var(--fmax, 1) * .65s)}
+  /* 갈라졌던 반쪽이 다시 붙어 오는 길이면, 다 붙고(.85초) 잠깐 쉰 뒤(1.1초) 강북이 차오르고 '강북 14구'가 뜬다 */
+  .stage[data-scene="3"]:is([data-from="0"],[data-from="1"],[data-from="2"]) .half.n rect{
+    animation-delay:calc(1.1s + var(--fx, 0) / var(--fmax, 1) * .65s)}
+  .stage[data-scene="3"]:is([data-from="0"],[data-from="1"],[data-from="2"]) [data-copy="3"]{transition-delay:1s}
   .stage[data-scene="4"][data-from="3"] .half.n rect,.stage[data-scene="4"][data-from="5"] .half.s rect,.stage[data-scene="5"].leave .half.s rect{
     animation:fill-down .35s var(--ease-soft) both;animation-delay:calc((1 - var(--fx, 0) / var(--fmax, 1)) * .45s)}
   @keyframes fill-up{from{opacity:var(--dim)}to{opacity:1}}
@@ -741,7 +745,7 @@ fetch('../../data/gangseo-dong.course.json').then(r => r.json()).then(c => {
   if (it && it.meta && it.meta.description) document.getElementById('salt').textContent = it.meta.description;
 }).catch(() => {});
 
-fetch('../../data/changes.json?v=5.42').then(r => r.json()).then(list => {
+fetch('../../data/changes.json?v=5.43').then(r => r.json()).then(list => {
   const ul = document.getElementById('recent');
   ul.innerHTML = '';
   for (const ch of list.slice(0, 5)) {
