@@ -643,7 +643,7 @@ function showList(){
   });
   clearRoutes();
   if(pin){pin.remove();pinTag.remove();pin=null}
-  setDongs([]);
+  setDongs([]);guVis('visible');
   map.easeTo({center:[126.985,37.56],zoom:COARSE?10:10.6,pitch:0,bearing:0,padding:pad(),duration:RM?0:700});
   (box.querySelector('[aria-current=true]')||box.firstChild)?.focus({preventScroll:false});
 }
@@ -654,10 +654,35 @@ async function load(s){
   const gj=await (await fetch(DATA+s+'.drive.json')).json();
   dongs=gj.features.map(f=>({name:f.properties.name,c:f.properties.c,geometry:f.geometry}));
   view='routes';$('back').hidden=false;
+  guVis('none');
   setDongs(dongs);
   fit();
   placePin(dongs[0]);
   await plan(dongs[0]);
+}
+/* ── 구 고르는 지도: 25개 구를 다 띄운다. 구 경계는 따로 없으니 각 구의 행정동 경계에서 두 동이 함께 쓰는 변을 지워 얻는다 ── */
+const GU_LAYERS=['gu-fill','gu-hov','gu-line','gu-label'];
+let guHov=null;
+function guVis(v){GU_LAYERS.forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility',v))}
+async function drawGus(){
+  const all=await Promise.all(index.map(m=>fetch(DATA+m.slug+'.drive.json').then(r=>r.json()).catch(()=>null)));
+  const fills=[],edges=[];
+  all.forEach((gj,k)=>{
+    if(!gj)return;const slug=index[k].slug,seen=new Map();
+    gj.features.forEach(f=>{
+      fills.push({type:'Feature',properties:{slug},geometry:f.geometry});
+      const g=f.geometry,polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;
+      polys.forEach(poly=>poly.forEach(r=>{for(let i=1;i<r.length;i++){
+        const a=r[i-1]+'',b=r[i]+'',key=a<b?a+';'+b:b+';'+a;
+        seen.has(key)?seen.delete(key):seen.set(key,[r[i-1],r[i]]);
+      }}));
+    });
+    edges.push({type:'Feature',properties:{slug},geometry:{type:'MultiLineString',coordinates:[...seen.values()]}});
+  });
+  map.getSource('gus').setData({type:'FeatureCollection',features:fills});
+  map.getSource('gu-edge').setData({type:'FeatureCollection',features:edges});
+  map.getSource('gu-pts').setData({type:'FeatureCollection',features:index.map(m=>({type:'Feature',
+    properties:{slug:m.slug,name:m.title.split(' ')[0]},geometry:{type:'Point',coordinates:m.c}}))});
 }
 function setDongs(list){map.getSource('dongs').setData(fc(list));map.getSource('dong-pts').setData(pts(list))}
 function fit(){
@@ -705,18 +730,63 @@ async function plan(s){
   drawRoutes();renderCards();
   if(focused)document.querySelectorAll('.card')[sel]?.focus({preventScroll:true});
 }
+/* 길은 선이 아니라 점이다. 20 m 마다 하나를 찍고, 멀리서 보면 넷째·열여섯째 점만 남겨 화면 위 간격을 비슷하게 둔다.
+   점마다 길 위 위치(u, 0~1)를 들고 있어, 띄울 때 출발점부터 물결(waveT)이 지나가며 부풀었다 가라앉고,
+   달릴 때는 지나온 만큼(passed)만 진하게 칠한다 */
+const DOT=20, LV=[{k:16,max:13},{k:4,min:13,max:15.5},{k:1,min:15.5}], SWELL=.07;
+let waveT=1+SWELL, waveRaf=0, passed=-1;
+const lvIds=i=>LV.map((_,l)=>'r'+i+'-'+l);
+function dotsOf(geom){
+  const seg=[];let tot=0;
+  for(let i=1;i<geom.length;i++){const d=hav(geom[i-1],geom[i]);seg.push(d);tot+=d}
+  const out=[];let n=0,i=0,base=0;
+  for(let at=0;at<=tot;at+=DOT,n++){
+    while(i<seg.length-1&&at>base+seg[i]){base+=seg[i];i++}
+    const a=geom[i],b=geom[i+1]||a,u=seg[i]?Math.min(1,(at-base)/seg[i]):0;
+    out.push({type:'Feature',properties:{u:tot?at/tot:0,lv:n%16?n%4?0:1:2},geometry:{type:'Point',coordinates:[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u]}});
+  }
+  return {type:'FeatureCollection',features:out};
+}
+function dotPaint(i){
+  const on=i===sel,t=waveT,u=['get','u'];
+  const w=['interpolate',['linear'],['-',t,u],0,.5,SWELL*.35,1.7,SWELL,1];
+  const col=on&&passed>=0?['step',u,T('route'),passed,T('route-alt')]:T(on?'route':'route-alt');
+  lvIds(i).forEach(id=>{
+    if(!map.getLayer(id))return;
+    map.setPaintProperty(id,'circle-radius',['interpolate',['linear'],['zoom'],11,['*',3,w],17,['*',7,w]]);
+    map.setPaintProperty(id,'circle-opacity',['step',u,1,t,0]);
+    map.setPaintProperty(id,'circle-stroke-opacity',['step',u,1,t,0]);
+    map.setPaintProperty(id,'circle-color',col);
+    map.setPaintProperty(id,'circle-stroke-color',T(on?'route-case':'route-alt-case'));
+  });
+}
+function wave(){
+  cancelAnimationFrame(waveRaf);
+  if(RM){waveT=1+SWELL;return routes.forEach((_,i)=>dotPaint(i))}
+  const t0=performance.now(),dur=1400;
+  const f=now=>{
+    const k=Math.min(1,(now-t0)/dur);waveT=(1-(1-k)**2)*(1+SWELL);
+    routes.forEach((_,i)=>dotPaint(i));
+    if(k<1)waveRaf=requestAnimationFrame(f);
+  };
+  waveT=0;waveRaf=requestAnimationFrame(f);
+}
+function setPassed(v){
+  if(Math.abs(v-passed)<.002&&v<1)return;
+  passed=v;if(routes[sel])dotPaint(sel);
+}
+function routeVis(i,v){lvIds(i).forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility',v))}
 function clearRoutes(){
-  for(let i=0;i<3;i++)if(map.getLayer('r'+i)){map.removeLayer('r'+i);map.removeLayer('r'+i+'-case');map.removeSource('r'+i)}
+  cancelAnimationFrame(waveRaf);
+  for(let i=0;i<3;i++)if(map.getSource('r'+i)){lvIds(i).forEach(id=>map.removeLayer(id));map.removeSource('r'+i)}
   bubbles.forEach(b=>b.remove());bubbles=[];routes=[];
 }
 function drawRoutes(){
   const keep=routes;clearRoutes();routes=keep;   // clearRoutes 가 routes 를 비우니 들고 있다가 되돌린다
   routes.forEach((r,i)=>{
-    map.addSource('r'+i,{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:r.geom}}});
-    map.addLayer({id:'r'+i+'-case',type:'line',source:'r'+i,layout:{'line-join':'round','line-cap':'round'},
-      paint:{'line-color':T('route-case'),'line-width':['interpolate',['linear'],['zoom'],11,6,17,22]}},'dong-label');
-    map.addLayer({id:'r'+i,type:'line',source:'r'+i,layout:{'line-join':'round','line-cap':'round'},
-      paint:{'line-color':T('route'),'line-width':['interpolate',['linear'],['zoom'],11,4,17,16]}},'dong-label');
+    map.addSource('r'+i,{type:'geojson',data:dotsOf(r.geom)});
+    LV.forEach((lv,l)=>map.addLayer({id:'r'+i+'-'+l,type:'circle',source:'r'+i,minzoom:lv.min||0,maxzoom:lv.max||24,
+      filter:['>=',['get','lv'],LV.length-1-l],paint:{'circle-stroke-width':1,'circle-pitch-alignment':'map'}},'dong-label'));
   });
   bubbles=routes.map((r,i)=>{
     const p=r.geom[Math.floor((r.geom.length-1)*(0.25+i*0.22))];
@@ -726,14 +796,11 @@ function drawRoutes(){
     return new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(p).addTo(map);
   });
   restyle();
+  wave();
 }
 function restyle(){
-  routes.forEach((r,i)=>{
-    const on=i===sel;
-    map.setPaintProperty('r'+i,'line-color',T(on?'route':'route-alt'));
-    map.setPaintProperty('r'+i+'-case','line-color',T(on?'route-case':'route-alt-case'));
-  });
-  if(routes[sel]){map.moveLayer('r'+sel+'-case','dong-label');map.moveLayer('r'+sel,'dong-label')}
+  routes.forEach((r,i)=>dotPaint(i));
+  if(routes[sel])lvIds(sel).forEach(id=>map.moveLayer(id,'dong-label'));
   bubbles.forEach((b,i)=>{const e=b.getElement();e.classList.add('bubble');e.classList.toggle('on',i===sel);e.classList.toggle('off',i!==sel);e.style.zIndex=i===sel?2:1});   // className= 은 maplibregl-marker 를 지운다
   document.querySelectorAll('.card').forEach((c,i)=>{c.setAttribute('aria-checked',i===sel);c.tabIndex=i===sel?0:-1});
 }
@@ -772,7 +839,8 @@ function start(i=sel){
   dongs.forEach(d=>{d.own=false;d.tgt=false});r.order[0].own=true;
   run={r,k:1,at:0,t0:performance.now(),dist:0,brg:0,queue:[],driving:false,gen:0};
   document.body.classList.add('driving');
-  routes.forEach((_,j)=>{const v=j===sel?'visible':'none';map.setLayoutProperty('r'+j,'visibility',v);map.setLayoutProperty('r'+j+'-case','visibility',v)});
+  routes.forEach((_,j)=>routeVis(j,j===sel?'visible':'none'));
+  run.tot=r.legs.reduce((m,l)=>m+legGeom(l).tot,0);setPassed(0);
   bubbles.forEach(b=>b.getElement().style.display='none');
   pin.getElement().style.display='none';pinTag.getElement().style.display='none';
   const ce=document.createElement('div');ce.className='car';ce.setAttribute('aria-hidden','true');
@@ -966,6 +1034,7 @@ function chase(){
         setDongs(run.r.order);
         along=0;
         $('km').textContent=km(run.dist);
+        setPassed(run.tot?run.dist/run.tot:1);
         if(run.at>=run.r.order.length-1){run.driving=false;finish();return}
         continue;
       }
@@ -974,6 +1043,7 @@ function chase(){
       run.car.setLngLat(q).setRotation(run.carBrg);
       map.jumpTo({center:q,bearing:run.brg});
       $('km').textContent=km(run.dist+along);
+      if(run.tot)setPassed((run.dist+along)/run.tot);
     }
     if(run.queue.length)requestAnimationFrame(frame);
     else{run.driving=false;run.rush=0;run.rushN=0}
@@ -1034,7 +1104,8 @@ function quit(){
   if(!run)return;run.car.remove();run=null;
   $('done').classList.remove('on');document.body.classList.remove('driving');
   dongs.forEach(d=>{d.own=false;d.tgt=false});setDongs(dongs);
-  routes.forEach((_,j)=>{map.setLayoutProperty('r'+j,'visibility','visible');map.setLayoutProperty('r'+j+'-case','visibility','visible')});
+  routes.forEach((_,j)=>routeVis(j,'visible'));
+  passed=-1;restyle();
   bubbles.forEach(b=>b.getElement().style.display='');
   pin.getElement().style.display='';pinTag.getElement().style.display='';
   map.easeTo({pitch:$('tilt').getAttribute('aria-pressed')==='true'?55:0,bearing:0,padding:{top:0,bottom:0,left:0,right:0},duration:RM?0:700});
@@ -1091,7 +1162,28 @@ map.on('load',async()=>{
     paint:{'text-color':['case',['==',['get','tgt'],1],'#ffffff',T('label')],
       'text-halo-color':['case',['==',['get','tgt'],1],T('tgt-line'),['==',['get','own'],1],T('own-halo'),T('halo')],
       'text-halo-width':['case',['==',['get','tgt'],1],6,2]}});
+  const empty={type:'FeatureCollection',features:[]};
+  ['gus','gu-edge','gu-pts'].forEach(id=>map.addSource(id,{type:'geojson',data:empty}));
+  map.addLayer({id:'gu-fill',type:'fill',source:'gus',paint:{'fill-color':T('area'),'fill-opacity':.75}},'dong-fill');
+  map.addLayer({id:'gu-hov',type:'fill',source:'gus',filter:['==',['get','slug'],''],paint:{'fill-color':T('tgt')}},'dong-fill');
+  map.addLayer({id:'gu-line',type:'line',source:'gu-edge',layout:{'line-join':'round'},paint:{'line-color':T('area-line'),
+    'line-width':['case',['==',['get','slug'],''],2.5,1.2]}},'dong-fill');
+  map.addLayer({id:'gu-label',type:'symbol',source:'gu-pts',layout:{'text-field':['get','name'],'text-font':['Noto Sans Bold'],
+    'text-size':['interpolate',['linear'],['zoom'],10,12,13,17],'text-padding':2},
+    paint:{'text-color':T('label'),'text-halo-color':T('halo'),'text-halo-width':2}});
+  /* 구에 마우스를 얹으면 짙어지고, 누르면 그 구로 들어간다 */
+  const guOn=g=>{
+    if(g===guHov)return;guHov=g;
+    map.setFilter('gu-hov',['==',['get','slug'],g||'']);
+    map.setPaintProperty('gu-line','line-color',['case',['==',['get','slug'],g||''],T('tgt-line'),T('area-line')]);
+    map.setPaintProperty('gu-line','line-width',['case',['==',['get','slug'],g||''],2.5,1.2]);
+    map.getCanvas().style.cursor=g?'pointer':'';
+  };
+  map.on('mousemove','gu-fill',e=>{if(view==='list')guOn(e.features[0].properties.slug)});
+  map.on('mouseleave','gu-fill',()=>guOn(null));
+  map.on('click','gu-fill',e=>{if(view==='list'){guOn(null);load(e.features[0].properties.slug)}});
   index=await (await fetch(DATA+'drive-index.json')).json();
+  drawGus();
   const q=new URLSearchParams(location.search).get('c');
   if(q&&index.some(m=>m.slug===q))load(q);else showList();
 });
