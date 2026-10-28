@@ -2,6 +2,12 @@
   {
     "v": "1.2.0",
     "date": "2026-10-28",
+    "ko": "한국어가 아닌 화면에서 띄어쓰기가 있는 지명(카이로의 Qasr Al-Nile, New Mexico 등)이 첫 스페이스에서 틀림으로 처리되던 문제를 고쳤습니다. 라틴 문자 이름은 소문자에 띄어쓰기 없는 치는 꼴로 보이고, 이름 안의 스페이스는 이름을 다 칠 때까지 판정하지 않습니다.",
+    "en": "Fixed place names containing a space (such as Qasr Al-Nile in Cairo or New Mexico) being judged wrong at the space in non-Korean UIs. Latin names now show in typing form (lowercase, no spaces), and a space inside a name is kept until the whole name is typed."
+  },
+  {
+    "v": "1.2.0",
+    "date": "2026-10-28",
     "ko": "Capital 플랜을 위해 44개 나라 수도의 구 단위 코스를 만들었습니다(도쿄 23구, 파리 20구, 런던 33구 등). 홈 화면에서는 아직 서울만 고를 수 있습니다.",
     "en": "Added district-level capital courses for 44 countries for the Capital plan (Tokyo's 23 wards, Paris's 20 arrondissements, London's 33 boroughs and more). The home screen still offers only Seoul."
   },
