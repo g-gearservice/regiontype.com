@@ -2074,6 +2074,26 @@ const lum = hex => {
 };
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
 const HEX = /^#[0-9a-f]{6}$/i;
+/* 윤곽 점 [각도°, 반지름] 3~16 개를 엔진(assets/bloub/engine.js genProfile)이 받는 64칸 반지름으로 편다.
+   0° 오른쪽, 90° 아래(화면 y 가 아래로), 270° 위. 점 사이는 각도를 따라 곧게 잇는다 */
+const GEN_N = 64, GEN_PTS = 16;
+export function genRadii(pts) {
+  if (!Array.isArray(pts)) return null;
+  const p = pts.slice(0, GEN_PTS * 2)
+    .filter(x => Array.isArray(x) && x.length === 2 && x.every(v => typeof v === 'number' && Number.isFinite(v)))
+    .slice(0, GEN_PTS)
+    .map(([a, r]) => [((a % 360) + 360) % 360, Math.min(1.3, Math.max(0.45, r))])
+    .sort((x, y) => x[0] - y[0])
+    .filter((x, i, all) => i === 0 || x[0] !== all[i - 1][0]);
+  if (p.length < 3) return null;
+  return Array.from({ length: GEN_N }, (_, i) => {
+    const a = i * 360 / GEN_N, k = p.findIndex(x => x[0] >= a);
+    const [a2, r2] = k < 0 ? p[0] : p[k], [a1, r1] = k <= 0 ? p.at(-1) : p[k - 1];
+    const span = ((a2 - a1) % 360 + 360) % 360 || 360;
+    return +(r1 + (r2 - r1) * (((a - a1) % 360 + 360) % 360) / span).toFixed(3);
+  });
+}
+
 export function botGen(g) {
   if (!g || typeof g !== 'object' || Array.isArray(g)) return null;
   const num = (v, lo, hi, d) => Number.isFinite(+v) ? +Math.min(hi, Math.max(lo, +v)).toFixed(3) : d;
@@ -2087,6 +2107,8 @@ export function botGen(g) {
   if (g.h2 != null) out.h2 = num(g.h2, -0.2, 0.2, 0);
   if (g.h3 != null) out.h3 = num(g.h3, -0.2, 0.2, 0);
   if (g.stem === true) out.stem = true;
+  const radii = genRadii(g.pts);
+  if (radii) out.radii = radii;
   return Object.keys(out).length ? out : null;
 }
 
@@ -2127,9 +2149,12 @@ export function botSystem({ courses, lang, name, now }) {
     `{"act":"post","tag":"<${TAGS.join('|')}>","title":"<up to ${CM.title} chars>","body":"<up to ${CM.body} chars>"} ` +
     'drafts a community post (brag, ask = question, idea, chat). It only fills the form; the user reviews and ' +
     'presses post. Write it in the user\'s voice from what they told you; never invent scores or facts.\n' +
-    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>","gen":{"lobes":0..12,"amp":-0.28..0.28,"sharp":0.5..3,"sx":0.72..1.28,"sy":0.72..1.28,"rot":-180..180,"h2":-0.2..0.2,"h3":-0.2..0.2,"stem":true|false}} changes how you look (any of the fields): ' +
+    '{"act":"look","shape":"<id>","expression":"<id>","colour":"<id>","gen":{"lobes":0..12,"amp":-0.28..0.28,"sharp":0.5..3,"sx":0.72..1.28,"sy":0.72..1.28,"rot":-180..180,"h2":-0.2..0.2,"h3":-0.2..0.2,"stem":true|false,"pts":[[deg,r],...]}} changes how you look (any of the fields): ' +
     Object.entries(BOT_LOOK).map(([k, v]) => `${k} ${v.join('|')}`).join('; ') + ' (colour can also be "accent" to sync with the highlight colour; ids are French words, citrouille = Halloween pumpkin with stem). ' +
-    'When asked to generate/create a custom avatar or shape not in the preset list, include "gen" in look (e.g. lobes=number of bumps/points, amp=bump depth, sharp=pointiness, sx/sy=width/height stretch, h2/h3=asymmetry, stem=top stem) along with matching colour.\n' +
+    'When asked to generate/create a custom avatar or shape not in the preset list, include "gen" in look (e.g. lobes=number of bumps/points, amp=bump depth, sharp=pointiness, sx/sy=width/height stretch, h2/h3=asymmetry, stem=top stem) along with matching colour. ' +
+    'For a silhouette those cannot make (skull, bat, ghost, cat head…), draw the outline with gen.pts instead: 3–16 [angle°, radius] ' +
+    'points around the centre, 0°=right, 90°=down, 180°=left, 270°=up, radius 0.45..1.3 (1 = plain circle); points are joined in angle order. ' +
+    'Example skull (round dome, cheekbones, narrow jaw): [[270,1],[315,1],[0,0.95],[30,0.92],[50,0.68],[90,0.78],[130,0.68],[150,0.92],[180,0.95],[225,1]].\n' +
     '{"act":"theme","name":"<short style name>","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site ' +
     'and saves the style under that name (2–4 words in the user\'s language) to the styles page: accent = highlight colour ' +
     '(must be light enough for dark text), block = main tile colour (must be dark enough for white text). ' +

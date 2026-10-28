@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, botTheme, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail, pinOf } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, botTheme, genRadii, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail, pinOf } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -888,6 +888,20 @@ console.log('security rule self-check done');
   assert.deepEqual(act({ act: 'look', gen: { lobes: 20, amp: 2, sharp: 5, sx: 0.2, sy: 5, stem: true } }),
     [{ act: 'look', shape: 'gen', gen: { lobes: 12, amp: 0.28, sharp: 3, sx: 0.72, sy: 1.28, stem: true } }], '맞춤 모양(gen)은 안전 범위로 자른다');
   assert.deepEqual(act({ act: 'look', shape: '__proto__' }), []);
+  {
+    const r = genRadii([[0, 1], [90, 0.5], [180, 1], [270, 1.2]]);
+    assert.equal(r.length, 64, '윤곽 점(pts)은 엔진의 64칸으로 편다');
+    assert.deepEqual([r[0], r[8], r[16], r[48], r[56]], [1, 0.75, 0.5, 1.2, 1.1], '점 사이는 각도를 따라 곧게, 360° 를 넘어 잇는다');
+    assert.deepEqual(genRadii([[-90, 9], [450, 0], [180, 1]]), genRadii([[270, 1.3], [90, 0.45], [180, 1]]), '각도는 0..360 으로 접고 반지름은 0.45..1.3 으로 자른다');
+    assert.equal(genRadii([[0, 1], [90, 1]]), null, '점이 셋 미만이면 버린다');
+    assert.equal(genRadii([[0, '1'], [90, 1], [180, null], { 0: 1 }]), null, '숫자 쌍이 아닌 점은 버린다');
+    assert.equal(genRadii('0,1;90,1;180,1'), null);
+    const many = genRadii(Array.from({ length: 5000 }, (_, i) => [i % 360, 1]));
+    assert.ok(many.every(x => x === 1), '점이 많아도 앞의 16개만 본다');
+    const g = act({ act: 'look', gen: { pts: [[270, 1], [0, 0.95], [90, 0.78], [180, 0.95]], stem: true } })[0];
+    assert.ok(g.shape === 'gen' && g.gen.radii.length === 64 && g.gen.stem === true && !('pts' in g.gen), 'look 의 gen.pts 는 radii 로 바뀌어 나간다');
+    assert.ok(g.gen.radii.every(x => x >= 0.4 && x <= 1.3), '엔진 genProfile 이 받는 범위 안');
+  }
   assert.deepEqual(botTheme({ accent: '#F0A03C', block: '#496a6d' }), { act: 'theme', accent: '#f0a03c', block: '#496a6d' });
   assert.equal(botTheme({ accent: '#222222', block: '#eeeeee' }), null, '글자가 안 읽히는 색은 버린다');
   assert.equal(botTheme({ accent: 'red;}body{display:none' }), null, '#rrggbb 만');
@@ -899,6 +913,7 @@ console.log('security rule self-check done');
     const seg = eng.slice(eng.indexOf(from), k === 'colour' ? eng.indexOf('\n];', eng.indexOf(from)) : eng.indexOf(to));
     assert.deepEqual([...seg.matchAll(/id:\s*"([^"]+)"/g)].map(x => x[1]), BOT_LOOK[k], `BOT_LOOK.${k} 가 engine.js 와 같다`);
   }
+  assert.ok(/var PROFILE_SAMPLES = 64;/.test(eng) && /r >= 0\.4 && r <= 1\.3/.test(eng), 'genRadii 의 64칸·범위가 engine.js genProfile 과 같다');
 
   /* 내 전적 — 로그인했을 때만, 숫자는 범위로 */
   const rec = { tier: '골드 II\n무시해', lp: 1234.6, games: '12', wins: -3, rank: 5,
