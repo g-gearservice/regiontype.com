@@ -1,12 +1,12 @@
 /* 소개 화면(/landing/, /landing/proto/)의 화면 말. 말은 data/landing-i18n.json, 게임 화면 말
    data/i18n.json 과 같은 26개만 받는다.
 
-   고르는 차례 — 엄격하다. 맞는 것이 없으면 한국어로 두고 아무것도 바꾸지 않는다.
+   고르는 차례. 맞는 것이 없으면 한국어로 두고 아무것도 바꾸지 않는다.
      1. 설정에서 고른 말 (rt.opt 의 lang 이 'auto' 가 아니면)
      2. 계정에 고정된 나라·언어 (/auth/me 의 pin = { country, lang }; 아직 없으면 건너뛴다)
-     3. 중계기 /where 의 country 와 브라우저 말(navigator.languages)이 서로 맞을 때만:
-        그 나라의 공용어(data/world.json 의 lang)가 지원 말이고, 브라우저 말 목록에 같은 말이
-        있어야 한다. 시간대·Accept-Language 하나만으로는 고르지 않는다.
+     3. 방문자가 사는 나라 — 중계기 /where 의 country 의 공용어(data/world.json 의 lang)가
+        지원 말이면 그 말. 브라우저 말 설정과는 맞춰 보지 않는다(브라우저가 영어여도 일본에서
+        들어오면 일본어). 시간대·Accept-Language 로는 나라를 짐작하지 않는다.
         설정의 '접속 지역 추정'(rt.opt 의 where:false)을 끄면 /where 를 묻지 않는다.
      4. 그 밖은 ko.
 
@@ -65,14 +65,14 @@
   const ok = l => LANGS.includes(l) ? l : '';
 
   /* 순수 판정. 검사가 그대로 부른다.
-     opt: rt.opt, pin: /auth/me 의 pin, where: /where 응답, langs: 브라우저 말 목록,
+     opt: rt.opt, pin: /auth/me 의 pin, where: /where 응답,
      official: 나라 → 공용어 표 */
-  function pick({ opt = {}, pin = null, where = null, langs = [], official = {} } = {}) {
+  function pick({ opt = {}, pin = null, where = null, official = {} } = {}) {
     if (opt.lang && opt.lang !== 'auto' && ok(opt.lang)) return opt.lang;
     if (pin && ok(base(pin.lang))) return base(pin.lang);
     const country = String(where && where.country || '').toUpperCase();
     const want = ok(base(official[country]));
-    if (want && langs.some(t => base(t) === want)) return want;
+    if (want) return want;
     return 'ko';
   }
 
@@ -155,8 +155,7 @@
       const world = await json(at('../data/world.json'), {}, 8000);
       for (const c of (world && world.countries) || []) official[c.id] = c.lang;
     }
-    const langs = [...(navigator.languages || []), navigator.language].filter(Boolean);
-    const lang = pick({ opt, pin: acct && acct.pin, where, langs, official });
+    const lang = pick({ opt, pin: acct && acct.pin, where, official });
     return set(lang);
   }
 
