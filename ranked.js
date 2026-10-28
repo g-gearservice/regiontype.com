@@ -918,7 +918,8 @@ async function generateBotLook(promptText) {
   let changed = !!quick;
   if (quick) act(quick);
   try {
-    const askPrompt = `Generate a bot avatar look matching this description: "${promptText}". Use {"act":"look","shape":"...","expression":"...","colour":"...","gen":{...}} (use a preset shape like citrouille/etoile/coeur/fleur/trefle/nuage/eclat if it fits directly, or synthesize a custom shape with "gen" lobes/amp/sharp/sx/sy/rot/h2/h3/stem and matching colour).`;
+    /* 워커가 한 줄을 400자(BOT_LINE)에서 자른다 — 설명(최대 160자)이 들어갈 자리를 남긴다. 자세한 꼴은 시스템 프롬프트에 있다 */
+    const askPrompt = `Change your look to match: "${promptText}". Reply with a look act: a preset shape if one truly fits, otherwise draw the outline with gen.pts; add a matching colour and expression.`;
     const d = await ask('/bot/chat', {
       msgs: [{ role: 'user', content: askPrompt }],
       courses: botCourses(),
@@ -2628,6 +2629,12 @@ wireChat();
 wireStyles();
 paintTheme();   // 머리 스크립트가 붙일 rt.themeCss 를 지금 표로 다시 적는다
 if (location.search.includes('rt=1')) {
+  /* 워커가 gen.pts 를 편 64칸 radii 가 버디까지 닿아 그려지는지 */
+  (window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href)).then(({ mountBuddy }) => {
+    const box = document.createElement('div'), radii = Array.from({ length: 64 }, (_, i) => +(1 - 0.3 * Math.max(0, Math.sin(i / 64 * Math.PI * 2))).toFixed(3));
+    mountBuddy(box, { still: true, shape: 'gen', gen: { radii } }).setShape('gen', { radii });
+    console.assert(box.querySelector('path')?.getAttribute('d')?.length > 20, '봇 모양: 윤곽 점(radii) 맞춤 모양이 그려진다');
+  });
   console.assert(spookyLook('유령 같은 봇')?.shape === 'goutte' && spookyLook('할로윈 호박')?.shape === 'citrouille' &&
     spookyLook('combat robot') === undefined && spookyLook('맑은 하늘') === undefined, '봇 모양: 할로윈 낱말 프리셋');
   console.assert(JSON.stringify(hashGen('별빛')) === JSON.stringify(hashGen('별빛')) &&

@@ -457,6 +457,16 @@ First-level admin units outside Seoul come from Natural Earth 10m. We do not inv
 
 `relay/size.mjs` is the size table. When courses grow, the relay reads that file, so run `node relay/test.mjs` after a rebuild. `GET /where` lives on the deployed relay.
 
+## Capital courses
+
+Each country's capital, one level down (Tokyo's 23 wards, Paris's arrondissements, London's 33 boroughs), comes from OpenStreetMap via Overpass. © OpenStreetMap contributors, ODbL. Where OpenStreetMap has no districts inside the capital, the units come from [geoBoundaries](https://www.geoboundaries.org): Cairo (CAPMAS via OCHA, CC BY 3.0 IGO), Kuala Lumpur (CC BY 4.0) and Wellington (Stats NZ, CC BY 4.0). Pretoria has no named districts in either source and has no capital course. Seoul stays `seoul-gu`. The capital, the admin level and any name filter live in the `CAP` table in `tools/build_capital.py`. Raw Overpass replies are cached in `/tmp/rt-geo/capital/`, so a rerun needs no network.
+
+    python3 tools/build_capital.py survey FR    # districts per admin level
+    python3 tools/build_capital.py data/        # every capital → data/<iso>-capital.*, world.json
+    python3 tools/build_size.py
+
+`build_world.py` rewrites `world.json` from scratch, so run `build_capital.py` after it.
+
 ## Matching
 
 Every keystroke is checked, including while Hangul is still composing. An abbreviation such as "강남" commits **only when it can lead to exactly one unconquered item**.
