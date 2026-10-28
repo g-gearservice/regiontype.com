@@ -63,6 +63,11 @@ world.json 의 46개 나라마다 수도 안쪽 구획(구·구역·자치구)�
 - 2026-10-28 geoBoundaries 로 셋을 채웠다 — 단계 자리 'gb:EGY/ADM2' 꼴. 카이로 41(구 qism, 라틴 표기), 쿠알라룸푸르 6(무킴·읍,
   KL 무킴과 KL 읍이 같은 이름으로 합쳐짐), 웰링턴 5(시의회 선거구, 2017). 리야드는 OSM 구청(بلدية) 8/16 — wikidata Q97302281. 13곳 중 다섯은 경계에 1–12km 틈이 있다(허용 거리로 잇기는 시도 후 되돌림).
   프리토리아만 남았다: OSM·geoBoundaries 모두 번호 선거구뿐.
+- 2026-10-28 검사: `node relay/test.mjs` 0 으로 끝. `?rt=1` self-check done, assert 실패 0(경고는 [ver]·중계기 ERR_CONNECTION_REFUSED 뿐).
+  `*-capital` 44곳 course·geom·size.mjs 건수와 이름이 모두 같다. 브라우저(헤드리스, 영어 화면): eg 41·nz 5·jp 23 판이 열리고
+  nz·jp 는 첫 이름+스페이스로 G.hits 1. eg 첫 칸 'Qasr Al-Nile' 은 화면 말이 한국어가 아니면 이름 속 스페이스에서 판정돼 틀린다
+  (it.say 가 없어 typeForm 꼴이 안 보임. 'qasralnile ' 은 맞음, 한국어 화면은 Enter 로 맞음). 띄어쓴 이름이 있는 수도 32/44, us-admin 'New Mexico' 도 같다.
+  그래서 '끝' 은 아직 안 친다.
 
 ---
 *만든 날: 2026-10-27*
