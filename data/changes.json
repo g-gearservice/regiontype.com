@@ -2,6 +2,12 @@
   {
     "v": "1.1.0",
     "date": "2026-10-27",
+    "ko": "봇 모양 만들기가 이제 있는 모양에서 고르는 데 그치지 않습니다. '해골로 변신해 줘'처럼 프리셋에 없는 모양을 말하면 봇이 그 윤곽을 직접 그려 그 모양이 됩니다.",
+    "en": "The bot shape generator is no longer limited to the existing shapes. Ask for something like a skull and the bot draws that outline itself and takes its shape."
+  },
+  {
+    "v": "1.1.0",
+    "date": "2026-10-27",
     "ko": "봇 스타일의 모양 만들기에 '유령'·'호박'·'박쥐'·'마녀' 같은 할로윈 낱말을 적으면 봇이 그 모습으로 곧바로 바뀌고, 답이 오면 더 다듬어집니다. 낱말에 맞는 게 없어도 같은 설명이면 늘 같은 모양이 나옵니다.",
     "en": "In the bot shape generator, Halloween words like ghost, pumpkin, bat or witch now change the bot's look instantly, then the reply refines it. Other descriptions always give the same shape for the same words."
   },
