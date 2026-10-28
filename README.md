@@ -8,7 +8,7 @@
 
 # English
 
-A typing drill for place names. v1.3.0 (`VER=5.42`) — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
+A typing drill for place names. v1.3.0 — Seoul's 25 districts on the home map; click a district to focus it, click it again to expand its dongs in place. Shipping UI is Korean only; the other 25 languages stay behind the dev flag until place names are translated too.
 
 ## What's new in 0.9.380
 
@@ -374,7 +374,7 @@ A release follows Semantic Versioning: `vMajor.Minor.Patch` (current: `v1.3.0`).
 
 Which part to raise is chosen by hand.
 
-`VER` — the number in parentheses on the settings version line — is a build number that runs separately from the release. It goes up by `0.01` on every change (`1.45 → 1.46`).
+`VER` in `app.js` is a build number for development, agents and local work only. It runs separately from the release, never appears in a release name, and goes up by `0.01` on every change (`1.45 → 1.46`).
 
 Each release gets its own branch, `static-A.B.C` (`static-1.3.0`), and is merged into `main` to deploy.
 
