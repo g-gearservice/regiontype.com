@@ -26,6 +26,14 @@ html_handling = "none"
 pattern = "www.regiontype.com"
 custom_domain = true
 
+# Pull-request previews only, at <branch>.pr.regiontype.com. Production never answers here
+# (enabled = false). Cloudflare makes the wildcard record and certificate on deploy.
+[[routes]]
+pattern = "pr.regiontype.com"
+custom_domain = true
+previews_enabled = true
+enabled = false
+
 # The root keeps its GitHub Pages A records and is caught by a route instead. A custom
 # domain would have meant deleting those records first, and the gap where the name does not
 # resolve at all is the one outage worth avoiding — resolvers cache a missing name for

@@ -9,6 +9,10 @@
 https://:worker.:account.workers.dev/*
   X-Robots-Tag: noindex
 
+# PR 프리뷰. workers.dev 와 달리 커스텀 도메인 프리뷰엔 Cloudflare 가 noindex 를 안 붙인다.
+https://:branch.pr.regiontype.com/*
+  X-Robots-Tag: noindex
+
 # signin/index.html 은 해시를 그대로 홈에 넘기고 비키는 인라인 스크립트 한 줄이
 # 전부다 — script-src 'self' 만으로는 그 한 줄이 막혀 SSO 착지가 끊긴다.
 # ★ 그 스크립트를 고치면 이 해시도 같이 고친다(위 welcome 쪽 명령과 같다).
