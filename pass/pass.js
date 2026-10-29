@@ -182,8 +182,10 @@ function paint(pal) {
   const root = document.documentElement, r = root.style;
   root.toggleAttribute('data-night', pal?.dark || NIGHT);
   const night = root.hasAttribute('data-night'), mix = (a, p, b) => `color-mix(in srgb,${a} ${p}%,${b})`;
-  const base = pal && night === !!pal.dark ? { '--bg': pal.bg, '--ink': pal.ink, '--ink-soft': mix(pal.ink, pal.dark ? 68 : 78, pal.bg),
-    '--card': pal.dark ? mix(pal.bg, 92, '#fff') : mix(pal.bg, 45, '#fff'), '--grid': mix(pal.bg, pal.dark ? 88 : 92, pal.ink) } : {};
+  /* 밤이면 팔레트의 밤 바탕(nightBg)에 사이트 밤 글자 — 홈의 themeCss 와 같은 셈 */
+  const [bg, ink] = night ? [pal?.nightBg, pal?.dark ? pal.ink : '#e7eef1'] : [pal?.bg, pal?.ink];
+  const base = pal ? { '--bg': bg, '--ink': ink, '--ink-soft': mix(ink, night ? 68 : 78, bg),
+    '--card': night ? mix(bg, 92, '#fff') : mix(bg, 45, '#fff'), '--grid': mix(bg, night ? 88 : 92, ink) } : {};
   const v = pal ? { '--accent': pal.accent, '--accent-deep': mix(pal.accent, 82, '#000'),
     '--block': pal.block, '--block-hi': mix(pal.block, 88, '#000'), ...base } : {};
   for (const k of ['--accent', '--accent-deep', '--block', '--block-hi', '--bg', '--ink', '--ink-soft', '--card', '--grid']) v[k] ? r.setProperty(k, v[k]) : r.removeProperty(k);
@@ -217,6 +219,7 @@ if (new URLSearchParams(location.search).get('rt') === '1') {
     A(T.filter(p => p.free).map(p => p.level).join() === '1,2' && FREE === 2, `pass ${s.id}: 무료는 맨 앞 팔레트 둘`);
     A(s.shapes.every(id => T.some(p => p.big && p.reward === id)) && T[SEASON_LEVELS - 1].reward === s.shapes[s.shapes.length - 1], `pass ${s.id}: 모양은 모두 큰 칸에, 마지막 칸은 그 시즌의 얼굴`);
     A(PALETTE_FAMILIES.filter(f => f.season === s.theme).every(f => T.some(p => p.big && p.reward === 'pal:' + f.id)), `pass ${s.id}: 갈래는 모두 큰 칸에`);
+    A(pals.every(q => /^#[0-9a-f]{6}$/.test(q.nightBg) && con(q.nightBg, q.dark ? q.ink : '#e7eef1') >= 4.5), `palette ${s.id}: 밤 바탕이 있고 밤 글자와 대비를 지킨다`);
     A(pals.every(q => con(q.accent, '#232c31') >= 4.5 && con(q.block, '#ffffff') >= 3 && con(q.bg, q.ink) >= 4.5), `palette ${s.id}: 대비(ranked.js THEME 의 min)를 지킨다`);
     A(new Set(pals.map(q => [q.accent, q.block, q.bg, q.ink].join())).size === pals.length, `palette ${s.id}: 같은 색 넷이 두 번 나오지 않는다`);
     A(t('season_' + s.theme), `i18n: 시즌 이름 ${s.theme}`);

@@ -464,7 +464,10 @@ passKit.then(kit => {
   syncHomeBot();   // 잠근 모양을 가졌는지 이제 안다
   /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색·지난 꼴의 팔레트)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
-  if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
+  /* 밤 바탕이 없던 때(2.3.0) 입은 팔레트는 거두지 않고 밤 바탕까지 담아 다시 적는다 */
+  const was = !cur.nightBg && owned.find(o => sameStyle({ ...pickTheme(o.palette), nightBg: undefined }, cur));
+  if (was) { try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(was.palette))); } catch {} paintTheme(); }
+  else if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
     try { localStorage.removeItem('rt.theme'); } catch {}
     paintTheme();
   }
@@ -1428,7 +1431,10 @@ const THEME = [
     also: { '--grid': v => `color-mix(in srgb,${v} 92%,var(--ink))`, '--land': v => `color-mix(in srgb,${v} 86%,var(--ink))`,
             '--land-line': v => v, '--card': v => `color-mix(in srgb,${v} 45%,#fff)` } },
   { key: 'ink', def: '#3c464a', night: false, also: { '--ink-soft': v => `color-mix(in srgb,${v} 78%,var(--bg))` } },
+  /* 밤 바탕 — 밤 화면에만 깐다(themeCss). 밤 글자는 사이트 밤 값(NIGHT_INK) 그대로 */
+  { key: 'nightBg', def: '#232c31', night: 'only', on: '#e7eef1', min: 4.5 },
 ];
+const NIGHT_INK = '#e7eef1';   // style.css 의 :root[data-night] --ink
 const HEX = /^#[0-9a-f]{6}$/;
 const pickTheme = th => ({ ...Object.fromEntries(THEME.filter(k => HEX.test(th?.[k.key])).map(k => [k.key, th[k.key]])), ...(th?.dark === true ? { dark: true } : {}) });
 const lum = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -1449,11 +1455,13 @@ const themeCss = th => {
   const both = [], day = [], night = [];
   for (const k of THEME) {
     const v = th[k.key];
-    if (!HEX.test(v)) continue;
+    if (!HEX.test(v) || k.night === 'only') continue;
     if (th.dark && !k.night) night.push(`--${k.key}:${v}`);
     else (k.night ? both : day).push(`--${k.key}:${v}`, ...Object.entries(k.also || {}).map(([p, f]) => `${p}:${f(v)}`));
   }
   if (night.length && HEX.test(th.bg) && HEX.test(th.ink)) night.push(...Object.entries(DARK(th.bg, th.ink)).map(([p, v]) => `${p}:${v}`));
+  /* 밝은 팔레트의 밤 바탕 — 낮 바탕 대신 밤에 깔고, 따라 나오는 값은 사이트 밤 글자와 섞는다 */
+  else if (HEX.test(th.nightBg)) night.push(`--bg:${th.nightBg}`, ...Object.entries(DARK(th.nightBg, NIGHT_INK)).map(([p, v]) => `${p}:${v}`));
   return (both.length ? `:root,:root[data-night]{${both.join(';')}}` : '') + (day.length ? `:root:not([data-night]){${day.join(';')}}` : '') +
     (night.length ? `:root[data-night]{${night.join(';')}}` : '');
 };
@@ -2555,6 +2563,8 @@ if (location.search.includes('rt=1')) {
       !at('2026-11-20').includes('pal:holly') && at('2026-12-25').includes('pal:holly'), '패스: 칸은 그 시즌이 열린 날부터');
     console.assert(themeCss({ accent: '#f5ca47', bg: '#131316', ink: '#e4e4e7', dark: true }).includes(':root[data-night]{--bg:#131316') &&
       !themeCss({ bg: '#131316', ink: '#e4e4e7', dark: true }).includes(':root:not([data-night]){--bg'), '스타일: 어두운 팔레트는 바탕을 밤에만 깐다');
+    console.assert(themeCss({ bg: '#f2e8de', ink: '#604d39', nightBg: '#2a2230' }).includes(':root[data-night]{--bg:#2a2230') &&
+      PASS.every(p => !p.reward.startsWith('pal:') || HEX.test(pickTheme(parseReward(p.reward).palette).nightBg)), '스타일: 팔레트마다 밤 바탕을 담아 밤에 깐다');
   });
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
