@@ -2,9 +2,9 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.61';
+const VER = '5.62';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
-const REL = '1.4.10';
+const REL = '2.0.0';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
@@ -3623,9 +3623,8 @@ const NAME_KEY = 'rt.name';
 
    비밀번호는 안 받는다. 1차는 Google·Apple(SSO)이 하고, 패스키는 계정에 걸어
    둔 사람만 얹는 2단계다 — 어느 쪽 비밀도 우리가 쥐지 않는다.
-   토큰을 쿠키가 아니라 localStorage 에 두는 건 중계기가 사이트와 다른 도메인
-   (regiontype.gearservicevanguard.com)에 있어서다. 남의 도메인 쿠키는 브라우저가
-   점점 더 막는다 — 도메인이 갈린 이상 HttpOnly 쿠키로 올릴 길은 닫혔다. */
+   토큰을 쿠키가 아니라 localStorage 에 두는 건 중계기가 처음에 사이트와 다른
+   도메인에 있어서였다. 지금은 같은 사이트의 api.regiontype.com 이다. */
 const TOKEN_KEY = 'rt.token';
 const token = () => { try { return localStorage.getItem(TOKEN_KEY) || '' } catch { return '' } };
 

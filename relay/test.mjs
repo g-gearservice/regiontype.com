@@ -109,7 +109,7 @@ console.log('ranked self-check done');
 
 /* ── 피드백 문 앞: IP 창 → Turnstile → GitHub ─────────── */
 const fbReq = (body = { ...base, cf: 'human-token' }, ip = '203.0.113.7') => new Request(
-  'https://regiontype.gearservicevanguard.com/', {
+  'https://api.regiontype.com/', {
     method: 'POST',
     headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
                ...(ip ? { 'cf-connecting-ip': ip } : {}) },
@@ -206,19 +206,19 @@ try {
   assert.equal(new URLSearchParams(sent[0].init.body).has('remoteip'), false,
                'IP 헤더가 없으면 선택 필드를 보내지 않는다');
 
-  const cfg = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/turnstile', {
+  const cfg = await relayWorker.fetch(new Request('https://api.regiontype.com/turnstile', {
     headers: { origin: 'https://regiontype.com' },
   }), fbEnv());
   assert.equal(cfg.status, 200);
   assert.equal((await cfg.json()).sitekey, 'public-sitekey');
   assert.equal(cfg.headers.get('access-control-allow-origin'), 'https://regiontype.com');
   assert.equal(JSON.stringify(await (await relayWorker.fetch(new Request(
-    'https://regiontype.gearservicevanguard.com/turnstile', { headers: { origin: 'https://regiontype.com' } }
+    'https://api.regiontype.com/turnstile', { headers: { origin: 'https://regiontype.com' } }
   ), fbEnv())).json()).includes('server-secret'), false, '설정 응답에는 비밀키가 없다');
-  assert.equal((await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/turnstile', {
+  assert.equal((await relayWorker.fetch(new Request('https://api.regiontype.com/turnstile', {
     headers: { origin: 'https://evil.example' },
   }), fbEnv())).status, 403, '낯선 출처에는 공개 설정도 주지 않는다');
-  assert.equal((await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/turnstile', {
+  assert.equal((await relayWorker.fetch(new Request('https://api.regiontype.com/turnstile', {
     headers: { origin: 'https://regiontype.com' },
   }), fbEnv({ TURNSTILE_SITEKEY: '' }))).status, 503, '공개키가 없으면 위젯 설정도 닫는다');
 } finally {
@@ -653,7 +653,7 @@ console.log('security rule self-check done');
   const A = 'a'.repeat(32), B = 'b'.repeat(32), C = 'c'.repeat(32), D = 'd'.repeat(32);
   const tok = {}; for (const w of [A, B, C, D]) tok[w] = await sign(env.SESSION_KEY, w);
   const call = async (path, body, who) => {
-    const r = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, {
+    const r = await relayWorker.fetch(new Request('https://api.regiontype.com' + path, {
       method: body ? 'POST' : 'GET', body: body && JSON.stringify(body),
       headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
                  ...(who ? { authorization: 'Bearer ' + tok[who] } : {}) } }), env);
@@ -706,7 +706,7 @@ console.log('security rule self-check done');
   assert.equal((await call('/cm/up', { target: 'r' + under }, D)).status, 404, '가려진 글 밑의 댓글에도 안 쌓인다');
   assert.equal((await call('/cm/up', null, B)).status, 405);
   for (const junk of [null, 7, [1]]) {
-    const r = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/cm/up', {
+    const r = await relayWorker.fetch(new Request('https://api.regiontype.com/cm/up', {
       method: 'POST', body: JSON.stringify(junk),
       headers: { origin: 'https://regiontype.com', 'content-type': 'application/json', authorization: 'Bearer ' + tok[B] } }), env);
     assert.equal(r.status, 400, JSON.stringify(junk) + ' 몸통은 400 으로 거른다');
@@ -758,7 +758,7 @@ console.log('security rule self-check done');
   const tok = { [A]: await sign(env.SESSION_KEY, A), [B]: await sign(env.SESSION_KEY, B) };
   for (const w of [A, B]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
   const call = async (path, body, who) => {
-    const r = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, {
+    const r = await relayWorker.fetch(new Request('https://api.regiontype.com' + path, {
       method: body ? 'POST' : 'GET', body: body && JSON.stringify(body),
       headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
                  ...(who ? { authorization: 'Bearer ' + tok[who] } : {}) } }), env);
@@ -936,7 +936,7 @@ console.log('security rule self-check done');
   assert.equal(botCutSay('좋아요 {웃음}'), '좋아요 {웃음}', 'JSON 꼴이 아닌 글은 그대로');
 
   const open = { limit: async () => ({ success: true }) };
-  const chat = (body, env) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/bot/chat', {
+  const chat = (body, env) => relayWorker.fetch(new Request('https://api.regiontype.com/bot/chat', {
     method: 'POST', body: JSON.stringify(body),
     headers: { origin: 'https://regiontype.com', 'content-type': 'application/json' } }), env);
   const ask = { msgs: [{ role: 'user', content: '순위 보여줘' }], courses };
@@ -1104,7 +1104,7 @@ console.log('security rule self-check done');
     } });
   const DB = { prepare: stmt, batch: async ss => { const out = []; for (const s of ss) out.push(await s.run()); return out; } };
   const open = { limit: async () => ({ success: true }) };
-  const ping = (body, env) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/online', {
+  const ping = (body, env) => relayWorker.fetch(new Request('https://api.regiontype.com/online', {
     method: 'POST', body: JSON.stringify(body),
     headers: { origin: 'https://regiontype.com', 'content-type': 'application/json' } }), env);
   assert.equal((await ping({ id }, {})).status, 503, 'D1 이 없으면 닫는다');
@@ -1135,10 +1135,10 @@ console.log('security rule self-check done');
     assert.equal(at.length, 1, `${p} 는 워커 하나에만 속해야 한다: ${at}`);
   }
   for (const n of Object.keys(OWN).filter(n => n !== 'feedback')) {
-    const r = await only(n).fetch(new Request('https://regiontype.gearservicevanguard.com/where', { method: 'OPTIONS' }), {});
+    const r = await only(n).fetch(new Request('https://api.regiontype.com/where', { method: 'OPTIONS' }), {});
     assert.equal(r.status, 404, `${n} 은 남의 경로를 거절한다`);
   }
-  const pre = await only('bot').fetch(new Request('https://regiontype.gearservicevanguard.com/bot/chat',
+  const pre = await only('bot').fetch(new Request('https://api.regiontype.com/bot/chat',
     { method: 'OPTIONS', headers: { origin: 'https://regiontype.com' } }), {});
   assert.equal(pre.status, 204, '자기 경로의 프리플라이트는 worker 로 넘긴다');
   console.log('entry split check done');
@@ -1174,7 +1174,7 @@ console.log('security rule self-check done');
   for (const w of [A, B, C]) tok[w] = await sign(env.SESSION_KEY, w);
   for (const w of [A, B, C]) db.prepare('insert into user (id, at) values (?, 0)').run(w);
   const call = async (path, body, who, e = env) => {
-    const r = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, {
+    const r = await relayWorker.fetch(new Request('https://api.regiontype.com' + path, {
       method: 'POST', body: JSON.stringify(body ?? {}),
       headers: { origin: 'https://regiontype.com', 'content-type': 'application/json',
                  ...(who ? { authorization: 'Bearer ' + tok[who] } : {}) } }), e);
@@ -1486,7 +1486,7 @@ console.log('security rule self-check done');
   const sent = [];
   const MAIL_KEY = 'mail-key-0123456789';
   const mailEnv = {
-    MAIL_KEY, MAIL_FROM: 'noreply@regiontype.gearservicevanguard.com', MAIL_NAME: 'regiontype',
+    MAIL_KEY, MAIL_FROM: 'noreply@regiontype.com', MAIL_NAME: 'regiontype',
     EMAIL: { send: async m => { sent.push(m); return { messageId: 'm1' }; } },
   };
   const MAIL = { fetch: (url, init) => handle(new Request(url, init), mailEnv) };
@@ -1528,7 +1528,7 @@ console.log('security rule self-check done');
     GOOGLE_ID: 'client-123', GOOGLE_SECRET: 'sek' };
   const call = async (path, body, extra = {}) => {
     const headers = { origin: extra.origin || 'https://regiontype.com', 'content-type': 'application/json', ...(extra.headers || {}) };
-    const r = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, {
+    const r = await relayWorker.fetch(new Request('https://api.regiontype.com' + path, {
       method: extra.method || 'POST', body: body == null ? undefined : JSON.stringify(body), headers,
     }), extra.env || base);
     const text = await r.text();
@@ -1555,7 +1555,7 @@ console.log('security rule self-check done');
   assert.equal(started.status, 200, started.msg);
   assert.equal(sent.length, before + 1);
   assert.equal(sent.at(-1).to, owner);
-  assert.deepEqual(sent.at(-1).from, { email: 'noreply@regiontype.gearservicevanguard.com', name: 'regiontype' }, '보내는 이름이 주소 대신 보인다');
+  assert.deepEqual(sent.at(-1).from, { email: 'noreply@regiontype.com', name: 'regiontype' }, '보내는 이름이 주소 대신 보인다');
   const code = sent.at(-1).text.match(/\b\d{6}\b/g).at(-1);
   const mailHtml = sent.at(-1).html;
   assert.ok(mailHtml.startsWith('<!doctype html>') && mailHtml.includes(`>${code}</td>`), '평문과 같은 코드가 HTML 본문에도 있다');
@@ -1616,7 +1616,7 @@ console.log('security rule self-check done');
     }) }), { status: 200 });
     db.prepare('insert into pending (id, kind, who, until, back) values (?, ?, null, ?, ?)').run(
       stateG, 'sso-google', Date.now() + 60_000, 'https://regiontype.com');
-    const prod = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/auth/cb?code=c&state=' + stateG), base);
+    const prod = await relayWorker.fetch(new Request('https://api.regiontype.com/auth/cb?code=c&state=' + stateG), base);
     assert.equal(prod.status, 302);
     assert.ok(prod.headers.get('location').includes('signin=ok'), '배포 로그인은 메일 없이 통과한다');
 
@@ -1626,7 +1626,7 @@ console.log('security rule self-check done');
     }) }), { status: 200 });
     db.prepare('insert into pending (id, kind, who, until, back) values (?, ?, null, ?, ?)').run(
       stateG, 'sso-google', Date.now() + 60_000, 'http://localhost:3000');
-    const localBad = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/auth/cb?code=c&state=' + stateG), base);
+    const localBad = await relayWorker.fetch(new Request('https://api.regiontype.com/auth/cb?code=c&state=' + stateG), base);
     assert.ok(localBad.headers.get('location').includes('signin=fail'), '다른 메일은 로컬에서 거절한다');
 
     globalThis.fetch = async () => new Response(JSON.stringify({ id_token: jwt({
@@ -1635,7 +1635,7 @@ console.log('security rule self-check done');
     }) }), { status: 200 });
     db.prepare('insert into pending (id, kind, who, until, back) values (?, ?, null, ?, ?)').run(
       stateG, 'sso-google', Date.now() + 60_000, 'http://localhost:3000');
-    const localOk = await relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com/auth/cb?code=c&state=' + stateG), base);
+    const localOk = await relayWorker.fetch(new Request('https://api.regiontype.com/auth/cb?code=c&state=' + stateG), base);
     assert.ok(localOk.headers.get('location').includes('signin=ok'), '허용된 메일만 로컬에서 통과한다');
   } finally {
     globalThis.fetch = realFetch;
@@ -1981,7 +1981,7 @@ console.log('security rule self-check done');
     LOBBY: { idFromName: n => n, get: n => ({ fetch: async r => { hit.push([n, typeof r === 'string' ? r : new URL(r.url).pathname]);
       return typeof r === 'string' ? Response.json({ ticket: 'T'.repeat(32) }) : new Response('lobby'); } }) },
     MATCH: { idFromName: n => n, get: n => ({ fetch: async r => { hit.push([n, new URL(r.url).pathname]); return new Response('match'); } }) } };
-  const wfetch = (path, init = {}, e = wenv) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, init), e);
+  const wfetch = (path, init = {}, e = wenv) => relayWorker.fetch(new Request('https://api.regiontype.com' + path, init), e);
   const okOrigin = { origin: 'https://regiontype.com' };
   assert.equal((await wfetch('/compete/ws', { headers: { ...okOrigin, upgrade: 'websocket' } }, { ...wenv, LOBBY: undefined })).status, 503);
   assert.equal((await wfetch('/compete/ws', { headers: { origin: 'https://evil.example', upgrade: 'websocket' } })).status, 403, '남의 Origin 은 소켓도 막는다');
@@ -2593,7 +2593,7 @@ assert.equal(pinOf('KR', { toString: () => 'ko-KR' }), null, '문자열이 아�
     /^\s*select/i.test(s.q) ? s.all() : s.run().then(r => ({ results: [], ...r })))) };
   const open = { limit: async () => ({ success: true }) };
   const env = { DB, SESSION_KEY: 'k'.repeat(32), GOOGLE_ID: 'gid', GOOGLE_SECRET: 'gsec', RL_AU: open, RL_CB: open };
-  const RELAY = 'https://regiontype.gearservicevanguard.com';
+  const RELAY = 'https://api.regiontype.com';
   const hexOf = u => [...u].map(b => b.toString(16).padStart(2, '0')).join('');
   const realFetch = globalThis.fetch;
   let claims = null;   // 다음 토큰 교환에서 Google 이 줄 값
@@ -2736,10 +2736,10 @@ console.log('pin self-check done');
   const authHeader = { authorization: `Bearer ${token}`, origin: 'https://regiontype.com' };
   const env = { DB, SESSION_KEY, RL_RK: { limit: async () => ({ success: true }) } };
 
-  const post = (path, body, headers = authHeader) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, {
+  const post = (path, body, headers = authHeader) => relayWorker.fetch(new Request('https://api.regiontype.com' + path, {
     method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body)
   }), env);
-  const get = (path, headers = authHeader) => relayWorker.fetch(new Request('https://regiontype.gearservicevanguard.com' + path, { method: 'GET', headers }), env);
+  const get = (path, headers = authHeader) => relayWorker.fetch(new Request('https://api.regiontype.com' + path, { method: 'GET', headers }), env);
   const aged = (ms = 60000) => db.prepare('update license_ticket set at = ? where who = ?').run(Date.now() - ms, me);
   const start = async (body, status = 201) => {
     const r = await post('/license/start', { mode: 'normal', dev: 'pc', lang: 'ko', ...body });

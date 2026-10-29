@@ -509,7 +509,7 @@ GitHub issues need a token, and a token on a static site is stolen immediately. 
 
 Put the URL in `FEEDBACK_URL`. The token never leaves the Worker.
 
-**Do not put Cloudflare Access in front of this Worker.** If `regiontype.gearservicevanguard.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code, which the site shows as a 502. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. That custom domain is the only door: `workers_dev = false` closes the `*.workers.dev` one. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
+**Do not put Cloudflare Access in front of this Worker.** If `api.regiontype.com` is behind Access, browsers get `OPTIONS` 403 on preflight and feedback never reaches your code, which the site shows as a 502. Remove the hostname from Zero Trust, or add a public Bypass policy for `/`. That custom domain is the only door: `workers_dev = false` closes the `*.workers.dev` one. Issue labels on GitHub must exist in English (`bug`, `enhancement`) — the relay maps feedback kinds to those names.
 
     node relay/test.mjs      checks that one issue and one score row are filtered correctly
 
@@ -577,7 +577,7 @@ Honest scores and well-built lies still look the same here. **The board is a hal
 **Google sign-in requests the `openid email` scope; Apple carries no scope.** The Google-verified email address is used solely to send the 5-minute sign-in code; it is kept temporarily in the server's sign-in challenge row, deleted on success, and never stored in the account or shown publicly. What comes back from the provider is an account id, and it is never kept as-is: it goes through an HMAC (`SUB_KEY`, or `SESSION_KEY` if that secret is unset) before it reaches D1, so a leak of that id somewhere else cannot be matched back to a row here.
 
 Second step:
-- **Email code**: 6-digit code sent from `noreply@regiontype.gearservicevanguard.com` to the Google account email (valid 5 minutes; max 5 codes per attempt; 5 wrong tries end the attempt). The relay needs `MAIL_KEY` and the `rt-mail` worker — without them nobody can finish signing in.
+- **Email code**: 6-digit code sent from `noreply@regiontype.com` to the Google account email (valid 5 minutes; max 5 codes per attempt; 5 wrong tries end the attempt). The relay needs `MAIL_KEY` and the `rt-mail` worker — without them nobody can finish signing in.
 - **Recovery code**: One-time backup codes from Settings › Security.
 
     wrangler secret put SESSION_KEY   # any long random string. rotating it kills every session, but leaves SSO links alone
@@ -590,7 +590,7 @@ Second step:
 
 **Recovery codes are the door when the Google mail cannot arrive.** Getting them in Settings › Security shows eight one-time codes exactly once; only their hashes reach D1. Each is spent once — a redeemed code is gone for good — and reissuing wipes every old code in the same stroke, so there is no way to see a code again once that screen closes.
 
-The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `regiontype.gearservicevanguard.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
+The session is a signed stateless token on `Authorization: Bearer`. No cookie: the relay first ran on `workers.dev`, away from the site, where third-party cookies are increasingly blocked. A header also means no CSRF. The relay now answers on `api.regiontype.com`, a subdomain of the site, so HttpOnly cookies are possible if the token ever needs replacing.
 
 **The row owner is read from the token.** The body is ignored — the old record-code path let anyone who knew the code post under that name.
 

@@ -12,10 +12,9 @@
  */
 const ZONE = 'regiontype.com';
 const SITE_HOSTS = ['regiontype.com', 'www.regiontype.com'];
-/* 중계기는 다른 존에 산다 — 홍수 차단 규칙은 사이트 존이 아니라 그 존에 걸어야
-   한다. 같은 존에 걸면 규칙이 아무 요청과도 안 맞아 조용히 아무것도 안 막는다 */
-const RELAY_ZONE = 'gearservicevanguard.com';
-const RELAY_HOST = 'regiontype.gearservicevanguard.com';
+/* 중계기는 사이트와 같은 존의 api. 에 산다. 홍수 차단 규칙은 RELAY_HOST 로 거른다 */
+const RELAY_ZONE = ZONE;
+const RELAY_HOST = 'api.regiontype.com';
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const APPLY = process.argv.includes('--apply');
 
