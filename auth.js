@@ -789,13 +789,6 @@ if (!ssoBack) {
           dispatchEvent(new Event('rt-tab-swap'));
           dispatchEvent(new Event('rt-auth-out'));
           if (typeof paintUI === 'function') paintUI();
-          /* 토큰이 죽어서 로그인된 사람이 아니다. 홈에 남기지 않고 소개로 보낸다.
-             호출: index.html 이 auth.js 를 싣고, 응답은 /auth/me 401. 토큰 키는 rt.token. */
-          try {
-            const framed = window.top !== window.self;
-            const home = location.pathname === '/' || location.pathname === '/index.html';
-            if (!framed && home && !location.search.includes('rt=1') && sessionStorage.getItem('rt.home') !== '1') location.replace('/landing/' + location.search);
-          } catch {}
           return;
         }
         if (!r.ok) return;

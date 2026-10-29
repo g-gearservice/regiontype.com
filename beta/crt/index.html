@@ -76,7 +76,7 @@ body{display:flex;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-a
 <body>
 <div class="tube" id="tube">
   <div class="screen">
-    <div class="bar"><a href="../../landing/" aria-label="regiontype 랜딩으로">REGIONTYPE/CRT</a><span id="st" aria-live="off">seoul</span></div>
+    <div class="bar"><a href="../../" aria-label="regiontype 홈으로">REGIONTYPE/CRT</a><span id="st" aria-live="off">seoul</span></div>
     <div class="main nomap" id="main">
       <div class="map"><canvas id="cv" width="10" height="10" role="img" aria-label="지도"></canvas><span class="credit" id="credit"></span></div>
       <div class="log" id="log" role="log" aria-live="polite"></div>
@@ -257,7 +257,7 @@ function run(raw) {
     return type(raw);
   }
   if (c === 'ls') return ls();
-  if (c === 'home' || c === 'exit') { location.href = '../../landing/'; return; }
+  if (c === 'home' || c === 'exit') { location.href = '../../'; return; }
   const d = find(c === 'open' || c === 'cd' ? arg : raw);
   if (d) return open(d);
   say(`${raw}: 그런 명령이나 구가 없습니다. help 를 쳐 보세요.`);
