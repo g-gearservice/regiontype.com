@@ -1720,6 +1720,8 @@ var _BotEngine = class _BotEngine {
     return {
       bodyPath,
       gaze,
+      // regiontype: le regard propre a la pose (sans pointeur ni derive) — buddy.js ne tourne le corps que de l'ecart
+      poseGaze: pose.gaze,
       bodyAlpha: pose.bodyAlpha,
       eyes,
       dots,

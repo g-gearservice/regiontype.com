@@ -1243,7 +1243,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
   #stylesBox :is(.profile-card,.sty-edit){border-radius:24px}
 }
 /* 두 탭 판을 한 칸에 겹친다 — 판 높이는 둘 중 큰 쪽이다. 가려진 판은 자리만 지키고 보이지도 눌리지도 않는다 */
-.sty-panels{display:grid;min-height:0}
+.sty-panels{display:grid;grid-template-columns:minmax(0,1fr);min-height:0}   /* 칸 너비는 판 너비다 — 안의 것이 넓다고 판을 밀지 않는다 */
 .sty-panels > .sty-panel{grid-area:1 / 1}
 #stylesBox .fb-head h2{font-size:18px}
 #stylesBox .back{width:32px;height:32px}
@@ -2538,9 +2538,10 @@ button.sty-swatch:active{transform:scale(.94)}
 /* 색 직접 고르기 — 고르기 칸 넷(ranked.js 의 THEME)을 한 줄에. 대비가 모자란 칸은 테두리와 '대비 부족' 글자로 — 색만이 아니다 */
 .sty-edit{border:0;display:flex;flex-direction:column;gap:10px;background:var(--card-fill);padding:12px;border-radius:var(--card-r);margin:0}
 .sty-edit legend{float:left;font-weight:800;font-size:15px}
-.sty-picks{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+/* 칸은 60px 아래로 줄지 않는다 — 좁으면 줄 수를 줄인다(4 → 3). 짓눌러 글자가 두 줄로 꺾이면 칸이 길쭉해진다 */
+.sty-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px}
 .sty-pick{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border-radius:var(--field-r);background:var(--card-inset);cursor:pointer;
-  font-size:12px;font-weight:700;line-height:1.2;text-align:center}
+  font-size:12px;font-weight:700;line-height:1.2;text-align:center;min-width:0;word-break:keep-all}
 .sty-pick[data-low]{box-shadow:inset 0 0 0 2px var(--bad)}
 .sty-pick input{width:34px;height:34px;padding:0;border:0;border-radius:10px;background:none;cursor:pointer}
 .sty-pick input::-webkit-color-swatch-wrapper{padding:0}
