@@ -2065,15 +2065,6 @@ export function botNow(n) {
            } : null };
 }
 
-/* 스타일 베타. 그 색 위에 얹히는 글자와 대비를 맞춘다 — --accent 위엔 --on-accent(#232c31) 4.5:1,
-   --block 위엔 흰 큰 글자 3:1. 못 미치는 색은 버린다 */
-const lum = hex => {
-  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
-  return .2126 * r + .7152 * g + .0722 * b;
-};
-const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
-const HEX = /^#[0-9a-f]{6}$/i;
 /* 윤곽 점 [각도°, 반지름] 3~16 개를 엔진(assets/bloub/engine.js genProfile)이 받는 64칸 반지름으로 편다.
    0° 오른쪽, 90° 아래(화면 y 가 아래로), 270° 위. 점 사이는 각도를 따라 곧게 잇는다 */
 const GEN_N = 64, GEN_PTS = 16;
@@ -2112,16 +2103,6 @@ export function botGen(g) {
   return Object.keys(out).length ? out : null;
 }
 
-export function botTheme(a) {
-  if (a?.reset === true) return { act: 'theme', reset: true };
-  const t = { act: 'theme' };
-  const name = plain(a?.name, 24);
-  if (name) t.name = name;
-  if (HEX.test(a?.accent) && contrast(a.accent, '#232c31') >= 4.5) t.accent = a.accent.toLowerCase();
-  if (HEX.test(a?.block) && contrast(a.block, '#ffffff') >= 3) t.block = a.block.toLowerCase();
-  return t.accent || t.block ? t : null;
-}
-
 export function botSystem({ courses, lang, name, now }) {
   const rec = now?.rec;
   return `You are ${name}, a small round mascot bot living on the home screen of regiontype.com, ` +
@@ -2155,14 +2136,12 @@ export function botSystem({ courses, lang, name, now }) {
     'For a silhouette those cannot make (skull, bat, ghost, cat head…), draw the outline with gen.pts instead: 3–16 [angle°, radius] ' +
     'points around the centre, 0°=right, 90°=down, 180°=left, 270°=up, radius 0.45..1.3 (1 = plain circle); points are joined in angle order. ' +
     'Example skull (round dome, cheekbones, narrow jaw): [[270,1],[315,1],[0,0.95],[30,0.92],[50,0.68],[90,0.78],[130,0.68],[150,0.92],[180,0.95],[225,1]].\n' +
-    '{"act":"theme","name":"<short style name>","accent":"#rrggbb","block":"#rrggbb"} (beta) recolours the site ' +
-    'and saves the style under that name (2–4 words in the user\'s language) to the styles page: accent = highlight colour ' +
-    '(must be light enough for dark text), block = main tile colour (must be dark enough for white text). ' +
-    '{"act":"theme","reset":true} goes back to the default colours.\n' +
+    'You cannot change the site colours. New colour palettes are earned in the Region Pass (/pass/); when the ' +
+    'user asks for other colours, a theme or a palette, point them there and never say you changed colours.\n' +
     'Style from a reference: when the user names a reference (a brand, artwork, season, mood, place, game...) ' +
-    'and wants that style, pick its key traits (main colours, light or dark, calm or lively) and in one reply ' +
-    'combine theme + look + set night (and motion if it fits). Say in one sentence which traits you took. ' +
-    'This is a beta: you cannot see images, only names and descriptions.\n' +
+    'and wants that style, pick its key traits (light or dark, calm or lively) and in one reply ' +
+    'combine look + set night (and motion if it fits). Say in one sentence which traits you took, and for ' +
+    'colours point to the Region Pass. You cannot see images, only names and descriptions.\n' +
     'Only act when the user asks. If you cannot do exactly what was asked, say so and ask — never swap in ' +
     'a different action. Never invent a slug. If you do not know a fact about the site, say so and offer ' +
     'the feedback form — never make one up.\n' +
@@ -2217,7 +2196,6 @@ export function botAct(text, courses) {
       if (g) { l.gen = g; if (!l.shape) l.shape = 'gen'; }
       return Object.keys(l).length ? { act: 'look', ...l } : null;
     }
-    if (a?.act === 'theme') return botTheme(a);
     return null;
   }).filter(Boolean);
   return { say: cut(j.say, BOT_LINE), do: acts };
