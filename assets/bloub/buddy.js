@@ -342,9 +342,11 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
       if (!eye.home) continue;
       const x = eye.home.x - c.x, y = eye.home.y - c.y, k = Math.min(1, Math.hypot(x, y) / rr);
       const [px, py] = rot(...face(x, y, t * Math.sqrt(1 - k * k)));
-      /* 눈은 늘 표정 그대로의 크기로 곧게 선 캡슐이다. 엔진은 공 위에 비춘 눈을 기울이고 짓눌러 주는데,
-         그건 버리고 눈꺼풀(깜빡임·졸린 눈)만큼만 세로로 줄인다 */
-      eye.matrix = `matrix(1,0,0,${(eye.lid ?? 1).toFixed(3)},${(c.x + px).toFixed(2)},${(c.y + py).toFixed(2)})`;
+      /* 눈은 표정 그대로의 크기·기울기로 선다. 엔진은 공 위에 비춘 눈을 시선만큼 비틀고 짓눌러 주는데,
+         그건 버리고 시선 없는 앞모습으로 다시 짠다 — 표정의 기울기(tilt, 웃는 눈의 八 자 따위)를 돌리고
+         눈꺼풀(깜빡임·졸린 눈)만큼 세로로 줄인다. 엔진의 행렬과 같은 셈이다(시선 0 이면 둘이 같다) */
+      const ph = (eye.tilt ?? 0) * Math.PI / 180, cp = Math.cos(ph), sp = Math.sin(ph), lid = eye.lid ?? 1;
+      eye.matrix = `matrix(${cp.toFixed(3)},${(sp * lid).toFixed(3)},${(-sp).toFixed(3)},${(cp * lid).toFixed(3)},${(c.x + px).toFixed(2)},${(c.y + py).toFixed(2)})`;
     }
     maskBody.setAttribute('d', solid);
     paper.setAttribute('d', solid);

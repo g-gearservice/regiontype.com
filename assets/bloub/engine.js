@@ -1709,6 +1709,7 @@ var _BotEngine = class _BotEngine {
           alpha: pose.eyeAlpha * clamp(e.depth / 0.12),
           // regiontype: l'ouverture seule (clignement x ouverture de l'expression) — buddy.js redessine l'oeil droit
           lid: k,
+          tilt: cfg.tilt ?? 0,
           home: { x: r2(h.x * hFit + (offX + decalage.x) * R2), y: r2(h.y * hFit + (offY + decalage.y) * R2) }
         });
       }
