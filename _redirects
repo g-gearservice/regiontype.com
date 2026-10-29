@@ -27,6 +27,8 @@
 /beta/3dnavigation/settings  /beta/3dnavigation/settings/           301
 /beta/bus/ /beta/bus/index.html 200
 /beta/bus  /beta/bus/           301
+/beta/flow/ /beta/flow/index.html 200
+/beta/flow  /beta/flow/           301
 /beta/style/ /beta/style/index.html 200
 /beta/style  /beta/style/           301
 /beta/styles/ /beta/style/index.html 200
