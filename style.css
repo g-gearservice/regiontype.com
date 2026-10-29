@@ -2549,11 +2549,11 @@ button.sty-swatch:active{transform:scale(.94)}
 .sty-low{font-size:11px;font-weight:800}
 .sty-low:empty{display:none}
 /* 추천 — 지금 강조색에 대비를 지키는 칸색 짝. 누르면 고르기 칸에 들어가 미리 보인다 */
-.sty-sug{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.sty-sug-head{font-size:13px;font-weight:800}
-.sty-sug-list{display:flex;gap:6px}
-.sty-sug .sty-swatch{width:34px;height:34px;padding:5px;gap:2px;border-radius:10px}
-.sty-shuffle{margin-left:auto;min-height:34px}
+.sty-sug{display:flex;align-items:center;gap:8px}
+.sty-sug-head{flex:none;font-size:13px;font-weight:800;white-space:nowrap}
+.sty-sug-list{display:flex;flex:1;min-width:0;gap:6px}
+.sty-sug .sty-swatch{flex:0 1 34px;min-width:24px;aspect-ratio:1;padding:5px;gap:2px;border-radius:10px}
+.sty-shuffle{flex:none;margin-left:auto;min-height:34px;white-space:nowrap}
 .sty-warn{margin:0;font-size:13px;font-weight:700}
 .sty-warn:empty{display:none}
 .sty-save{align-self:stretch;min-height:40px;padding:0 18px;border:0;border-radius:999px;font:inherit;font-weight:800;color:#fff;background:var(--block-deep);cursor:pointer;transition:transform .1s ease-out,background var(--fast)}
