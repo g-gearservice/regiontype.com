@@ -2643,7 +2643,9 @@ body:is(.signing,.rk-styling,:has(#play.on),:has(#styles:popover-open #styPanelB
    ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
 .rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
 .rk-dim[hidden]{display:none}
-body:is(.rk-intro,.rk-emerge) #regions{z-index:auto}
+/* fixed 는 z-index:auto 여도 쌓임 맥락을 만들어 넵바(7)를 화면 안(0)에 가둔다 — 막 밑으로 로고가
+   깔린다. 그동안만 absolute 로 내려 맥락을 푼다(body 가 화면 높이에 overflow:hidden 이라 자리는 같다) */
+body:is(.rk-intro,.rk-emerge) #regions{position:absolute;z-index:auto}
 body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:7}
 body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}

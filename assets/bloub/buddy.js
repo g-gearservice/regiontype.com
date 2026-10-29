@@ -88,6 +88,65 @@ function eyeTop(eyes) {
   return top;
 }
 
+/* 입체. 엔진이 내는 몸은 평면 윤곽이라 고개를 돌려도 눈만 미끄러진다. 몸을 두께 있는 덩이로 세우고
+   눈과 같은 셈(engine 의 eyePoses)으로 시선만큼 돌려 다시 비춘 그림자를 몸으로 쓴다 — 고개를 돌리면
+   실루엣이 함께 돈다. 그림자는 덩이를 이루는 조각들의 그림자를 한 path 에 겹쳐 놓은 것이다 —
+   같은 방향으로 감긴 하위 경로는 nonzero 로 하나로 합쳐진다(돌림이 90° 를 넘지 않아 방향이 안 뒤집힌다).
+   보통 모양은 윤곽을 앞뒤로 줄여 쌓은 베개, 호박은 세로축을 도는 타원체 마디 LOBES 개다 */
+const TURN = .7, PUFF = .5, SLICES = [1, .96, .9, .82, .72, .6, .45, .28], LOBES = 8;
+const spin3 = (u, v, a) => {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [u.map((x, i) => x * c + v[i] * s), v.map((x, i) => x * c - u[i] * s)];
+};
+function basis(g) {
+  const rad = d => d * TURN * Math.PI / 180;
+  let f = [0, 0, 1], right = [1, 0, 0], down = [0, 1, 0];
+  [f, right] = spin3(f, right, rad(g.yaw));
+  [down, f] = spin3(down, f, rad(g.pitch));
+  [right, down] = spin3(right, down, rad(g.roll));
+  return (x, y, z) => [right[0] * x + down[0] * y + f[0] * z, right[1] * x + down[1] * y + f[1] * z];
+}
+/* 몸 한가운데와 반 폭·반 키 — 윤곽의 상자로 잰다 */
+function box(p) {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const q of p) { x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: (x1 - x0) / 2, h: (y1 - y0) / 2 };
+}
+const ring = (c, pts) => 'M' + pts.map(([x, y]) => (c.x + x).toFixed(1) + ' ' + (c.y + y).toFixed(1)).join('L') + 'Z';
+/* 베개 — 윤곽을 앞뒤로 줄여 가며 겹쳐 쌓는다. 가장자리는 두께 0, 한가운데는 앞뒤로 PUFF */
+function pillow(p, c, rot) {
+  const t = Math.min(c.w, c.h) * PUFF;
+  let d = '';
+  for (const s of SLICES) {
+    const z = t * Math.sqrt(1 - s * s);
+    for (const zz of z ? [z, -z] : [0]) d += ring(c, p.map(q => rot((q.x - c.x) * s, (q.y - c.y) * s, zz)));
+  }
+  return d;
+}
+/* 타원체(가운데 o, 세 반축 a·b·e)의 그림자는 타원이다 — 반축을 비춘 2×3 행렬 M 의 M·Mᵀ 를 풀어 낸다 */
+function blob(c, rot, o, axes) {
+  const [cx, cy] = rot(...o), m = axes.map(v => rot(...v));
+  let a = 0, b = 0, d = 0;
+  for (const [x, y] of m) { a += x * x; b += x * y; d += y * y; }
+  const h = (a + d) / 2, q = Math.sqrt(((a - d) / 2) ** 2 + b * b), th = Math.atan2(2 * b, a - d) / 2;
+  const r1 = Math.sqrt(h + q), r2 = Math.sqrt(Math.max(0, h - q)), ct = Math.cos(th), st = Math.sin(th), pts = [];
+  for (let i = 0; i < 40; i++) {
+    const u = i / 40 * Math.PI * 2, x = r1 * Math.cos(u), y = r2 * Math.sin(u);
+    pts.push([cx + x * ct - y * st, cy + x * st + y * ct]);
+  }
+  return ring(c, pts);
+}
+/* 호박 — 가운데 심 하나와 그 둘레의 마디들. 마디끼리 겹치는 자리가 골이 되어 가장자리에 물결로 선다 */
+function gourd(c, rot) {
+  const W = c.w, H = c.h;
+  let d = blob(c, rot, [0, 0, 0], [[W * .7, 0, 0], [0, H * .96, 0], [0, 0, W * .7]]);
+  for (let i = 0; i < LOBES; i++) {
+    const ph = (i + .5) / LOBES * Math.PI * 2, sx = Math.sin(ph), sz = Math.cos(ph), R = W * .5;
+    d += blob(c, rot, [R * sx, 0, R * sz], [[W * .5 * sx, 0, W * .5 * sz], [0, H, 0], [W * .3 * sz, 0, -W * .3 * sx]]);
+  }
+  return d;
+}
+
 const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs) => {
   const n = document.createElementNS(NS, tag);
@@ -265,8 +324,15 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
   function draw(now) {
     glideAt(now);
     const f = engine.sample(now);
-    maskBody.setAttribute('d', f.bodyPath);
-    paper.setAttribute('d', f.bodyPath);
+    const flat = outline(f.bodyPath), c = box(flat), rot = basis(f.gaze || { yaw: 0, pitch: 0, roll: 0 });
+    const solid = stemOf ? gourd(c, rot) : pillow(flat, c, rot);
+    maskBody.setAttribute('d', solid);
+    paper.setAttribute('d', solid);
+    /* 꼭지는 돌린 공의 꼭대기(극)에 꽂고 그 축만큼 기운다 */
+    if (stemOf) {
+      const [px, py] = rot(0, -c.h, 0), lean = Math.atan2(px, -py) * 180 / Math.PI;
+      stem.setAttribute('transform', `translate(${(c.x + px).toFixed(1)} ${(c.y + py).toFixed(1)}) rotate(${lean.toFixed(1)}) translate(${-c.x.toFixed(1)} ${(c.h - c.y).toFixed(1)})`);
+    }
     if (worn.hat || worn.back) {
       const a = anchorOf(f.bodyPath, { brim: worn.hat?.brim, sink: worn.hat?.sink, cover: worn.hat?.cover, floor: eyeTop(f.eyes) });
       /* 모양별 손보기(items.js 의 FIT) — 자동 자리에서 dy 만큼 내리고 k 배 키운다 */

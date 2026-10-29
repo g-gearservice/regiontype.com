@@ -1714,6 +1714,7 @@ var _BotEngine = class _BotEngine {
     const notch = pose.notif ? { x: nx, y: ny, r: pose.notif.notch * R2 } : null;
     return {
       bodyPath,
+      gaze,
       bodyAlpha: pose.bodyAlpha,
       eyes,
       dots,
