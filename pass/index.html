@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>리전 패스 — regiontype</title>
-<meta name="description" content="판을 끝낼 때마다 XP 가 쌓이고, 100레벨까지 봇 꾸미기를 받는 regiontype 의 시즌 패스.">
+<meta name="description" content="판을 끝낼 때마다 XP 가 쌓이고, 100레벨까지 할로윈 색 팔레트와 봇 모양을 받는 regiontype 의 시즌 패스.">
 <link rel="canonical" href="https://regiontype.com/pass/">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=5.45">
-<link rel="stylesheet" href="../style.css?v=5.53">
-<link rel="stylesheet" href="pass.css?v=5.53">
+<link rel="stylesheet" href="../style.css?v=5.66">
+<link rel="stylesheet" href="pass.css?v=5.66">
 <!-- 패스는 아직 서버가 없다(PLAN-pass.md M3). 지금은 보상 표(assets/bloub/items.js)와 규칙을
-     보여 주고, 고른 레벨의 보상을 내 봇에 미리 씌워 본다 -->
-<script type="module" src="pass.js?v=5.53"></script>
+     보여 주고, 고른 레벨의 보상을 미리 본다 — 팔레트는 이 페이지 색, 구 모양은 내 봇 -->
+<script type="module" src="pass.js?v=5.66"></script>
 </head>
 <body>
 
@@ -33,11 +33,11 @@
 
 <main class="ps" id="main">
   <h1 data-i18n="pass">리전 패스</h1>
-  <p class="ps-lead" data-i18n="passLead">판을 끝낼 때마다 XP 가 쌓이고, 레벨마다 봇 꾸미기를 받습니다.</p>
+  <p class="ps-lead" data-i18n="passLead">판을 끝낼 때마다 XP 가 쌓이고, 레벨마다 할로윈 색 팔레트와 봇 모양을 받습니다.</p>
 
   <section class="ps-card" aria-labelledby="psNow">
     <div class="ps-head">
-      <h2 id="psNow" data-i18n="passName">시즌 1 · 패스 1</h2>
+      <h2 id="psNow" data-i18n="passName">시즌 1 · 할로윈</h2>
       <span class="ps-state" id="state" data-i18n="passSoon">곧 열림</span>
     </div>
     <p class="ps-lv"><b id="lv">0</b> <span>/ 100</span> <span data-i18n="passLevel">레벨</span></p>
@@ -56,7 +56,7 @@
 
   <section aria-labelledby="psTrack">
     <h2 id="psTrack" data-i18n="passTrack">보상</h2>
-    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고르면 위의 봇이 입어 본다. ★ 는 새 아이템이다.</p>
+    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고르면 페이지 색이나 위의 봇이 바뀌어 미리 보인다. ★ 는 새 팔레트다.</p>
     <ol class="ps-track" id="track" data-i18n-aria="passTrack" aria-label="보상"></ol>
   </section>
 
