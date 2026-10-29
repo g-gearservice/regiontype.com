@@ -437,7 +437,8 @@ const sameStyle = (a, b) => THEME.every(k => (a[k.key] || '') === (b[k.key] || '
 const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI).href);
 /* 가진 보상 — 열린 시즌들의 무료 칸과 내 레벨까지의 칸(items.js 의 ownedRewards).
    팔레트는 [{ ref, palette }] 로 게임 스타일 탭에, 모양 id 는 봇 스타일 탭의 모양 줄에 더한다 */
-let owned = [], ownedShapes = [], lockedShapes = [];
+/* lockedShapes 는 items.js 의 PASS_ENGINE_SHAPES — 표가 오기 전에도 잠겨 있게 처음 값을 같이 적는다 */
+let owned = [], ownedShapes = [], lockedShapes = ['citrouille'];
 const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
 const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
 function countOwned(kit) {
@@ -663,8 +664,9 @@ function mountBotStyle() {
   botMounted = true;
   syncBotStyleFromStorage();
   const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
-  buddyKit.then(({ mountBuddy, TABLES }) => {
-    botLists.shape = [...TABLES.shapes.map(x => x.id).filter(id => !lockedShapes.includes(id)), ...ownedShapes];   // 패스에서 받은 모양(잠근 호박 포함)은 뒤에
+  /* 받은 모양(ownedShapes)을 센 뒤에 목록을 짓는다 — passKit 의 countOwned 가 먼저 돈다 */
+  Promise.all([buddyKit, passKit]).then(([{ mountBuddy, TABLES }]) => {
+    botLists.shape = [...TABLES.shapes.map(x => x.id), ...ownedShapes];   // 패스에서 받은 모양(잠근 호박 포함)은 뒤에
     botLists.colour = ['accent', ...TABLES.colours.map(x => x.id)];
     const saved = readFace();
     if (botLists.shape.includes(saved.shape) || saved.shape === 'gen') botChar.shape = saved.shape;
