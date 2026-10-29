@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>유기적인 픽셀들 · regiontype beta</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../../favicon/favicon.svg">
+<link rel="stylesheet" href="../../style.css?v=5.55">
+<style>
+/* ── 유기적인 픽셀들 (Organic Pixels) ──
+   기존의 딱딱한 직각 도트/비트맵 격자를 유기체처럼 서로 이어붙인다.
+   커서가 호버링되는 곳 주변으로 비트들이 반응하여 결합(Adjacent & Diagonal Merge)과
+   오목 모서리 필릿(Liquid Fillet)을 형성하며 살아 숨쉬듯 유기적으로 연결된다. */
+:root {
+  --sig-organic: #a855f7;
+  --sig-glow: rgba(168, 85, 247, 0.35);
+  --canvas-bg: var(--bg);
+  --dong-color: var(--ink);
+  --dong-hi: var(--accent);
+  --hud-bg: color-mix(in srgb, var(--bg) 85%, transparent);
+  --hud-border: color-mix(in srgb, var(--ink) 18%, transparent);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+:root[data-night] {
+  --sig-organic: #c084fc;
+  --sig-glow: rgba(192, 132, 252, 0.4);
+  --hud-bg: color-mix(in srgb, var(--bg) 80%, #000);
+  --hud-border: color-mix(in srgb, var(--ink) 25%, transparent);
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 홈 배경의 대각 빛과 장식 격자 */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--ink) 18%, transparent) 1.2px, transparent 1.6px) 0 0 / 32px 32px,
+    linear-gradient(118deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 36%);
+  opacity: 0.75;
+}
+:root[data-night] .bg-grid {
+  background: radial-gradient(circle, color-mix(in srgb, var(--ink) 22%, transparent) 1.2px, transparent 1.6px) 0 0 / 32px 32px;
+}
+
+/* 상단 내비게이션 바 */
+.top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(24px, env(safe-area-inset-left));
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.logo span { font-weight: 400; }
+.logo i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 2px;
+}
+
+.badge {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sig-organic);
+  background: color-mix(in srgb, var(--sig-organic) 15%, transparent);
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--sig-organic) 35%, transparent);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--fast) var(--ease-out);
+}
+.nav-btn:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.nav-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 캔버스 뷰포트 */
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#mapCanvas {
+  display: block;
+  max-width: 94vw;
+  max-height: 75vh;
+  touch-action: none;
+  cursor: crosshair;
+  filter: drop-shadow(0 12px 32px color-mix(in srgb, var(--ink) 12%, transparent));
+}
+
+/* 하단 정보 카드 */
+.info-card {
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(580px, calc(100vw - 36px));
+  padding: 14px 20px;
+  box-sizing: border-box;
+  background: var(--hud-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--hud-border);
+  border-radius: 16px;
+  box-shadow: 0 16px 36px -10px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity var(--fast) var(--ease-out), transform var(--fast) var(--ease-out);
+}
+
+.info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dong-name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.dong-meta {
+  font: 500 12px/1 var(--font-mono);
+  color: var(--ink-soft);
+}
+
+.dong-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* 하단 인터랙션 컨트롤 바 */
+.ctrl-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--hud-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--hud-border);
+  border-radius: 30px;
+  box-shadow: 0 8px 24px -6px rgba(0,0,0,0.12);
+  z-index: 10;
+}
+
+.ctrl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.ctrl-item label {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ctrl-item input[type="range"] {
+  width: 90px;
+  accent-color: var(--sig-organic);
+  cursor: pointer;
+}
+
+.ctrl-item input[type="checkbox"] {
+  accent-color: var(--sig-organic);
+  cursor: pointer;
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: var(--hud-border);
+}
+
+@media (max-width: 680px) {
+  .ctrl-bar {
+    width: calc(100vw - 32px);
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 8px 12px;
+    border-radius: 18px;
+  }
+  .info-card {
+    bottom: 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<header class="top-bar">
+  <a class="brand" href="../../" aria-label="regiontype 홈">
+    <div class="logo">region<span>type</span><i aria-hidden="true"></i></div>
+    <span class="badge">beta · 유기적 픽셀들</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-btn" href="../style/">스타일 목록</a>
+    <button class="nav-btn" id="themeBtn" aria-label="테마 전환">야간 모드</button>
+  </div>
+</header>
+
+<main class="stage">
+  <canvas id="mapCanvas" aria-label="강서구 20개 행정동 유기적 픽셀 지도" tabindex="0"></canvas>
+</main>
+
+<aside class="info-card" id="infoCard">
+  <div class="info-head">
+    <span class="dong-name" id="cardName">강서구</span>
+    <span class="dong-meta" id="cardMeta">20개 행정동 · 377 픽셀</span>
+  </div>
+  <p class="dong-desc" id="cardDesc">마우스 커서를 지도 위로 가져가면 주변 비트들이 유기적으로 결합하고 형태를 바꿉니다.</p>
+</aside>
+
+<footer class="ctrl-bar" role="toolbar" aria-label="유기적 픽셀 조작">
+  <div class="ctrl-item">
+    <label for="liquidRange">유기 반경</label>
+    <input type="range" id="liquidRange" min="0" max="100" value="75" aria-label="유기 반경">
+    <span id="liquidVal" style="font-family:var(--font-mono);font-size:11px;">75%</span>
+  </div>
+  <div class="divider" aria-hidden="true"></div>
+  <div class="ctrl-item">
+    <label for="roundRange">모서리 둥글기</label>
+    <input type="range" id="roundRange" min="0" max="100" value="0" aria-label="모서리 둥글기">
+    <span id="roundVal" style="font-family:var(--font-mono);font-size:11px;">0%</span>
+  </div>
+  <div class="divider" aria-hidden="true"></div>
+  <div class="ctrl-item">
+    <input type="checkbox" id="diagMerge" checked>
+    <label for="diagMerge">대각선 브릿지</label>
+  </div>
+  <div class="divider" aria-hidden="true"></div>
+  <div class="ctrl-item">
+    <label for="hoverRadius">커서 반응</label>
+    <input type="range" id="hoverRadius" min="0" max="100" value="80" aria-label="커서 반응 세기">
+    <span id="hoverVal" style="font-family:var(--font-mono);font-size:11px;">80%</span>
+  </div>
+</footer>
+
+<script>
+'use strict';
+
+/* ── 유기적 픽셀 엔진 (Organic Pixels Engine) ──
+   1. 32x26 행정동 격자 데이터를 읽는다.
+   2. 각 꼭짓점(vertex)에서 2x2 이웃 셀 위상을 검사한다.
+   3. 인접 셀(Adjacent)은 빈틈없이 합치고, 대각선(Diagonal) 및 오목 모서리는
+      부드러운 사분원 필릿(Fillet)으로 연결한다.
+   4. 커서 위치(mx, my) 주변으로 유기 반경이 실시간으로 팽창하며 비트들이
+      마치 생명체/자성 유체처럼 서로 반응한다.
+*/
+
+const $ = s => document.querySelector(s);
+const canvas = $('#mapCanvas');
+const ctx = canvas.getContext('2d');
+
+const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+  'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
+  'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝÞĀĒĪŌŪЙЪЫЬабвгдежзийклмнопрстуфхцчшщъыьэюя';
+
+let GEOM = null;
+let COURSE = null;
+let DONG_MAP = new Map(); // name -> info
+
+// 설정 상태
+let liquidRatio = 0.75;    // 유기 반경 (0 ~ 1)
+let cornerRound = 0.0;     // 외곽 코너 둥글기 (0 ~ 1)
+let diagMerge = true;      // 대각선 브릿지 결합
+let hoverStimulus = 0.8;   // 커서 호버링 자극 세기
+
+// 커서 및 인터랙션 상태
+let mouse = { x: -9999, y: -9999, vx: 0, vy: 0, active: false };
+let hoveredItem = null;
+let activeItem = null;
+let animId = null;
+
+// 팔레트 (regiontype 고유 톤 기반)
+const DONG_PALETTES = [
+  '#4a7c82', '#5f8d92', '#3e6b70', '#568388', '#6a979c',
+  '#446f74', '#5a888d', '#659398', '#4f7c81', '#3a666b',
+  '#538085', '#608e93', '#48757a', '#5c8a8f', '#6e9da2',
+  '#426d72', '#58868b', '#639196', '#4d7a7f', '#386469'
+];
+
+async function init() {
+  try {
+    const [geomRes, courseRes] = await Promise.all([
+      fetch('../../data/gangseo-dong.geom.json'),
+      fetch('../../data/gangseo-dong.course.json')
+    ]);
+    GEOM = await geomRes.json();
+    COURSE = await courseRes.json();
+
+    COURSE.items.forEach(it => {
+      DONG_MAP.set(it.name, it.meta || {});
+    });
+
+    resize();
+    window.addEventListener('resize', resize);
+    setupEvents();
+    renderLoop();
+  } catch (err) {
+    console.error('Failed to load map data:', err);
+  }
+}
+
+function resize() {
+  if (!GEOM) return;
+  const dpr = window.devicePixelRatio || 1;
+  const maxW = Math.min(window.innerWidth * 0.94, 960);
+  const maxH = window.innerHeight * 0.72;
+  const aspect = GEOM.w / GEOM.h;
+  let w = maxW;
+  let h = w / aspect;
+  if (h > maxH) {
+    h = maxH;
+    w = h * aspect;
+  }
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  canvas.style.width = `${Math.round(w)}px`;
+  canvas.style.height = `${Math.round(h)}px`;
+}
+
+function setupEvents() {
+  // 마우스 / 터치 인터랙션
+  const onMove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    const clientX = touch.clientX;
+    const clientY = touch.clientY;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    mouse.x = (clientX - rect.left) * scaleX;
+    mouse.y = (clientY - rect.top) * scaleY;
+    mouse.active = true;
+    checkHoveredCell();
+  };
+
+  const onLeave = () => {
+    mouse.active = false;
+    mouse.x = -9999;
+    mouse.y = -9999;
+    hoveredItem = null;
+    updateInfoCard();
+  };
+
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', onLeave);
+  canvas.addEventListener('touchstart', onMove, { passive: true });
+  canvas.addEventListener('touchmove', onMove, { passive: true });
+  canvas.addEventListener('touchend', onLeave);
+
+  // 컨트롤 슬라이더
+  $('#liquidRange').addEventListener('input', e => {
+    liquidRatio = e.target.value / 100;
+    $('#liquidVal').textContent = `${e.target.value}%`;
+  });
+
+  $('#roundRange').addEventListener('input', e => {
+    cornerRound = e.target.value / 100;
+    $('#roundVal').textContent = `${e.target.value}%`;
+  });
+
+  $('#diagMerge').addEventListener('change', e => {
+    diagMerge = e.target.checked;
+  });
+
+  $('#hoverRadius').addEventListener('input', e => {
+    hoverStimulus = e.target.value / 100;
+    $('#hoverVal').textContent = `${e.target.value}%`;
+  });
+
+  // 테마 전환
+  $('#themeBtn').addEventListener('click', () => {
+    const isNight = document.documentElement.toggleAttribute('data-night');
+    $('#themeBtn').textContent = isNight ? '주간 모드' : '야간 모드';
+    try {
+      const opt = JSON.parse(localStorage.getItem('rt.opt') || '{}');
+      opt.night = isNight;
+      localStorage.setItem('rt.opt', JSON.stringify(opt));
+    } catch (e) {}
+  });
+
+  // 키보드 조작
+  canvas.addEventListener('keydown', e => {
+    if (!GEOM || !GEOM.items.length) return;
+    const count = GEOM.items.length;
+    let idx = activeItem !== null ? activeItem : -1;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      idx = (idx + 1) % count;
+      activeItem = idx;
+      hoveredItem = idx;
+      updateInfoCard();
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      idx = (idx - 1 + count) % count;
+      activeItem = idx;
+      hoveredItem = idx;
+      updateInfoCard();
+      e.preventDefault();
+    } else if (e.key === 'Escape') {
+      activeItem = null;
+      hoveredItem = null;
+      updateInfoCard();
+    }
+  });
+}
+
+function checkHoveredCell() {
+  if (!GEOM || !mouse.active) return;
+  const cols = GEOM.cols;
+  const rows = GEOM.rows_n;
+  const cw = canvas.width / cols;
+  const ch = canvas.height / rows;
+
+  const col = Math.floor(mouse.x / cw);
+  const row = Math.floor(mouse.y / ch);
+
+  if (row >= 0 && row < rows && col >= 0 && col < cols) {
+    const chSymbol = GEOM.grid[row][col];
+    if (chSymbol !== '.') {
+      const idx = SYM.indexOf(chSymbol);
+      if (idx !== -1 && idx < GEOM.items.length) {
+        if (hoveredItem !== idx) {
+          hoveredItem = idx;
+          updateInfoCard();
+        }
+        return;
+      }
+    }
+  }
+
+  if (hoveredItem !== activeItem) {
+    hoveredItem = activeItem;
+    updateInfoCard();
+  }
+}
+
+function updateInfoCard() {
+  const targetIdx = hoveredItem !== null ? hoveredItem : activeItem;
+  if (targetIdx !== null && GEOM && GEOM.items[targetIdx]) {
+    const item = GEOM.items[targetIdx];
+    const meta = DONG_MAP.get(item.name) || {};
+
+    let pixelCount = 0;
+    GEOM.grid.forEach(r => {
+      [...r].forEach(c => { if (c === SYM[targetIdx]) pixelCount++; });
+    });
+
+    $('#cardName').textContent = item.name;
+    $('#cardMeta').textContent = `강서구 행정동 #${targetIdx + 1} · ${pixelCount} 픽셀`;
+    $('#cardDesc').textContent = meta.description || '강서구를 이루는 아름다운 행정동입니다.';
+  } else {
+    $('#cardName').textContent = '강서구 (Gangseo-gu)';
+    $('#cardMeta').textContent = '20개 행정동 · 377 픽셀';
+    $('#cardDesc').textContent = '마우스 커서를 지도 위로 가져가면 주변 비트들이 유기적으로 결합하고 형태를 바꿉니다.';
+  }
+}
+
+/* ── 렌더링 루프 ── */
+function renderLoop() {
+  draw();
+  animId = requestAnimationFrame(renderLoop);
+}
+
+function draw() {
+  if (!GEOM) return;
+
+  const cols = GEOM.cols;
+  const rows = GEOM.rows_n;
+  const cw = canvas.width / cols;
+  const ch = canvas.height / rows;
+  const baseS = Math.min(cw, ch);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const grid = GEOM.grid;
+  const isNight = document.documentElement.hasAttribute('data-night');
+
+  // 1단계: 기본 셀(정사각형/원) 그리기
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const chSymbol = grid[r][c];
+      if (chSymbol === '.') continue;
+
+      const itemIdx = SYM.indexOf(chSymbol);
+      const isTarget = hoveredItem === itemIdx || activeItem === itemIdx;
+
+      // 커서와의 거리 계산 (유기적 팽창)
+      const cx = (c + 0.5) * cw;
+      const cy = (r + 0.5) * ch;
+      const dist = Math.hypot(cx - mouse.x, cy - mouse.y);
+      const stimDist = baseS * 4.5 * (hoverStimulus + 0.2);
+
+      let stretch = 0;
+      if (mouse.active && dist < stimDist) {
+        stretch = (1 - dist / stimDist) * hoverStimulus * 0.15;
+      }
+
+      // 색상 지정
+      if (isTarget) {
+        ctx.fillStyle = isNight ? '#f0a03c' : '#e07a3a';
+      } else {
+        ctx.fillStyle = DONG_PALETTES[itemIdx % DONG_PALETTES.length];
+      }
+
+      const x = c * cw - (cw * stretch * 0.5);
+      const y = r * ch - (ch * stretch * 0.5);
+      const w = cw * (1 + stretch);
+      const h = ch * (1 + stretch);
+
+      // 셀 베이스 렌더링
+      if (cornerRound > 0) {
+        const cr = baseS * 0.5 * cornerRound;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, cr);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, w, h);
+      }
+    }
+  }
+
+  // 2단계: 2x2 꼭짓점 위상 검사 및 유기적 필릿(Liquid Fillet) 그리기
+  const maxR = baseS * 0.5;
+
+  for (let vr = 0; vr <= rows; vr++) {
+    for (let vc = 0; vc <= cols; vc++) {
+      const tl = vr > 0 && vc > 0 ? grid[vr - 1][vc - 1] : '.';
+      const tr = vr > 0 && vc < cols ? grid[vr - 1][vc] : '.';
+      const bl = vr < rows && vc > 0 ? grid[vr][vc - 1] : '.';
+      const br = vr < rows && vc < cols ? grid[vr][vc] : '.';
+
+      const s_tl = tl !== '.';
+      const s_tr = tr !== '.';
+      const s_bl = bl !== '.';
+      const s_br = br !== '.';
+      const k = (s_tl ? 1 : 0) + (s_tr ? 1 : 0) + (s_bl ? 1 : 0) + (s_br ? 1 : 0);
+
+      if (k === 0 || k === 4) continue;
+
+      const vx = vc * cw;
+      const vy = vr * ch;
+
+      // 커서 근접에 따른 유기 반경 동적 반응
+      let dynamicR = maxR * liquidRatio;
+      if (mouse.active) {
+        const d = Math.hypot(vx - mouse.x, vy - mouse.y);
+        const stimDist = baseS * 4.0;
+        if (d < stimDist) {
+          const factor = Math.cos((d / stimDist) * Math.PI * 0.5);
+          dynamicR = Math.min(maxR * 0.98, dynamicR + (maxR - dynamicR) * factor * hoverStimulus);
+        }
+      }
+
+      if (dynamicR <= 0.5) continue;
+
+      // 오목 모서리 (Concave Fillets - 3개 채워지고 1개 빈 칸)
+      if (k === 3) {
+        if (!s_br) {
+          // BR 사분면에 필릿
+          const sym = (tr === bl) ? tr : (tl !== '.' ? tl : tr);
+          applyFillColor(sym);
+          drawQuadrantFilletBR(vx, vy, dynamicR);
+        } else if (!s_bl) {
+          // BL 사분면에 필릿
+          const sym = (tl === br) ? tl : (tr !== '.' ? tr : tl);
+          applyFillColor(sym);
+          drawQuadrantFilletBL(vx, vy, dynamicR);
+        } else if (!s_tr) {
+          // TR 사분면에 필릿
+          const sym = (tl === br) ? tl : (bl !== '.' ? bl : tl);
+          applyFillColor(sym);
+          drawQuadrantFilletTR(vx, vy, dynamicR);
+        } else if (!s_tl) {
+          // TL 사분면에 필릿
+          const sym = (tr === bl) ? tr : (br !== '.' ? br : tr);
+          applyFillColor(sym);
+          drawQuadrantFilletTL(vx, vy, dynamicR);
+        }
+      }
+
+      // 대각선 결합 (Diagonal Bridges - 2개 대각선 셀이 만나는 목 부분)
+      else if (k === 2 && diagMerge) {
+        if (s_tl && s_br && !s_tr && !s_bl) {
+          // TR과 BL 사분면에 필릿 생성하여 대각선 목을 연결
+          applyFillColor(tl);
+          drawQuadrantFilletTR(vx, vy, dynamicR);
+          applyFillColor(br);
+          drawQuadrantFilletBL(vx, vy, dynamicR);
+        } else if (s_tr && s_bl && !s_tl && !s_br) {
+          // TL과 BR 사분면에 필릿 생성
+          applyFillColor(tr);
+          drawQuadrantFilletTL(vx, vy, dynamicR);
+          applyFillColor(bl);
+          drawQuadrantFilletBR(vx, vy, dynamicR);
+        }
+      }
+    }
+  }
+
+  // 3단계: 행정동 명칭 라벨 렌더링
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${Math.max(10, Math.round(baseS * 0.42))}px -apple-system, sans-serif`;
+
+  GEOM.items.forEach((item, idx) => {
+    if (!item.c) return;
+    const isTarget = hoveredItem === idx || activeItem === idx;
+    const lx = (item.c[0] / GEOM.w) * canvas.width;
+    const ly = (item.c[1] / GEOM.h) * canvas.height;
+
+    // 라벨 배경 은은한 후광
+    ctx.fillStyle = isNight ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.75)';
+    const text = item.name.replace(/(\d)동$/, '$1');
+    const metrics = ctx.measureText(text);
+    const pad = 4;
+    ctx.fillRect(lx - metrics.width * 0.5 - pad, ly - 8, metrics.width + pad * 2, 16);
+
+    ctx.fillStyle = isTarget ? (isNight ? '#fff' : '#000') : (isNight ? '#cbd5e1' : '#1e293b');
+    ctx.fillText(text, lx, ly);
+  });
+}
+
+function applyFillColor(sym) {
+  const itemIdx = SYM.indexOf(sym);
+  const isTarget = hoveredItem === itemIdx || activeItem === itemIdx;
+  const isNight = document.documentElement.hasAttribute('data-night');
+  if (isTarget) {
+    ctx.fillStyle = isNight ? '#f0a03c' : '#e07a3a';
+  } else {
+    ctx.fillStyle = DONG_PALETTES[itemIdx % DONG_PALETTES.length];
+  }
+}
+
+/* 4개 사분면 필릿 드로잉 함수 (수학적으로 검증된 정밀 호 곡선) */
+function drawQuadrantFilletBR(vx, vy, R) {
+  ctx.beginPath();
+  ctx.moveTo(vx, vy);
+  ctx.lineTo(vx + R, vy);
+  ctx.arc(vx + R, vy + R, R, -Math.PI * 0.5, Math.PI, true);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawQuadrantFilletBL(vx, vy, R) {
+  ctx.beginPath();
+  ctx.moveTo(vx, vy);
+  ctx.lineTo(vx, vy + R);
+  ctx.arc(vx - R, vy + R, R, 0, -Math.PI * 0.5, true);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawQuadrantFilletTR(vx, vy, R) {
+  ctx.beginPath();
+  ctx.moveTo(vx, vy);
+  ctx.lineTo(vx, vy - R);
+  ctx.arc(vx + R, vy - R, R, Math.PI, Math.PI * 0.5, true);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawQuadrantFilletTL(vx, vy, R) {
+  ctx.beginPath();
+  ctx.moveTo(vx, vy);
+  ctx.lineTo(vx - R, vy);
+  ctx.arc(vx - R, vy - R, R, Math.PI * 0.5, 0, true);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// 초기 야간 모드 상태 복원
+try {
+  const isNight = !!JSON.parse(localStorage.getItem('rt.opt') || '{}').night;
+  document.documentElement.toggleAttribute('data-night', isNight);
+  $('#themeBtn').textContent = isNight ? '주간 모드' : '야간 모드';
+} catch (e) {}
+
+init();
+</script>
+</body>
+</html>
