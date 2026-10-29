@@ -101,6 +101,11 @@ export const finishImg = f => f.img ? new URL(`fin/${f.id}.jpg` + new URL(import
 const { REGIONS } = await import(new URL('regions.js' + new URL(import.meta.url).search, import.meta.url).href);
 export { REGIONS };
 export const REGION_BY_SHAPE = new Map(REGIONS.map(r => [`gu-${r.id}`, r]));
+/* 이벤트 시즌 모양 몸 — tools/build_season_shapes.py 가 원·다각형으로 지은 실루엣(반지름 64개). id 는 소문자뿐이라
+   그대로 모양 칸에 들어간다(중계기 profile() 의 얼굴 칸이 [a-z]{1,16} 만 받는다). buddy.js 의 radiiOf 가 여기서도 찾는다 */
+const { SEASON_SHAPES } = await import(new URL('shapes.js' + new URL(import.meta.url).search, import.meta.url).href);
+export { SEASON_SHAPES };
+export const SEASON_SHAPE_BY_ID = new Map(SEASON_SHAPES.map(x => [x.id, x]));
 
 /* 'crown:rose' → { item, colour }. 모르는 아이템·색은 null */
 export function parseItem(ref) {
@@ -109,112 +114,148 @@ export function parseItem(ref) {
   if (!item || (c && !COLOURS.includes(c))) return null;
   return { item, colour: c || item.tint };
 }
-/* 패스 보상 하나를 푼다. 꼴은 넷:
+/* 패스 보상 하나를 푼다. 꼴은 다섯:
      'crown' · 'crown:rose'  → 씌우는 아이템   { kind: 'item', item, colour }
      'fin:dots'              → 몸 마감         { kind: 'finish', finish }
      'pal:pumpkin-2'         → 사이트 색       { kind: 'palette', palette }
-     'gu-mapo'               → 몸 모양(구)     { kind: 'shape', region } */
+     'fantome'               → 이벤트 몸 모양  { kind: 'shape', shape }
+     'gu-mapo'               → 구 몸 모양      { kind: 'region', region } */
 export function parseReward(ref) {
   ref = String(ref || '');
   if (ref.startsWith('fin:')) { const finish = FINISH_BY_ID.get(ref.slice(4)); return finish ? { kind: 'finish', finish } : null; }
   if (ref.startsWith('pal:')) { const palette = paletteOf(ref.slice(4)); return palette ? { kind: 'palette', palette } : null; }
-  if (REGION_BY_SHAPE.has(ref)) return { kind: 'shape', region: REGION_BY_SHAPE.get(ref) };
+  if (SEASON_SHAPE_BY_ID.has(ref)) return { kind: 'shape', shape: SEASON_SHAPE_BY_ID.get(ref) };
+  if (REGION_BY_SHAPE.has(ref)) return { kind: 'region', region: REGION_BY_SHAPE.get(ref) };
   const got = parseItem(ref);
   return got ? { kind: 'item', ...got } : null;
 }
 
 /* 색 팔레트 — 사이트 색(ranked.js 의 THEME: accent·block·bg·ink)을 통째로 바꾸는 패스 보상. 사람이 색을 직접
    고르는 길은 없다 — 가진 팔레트만 입는다. 갈래(아래 표)는 대비(accent↔#232c31 4.5, block↔흰 글자 3, bg↔ink 4.5)를
-   지키게 뽑은 값이다. 고치면 ?rt=1 이 대비를 잰다.
-   변주 '<갈래>-<k>'(k 2‥7)는 그 갈래의 강조색에 다른 갈래의 칸색과 바탕·글자 짝을 빌린다. 셋 다 저마다 대비를
-   지키므로 섞어도 지킨다. 이름은 갈래 이름 뒤에 로마 숫자(호박 II) */
+   지키게 뽑은 값이다. 고치면 pass/?rt=1 이 대비를 잰다.
+   dark 갈래는 어두운 바탕에 밝은 글자다 — 입으면 밤 화면이 켜지고 사이트의 밤 바탕 대신 그 바탕을 깐다(ranked.js 의 themeCss).
+   변주 '<갈래>-<k>'(k 2‥7)는 그 갈래의 강조색에 같은 시즌 다른 갈래의 칸색과 바탕·글자 짝을 빌린다. 셋 다 저마다
+   대비를 지키고 같은 시즌끼리는 밝기(dark)도 같으므로 섞어도 지킨다. 이름은 갈래 이름 뒤에 로마 숫자(호박 II) */
 export const PALETTE_FAMILIES = [
-  { id: 'pumpkin', accent: '#f79545', block: '#7c4fb0', bg: '#f2e8de', ink: '#604d39' },
-  { id: 'candycorn', accent: '#fac942', block: '#e3581c', bg: '#f6f0da', ink: '#605839' },
-  { id: 'witch', accent: '#9ada62', block: '#8e4ab5', bg: '#e9e2ee', ink: '#503960' },
-  { id: 'cauldron', accent: '#64d887', block: '#43a383', bg: '#e2eee7', ink: '#396049' },
-  { id: 'bat', accent: '#e79e55', block: '#655ca3', bg: '#e5e3ed', ink: '#413d5c' },
-  { id: 'ghost', accent: '#7cb5c0', block: '#637e9c', bg: '#e3eaed', ink: '#3d525c' },
-  { id: 'harvestmoon', accent: '#f0d04c', block: '#4a5fb5', bg: '#f4f0dd', ink: '#605b39' },
-  { id: 'graveyard', accent: '#94bb81', block: '#6b8a94', bg: '#e5ebe5', ink: '#415841' },
-  { id: 'raven', accent: '#6ea1cf', block: '#575fa8', bg: '#e3e5ed', ink: '#3d435c' },
-  { id: 'spider', accent: '#e76a6a', block: '#7a6b94', bg: '#ebe5e6', ink: '#584145' },
-  { id: 'potion', accent: '#d766db', block: '#33a398', bg: '#eee1ef', ink: '#5c3960' },
-  { id: 'lantern', accent: '#ffb13d', block: '#cf5530', bg: '#f5ebdb', ink: '#605039' },
-  { id: 'bloodmoon', accent: '#f2645a', block: '#c9364e', bg: '#f0e2e0', ink: '#603e39' },
-  { id: 'mummy', accent: '#c7ae75', block: '#a1845e', bg: '#f0ece0', ink: '#605539' },
-  { id: 'skeleton', accent: '#b0ae8d', block: '#70798f', bg: '#ebebe5', ink: '#565643' },
-  { id: 'haunted', accent: '#a385d6', block: '#528fad', bg: '#e6e2ee', ink: '#453960' },
-  { id: 'broom', accent: '#d3a269', block: '#b5754a', bg: '#efe9e1', ink: '#605039' },
-  { id: 'blackcat', accent: '#d0f04c', block: '#636b9c', bg: '#eceee2', ink: '#596039' },
-  { id: 'werewolf', accent: '#cf986e', block: '#5e80a1', bg: '#ede8e3', ink: '#5c4d3d' },
-  { id: 'vampire', accent: '#e76a87', block: '#cf3046', bg: '#efe1e5', ink: '#603943' },
-  { id: 'zombie', accent: '#aada62', block: '#4ea651', bg: '#e9efe1', ink: '#4e6039' },
-  { id: 'fog', accent: '#86a6b6', block: '#668599', bg: '#e5e9eb', ink: '#415158' },
-  { id: 'candle', accent: '#f5d247', block: '#c66339', bg: '#f2edde', ink: '#605539' },
-  { id: 'owl', accent: '#daa662', block: '#a67d59', bg: '#efeae1', ink: '#605239' },
+  /* 할로윈 — 호박·사탕·마녀·핏빛 */
+  { id: 'pumpkin', season: 'halloween', accent: '#f79545', block: '#7c4fb0', bg: '#f2e8de', ink: '#604d39' },
+  { id: 'candycorn', season: 'halloween', accent: '#fac942', block: '#e3581c', bg: '#f6f0da', ink: '#605839' },
+  { id: 'ghost', season: 'halloween', accent: '#7cb5c0', block: '#637e9c', bg: '#e3eaed', ink: '#3d525c' },
+  { id: 'bat', season: 'halloween', accent: '#e79e55', block: '#655ca3', bg: '#e5e3ed', ink: '#413d5c' },
+  { id: 'witch', season: 'halloween', accent: '#9ada62', block: '#8e4ab5', bg: '#e9e2ee', ink: '#503960' },
+  { id: 'cauldron', season: 'halloween', accent: '#64d887', block: '#43a383', bg: '#e2eee7', ink: '#396049' },
+  { id: 'potion', season: 'halloween', accent: '#d766db', block: '#33a398', bg: '#eee1ef', ink: '#5c3960' },
+  { id: 'blackcat', season: 'halloween', accent: '#d0f04c', block: '#636b9c', bg: '#eceee2', ink: '#596039' },
+  { id: 'vampire', season: 'halloween', accent: '#e76a87', block: '#cf3046', bg: '#efe1e5', ink: '#603943' },
+  { id: 'bloodmoon', season: 'halloween', accent: '#f2645a', block: '#c9364e', bg: '#f0e2e0', ink: '#603e39' },
+  /* 블랙 프라이데이 — 모두 어두운 스타일. 검정 위 금빛·세일 빨강·네온 */
+  { id: 'blackfriday', season: 'blackfriday', dark: true, accent: '#f5ca47', block: '#50505e', bg: '#131316', ink: '#e4e4e7' },
+  { id: 'doorbuster', season: 'blackfriday', dark: true, accent: '#fb5c51', block: '#7e3036', bg: '#1a0f10', ink: '#ebe0e1' },
+  { id: 'cybermonday', season: 'blackfriday', dark: true, accent: '#42ccfa', block: '#274786', bg: '#0b111e', ink: '#e0e3eb' },
+  { id: 'neonsale', season: 'blackfriday', dark: true, accent: '#fa42cc', block: '#623479', bg: '#180d1c', ink: '#e8e0eb' },
+  { id: 'goldcard', season: 'blackfriday', dark: true, accent: '#e2b05a', block: '#755c38', bg: '#1b160e', ink: '#ebe7e0' },
+  { id: 'midnight', season: 'blackfriday', dark: true, accent: '#9783fc', block: '#343a79', bg: '#0b0d1e', ink: '#e0e1eb' },
+  { id: 'onyx', season: 'blackfriday', dark: true, accent: '#90a1ad', block: '#4e585f', bg: '#131516', ink: '#e3e6e8' },
+  { id: 'cashback', season: 'blackfriday', dark: true, accent: '#51ec9e', block: '#2b8265', bg: '#0d1c17', ink: '#e0ebe7' },
+  /* 크리스마스 — 호랑가시·전나무·눈·사탕지팡이·루돌프 코 */
+  { id: 'holly', season: 'christmas', accent: '#69d38c', block: '#c62f3b', bg: '#e2eee2', ink: '#396039' },
+  { id: 'pine', season: 'christmas', accent: '#72ca9e', block: '#37a477', bg: '#e3ede7', ink: '#3d5c47' },
+  { id: 'snow', season: 'christmas', accent: '#64b1d8', block: '#437ab1', bg: '#dfeaf1', ink: '#395060' },
+  { id: 'candycane', season: 'christmas', accent: '#f25f77', block: '#d0253c', bg: '#f0e0e3', ink: '#603940' },
+  { id: 'gingerbread', season: 'christmas', accent: '#dd9e5f', block: '#be6837', bg: '#f1e9df', ink: '#604e39' },
+  { id: 'tinsel', season: 'christmas', accent: '#f5cd47', block: '#bc8d2f', bg: '#f2edde', ink: '#605539' },
+  { id: 'poinsettia', season: 'christmas', accent: '#ee636e', block: '#ca2b53', bg: '#efe1e1', ink: '#603939' },
+  { id: 'frost', season: 'christmas', accent: '#72bbca', block: '#5c8599', bg: '#e2ebee', ink: '#395660' },
+  { id: 'cocoa', season: 'christmas', accent: '#ca9772', block: '#ab6a49', bg: '#efe8e1', ink: '#604b39' },
+  { id: 'rudolph', season: 'christmas', accent: '#f6624c', block: '#b17143', bg: '#f0e3e0', ink: '#604039' },
 ];
 export const PALETTE_VARIANTS = 7;
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
-/* 'pumpkin' · 'pumpkin-3' → { id, family, n, accent, block, bg, ink }. 모르는 것은 null */
+/* 'pumpkin' · 'pumpkin-3' → { id, family, n, roman, dark, accent, block, bg, ink }. 모르는 것은 null */
 export function paletteOf(id) {
   const [, fam, k] = String(id || '').match(/^([a-z]+)(?:-([2-7]))?$/) || [];
-  const i = PALETTE_FAMILIES.findIndex(f => f.id === fam);
-  if (i < 0) return null;
-  const n = +(k || 1), F = PALETTE_FAMILIES, at = d => F[(i + d * (n - 1)) % F.length];
-  return { id, family: fam, n, roman: ROMAN[n], accent: F[i].accent, block: at(5).block, bg: at(7).bg, ink: at(7).ink };
+  const f = PALETTE_FAMILIES.find(x => x.id === fam);
+  if (!f) return null;
+  const G = PALETTE_FAMILIES.filter(x => x.season === f.season), i = G.indexOf(f), n = +(k || 1);
+  const at = d => G[(i + d * (n - 1)) % G.length];
+  return { id, family: fam, n, roman: ROMAN[n], dark: !!f.dark, accent: f.accent, block: at(3).block, bg: at(5).bg, ink: at(5).ink };
 }
 
-/* ── 리전 패스 1 · 할로윈 · 100레벨 ──────────────────────
-   큰 보상(BIG)은 손으로 적는다 — 팔레트 갈래 24개, 끝에 서울 전체 모양.
-   나머지 레벨에는 서울 25구 모양을 코스 순서(강서구부터 시계 방향)로 고르게 흩고,
-   남는 자리는 이미 연 갈래의 변주를 돌아가며 준다. 같은 것을 두 번 주지 않는다.
-   맨 앞 팔레트 FREE 개는 누구나 처음부터 가진다(free) — 서버가 레벨을 세기 전엔 그것만 가진 것이다.
-   모자·등·마감(ITEMS·FINISHES)은 이번 시즌 보상에서 빠졌다. 그리는 코드는 다음 시즌을 위해 남긴다 */
-const BIG = { 1: 'pal:pumpkin', 5: 'pal:candycorn', 10: 'pal:ghost', 12: 'pal:bat', 15: 'pal:broom', 20: 'pal:owl',
-  22: 'pal:mummy', 25: 'pal:graveyard', 30: 'pal:spider', 33: 'pal:cauldron', 35: 'pal:candle', 40: 'pal:raven',
-  45: 'pal:witch', 48: 'pal:werewolf', 50: 'pal:skeleton', 55: 'pal:zombie', 60: 'pal:haunted', 65: 'pal:fog',
-  70: 'pal:potion', 75: 'pal:blackcat', 80: 'pal:lantern', 85: 'pal:harvestmoon', 90: 'pal:vampire', 95: 'pal:bloodmoon',
-  100: 'gu-seoul' };
-export const PASS_LEVELS = 100, FREE = 2;
-/* XP — 끝낸 판마다 game(경쟁전은 ranked), 하루 day 까지. level 만큼 쌓이면 한 레벨.
-   ponytail: 서버가 세기 전(PLAN-pass M3)이라 이 기기(rt.pass: { pass, xp, day, today })에 쌓는다. 서버가 오면 그 값을 받는다 */
-export const PASS_ID = 'halloween-1';
+/* ── 리전 패스 · 이벤트 시즌 ─────────────────────────────
+   시즌마다 패스 하나(50레벨). 날짜가 [from, to) 안이면 그 시즌이 열려 있고, 날이 바뀌면 저절로 다음 시즌으로 넘어간다.
+   큰 보상(★)은 그 시즌의 팔레트 갈래와 모양(적은 차례대로)을 번갈아 1레벨부터 50레벨까지 고르게 놓는다 —
+   마지막 칸은 shapes 의 마지막(그 시즌의 얼굴: 호박·왕관·산타).
+   나머지 레벨은 이미 연 갈래의 변주를 돌아가며 준다. 같은 것을 두 번 주지 않는다.
+   맨 앞 팔레트 FREE 개는 그 시즌을 연 누구나 가진다(free). 받은 것은 시즌이 끝나도 남는다.
+   모자·등·마감(ITEMS·FINISHES)과 구 모양은 이벤트 시즌 보상에서 빠졌다. 그리는 코드는 남긴다 */
+export const SEASONS = [
+  { id: 'halloween-2026', theme: 'halloween', from: '2026-10-01', to: '2026-11-02',
+    shapes: ['chauvesouris', 'chat', 'tombe', 'chaudron', 'fantome', 'crane', 'potiron'] },
+  { id: 'blackfriday-2026', theme: 'blackfriday', from: '2026-11-02', to: '2026-12-01',
+    shapes: ['etiquette', 'ticket', 'sac', 'bourse', 'diamant', 'couronne'] },
+  { id: 'christmas-2026', theme: 'christmas', from: '2026-12-01', to: '2027-01-07',
+    shapes: ['cloche', 'chaussette', 'flocon', 'cadeau', 'bonhomme', 'sapin', 'renne', 'perenoel'] },
+];
+export const SEASON_LEVELS = 50, PASS_LEVELS = SEASONS.length * SEASON_LEVELS, FREE = 2;
+/* XP — 끝낸 판마다 game(경쟁전은 ranked), 하루 day 까지. level 만큼 쌓이면 한 레벨 */
 export const PASS_XP = { game: 20, ranked: 30, level: 100, day: 300 };
 export const passLevel = xp => Math.min(PASS_LEVELS, Math.floor((+xp || 0) / PASS_XP.level));
-/* rt.pass 한 칸에 판 하나의 XP 를 더한 새 값. 다른 패스의 값이면 0 에서, 날이 바뀌면 하루치를 새로 센다 */
-export function gainXp(st, ranked, today) {
-  st = st && st.pass === PASS_ID ? st : { pass: PASS_ID, xp: 0 };
-  const used = st.day === today ? st.today || 0 : 0;
-  const add = Math.max(0, Math.min(ranked ? PASS_XP.ranked : PASS_XP.game, PASS_XP.day - used));
-  return { pass: PASS_ID, xp: (st.xp || 0) + add, day: today, today: used + add, add };
-}
-export const PASS = (() => {
+/* 'YYYY-MM-DD'(그 사람의 날) → 열린 시즌. 시즌 사이면 null */
+export const seasonAt = day => SEASONS.find(s => s.from <= day && day < s.to) || null;
+export const SEASON_BY_ID = new Map(SEASONS.map(s => [s.id, s]));
+
+const tracks = new Map();
+/* 시즌 하나의 50칸 — [{ level, reward, big, free }] */
+export function trackOf(season) {
+  if (tracks.has(season.id)) return tracks.get(season.id);
+  const fams = PALETTE_FAMILIES.filter(f => f.season === season.theme).map(f => 'pal:' + f.id);
+  const bigs = [];
+  for (let i = 0; i < Math.max(fams.length, season.shapes.length); i++) bigs.push(fams[i], season.shapes[i]);
+  const order = bigs.filter(Boolean);
+  if (!SEASON_SHAPE_BY_ID.has(order[order.length - 1])) order.push(order.splice(order.findLastIndex(r => SEASON_SHAPE_BY_ID.has(r)), 1)[0]);
+  const at = new Map(order.map((r, k) => [1 + Math.round(k * (SEASON_LEVELS - 1) / (order.length - 1)), r]));
   const out = [], open = [], used = new Map();
-  const gus = REGIONS.filter(r => r.id !== 'seoul').map(r => `gu-${r.id}`);
-  const fill = PASS_LEVELS - Object.keys(BIG).length;
-  let turn = 0, nth = 0, g = 0, free = FREE;
-  const push = (lv, reward, big) => {
-    const p = { level: lv, reward, big };
-    if (reward && reward.startsWith('pal:') && free > 0) { p.free = true; free--; }
-    out.push(p);
-  };
-  for (let lv = 1; lv <= PASS_LEVELS; lv++) {
-    const big = BIG[lv];
-    if (big) {
-      if (big.startsWith('pal:')) { open.push(big.slice(4)); used.set(big.slice(4), 1); }
-      push(lv, big, true);
-      continue;
-    }
-    /* 채움 칸 nth 번째 — 구 모양이 들어갈 차례인지(25개를 채움 칸 전체에 고르게) */
-    const gu = Math.floor((nth + 1) * gus.length / fill) > Math.floor(nth * gus.length / fill);
-    nth++;
-    let reward = gu ? gus[g++] : null;
+  let turn = 0, free = FREE;
+  for (let lv = 1; lv <= SEASON_LEVELS; lv++) {
+    let reward = at.get(lv) || null;
+    const big = !!reward;
+    if (reward && reward.startsWith('pal:')) { open.push(reward.slice(4)); used.set(reward.slice(4), 1); }
     for (let k = 0; k < open.length && !reward; k++) {
       const fam = open[(turn + k) % open.length], n = used.get(fam) + 1;
       if (n <= PALETTE_VARIANTS) { used.set(fam, n); reward = `pal:${fam}-${n}`; turn = (turn + k + 1) % open.length; }
     }
-    push(lv, reward, false);
+    const p = { level: lv, reward, big };
+    if (reward && reward.startsWith('pal:') && free > 0) { p.free = true; free--; }
+    out.push(p);
   }
+  tracks.set(season.id, out);
   return out;
-})();
+}
+
+/* ── 리전 패스 하나 ─────────────────────────────────────
+   세 시즌의 50칸을 날짜 차례로 이어 한 줄 150레벨, XP 도 하나다. 레벨은 언제든 오르지만 칸은 그 시즌이 열린 날부터
+   받는다(지난 시즌 칸은 늦게 닿아도 받는다). 시기 예측 — 패스는 10/30 에 열렸다. 하루 상한(3레벨)이면 11/2 에 ~9,
+   12/1 에 ~96(블랙 프라이데이 줄 끝), 12/19 쯤 150. 할로윈은 사흘 남아 할로윈 칸은 대부분 11월에 받는다.
+   ponytail: 시즌마다 50칸 고정 — 하루 1레벨이면 1/6 에 ~69 라 크리스마스 줄에 못 닿는다. 그게 문제면 칸 수를 날짜 길이에 맞춘다 */
+export const PASS_ID = 'holiday-2026';
+export const PASS = SEASONS.flatMap((s, k) => trackOf(s).map(p => ({ ...p, level: p.level + k * SEASON_LEVELS, season: s })));
+export const passOpen = day => !!seasonAt(day);
+/* rt.pass → { pass, xp, day, today }. v2.2.0 의 할로윈 패스(halloween-1) XP 는 그대로 잇는다 */
+export function passStore(raw) {
+  const ok = raw && (raw.pass === PASS_ID || raw.pass === 'halloween-1');
+  return ok ? { pass: PASS_ID, xp: +raw.xp || 0, day: raw.day, today: raw.today || 0 } : { pass: PASS_ID, xp: 0 };
+}
+/* 판 하나의 XP 를 더한 새 rt.pass(add 는 더한 양). 패스가 닫힌 날엔 0, 날이 바뀌면 하루치를 새로 센다 */
+export function gainXp(st, ranked, today) {
+  st = passStore(st);
+  const used = st.day === today ? st.today : 0;
+  const add = !passOpen(today) ? 0 : Math.max(0, Math.min(ranked ? PASS_XP.ranked : PASS_XP.game, PASS_XP.day - used));
+  return { pass: PASS_ID, xp: st.xp + add, day: today, today: used + add, add };
+}
+/* 칸 하나를 가졌나 — 그 시즌이 열렸고, 무료이거나 내 레벨까지 */
+export const passOwns = (p, lv, today) => p.season.from <= today && (!!p.free || p.level <= lv);
+/* 가진 보상 [{ ref, got, season }] */
+export function ownedRewards(st, today) {
+  const lv = passLevel(passStore(st).xp);
+  return PASS.filter(p => passOwns(p, lv, today)).map(p => ({ ref: p.reward, got: parseReward(p.reward), season: p.season }));
+}

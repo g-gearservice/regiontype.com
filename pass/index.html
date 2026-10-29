@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>리전 패스 — regiontype</title>
-<meta name="description" content="판을 끝낼 때마다 XP 가 쌓이고, 100레벨까지 할로윈 색 팔레트와 봇 모양을 받는 regiontype 의 시즌 패스.">
+<meta name="description" content="할로윈·블랙 프라이데이·크리스마스 — 날짜 차례로 이은 150레벨 한 줄. 판을 끝낼 때마다 XP 가 쌓이고, 시즌이 열리면 그 이벤트의 색 팔레트와 봇 모양을 받는 regiontype 의 리전 패스.">
 <link rel="canonical" href="https://regiontype.com/pass/">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=5.45">
-<link rel="stylesheet" href="../style.css?v=5.68">
-<link rel="stylesheet" href="pass.css?v=5.68">
-<!-- 패스는 아직 서버가 없다(PLAN-pass.md M3). 지금은 보상 표(assets/bloub/items.js)와 규칙을
-     보여 주고, 고른 레벨의 보상을 미리 본다 — 팔레트는 이 페이지 색, 구 모양은 내 봇 -->
-<script type="module" src="pass.js?v=5.68"></script>
+<link rel="stylesheet" href="../style.css?v=5.70">
+<link rel="stylesheet" href="pass.css?v=5.70">
+<!-- 패스는 아직 서버가 없다(PLAN-pass.md M3). 세 시즌을 이은 보상 줄(assets/bloub/items.js 의 PASS)을
+     보여 주고, 고른 칸을 미리 본다 — 팔레트는 이 페이지 색과 작은 지도, 모양은 내 봇. 진행은 이 기기에 쌓인다 -->
+<script type="module" src="pass.js?v=5.70"></script>
 </head>
 <body>
 
@@ -33,17 +33,20 @@
 
 <main class="ps" id="main">
   <h1 data-i18n="pass">리전 패스</h1>
-  <p class="ps-lead" data-i18n="passLead">판을 끝낼 때마다 XP 가 쌓이고, 레벨마다 할로윈 색 팔레트와 봇 모양을 받습니다.</p>
+  <p class="ps-lead" data-i18n="passLead">할로윈부터 크리스마스까지 패스 하나. 판을 끝낼 때마다 XP 가 쌓이고, 시즌이 열리면 그 이벤트의 색 팔레트와 봇 모양을 받습니다.</p>
+  <!-- 시즌 탭 — 패스는 하나, 탭은 줄에서 그 시즌 첫 칸으로 건너뛴다(pass.js) -->
+  <div class="ps-tabs" id="seasons" role="group" data-i18n-aria="passSeasons" aria-label="시즌"></div>
 
   <section class="ps-card" aria-labelledby="psNow">
     <div class="ps-head">
-      <h2 id="psNow" data-i18n="passName">시즌 1 · 할로윈</h2>
-      <span class="ps-state" id="state" data-i18n="passOpen">진행 중</span>
+      <h2 id="psNow">할로윈</h2>
+      <span class="ps-state" id="state">진행 중</span>
     </div>
-    <p class="ps-lv"><b id="lv">0</b> <span>/ 100</span> <span data-i18n="passLevel">레벨</span></p>
+    <p class="ps-span" id="span"></p>
+    <p class="ps-lv"><b id="lv">0</b> <span id="lvMax">/ 50</span> <span data-i18n="passLevel">레벨</span></p>
     <progress id="xp" max="100" value="0" data-i18n-aria="passXp" aria-label="다음 레벨까지 XP"></progress>
     <p class="ps-xp" id="xpNum"></p>
-    <p class="ps-note" id="note" data-i18n="passLocal">로그인하고 판을 끝낼 때마다 XP 가 쌓인다. 지금은 이 기기에 쌓이고, 서버가 열리면 계정으로 옮긴다.</p>
+    <p class="ps-note" id="note"></p>
   </section>
 
   <section class="ps-show" aria-labelledby="psPeek">
@@ -58,7 +61,7 @@
 
   <section aria-labelledby="psTrack">
     <h2 id="psTrack" data-i18n="passTrack">보상</h2>
-    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고르면 페이지 색이나 위의 봇이 바뀌어 미리 보인다. ★ 는 새 팔레트다.</p>
+    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고르면 페이지 색이나 위의 봇이 바뀌어 미리 보인다. ★ 는 새 팔레트나 새 모양이다.</p>
     <ol class="ps-track" id="track" data-i18n-aria="passTrack" aria-label="보상"></ol>
   </section>
 
@@ -66,8 +69,8 @@
     <h2 id="psHow" data-i18n="passHow">어떻게 쌓이나</h2>
     <ul>
       <li data-i18n="passRule1">시즌은 6개월이다. 시즌이 바뀌면 랭크 레이팅을 새로 잡는다.</li>
-      <li data-i18n="passRule2">패스는 3개월씩, 시즌 하나에 두 번 열린다. 레벨은 100까지.</li>
-      <li data-i18n="passRule3">끝낸 판은 모두 XP 를 준다. 랭크전은 더 준다. 하루에 받는 XP 에는 상한이 있다.</li>
+      <li data-i18n="passRule2">패스는 하나, 레벨은 150까지 — 할로윈(1–50), 블랙 프라이데이(51–100), 크리스마스(101–150). 칸은 그 시즌이 열린 날부터 받는다.</li>
+      <li data-i18n="passRule3">끝낸 판마다 20 XP, 경쟁전은 30 XP. 하루 300 XP 까지 받고, 100 XP 마다 한 레벨이 오른다.</li>
       <li data-i18n="passRule4">로그인한 계정에만 쌓인다. 중간에 나간 판과 부정 검토 중인 판은 세지 않는다.</li>
       <li data-i18n="passRule5">보상은 꾸미기뿐이다. 받은 것은 패스가 끝나도 계정에 남는다.</li>
     </ul>
