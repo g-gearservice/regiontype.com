@@ -1,4 +1,6 @@
 [
+  {"v": "2.0.1", "date": "2026-10-29", "ko": "봇의 눈이 짓눌린 틈이 아니라 표정 그대로의 크기와 모양으로 똑바로 뜹니다(웃는 눈·화난 눈의 기울기는 그대로). 두 눈의 크기도 같습니다.", "en": "Bot eyes now open fully upright at their expression's own size and shape (smiling and angry slants kept) instead of squashed slits, and both eyes match."},
+  {"v": "2.0.1", "date": "2026-10-29", "ko": "내 스타일 창에서 다른 추천 버튼이 추천 색 바로 뒤에 붙고, 색 직접 고르기 칸이 창 밖으로 넘치지 않습니다.", "en": "In My styles, the More ideas button now sits right after the suggested colors, and Pick your own colors no longer spills out of the window."},
   {"v": "2.0.0", "date": "2026-10-29", "ko": "로그인·순위표·피드백 서버가 api.regiontype.com 으로 옮겼고, 확인 메일은 noreply@regiontype.com 에서 옵니다.", "en": "The sign-in, leaderboard and feedback server moved to api.regiontype.com, and confirmation mail now comes from noreply@regiontype.com."},
   {"v": "1.4.10", "date": "2026-10-29", "ko": "봇이 가만히 있을 땐 기울지 않고 똑바로 서며, 눈도 비스듬해지지 않고 곧게 섭니다. 둥근 봇은 돌 때 납작한 바둑돌이 아니라 공처럼 돕니다.", "en": "Bots now stand upright at rest with level, upright eyes, and round bots turn like a ball instead of a flat disc."},
   {"v": "1.4.10", "date": "2026-10-29", "ko": "좁은 화면에서 내 스타일 창의 색 직접 고르기와 봇 스타일 판이 창 밖으로 넘치던 것을 고쳤습니다.", "en": "Fixed Pick your own colors and the Bot style panel spilling out of the My styles window on narrow screens."},

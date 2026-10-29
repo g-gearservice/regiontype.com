@@ -127,6 +127,12 @@ pattern = "api.regiontype.com"
 zone_name = "regiontype.com"
 custom_domain = true
 
+# 배포된 사이트가 api. 로 넘어가기 전까지 같이 연다. 넘어간 뒤 지운다.
+[[routes]]
+pattern = "regiontype.gearservicevanguard.com"
+zone_name = "gearservicevanguard.com"
+custom_domain = true
+
 [observability]
 enabled = true
 
