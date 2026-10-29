@@ -2643,9 +2643,16 @@ body:is(.signing,.rk-styling,:has(#play.on),:has(#styles:popover-open #styPanelB
    ranked.js 의 INTRO_LOCK — inert 라 호버도 안 먹는다) */
 .rk-dim{position:absolute;inset:0;background:rgb(6 8 10 / .66);pointer-events:auto}
 .rk-dim[hidden]{display:none}
-body:is(.rk-intro,.rk-emerge) #regions{z-index:auto}
+/* fixed 는 z-index:auto 여도 쌓임 맥락을 만들어 넵바(7)를 화면 안(0)에 가둔다 — 막 밑으로 로고가
+   깔린다. 그동안만 absolute 로 내려 맥락을 푼다(body 가 화면 높이에 overflow:hidden 이라 자리는 같다) */
+body:is(.rk-intro,.rk-emerge) #regions{position:absolute;z-index:auto}
 body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:7}
 body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
+/* 데스크톱 — 봇 층이 넵바 위로 오른다. 막이 넵바를 덮고 로고 알약 자리만 오려진다(ranked.js 의 punch) */
+@media not (pointer:coarse){
+  body.rk-intro .rk-layer{z-index:8}
+  body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:1}
+}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 @keyframes rk-peek{
   0%,100%{transform:translateY(0) rotate(0)}

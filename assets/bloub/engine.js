@@ -1686,8 +1686,12 @@ var _BotEngine = class _BotEngine {
     const eyes = [];
     if (pose.eyeAlpha > 0.01) {
       const poses = eyePoses(gaze, R2, pose.split);
+      // regiontype: le meme oeil sans regard — sa place sur le visage, pour que buddy.js le colle au corps tourne
+      const homes = eyePoses({ yaw: 0, pitch: 0, roll: 0 }, R2, pose.split);
       for (let i = 0; i < 2; i++) {
         const e = poses[i];
+        const h = homes[i];
+        const hFit = bodyRadius(h.x, h.y);
         if (e.depth <= 0.02) continue;
         const cfg = pose.eyes[i];
         const fit = bodyRadius(e.x, e.y);
@@ -1702,7 +1706,8 @@ var _BotEngine = class _BotEngine {
         eyes.push({
           d: capsulePath(cfg.w * R2, cfg.h * R2),
           matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${r2(e.x * fit + (offX + decalage.x) * R2)},${r2(e.y * fit + (offY + decalage.y) * R2)})`,
-          alpha: pose.eyeAlpha * clamp(e.depth / 0.12)
+          alpha: pose.eyeAlpha * clamp(e.depth / 0.12),
+          home: { x: r2(h.x * hFit + (offX + decalage.x) * R2), y: r2(h.y * hFit + (offY + decalage.y) * R2) }
         });
       }
     }
@@ -1714,6 +1719,7 @@ var _BotEngine = class _BotEngine {
     const notch = pose.notif ? { x: nx, y: ny, r: pose.notif.notch * R2 } : null;
     return {
       bodyPath,
+      gaze,
       bodyAlpha: pose.bodyAlpha,
       eyes,
       dots,
