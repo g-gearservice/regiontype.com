@@ -2648,6 +2648,11 @@ body:is(.signing,.rk-styling,:has(#play.on),:has(#styles:popover-open #styPanelB
 body:is(.rk-intro,.rk-emerge) #regions{position:absolute;z-index:auto}
 body:is(.rk-intro,.rk-emerge) #regions .navbar{z-index:7}
 body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:.34}
+/* 데스크톱 — 봇 층이 넵바 위로 오른다. 막이 넵바를 덮고 로고 알약 자리만 오려진다(ranked.js 의 punch) */
+@media not (pointer:coarse){
+  body.rk-intro .rk-layer{z-index:8}
+  body.rk-intro #regions .navbar :is(.nav-side,.nav-shape,.nav-burger){opacity:1}
+}
 body.rk-intro .rk-bot-motion{animation:rk-peek 1.4s var(--ease-out) infinite}
 @keyframes rk-peek{
   0%,100%{transform:translateY(0) rotate(0)}

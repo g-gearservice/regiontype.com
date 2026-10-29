@@ -1804,7 +1804,17 @@ function peekFrame() {
   if (!intro) return;
   const [x, y] = peekAt();
   if (x !== bot.x || y !== bot.y) place(x, y);
+  punch();
   requestAnimationFrame(peekFrame);
+}
+/* 데스크톱은 봇 층이 넵바 위로 올라 막이 넵바까지 어둡게 덮고, 봇 손이 넵바 위로 나온다(style.css).
+   로고 알약 자리만 막과 봇에서 오려 내 — 로고가 밝게 비치고 봇은 그 뒤에 갇혀 보인다.
+   clip-path 라 오린 자리는 누름도 로고로 간다 */
+function punch() {
+  const r = logo().getBoundingClientRect();
+  const pill = (x, y) => { const h = r.height / 2; return `M${x + h} ${y}H${x + r.width - h}A${h} ${h} 0 0 1 ${x + r.width - h} ${y + r.height}H${x + h}A${h} ${h} 0 0 1 ${x + h} ${y}Z`; };
+  dim.style.clipPath = `path(evenodd,"M0 0H${innerWidth}V${innerHeight}H0Z${pill(r.left, r.top)}")`;
+  bot.el.style.clipPath = `path(evenodd,"M-9999 -9999H9999V9999H-9999Z${pill(r.left - bot.x, r.top - bot.y)}")`;
 }
 function endIntro() {
   if (!intro) return;
@@ -1812,6 +1822,8 @@ function endIntro() {
   try { localStorage.removeItem(RESCUE_KEY); } catch {}
   document.body.classList.remove('rk-intro');
   dim.hidden = true;
+  dim.style.clipPath = '';
+  if (bot) bot.el.style.clipPath = '';
   aimAt(null);
   skip.hidden = true;
   logo().setAttribute('aria-label', 'regiontype');

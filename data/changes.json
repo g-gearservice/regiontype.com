@@ -1,4 +1,5 @@
 [
+  {"v": "1.4.9", "date": "2026-10-29", "ko": "처음 온 사람에게 봇이 조를 때 넵바도 함께 어두워지고, 봇의 손이 로고 알약 뒤에서 넵바 위로 삐져나옵니다.", "en": "On a first visit, the navbar dims along with the page and the bot's hand pokes out over it from behind the logo pill."},
   {"v": "1.4.9", "date": "2026-10-29", "ko": "봇이 고개를 돌리면 눈만 미끄러지지 않고 몸의 실루엣도 함께 입체로 돕니다. 호박 봇은 마디 윤곽이 가장자리에 또렷이 섭니다.", "en": "When a bot turns its head, its whole silhouette now turns in 3D instead of only the eyes sliding. The pumpkin bot shows clear lobe outlines along its edge."},
   {"v": "1.4.9", "date": "2026-10-29", "ko": "처음 온 사람에게 봇이 조를 때 로고 알약이 어두운 막 위로 밝게 올라와, 봇이 그 뒤에 갇힌 것이 보입니다.", "en": "On a first visit, the logo pill now stays bright above the dimmed page, so the bot is clearly trapped behind it."},
   {"v": "1.4.8", "date": "2026-10-29", "ko": "유기적인 픽셀들(베타): 강서구 지도를 직각 비트 대신 커서 호버링에 따라 서로 유기적으로 이어지는 액체형 픽셀들로 렌더링하는 새 스타일을 시험합니다.", "en": "Organic Pixels (beta): A new style preview rendering Gangseo-gu map with liquid organic pixels that connect and react organically to cursor hover."},
