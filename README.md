@@ -386,11 +386,11 @@ Never lower a `?v=` query. If you do, it collides with an old number and the cac
 
 ### Version for Agents
 
-A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `static-A.B.C`.
+A pull request opened directly by a bot uses `agent-static-A.B.C` instead of `static-A.B.C`.
 
-- **N** — the bot's own pull request count: the number of `agent-static-*` pull requests opened so far, plus one
-- **0.0** — fixed, whatever `VER` is. Only N grows
-- Never mix it with a hand-chosen `static-A.B.C`
+- **A.B.C** — the release the pull request ships (`REL`). Branch, pull request title, commit prefix and `REL` all carry the same version: `agent-static-1.4.0` ↔ `v1.4.0`
+- One release per pull request. If the branch name is taken, pick a new version
+- `VER` never goes in a branch name. Never mix it with a hand-chosen `static-A.B.C`
 
 ## Run
 

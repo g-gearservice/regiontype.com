@@ -44,10 +44,10 @@
 거기서 일하고(`static-1.0.0`), 끝나면 `main` 에 머지해 배포한다. 머지가 된 뒤에야
 옛 브랜치를 지운다.
 
-**봇이 직접 PR 을 올릴 때는 `agent-static-0.0.N` 브랜치를 쓴다.** N 은 봇이 직접
-올린 PR 의 순번이다 — 지금까지 열린 `agent-static-*` PR 수에 1을 더한다
-(`gh pr list --state all --limit 1000 --json headRefName -q '.[].headRefName' | grep -c '^agent-static-'`).
-VER 과 무관하게 0.0 고정이고 N 만 늘린다. 사람이 고른 `static-A.B.C` 와 섞지 않는다.
+**봇이 직접 PR 을 올릴 때는 `agent-static-A.B.C` 브랜치를 쓴다.** A.B.C 는 그 PR 이 내는 `REL` 이다 —
+브랜치·PR 제목·커밋 머리(`v1.4.0: …`)·`REL` 이 한 버전으로 맞는다(`agent-static-1.4.0` ↔ `v1.4.0`).
+PR 하나에 릴리스 하나. 같은 이름의 브랜치가 이미 있으면 버전을 다시 고른다(사람이 고른다).
+VER 은 브랜치 이름에 넣지 않는다. 사람이 고른 `static-A.B.C` 와 섞지 않는다.
 
 **Pages 설정에는 손대지 않는다.** 소스 브랜치·도메인 따위는 사람이 만진다 —
 읽지도 바꾸지도 않는다.

@@ -2,9 +2,9 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.52';
+const VER = '5.53';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
-const REL = '1.4.3';
+const REL = '1.4.4';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
@@ -106,14 +106,6 @@ function paintUI(then) {
   document.title = 'regiontype · ' + t('pageTitle');
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
   requestAnimationFrame(() => relayoutNavShapes());
-  /* 소개 페이지는 언어마다 별도 파일이다(about/ 폴더 안, ko 는 접미 없이 about/index.html).
-     파일이 없는 언어는 한국어 소개로 보낸다 — 없는 주소를 열지 않는다 */
-  const aboutLink = $('#aboutLink');
-  if (aboutLink) {
-    const have = 'ar,bg,cs,de,el,en,es,fi,fr,hu,id,it,ja,ms,nb,nl,pl,pt,ro,sv,th,tr,uk,vi,zh';
-    aboutLink.href = (LANG !== 'ko' && have.split(',').includes(LANG))
-      ? `about/${LANG}.html` : 'about/';
-  }
   document.querySelectorAll('.unit').forEach(el => { el.textContent = unitLabel(); });
   if (then) then();
 }
@@ -1830,14 +1822,14 @@ function wireNavShape() { navTop.wire(); navBot.wire(); }
 function relayoutNavShapes() { navTop.relayout(); navBot.relayout(); }
 
 /* ── 폰의 윗줄 메뉴 ─────────────────────────────────────
-   손가락 화면에서는 로고 대신 왼쪽 위 햄버거가 윗줄 메뉴(순위·기록·커뮤니티·소개)를
+   손가락 화면에서는 로고 대신 왼쪽 위 햄버거가 윗줄 메뉴(순위·기록·커뮤니티·리전 패스)를
    펼친다 — 같은 요소를 옮길 뿐이라 href 로 받는 손(ranked.js)과 키보드 길이 그대로 산다.
    설정·시작하기·로그인은 아래 알약에 그대로 있다. 밖을 누르거나 Esc, 칸을 고르면 접힌다 */
 const SHEET = { open: false };
 const sheetOn = () => fingers() && !!$('#sheetMore').firstChild;
 function sheetDock() {
   $('#sheetMore').append(...['#regions a[href="#ranking"]', '#regions a[href="#records"]',
-    '#regions a[href="community/"]', '#aboutLink'].map(s => $(s)));
+    '#regions a[href="community/"]', '#passLink'].map(s => $(s)));
   $('#sheetMore').inert = true;
 }
 function sheetSet(open) {
