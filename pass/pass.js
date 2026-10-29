@@ -8,9 +8,9 @@ document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
 
 const SEARCH = new URL(import.meta.url).search;
 const VER = new URLSearchParams(SEARCH).get('v') || '';
-const { mountBuddy, anchorOf, TABLES } = await import('../assets/bloub/buddy.js' + SEARCH);
+const { mountBuddy, anchorOf, TABLES, shapeRadii } = await import('../assets/bloub/buddy.js' + SEARCH);
 const { SEASONS, SEASON_LEVELS, seasonAt, trackOf, PASS, passStore, passLevel, passOwns, PASS_LEVELS, PASS_XP, FREE, ITEMS, COLOURS, FINISHES, REGIONS,
-  PALETTE_FAMILIES, SEASON_SHAPES, parseReward, finishImg } = await import('../assets/bloub/items.js' + SEARCH);
+  PALETTE_FAMILIES, SEASON_SHAPES, PASS_ENGINE_SHAPES, parseReward, finishImg } = await import('../assets/bloub/items.js' + SEARCH);
 
 let I18N = { ko: {} }, LANG = 'ko';
 const t = (key, vars) => {
@@ -21,7 +21,7 @@ const t = (key, vars) => {
 let ui = null;
 try { ui = JSON.parse(localStorage.getItem('rt.ui') || 'null'); } catch {}
 /* 홈이 남긴 팩이 패스보다 옛것이면(새 모양 이름이 없으면) 표 전체를 받는다 */
-if (ui && ui.pack && ui.pack.passXpLeft && SEASON_SHAPES.every(x => ui.pack['shape_' + x.id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
+if (ui && ui.pack && ui.pack.passXpLeft && [...SEASON_SHAPES.map(x => x.id), ...PASS_ENGINE_SHAPES].every(id => ui.pack['shape_' + id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
 else {
   try { I18N = await (await fetch('../data/i18n.json?v=' + VER)).json(); } catch {}
   const langs = Object.keys(I18N);
@@ -53,7 +53,7 @@ function swatch(got) {
     const svg = document.createElementNS(NS, 'svg'), path = document.createElementNS(NS, 'path');
     svg.setAttribute('viewBox', '-1.4 -1.4 2.8 2.8');
     svg.classList.add('ps-sil');
-    const r = got.shape.radii;
+    const r = got.shape.radii || shapeRadii(got.shape.id);   // 엔진 모양(citrouille)은 엔진의 반지름
     path.setAttribute('d', 'M' + r.map((v, i) => { const a = i / r.length * Math.PI * 2; return `${(v * Math.cos(a)).toFixed(3)} ${(v * Math.sin(a)).toFixed(3)}`; }).join('L') + 'Z');
     svg.append(path);
     svg.setAttribute('aria-hidden', 'true');
@@ -224,6 +224,7 @@ if (new URLSearchParams(location.search).get('rt') === '1') {
   A(PALETTE_FAMILIES.filter(f => f.season === 'blackfriday').every(f => f.dark && lum(f.bg) < .02), 'palette: 블랙 프라이데이는 모두 어두운 스타일');
   A(PASS.length === PASS_LEVELS && PASS.every((p, i) => p.level === i + 1) && new Set(PASS.map(p => p.reward)).size === PASS_LEVELS, 'pass: 한 줄 1..150, 같은 보상 없음');
   A(PASS.every((p, i) => !i || PASS[i - 1].season.from <= p.season.from), 'pass: 줄 순서 = 날짜 순서');
+  A(PASS[SEASON_LEVELS - 1].reward === 'citrouille' && shapeRadii('citrouille') && !TABLES.shapes.some(x => x.id === 'citrouille'), 'pass: 할로윈 50레벨은 엔진 호박(citrouille) — 기본 목록엔 없다');
   A(SEASONS.every((s, i) => s.from < s.to && (!i || SEASONS[i - 1].to === s.from)), 'season: 날짜가 겹치거나 비지 않고 이어진다');
   A(seasonAt('2026-10-31').theme === 'halloween' && seasonAt('2026-11-27').theme === 'blackfriday' && seasonAt('2026-12-25').theme === 'christmas', 'season: 날짜로 시즌을 고른다');
   A(SEASON_SHAPES.every(x => /^[a-z]{1,16}$/.test(x.id) && x.radii.length === 64 && x.radii.every(v => v >= .4 && v <= 1.3)), 'shapes: 중계기가 받는 id · 반지름 64개 · 엔진 범위 안');

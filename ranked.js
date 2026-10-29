@@ -38,8 +38,12 @@ const readName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } ca
    null 셋이라 엔진이 제 기본 모습으로 선다. 색은 CSS 의 --buddy-ink(경쟁전 빨강)를
    덮으므로, 안 골랐으면 덮지 않아 빨간 봇 그대로다. */
 const readFace = () => {
-  try { return JSON.parse(localStorage.getItem('rt.character') || '{}') || {}; }
+  let f;
+  try { f = JSON.parse(localStorage.getItem('rt.character') || '{}') || {}; }
   catch { return {}; }
+  /* 패스에 잠근 엔진 모양(호박)은 받기 전엔 입지 못한다 — 기본 모양으로 선다. 저장 값은 그대로 둔다(받으면 돌아온다) */
+  if (lockedShapes.includes(f.shape) && !ownedShapes.includes(f.shape)) delete f.shape;
+  return f;
 };
 
 /* anon — 세션 토큰을 싣지 않는다. 봇 대화는 로그인과 상관없고, 안 보내면 샐 일도 없다 */
@@ -433,13 +437,15 @@ const sameStyle = (a, b) => THEME.every(k => (a[k.key] || '') === (b[k.key] || '
 const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI).href);
 /* 가진 보상 — 열린 시즌들의 무료 칸과 내 레벨까지의 칸(items.js 의 ownedRewards).
    팔레트는 [{ ref, palette }] 로 게임 스타일 탭에, 모양 id 는 봇 스타일 탭의 모양 줄에 더한다 */
-let owned = [], ownedShapes = [];
+/* lockedShapes 는 items.js 의 PASS_ENGINE_SHAPES — 표가 오기 전에도 잠겨 있게 처음 값을 같이 적는다 */
+let owned = [], ownedShapes = [], lockedShapes = ['citrouille'];
 const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
 const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
 function countOwned(kit) {
   const got = kit.ownedRewards(readPass(), today());
   owned = got.filter(o => o.got.kind === 'palette').map(o => ({ ref: o.ref, palette: o.got.palette }));
   ownedShapes = got.filter(o => o.got.kind === 'shape').map(o => o.ref);
+  lockedShapes = kit.PASS_ENGINE_SHAPES;
 }
 /* 리전 패스 XP — 끝낸 판마다(나간 판은 finish 에 닿지 않는다), 패스가 열린 동안. 로그인한 계정만. 결과 칸에 +XP 와 레벨을 적는다 */
 addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
@@ -455,6 +461,7 @@ addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
 }));
 passKit.then(kit => {
   countOwned(kit);
+  syncHomeBot();   // 잠근 모양을 가졌는지 이제 안다
   /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색·지난 꼴의 팔레트)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
   if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
@@ -657,8 +664,9 @@ function mountBotStyle() {
   botMounted = true;
   syncBotStyleFromStorage();
   const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
-  buddyKit.then(({ mountBuddy, TABLES }) => {
-    botLists.shape = [...TABLES.shapes.map(x => x.id), ...ownedShapes];   // 패스에서 받은 이벤트 모양은 뒤에
+  /* 받은 모양(ownedShapes)을 센 뒤에 목록을 짓는다 — passKit 의 countOwned 가 먼저 돈다 */
+  Promise.all([buddyKit, passKit]).then(([{ mountBuddy, TABLES }]) => {
+    botLists.shape = [...TABLES.shapes.map(x => x.id), ...ownedShapes];   // 패스에서 받은 모양(잠근 호박 포함)은 뒤에
     botLists.colour = ['accent', ...TABLES.colours.map(x => x.id)];
     const saved = readFace();
     if (botLists.shape.includes(saved.shape) || saved.shape === 'gen') botChar.shape = saved.shape;
@@ -806,7 +814,11 @@ const SPOOKY = [
 ];
 function spookyLook(text) {
   const hit = SPOOKY.find(([re]) => re.test(text));
-  return hit && { act: 'look', ...hit[1] };
+  if (!hit) return hit;
+  /* 호박은 패스 50레벨 보상 — 아직 없으면 그 시즌 모양 대신 둥근 몸에 주황만 입힌다 */
+  const look = { act: 'look', ...hit[1] };
+  if (lockedShapes.includes(look.shape) && !ownedShapes.includes(look.shape)) look.shape = 'cercle';
+  return look;
 }
 
 /* 낱말도 모델 답도 없을 때 설명을 해시해 빚는 모양. 같은 설명이면 같은 모양이다 */

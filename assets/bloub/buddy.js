@@ -21,9 +21,12 @@ const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID,
 const EYE = 'oklch(from var(--buddy-eye, var(--buddy-ink, var(--block))) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
 const STEM_D = 'M-15 -72C-13 -96 -22 -114 -31 -124L-17 -133C-3 -120 10 -98 15 -72Q8 -65 0 -69Q-8 -65 -15 -72Z';
 
-const { ITEMS, parseItem, SLOTS, FINISH_BY_ID, finishImg, REGION_BY_SHAPE, SEASON_SHAPE_BY_ID, FIT } = await import(new URL('items.js' + new URL(import.meta.url).search, import.meta.url).href);
+const { ITEMS, parseItem, SLOTS, FINISH_BY_ID, finishImg, REGION_BY_SHAPE, SEASON_SHAPE_BY_ID, PASS_ENGINE_SHAPES, FIT } = await import(new URL('items.js' + new URL(import.meta.url).search, import.meta.url).href);
 
-export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS, items: ITEMS };
+/* 고를 수 있는 모양에서 패스에 잠근 엔진 모양(호박)은 뺀다 — 받은 사람에게만 ranked.js 가 덧붙인다.
+   그리기는 그대로 된다(SHAPE_BY_ID). 반지름이 필요한 쪽(pass.js)은 shapeRadii 로 받는다 */
+export const TABLES = { shapes: SHAPES.filter(x => !PASS_ENGINE_SHAPES.includes(x.id)), expressions: EXPRESSIONS, colours: COLORS, items: ITEMS };
+export const shapeRadii = id => SHAPE_BY_ID.get(id)?.radii;
 
 /* 몸 윤곽(engine 의 bodyPath: M 한 점 + C 세 점씩)에서 곡선 위의 점만 골라 꾸미기의 닻을 낸다.
    back 은 한가운데. hat 은 진짜 모자처럼 앉힌다 — 정수리에서 아래로 내려가며 몸 가로가 챙(brim)만큼
