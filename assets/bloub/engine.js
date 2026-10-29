@@ -1707,6 +1707,8 @@ var _BotEngine = class _BotEngine {
           d: capsulePath(cfg.w * R2, cfg.h * R2),
           matrix: `matrix(${r2(ax)},${r2(ay * k)},${r2(cx2)},${r2(cy2 * k)},${r2(e.x * fit + (offX + decalage.x) * R2)},${r2(e.y * fit + (offY + decalage.y) * R2)})`,
           alpha: pose.eyeAlpha * clamp(e.depth / 0.12),
+          // regiontype: l'ouverture seule (clignement x ouverture de l'expression) — buddy.js redessine l'oeil droit
+          lid: k,
           home: { x: r2(h.x * hFit + (offX + decalage.x) * R2), y: r2(h.y * hFit + (offY + decalage.y) * R2) }
         });
       }
