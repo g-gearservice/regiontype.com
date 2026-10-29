@@ -106,6 +106,8 @@ export const REGION_BY_SHAPE = new Map(REGIONS.map(r => [`gu-${r.id}`, r]));
 const { SEASON_SHAPES } = await import(new URL('shapes.js' + new URL(import.meta.url).search, import.meta.url).href);
 export { SEASON_SHAPES };
 export const SEASON_SHAPE_BY_ID = new Map(SEASON_SHAPES.map(x => [x.id, x]));
+/* 엔진 기본 모양 가운데 패스에 잠근 것 — 받기 전엔 봇 스타일에 없다(ranked.js). 반지름은 엔진에 있다 */
+export const PASS_ENGINE_SHAPES = ['citrouille'];
 
 /* 'crown:rose' → { item, colour }. 모르는 아이템·색은 null */
 export function parseItem(ref) {
@@ -125,6 +127,7 @@ export function parseReward(ref) {
   if (ref.startsWith('fin:')) { const finish = FINISH_BY_ID.get(ref.slice(4)); return finish ? { kind: 'finish', finish } : null; }
   if (ref.startsWith('pal:')) { const palette = paletteOf(ref.slice(4)); return palette ? { kind: 'palette', palette } : null; }
   if (SEASON_SHAPE_BY_ID.has(ref)) return { kind: 'shape', shape: SEASON_SHAPE_BY_ID.get(ref) };
+  if (PASS_ENGINE_SHAPES.includes(ref)) return { kind: 'shape', shape: { id: ref } };
   if (REGION_BY_SHAPE.has(ref)) return { kind: 'region', region: REGION_BY_SHAPE.get(ref) };
   const got = parseItem(ref);
   return got ? { kind: 'item', ...got } : null;
@@ -184,13 +187,13 @@ export function paletteOf(id) {
 /* ── 리전 패스 · 이벤트 시즌 ─────────────────────────────
    시즌마다 패스 하나(50레벨). 날짜가 [from, to) 안이면 그 시즌이 열려 있고, 날이 바뀌면 저절로 다음 시즌으로 넘어간다.
    큰 보상(★)은 그 시즌의 팔레트 갈래와 모양(적은 차례대로)을 번갈아 1레벨부터 50레벨까지 고르게 놓는다 —
-   마지막 칸은 shapes 의 마지막(그 시즌의 얼굴: 호박·왕관·산타).
+   마지막 칸은 shapes 의 마지막(그 시즌의 얼굴: 할로윈 호박(엔진의 citrouille)·왕관·산타).
    나머지 레벨은 이미 연 갈래의 변주를 돌아가며 준다. 같은 것을 두 번 주지 않는다.
    맨 앞 팔레트 FREE 개는 그 시즌을 연 누구나 가진다(free). 받은 것은 시즌이 끝나도 남는다.
    모자·등·마감(ITEMS·FINISHES)과 구 모양은 이벤트 시즌 보상에서 빠졌다. 그리는 코드는 남긴다 */
 export const SEASONS = [
   { id: 'halloween-2026', theme: 'halloween', from: '2026-10-01', to: '2026-11-02',
-    shapes: ['chauvesouris', 'chat', 'tombe', 'chaudron', 'fantome', 'crane', 'potiron'] },
+    shapes: ['chauvesouris', 'chat', 'tombe', 'chaudron', 'fantome', 'crane', 'potiron', 'citrouille'] },
   { id: 'blackfriday-2026', theme: 'blackfriday', from: '2026-11-02', to: '2026-12-01',
     shapes: ['etiquette', 'ticket', 'sac', 'bourse', 'diamant', 'couronne'] },
   { id: 'christmas-2026', theme: 'christmas', from: '2026-12-01', to: '2027-01-07',
@@ -212,7 +215,8 @@ export function trackOf(season) {
   const bigs = [];
   for (let i = 0; i < Math.max(fams.length, season.shapes.length); i++) bigs.push(fams[i], season.shapes[i]);
   const order = bigs.filter(Boolean);
-  if (!SEASON_SHAPE_BY_ID.has(order[order.length - 1])) order.push(order.splice(order.findLastIndex(r => SEASON_SHAPE_BY_ID.has(r)), 1)[0]);
+  const last = season.shapes[season.shapes.length - 1];
+  if (order[order.length - 1] !== last) order.push(order.splice(order.indexOf(last), 1)[0]);
   const at = new Map(order.map((r, k) => [1 + Math.round(k * (SEASON_LEVELS - 1) / (order.length - 1)), r]));
   const out = [], open = [], used = new Map();
   let turn = 0, free = FREE;
