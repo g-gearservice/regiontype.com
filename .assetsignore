@@ -25,3 +25,5 @@ mail
 sms
 agent-feedback
 .impeccable
+node_modules
+my-react-app

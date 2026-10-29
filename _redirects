@@ -31,5 +31,9 @@
 /beta/flow  /beta/flow/           301
 /beta/style/ /beta/style/index.html 200
 /beta/style  /beta/style/           301
+/beta/styles/ /beta/style/index.html 200
+/beta/styles  /beta/style/           301
+/beta/organic/ /beta/organic/index.html 200
+/beta/organic  /beta/organic/           301
 /landing   /  301
 /landing/* /  301
