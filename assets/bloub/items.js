@@ -174,14 +174,18 @@ export const PALETTE_FAMILIES = [
 ];
 export const PALETTE_VARIANTS = 7;
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
-/* 'pumpkin' · 'pumpkin-3' → { id, family, n, roman, dark, accent, block, bg, ink }. 모르는 것은 null */
+/* 밤 바탕(nightBg) — 밤 화면에서 사이트 밤 바탕(#232c31) 대신 까는 색. 칸색을 밤 먹색(#161b1e)에 20% 섞어 팔레트 기운만 남긴다.
+   밤 글자(#e7eef1)와 대비 4.5 를 넘게 어둡다(pass/?rt=1 이 잰다). dark 팔레트는 제 바탕이 곧 밤 바탕이다 */
+const hexMix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('');
+/* 'pumpkin' · 'pumpkin-3' → { id, family, n, roman, dark, accent, block, bg, ink, nightBg }. 모르는 것은 null */
 export function paletteOf(id) {
   const [, fam, k] = String(id || '').match(/^([a-z]+)(?:-([2-7]))?$/) || [];
   const f = PALETTE_FAMILIES.find(x => x.id === fam);
   if (!f) return null;
   const G = PALETTE_FAMILIES.filter(x => x.season === f.season), i = G.indexOf(f), n = +(k || 1);
   const at = d => G[(i + d * (n - 1)) % G.length];
-  return { id, family: fam, n, roman: ROMAN[n], dark: !!f.dark, accent: f.accent, block: at(3).block, bg: at(5).bg, ink: at(5).ink };
+  const block = at(3).block, bg = at(5).bg;
+  return { id, family: fam, n, roman: ROMAN[n], dark: !!f.dark, accent: f.accent, block, bg, ink: at(5).ink, nightBg: f.dark ? bg : hexMix(block, '#161b1e', .2) };
 }
 
 /* ── 리전 패스 · 이벤트 시즌 ─────────────────────────────
