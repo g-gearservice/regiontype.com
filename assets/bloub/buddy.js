@@ -93,7 +93,7 @@ function eyeTop(eyes) {
    실루엣이 함께 돈다. 그림자는 덩이를 이루는 조각들의 그림자를 한 path 에 겹쳐 놓은 것이다 —
    같은 방향으로 감긴 하위 경로는 nonzero 로 하나로 합쳐진다(돌림이 90° 를 넘지 않아 방향이 안 뒤집힌다).
    보통 모양은 윤곽을 앞뒤로 줄여 쌓은 베개, 호박은 세로축을 도는 타원체 마디 LOBES 개다 */
-const TURN = .7, PUFF = .5, SLICES = [1, .96, .9, .82, .72, .6, .45, .28], LOBES = 8;
+const TURN = 1, PUFF = .5, SLICES = [1, .96, .9, .82, .72, .6, .45, .28], LOBES = 8;
 const spin3 = (u, v, a) => {
   const c = Math.cos(a), s = Math.sin(a);
   return [u.map((x, i) => x * c + v[i] * s), v.map((x, i) => x * c - u[i] * s)];
@@ -326,6 +326,15 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     const f = engine.sample(now);
     const flat = outline(f.bodyPath), c = box(flat), rot = basis(f.gaze || { yaw: 0, pitch: 0, roll: 0 });
     const solid = stemOf ? gourd(c, rot) : pillow(flat, c, rot);
+    /* 눈은 몸에 박혀 있다 — 얼굴 위 제자리(시선 0 의 자리)를 덩이 앞면에 얹고 몸과 같은 돌림으로 옮긴다.
+       눈 모양(기울기·줄어듦)은 엔진의 것을 그대로 두고 자리만 바꾼다 */
+    const t = stemOf ? c.w : Math.min(c.w, c.h) * PUFF, rr = Math.min(c.w, c.h);
+    for (const eye of f.eyes) {
+      if (!eye.home) continue;
+      const x = eye.home.x - c.x, y = eye.home.y - c.y, k = Math.min(1, Math.hypot(x, y) / rr);
+      const [px, py] = rot(x, y, t * Math.sqrt(1 - k * k));
+      eye.matrix = eye.matrix.replace(/,[^,]+,[^,]+\)$/, `,${(c.x + px).toFixed(2)},${(c.y + py).toFixed(2)})`);
+    }
     maskBody.setAttribute('d', solid);
     paper.setAttribute('d', solid);
     /* 꼭지는 돌린 공의 꼭대기(극)에 꽂고 그 축만큼 기운다 */
