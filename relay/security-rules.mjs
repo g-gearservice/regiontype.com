@@ -17,15 +17,15 @@ export const PROBES = {
   site:     { url: 'https://regiontype.com/' },
   www:      { url: 'https://www.regiontype.com/' },
   plain:    { url: 'http://regiontype.com/', redirect: 'manual' },
-  relay:    { url: 'https://regiontype.gearservicevanguard.com/where',
+  relay:    { url: 'https://api.regiontype.com/where',
               headers: { Origin: 'https://regiontype.com' } },
-  preflight: { url: 'https://regiontype.gearservicevanguard.com/', method: 'OPTIONS',
+  preflight: { url: 'https://api.regiontype.com/', method: 'OPTIONS',
                headers: { Origin: 'https://regiontype.com',
                           'Access-Control-Request-Method': 'POST' } },
   /* 저장소 파일을 사이트가 내주는지 — Pages 에는 .assetsignore 가 없어 엣지가 대신 막는다 */
   internals: { url: 'https://regiontype.com/relay/worker.mjs' },
   /* 남의 출처로 같은 문을 두드려 본다 — 문이 아무에게나 열리면 여기서 걸린다 */
-  stranger: { url: 'https://regiontype.gearservicevanguard.com/', method: 'OPTIONS',
+  stranger: { url: 'https://api.regiontype.com/', method: 'OPTIONS',
               headers: { Origin: 'https://evil.example',
                          'Access-Control-Request-Method': 'POST' } },
 };

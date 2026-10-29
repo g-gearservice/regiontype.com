@@ -1,4 +1,5 @@
 [
+  {"v": "2.0.0", "date": "2026-10-29", "ko": "로그인·순위표·피드백 서버가 api.regiontype.com 으로 옮겼고, 확인 메일은 noreply@regiontype.com 에서 옵니다.", "en": "The sign-in, leaderboard and feedback server moved to api.regiontype.com, and confirmation mail now comes from noreply@regiontype.com."},
   {"v": "1.4.10", "date": "2026-10-29", "ko": "봇이 가만히 있을 땐 기울지 않고 똑바로 서며, 눈도 비스듬해지지 않고 곧게 섭니다. 둥근 봇은 돌 때 납작한 바둑돌이 아니라 공처럼 돕니다.", "en": "Bots now stand upright at rest with level, upright eyes, and round bots turn like a ball instead of a flat disc."},
   {"v": "1.4.10", "date": "2026-10-29", "ko": "좁은 화면에서 내 스타일 창의 색 직접 고르기와 봇 스타일 판이 창 밖으로 넘치던 것을 고쳤습니다.", "en": "Fixed Pick your own colors and the Bot style panel spilling out of the My styles window on narrow screens."},
   {"v": "1.4.9", "date": "2026-10-29", "ko": "처음 온 사람에게 봇이 조를 때 넵바도 함께 어두워지고, 봇의 손이 로고 알약 뒤에서 넵바 위로 삐져나옵니다.", "en": "On a first visit, the navbar dims along with the page and the bot's hand pokes out over it from behind the logo pill."},

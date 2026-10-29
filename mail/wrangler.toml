@@ -6,7 +6,7 @@
 #   wrangler secret put MAIL_KEY -c relay/wrangler.auth.toml
 #   wrangler secret put MAIL_KEY -c relay/wrangler.toml
 # 로컬 중계기만 쓸 때는 relay/.dev.vars 에 MAIL_KEY 를 사람이 적는다.
-# 보내는 주소는 noreply@regiontype.gearservicevanguard.com, 이름은 MAIL_NAME. Email Sending 에 regiontype.gearservicevanguard.com 이 온보딩되어 있어야 나간다.
+# 보내는 주소는 noreply@regiontype.com, 이름은 MAIL_NAME. Email Sending 에 regiontype.com 이 온보딩되어 있어야 나간다.
 # 수신자 허용 목록은 두지 않는다 — 누구에게 보내는지는 중계기의 확인된 사서함만 정한다.
 name = "rt-mail"
 main = "worker.mjs"
@@ -14,12 +14,12 @@ compatibility_date = "2026-09-15"
 workers_dev = false
 
 [vars]
-MAIL_FROM = "noreply@regiontype.gearservicevanguard.com"
+MAIL_FROM = "noreply@regiontype.com"
 MAIL_NAME = "regiontype"
 
 [[send_email]]
 name = "EMAIL"
-allowed_sender_addresses = ["noreply@regiontype.gearservicevanguard.com"]
+allowed_sender_addresses = ["noreply@regiontype.com"]
 
 [observability]
 enabled = true

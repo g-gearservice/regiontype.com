@@ -1,5 +1,5 @@
 /* regiontype 중계기 — 정적 사이트가 혼자 못 하는 두 가지만 한다. 도메인은
-   regiontype.gearservicevanguard.com 이다(workers.dev 문은 닫혀 있다 — wrangler.toml 참고).
+   api.regiontype.com 이다(workers.dev 문은 닫혀 있다 — wrangler.toml 참고).
 
      배포는 경로 묶음별로 따로 한다 — 코드는 이 파일 하나, 문은 entry-<이름>.mjs(entry.mjs 의 OWN).
        rt-feedback   POST / · /turnstile · /where, 그리고 어느 워커도 안 잡은 나머지의 원점
@@ -1025,7 +1025,7 @@ const consumeTwo = (env, id) =>
    않는다 — OIDC Core §3.1.3.7 이 이 경로(token endpoint response)를 신뢰
    경계로 인정한다. 브라우저를 거쳐 온 id_token(예: implicit flow)이었다면
    이 가정이 깨진다 — 여긴 그 경로를 쓰지 않는다. */
-const REDIRECT = 'https://regiontype.gearservicevanguard.com/auth/cb';
+const REDIRECT = 'https://api.regiontype.com/auth/cb';
 
 const PROVIDERS = {
   google: {

@@ -4,7 +4,7 @@ compatibility_date = "2026-08-01"
 # 문은 존 라우트뿐 — workers.dev 는 닫는다.
 workers_dev = false
 
-# 이 워커가 받는 경로는 entry.mjs 의 OWN.auth. regiontype.gearservicevanguard.com 의 rt-feedback(커스텀
+# 이 워커가 받는 경로는 entry.mjs 의 OWN.auth. api.regiontype.com 의 rt-feedback(커스텀
 # 도메인)보다 존 라우트 워커가 먼저 요청을 받으므로 프런트·OAuth 주소는 그대로다.
 # 배포: wrangler deploy -c wrangler.auth.toml
 # 시크릿(wrangler secret put X -c wrangler.auth.toml):
@@ -38,8 +38,8 @@ namespace_id = "1004"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이�
 
 # 시크릿을 넣은 뒤 주석을 푼다 — 그 전에는 이 워커가 실제 요청을 받지 않는다.
 # [[routes]]
-# pattern = "regiontype.gearservicevanguard.com/auth/*"
-# zone_name = "gearservicevanguard.com"
+# pattern = "api.regiontype.com/auth/*"
+# zone_name = "regiontype.com"
 
 
 [observability]
