@@ -17,6 +17,8 @@
 /terms.html /terms/            301
 /community/ /community/index.html 200
 /community  /community/          301
+/pass/   /pass/index.html   200
+/pass    /pass/             301
 /mimi/   /mimi/index.html   200
 /mimi    /mimi/             301
 /beta/3dnavigation/ /beta/3dnavigation/index.html 200
