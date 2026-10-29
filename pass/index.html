@@ -9,11 +9,11 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=5.45">
-<link rel="stylesheet" href="../style.css?v=5.66">
-<link rel="stylesheet" href="pass.css?v=5.66">
+<link rel="stylesheet" href="../style.css?v=5.68">
+<link rel="stylesheet" href="pass.css?v=5.68">
 <!-- 패스는 아직 서버가 없다(PLAN-pass.md M3). 지금은 보상 표(assets/bloub/items.js)와 규칙을
      보여 주고, 고른 레벨의 보상을 미리 본다 — 팔레트는 이 페이지 색, 구 모양은 내 봇 -->
-<script type="module" src="pass.js?v=5.66"></script>
+<script type="module" src="pass.js?v=5.68"></script>
 </head>
 <body>
 
@@ -38,15 +38,17 @@
   <section class="ps-card" aria-labelledby="psNow">
     <div class="ps-head">
       <h2 id="psNow" data-i18n="passName">시즌 1 · 할로윈</h2>
-      <span class="ps-state" id="state" data-i18n="passSoon">곧 열림</span>
+      <span class="ps-state" id="state" data-i18n="passOpen">진행 중</span>
     </div>
     <p class="ps-lv"><b id="lv">0</b> <span>/ 100</span> <span data-i18n="passLevel">레벨</span></p>
     <progress id="xp" max="100" value="0" data-i18n-aria="passXp" aria-label="다음 레벨까지 XP"></progress>
-    <p class="ps-note" id="note" data-i18n="passNotOpen">패스가 열리면 로그인한 계정으로 판을 끝낼 때마다 XP 가 쌓인다.</p>
+    <p class="ps-xp" id="xpNum"></p>
+    <p class="ps-note" id="note" data-i18n="passLocal">로그인하고 판을 끝낼 때마다 XP 가 쌓인다. 지금은 이 기기에 쌓이고, 서버가 열리면 계정으로 옮긴다.</p>
   </section>
 
   <section class="ps-show" aria-labelledby="psPeek">
     <div class="ps-bot" id="bot"></div>
+    <div class="ps-map" id="psMap" role="img" data-i18n-aria="passMap" aria-label="이 팔레트로 칠한 서울 지도" hidden></div>
     <div class="ps-peek">
       <h2 id="psPeek" data-i18n="passPreview">미리 입어 보기</h2>
       <p class="ps-pick" id="pick" aria-live="polite"></p>

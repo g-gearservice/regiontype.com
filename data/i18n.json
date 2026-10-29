@@ -664,7 +664,15 @@
     "pal_zombie": "좀비",
     "pal_fog": "안개",
     "pal_candle": "촛불",
-    "pal_owl": "부엉이"
+    "pal_owl": "부엉이",
+    "passOpen": "진행 중",
+    "passLocal": "로그인하고 판을 끝낼 때마다 XP 가 쌓입니다. 지금은 이 기기에 쌓이고, 서버가 열리면 계정으로 옮깁니다.",
+    "passSignIn": "로그인해야 XP 가 쌓입니다. 무료 팔레트 둘은 지금 바로 입을 수 있습니다.",
+    "passXpLeft": "다음 레벨까지 {xp} XP",
+    "passMap": "이 팔레트로 칠한 서울 지도",
+    "passGain": "리전 패스 +{xp} XP · Lv {lv}",
+    "passGainUp": "리전 패스 +{xp} XP · Lv {lv} 달성! 새 보상을 확인하세요",
+    "passCapped": "리전 패스: 오늘 받을 XP 를 다 받았어요"
   },
   "en": {
     "start": "Play",
@@ -1331,7 +1339,15 @@
     "pal_zombie": "Zombie",
     "pal_fog": "Fog",
     "pal_candle": "Candlelight",
-    "pal_owl": "Owl"
+    "pal_owl": "Owl",
+    "passOpen": "Live",
+    "passLocal": "Every game you finish while signed in earns XP. For now it is stored on this device and moves to your account once the server side opens.",
+    "passSignIn": "Sign in to earn XP. The two free palettes are yours right away.",
+    "passXpLeft": "{xp} XP to the next level",
+    "passMap": "Seoul map painted in this palette",
+    "passGain": "Region Pass +{xp} XP · Lv {lv}",
+    "passGainUp": "Region Pass +{xp} XP · reached Lv {lv}! Check your new reward",
+    "passCapped": "Region Pass: you have earned all of today's XP"
   },
   "ja": {
     "start": "はじめる",

@@ -23,11 +23,16 @@ body{overflow:auto}
 .ps-lv{margin-top:14px;font-size:15px;color:var(--ink-soft)}
 .ps-lv b{font-size:34px;font-weight:800;color:var(--ink)}
 .ps progress{width:100%;height:12px;margin-top:8px;accent-color:var(--accent)}
+.ps-xp{margin-top:6px;font-size:14px;font-weight:700;color:var(--ink-soft)}
+.ps-xp:empty{display:none}
 .ps-note{margin-top:10px;font-size:15px;color:var(--ink-soft)}
 
 .ps-show{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
 .ps-bot{width:180px;height:180px;flex:none}
 .ps-bot .buddy{width:100%;height:100%;display:block;overflow:visible}
+/* 팔레트 견본 지도 — 팔레트 바탕을 그대로 깐 작은 서울. 밤에도 팔레트 그대로 */
+.ps-map{width:180px;height:180px;flex:none}
+.ps-map svg{width:100%;height:100%;display:block}
 .ps-peek{flex:1;min-width:200px}
 .ps-pick{margin-top:8px;font-size:17px;font-weight:700;min-height:1.5em}
 .ps-off{margin-top:12px;min-height:36px;padding:4px 16px;border:2px solid var(--grid);border-radius:999px;background:transparent;
