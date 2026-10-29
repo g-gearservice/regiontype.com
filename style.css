@@ -2554,7 +2554,7 @@ button.sty-swatch:active{transform:scale(.94)}
 .sty-sug{display:flex;align-items:center;gap:8px}
 .sty-sug-head{flex:none;font-size:13px;font-weight:800;white-space:nowrap}
 .sty-sug-list{display:flex;flex:0 1 auto;min-width:0;gap:6px}   /* 늘지 않는다 — 다른 추천 버튼이 바로 뒤에 붙는다 */
-.sty-sug .sty-swatch{flex:0 1 34px;min-width:24px;aspect-ratio:1;padding:5px;gap:2px;border-radius:10px}
+.sty-sug .sty-swatch{flex:0 1 34px;min-width:24px;height:auto;aspect-ratio:1;padding:5px;gap:2px;border-radius:10px}
 .sty-shuffle{flex:none;min-height:34px;white-space:nowrap}
 .sty-warn{margin:0;font-size:13px;font-weight:700}
 .sty-warn:empty{display:none}
