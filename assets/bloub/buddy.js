@@ -92,19 +92,19 @@ function eyeTop(eyes) {
    눈과 같은 셈(engine 의 eyePoses)으로 시선만큼 돌려 다시 비춘 그림자를 몸으로 쓴다 — 고개를 돌리면
    실루엣이 함께 돈다. 그림자는 덩이를 이루는 조각들의 그림자를 한 path 에 겹쳐 놓은 것이다 —
    같은 방향으로 감긴 하위 경로는 nonzero 로 하나로 합쳐진다(돌림이 90° 를 넘지 않아 방향이 안 뒤집힌다).
-   보통 모양은 윤곽을 앞뒤로 줄여 쌓은 베개, 호박은 세로축을 도는 타원체 마디 LOBES 개다 */
-const TURN = 1, PUFF = .5, SLICES = [1, .96, .9, .82, .72, .6, .45, .28], LOBES = 8;
+   보통 모양은 윤곽을 앞뒤로 줄여 쌓은 덩이, 호박은 세로축을 도는 타원체 마디 LOBES 개다 */
+const TURN = .5, TURN_MAX = 30, PUFF = 1, SLICES = [1, .99, .97, .94, .9, .85, .78, .7, .6, .48, .34, .18], LOBES = 8;
 const spin3 = (u, v, a) => {
   const c = Math.cos(a), s = Math.sin(a);
   return [u.map((x, i) => x * c + v[i] * s), v.map((x, i) => x * c - u[i] * s)];
 };
-function basis(g) {
-  const rad = d => d * TURN * Math.PI / 180;
+function basis(g, k = TURN) {
+  const rad = d => d * k * Math.PI / 180;
   let f = [0, 0, 1], right = [1, 0, 0], down = [0, 1, 0];
   [f, right] = spin3(f, right, rad(g.yaw));
   [down, f] = spin3(down, f, rad(g.pitch));
   [right, down] = spin3(right, down, rad(g.roll));
-  return (x, y, z) => [right[0] * x + down[0] * y + f[0] * z, right[1] * x + down[1] * y + f[1] * z];
+  return (x, y, z) => [0, 1, 2].map(i => right[i] * x + down[i] * y + f[i] * z);
 }
 /* 몸 한가운데와 반 폭·반 키 — 윤곽의 상자로 잰다 */
 function box(p) {
@@ -113,7 +113,8 @@ function box(p) {
   return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: (x1 - x0) / 2, h: (y1 - y0) / 2 };
 }
 const ring = (c, pts) => 'M' + pts.map(([x, y]) => (c.x + x).toFixed(1) + ' ' + (c.y + y).toFixed(1)).join('L') + 'Z';
-/* 베개 — 윤곽을 앞뒤로 줄여 가며 겹쳐 쌓는다. 가장자리는 두께 0, 한가운데는 앞뒤로 PUFF */
+/* 덩이 — 윤곽을 앞뒤로 줄여 가며 겹쳐 쌓는다. 가장자리는 두께 0, 한가운데는 앞뒤로 반지름 × PUFF.
+   PUFF 1 이라야 원이 공이 된다(그보다 얇으면 돌릴 때 바둑돌처럼 납작하다) */
 function pillow(p, c, rot) {
   const t = Math.min(c.w, c.h) * PUFF;
   let d = '';
@@ -324,7 +325,14 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
   function draw(now) {
     glideAt(now);
     const f = engine.sample(now);
-    const flat = outline(f.bodyPath), c = box(flat), rot = basis(f.gaze || { yaw: 0, pitch: 0, roll: 0 });
+    /* 몸은 표정이 원래 보는 쪽(poseGaze)에서 벗어난 만큼만 돈다 — 가만히 있을 땐 똑바로 서 있고,
+       눈은 그 표정의 자리(오른쪽 위로 비낀 시선)에 박혀 있다가 몸과 함께 돈다 */
+    const g0 = f.poseGaze || { yaw: 0, pitch: 0, roll: 0 }, g = f.gaze || g0;
+    const flat = outline(f.bodyPath), c = box(flat);
+    /* 반대쪽 구석을 보면 벗어남이 70° 가까이 된다 — 그만큼 돌리면 눈 자리가 몸 가장자리로 넘어간다.
+       절반만, TURN_MAX 까지만 돈다 */
+    const off = k => Math.max(-TURN_MAX, Math.min(TURN_MAX, (g[k] - g0[k]) * TURN));
+    const rot = basis({ yaw: off('yaw'), pitch: off('pitch'), roll: off('roll') }, 1), face = basis(g0, 1);
     const solid = stemOf ? gourd(c, rot) : pillow(flat, c, rot);
     /* 눈은 몸에 박혀 있다 — 얼굴 위 제자리(시선 0 의 자리)를 덩이 앞면에 얹고 몸과 같은 돌림으로 옮긴다.
        눈 모양(기울기·줄어듦)은 엔진의 것을 그대로 두고 자리만 바꾼다 */
@@ -332,7 +340,7 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     for (const eye of f.eyes) {
       if (!eye.home) continue;
       const x = eye.home.x - c.x, y = eye.home.y - c.y, k = Math.min(1, Math.hypot(x, y) / rr);
-      const [px, py] = rot(x, y, t * Math.sqrt(1 - k * k));
+      const [px, py] = rot(...face(x, y, t * Math.sqrt(1 - k * k)));
       eye.matrix = eye.matrix.replace(/,[^,]+,[^,]+\)$/, `,${(c.x + px).toFixed(2)},${(c.y + py).toFixed(2)})`);
     }
     maskBody.setAttribute('d', solid);
