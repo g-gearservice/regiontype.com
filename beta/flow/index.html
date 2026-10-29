@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>흐름 · regiontype beta</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#262626">
+<link rel="icon" href="../../favicon/favicon.svg">
+<!-- 흐름 — 서울 25개 자치구 경계가 손으로 그린 듯 살짝 흔들리는 선으로 떠 있고, 빈 구마다
+     한가운데 물방울 하나가 맺혀 있다. 이름을 쳐서 스페이스나 Enter 로 확정하면 방울이 터지며
+     둥근 물방울들이 차례로 부풀어 녹아 붙어 그 구를 채운다. 이미 찬 이웃이 있으면 맞닿은 경계에서
+     그 경계부터 터져 한 덩이로 이어진다.
+     경계는 data/seoul-gu.flow.json(tools/build_flow.py), 한 줄 소개는 data/seoul-gu.course.json 그대로다 -->
+<style>
+/* ── 토큰. 어두운 판 한 벌뿐이다 ── */
+:root{
+  color-scheme:dark;
+  --bg:#262626; --line:rgba(236,236,236,.82); --fill:#fafafa;
+  --ink:#e4e4e4; --dim:rgba(216,216,216,.55); --bad:#ff8a7a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+}
+html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;color:var(--ink);font-family:var(--sans)}
+body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100dvh}
+/* 두 장을 겹친다. 아래 pool 은 물(채움)만 그리고 goo 필터로 번진 가장자리를 다시 또렷하게
+   세운다 — 이웃한 물끼리는 맞닿는 순간 한 덩이로 이어진다. 위 cv 는 경계선과 이름이고,
+   difference 로 섞여 빈 땅에서는 밝게, 물 위에서는 어둡게 보인다 */
+.stage{position:relative;min-height:0}
+.stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+#pool{filter:url(#goo)}
+#cv{mix-blend-mode:difference}
+.stage svg{position:absolute}
+
+.bar{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));
+  font:12px/1.5 var(--mono);color:var(--dim)}
+.bar b{color:var(--ink);font-weight:600}
+.bar a{color:inherit}
+.stats{display:flex;gap:14px;font-variant-numeric:tabular-nums}
+.stats span b{font-weight:600}
+
+.dock{display:grid;justify-items:center;gap:8px;
+  padding:0 max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#note{min-height:1.5em;margin:0;font-size:13px;color:var(--dim);text-align:center;transition:opacity .4s}
+#typein{width:min(360px,100%);box-sizing:border-box;padding:10px 14px;border-radius:999px;
+  border:1.25px solid var(--line);background:transparent;color:var(--ink);font:500 18px var(--sans);text-align:center;outline:none}
+#typein:focus-visible{box-shadow:0 0 0 3px rgba(236,236,236,.18)}
+#typein.miss{border-color:var(--bad);border-style:dashed;animation:nudge .32s}
+@keyframes nudge{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){#typein.miss{animation:none}#note{transition:none}}
+.hint{margin:0;font:11px var(--mono);color:var(--dim)}
+kbd{font:inherit;border:1px solid var(--dim);border-radius:4px;padding:0 4px}
+a:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+</style>
+</head>
+<body>
+<header class="bar">
+  <span><b>flow</b> · 서울 25개 자치구 · <a href="../style/">스타일</a></span>
+  <span class="stats" aria-live="off"><span>맞힘 <b id="sOk">0</b>/<b id="sAll">25</b></span><span>틀림 <b id="sBad">0</b></span><span id="sTime">0:00.0</span></span>
+</header>
+<div class="stage">
+  <canvas id="pool" aria-hidden="true"></canvas>
+  <canvas id="cv" aria-hidden="true"></canvas>
+  <svg width="0" height="0" aria-hidden="true" focusable="false"><filter id="goo">
+    <feGaussianBlur stdDeviation="3"/>
+    <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"/>
+  </filter></svg>
+</div>
+<div class="dock">
+  <p id="note" aria-live="polite">구 이름을 치고 스페이스나 Enter</p>
+  <input id="typein" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" lang="ko" aria-label="자치구 이름" aria-describedby="note">
+  <p class="hint"><kbd>Space</kbd>/<kbd>Enter</kbd> 확정 · <kbd>Esc</kbd> 처음부터</p>
+</div>
+<script>
+'use strict';
+const DATA = '../../data/';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), g = cv.getContext('2d'), pool = $('pool'), w = pool.getContext('2d');
+const inp = $('typein'), note = $('note');
+const css = getComputedStyle(document.documentElement);
+const tok = n => css.getPropertyValue(n).trim();
+const LINE = tok('--line'), FILL = tok('--fill'), SANS = tok('--sans');
+const still = matchMedia('(prefers-reduced-motion: reduce)');
+const FILL_MS = 1100;   // 들어온 자리에서 가장 먼 방울이 터지기 시작할 때까지
+
+// ── 판정. app.js matchInput 과 같은 규칙: 이름이 맞거나, 약칭(구를 뗀 것)이면
+//    그 약칭으로 이어질 남은 구가 자기뿐일 때만 확정한다(중 → 중랑구가 남았으면 아직 아니다).
+//    앞에 찌꺼기가 붙어 있어도 뒤에서부터 견준다
+const key = s => String(s).normalize('NFC').replace(/\s/g, '').toLowerCase();
+function match(raw, items) {
+  const buf = key(raw);
+  for (let i = 0; i < buf.length; i++) {
+    const sub = buf.slice(i), open = items.filter(it => !it.claimed);
+    const exact = open.find(it => key(it.name) === sub);
+    if (exact) return exact;
+    const alias = open.find(it => it.aliases.some(a => key(a) === sub) &&
+      open.every(x => x === it || (!key(x.name).startsWith(sub) && !x.aliases.some(a => key(a) === sub))));
+    if (alias) return alias;
+  }
+  return null;
+}
+const strip = n => { const m = /^(.+?)구$/.exec(n); return m && m[1].length > 1 ? m[1] : null; };
+
+// ── 판. 서울 25개 구의 실제 경계(data/seoul-gu.flow.json, tools/build_flow.py).
+//    이웃은 맞닿은 꼭짓점으로 찾는다 — 물은 이미 찬 이웃과 맞닿은 자리에서 흘러든다
+let map = null, items = [], G = null;
+let W = 0, H = 0, dpr = 1, k = 1, ox = 0, oy = 0;
+function fit() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  const r = cv.getBoundingClientRect(); W = r.width; H = r.height;
+  for (const [c, x] of [[cv, g], [pool, w]]) {
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  if (!map) return;
+  const pad = 28;
+  k = Math.min((W - pad * 2) / map.w, (H - pad * 2) / map.h);
+  ox = (W - map.w * k) / 2; oy = (H - map.h * k) / 2;
+}
+const X = x => ox + x * k, Y = y => oy + y * k;
+
+// 구 하나 = 물방울 하나. 구 한가운데서 사방으로 경계까지 잰 거리(반지름 곡선)를
+// 낮은 물결 몇 가닥(푸리에 BLOB_H 차까지)만 남겨 매끈하게 접고, 둥글게 당기고, 조금 줄인다 —
+// 모난 경계는 지워지고 그 구의 생김(길쭉함·불룩한 쪽)만 남은 방울이 된다.
+// 방울끼리는 살짝 떨어져 있고, 모아 놓으면 서울 모양이다
+const BLOB_N = 96, BLOB_H = 3, BLOB_K = 0.8, BLOB_ROUND = 0.6;
+function rayOut(c, a, rings) {
+  const dx = Math.cos(a), dy = Math.sin(a);
+  let far = 0;
+  for (const r of rings)
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+      const [x1, y1] = r[j], [x2, y2] = r[i], ex = x2 - x1, ey = y2 - y1;
+      const den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-9) continue;
+      const tt = ((x1 - c[0]) * ey - (y1 - c[1]) * ex) / den, u = ((x1 - c[0]) * dy - (y1 - c[1]) * dx) / den;
+      if (tt > 0 && u >= 0 && u <= 1) far = Math.max(far, tt);
+    }
+  return far;
+}
+function blobOf(rings, c) {
+  const raw = Array.from({ length: BLOB_N }, (_, j) => rayOut(c, j / BLOB_N * 6.283, rings));
+  const co = [];
+  for (let h = 0; h <= BLOB_H; h++) {
+    let re = 0, im = 0;
+    raw.forEach((r, j) => { const a = j / BLOB_N * 6.283 * h; re += r * Math.cos(a); im += r * Math.sin(a); });
+    co.push([re / BLOB_N * (h ? 2 : 1), im / BLOB_N * (h ? 2 : 1)]);
+  }
+  return raw.map((_, j) => {
+    const a = j / BLOB_N * 6.283;
+    const r = co.reduce((s, [re, im], h) => s + re * Math.cos(a * h) + im * Math.sin(a * h), 0);
+    // 평균 반지름 쪽으로 반쯤 당겨 잘록한 허리를 메운다 — 하트·나비 꼴이 아니라 방울 꼴로
+    return Math.max(6, (co[0][0] + BLOB_ROUND * (r - co[0][0])) * BLOB_K);
+  });
+}
+// 겹친 방울끼리는 서로 밀어 맞닿은 쪽을 깎는다 — 붙은 비눗방울처럼 마주 본 면이 판판해진다.
+// 깎은 뒤 이웃 반지름과 고르게 섞어 모서리를 다시 둥글린다
+const BLOB_GAP = 5;
+function radiusAt(it, a) {
+  const f = ((a % 6.283) + 6.283) % 6.283 / 6.283 * BLOB_N, j = Math.floor(f) % BLOB_N;
+  return it.blob[j] + (it.blob[(j + 1) % BLOB_N] - it.blob[j]) * (f - Math.floor(f));
+}
+function settle(list) {
+  for (let pass = 0; pass < 40; pass++) {
+    let moved = false;
+    for (const A of list) for (const B of list) {
+      if (A === B) continue;
+      const far = Math.max(...A.blob) + Math.max(...B.blob) + BLOB_GAP;
+      if (Math.hypot(A.c[0] - B.c[0], A.c[1] - B.c[1]) > far) continue;
+      A.blob.forEach((r, j) => {
+        const a = j / BLOB_N * 6.283, x = A.c[0] + r * Math.cos(a), y = A.c[1] + r * Math.sin(a);
+        const d = Math.hypot(x - B.c[0], y - B.c[1]), rb = radiusAt(B, Math.atan2(y - B.c[1], x - B.c[0]));
+        if (d < rb + BLOB_GAP) { A.blob[j] = r * 0.97; moved = true; }
+      });
+    }
+    if (!moved) break;
+  }
+  for (const it of list)
+    for (let k2 = 0; k2 < 3; k2++)
+      it.blob = it.blob.map((r, j, b) => Math.min(r, (b[(j + BLOB_N - 1) % BLOB_N] + 2 * r + b[(j + 1) % BLOB_N]) / 4));
+}
+
+// 방울 테두리는 천천히 출렁인다. 막 찬 방울은 한 번 크게 일렁였다 가라앉는다
+function pathOf(it, t, now) {
+  const p = new Path2D(), cx = it.c[0], cy = it.c[1];
+  const mo = still.matches ? 0 : 1;
+  const kick = it.claimed && mo ? Math.max(0, 1 - (now - it.at) / 900) : 0;
+  for (let j = 0; j <= BLOB_N; j++) {
+    const a = j / BLOB_N * 6.283, r = it.blob[j % BLOB_N];
+    const wob = 1 + mo * (0.012 * Math.sin(a * 3 + t * 0.9 + it.p) + 0.008 * Math.sin(a * 5 - t * 0.7))
+                  + kick * 0.05 * Math.sin(a * 4 + it.p) * Math.sin((1 - kick) * 9);
+    const x = X(cx + r * wob * Math.cos(a)), y = Y(cy + r * wob * Math.sin(a));
+    j ? p.lineTo(x, y) : p.moveTo(x, y);
+  }
+  p.closePath();
+  return p;
+}
+
+// 물방울로 채운다. 구 안에 미리 뿌려 둔 방울 자리(drops)마다 둥근 방울이 부풀어 오르는데,
+// 들어온 자리(src)에서 가까운 방울부터 차례로 터진다. 방울은 살짝 넘쳤다 가라앉고(outBack),
+// goo 필터가 이웃 방울끼리 녹여 붙여 물이 번져 가듯 보인다. 다 차면 구 모양 그대로 고인다
+const DROP_MS = 520;                     // 방울 하나가 부푸는 시간
+const outBack = s => 1 + 2.2 * (s - 1) ** 3 + 1.2 * (s - 1) ** 2;
+function water(it, P, now) {
+  const el = still.matches ? Infinity : now - it.at;
+  if (el >= FILL_MS + DROP_MS + 80) { w.fill(P); return 1; }
+  w.save(); w.clip(P); w.beginPath();
+  for (const d of it.drops) {
+    const s = (el - d.delay) / DROP_MS;
+    if (s <= 0) continue;
+    const r = d.r * k * outBack(Math.min(1, s));
+    w.moveTo(X(d.x) + r, Y(d.y)); w.arc(X(d.x), Y(d.y), r, 0, 6.283);
+  }
+  w.fill(); w.restore();
+  return Math.min(1, el / (FILL_MS + DROP_MS));
+}
+
+// 방울이 터질 때 들어온 자리에서 물결 두 겹이 퍼져 사라진다
+const RIPPLE_MS = 1300;
+function ripple(it, now) {
+  if (still.matches) return;
+  for (const lag of [0, 260]) {
+    const s = (now - it.at - lag) / RIPPLE_MS;
+    if (s <= 0 || s >= 1) continue;
+    const e = 1 - (1 - s) ** 3;
+    g.globalAlpha = (1 - s) * 0.9;
+    g.beginPath(); g.arc(X(it.src[0]), Y(it.src[1]), (it.seed + e * 70) * k, 0, 6.283); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+function draw(now) {
+  const t = now / 1000;
+  g.clearRect(0, 0, W, H); w.clearRect(0, 0, W, H);
+  if (!items.length) return;
+  const P = items.map(it => pathOf(it, t, now)), shown = [];
+  w.fillStyle = FILL;
+  items.forEach((it, i) => { if (it.claimed) shown.push([it, water(it, P[i], now)]); });
+  // 방울 테두리
+  g.lineWidth = 1.2; g.lineJoin = 'round'; g.strokeStyle = LINE;
+  for (const p of P) g.stroke(p);
+  for (const it of items) if (it.claimed) ripple(it, now);
+  // 이름은 다 차오를 무렵 떠오른다. 선 캔버스가 difference 라 흰 글자가 물 위에서 어둡게 읽힌다
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+  const fs = Math.max(10, Math.min(15, 17 * k));
+  g.font = `600 ${fs}px ${SANS}`;
+  for (const [it, e] of shown) {
+    g.globalAlpha = Math.max(0, (e - 0.6) / 0.4);
+    g.fillText(it.name, X(it.c[0]), Y(it.c[1]));
+  }
+  g.globalAlpha = 1;
+}
+
+let raf = 0;
+function loop(now) { draw(now); tickClock(now); raf = requestAnimationFrame(loop); }
+
+// 물이 들어올 자리: 이미 찬 이웃 중 가장 길게 맞닿은 구와의 맞닿은 꼭짓점들 한가운데.
+// 찬 이웃이 없으면 구 한가운데 맺힌 방울에서 터진다. 방울마다 그 자리에서 먼 만큼 늦게 부푼다
+function source(it) {
+  let best = null;
+  for (const o of items) {
+    if (o === it || !o.claimed) continue;
+    const shared = it.verts.filter(v => o.vset.has(v[0] + ',' + v[1]));
+    if (shared.length > (best ? best.length : 0)) best = shared;
+  }
+  const src = best ? [best.reduce((a, v) => a + v[0], 0) / best.length, best.reduce((a, v) => a + v[1], 0) / best.length] : it.c;
+  // 이웃 쪽을 향한 방울 가장자리에서 들어온다
+  if (best) {
+    const a = Math.atan2(src[1] - it.c[1], src[0] - it.c[0]);
+    const r = it.blob[Math.round((a < 0 ? a + 6.283 : a) / 6.283 * BLOB_N) % BLOB_N];
+    src[0] = it.c[0] + r * Math.cos(a); src[1] = it.c[1] + r * Math.sin(a);
+  }
+  it.src = src;
+  const reach = Math.max(...it.drops.map(d => Math.hypot(d.x - src[0], d.y - src[1]))) || 1;
+  for (const d of it.drops) d.delay = Math.hypot(d.x - src[0], d.y - src[1]) / reach * FILL_MS + d.lag;
+}
+
+// 방울 자리: 구 안쪽에 성긴 격자를 깔고 조금씩 흐트러뜨린다. 반지름이 간격보다 커서
+// 다 부풀면 빈틈 없이 덮인다. 흐트러짐은 좌표에서 뽑아 늘 같은 자리다
+const DROP_GAP = 30;
+const hash = (x, y) => { const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); };
+function inside(x, y, rings) {
+  let hit = false;
+  for (const r of rings)
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++)
+      if ((r[i][1] > y) !== (r[j][1] > y) && x < (r[j][0] - r[i][0]) * (y - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0]) hit = !hit;
+  return hit;
+}
+function dropsOf(rings, c) {
+  const pts = rings.flat(), out = [{ x: c[0], y: c[1], r: DROP_GAP * 1.1, lag: 0, delay: 0 }];
+  const [x0, x1] = [Math.min(...pts.map(p => p[0])), Math.max(...pts.map(p => p[0]))];
+  const [y0, y1] = [Math.min(...pts.map(p => p[1])), Math.max(...pts.map(p => p[1]))];
+  for (let y = y0; y <= y1 + DROP_GAP; y += DROP_GAP)
+    for (let x = x0; x <= x1 + DROP_GAP; x += DROP_GAP) {
+      const jx = x + (hash(x, y) - 0.5) * DROP_GAP * 0.7, jy = y + (hash(y, x) - 0.5) * DROP_GAP * 0.7;
+      // 경계 바로 바깥 자리도 받는다 — 가장자리까지 둥글게 차오르게(넘친 곳은 구 모양으로 잘린다)
+      const near = inside(jx, jy, rings) || [[0, 1], [1, 0], [0, -1], [-1, 0]].some(([a, b]) => inside(jx + a * DROP_GAP * 0.6, jy + b * DROP_GAP * 0.6, rings));
+      if (near) out.push({ x: jx, y: jy, r: DROP_GAP * (0.74 + 0.36 * hash(jx, jy)), lag: (hash(jy, jx) - 0.5) * 140, delay: 0 });
+    }
+  return out;
+}
+function area(rings) {
+  return rings.reduce((a, r) => a + Math.abs(r.reduce((s, p, i) => { const q = r[(i + 1) % r.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2, 0);
+}
+
+// ── 게임. 순서 없이 남은 구 아무거나. 시계는 첫 키에서 선다
+const fmt = ms => { const s = ms / 1000; return `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`; };
+function tickClock(now) {
+  if (!G || !G.t0) return;
+  $('sTime').textContent = fmt((G.t1 || now) - G.t0);
+}
+function reset() {
+  items.forEach(it => { it.claimed = false; it.at = 0; });
+  G = { t0: 0, t1: 0, ok: 0, bad: 0 };
+  $('sOk').textContent = 0; $('sBad').textContent = 0; $('sTime').textContent = fmt(0);
+  say('구 이름을 치고 스페이스나 Enter');
+  inp.value = ''; inp.disabled = false; inp.focus();
+}
+function say(text) { note.textContent = text; }
+function miss() {
+  G.bad++; $('sBad').textContent = G.bad;
+  inp.classList.remove('miss'); void inp.offsetWidth; inp.classList.add('miss');
+  say('틀렸어요 — 다시');
+}
+function judge(raw) {
+  if (!G || G.t1 || !raw.trim()) return;
+  const hit = match(raw, items);
+  if (!hit) return miss();
+  source(hit);
+  hit.claimed = true; hit.at = performance.now();
+  G.ok++; $('sOk').textContent = G.ok;
+  inp.classList.remove('miss');
+  if (G.ok === items.length) {
+    G.t1 = performance.now(); tickClock(G.t1);
+    inp.disabled = true;
+    say(`25개 구 다 채움 · ${fmt(G.t1 - G.t0)} · 틀림 ${G.bad} — Esc 로 처음부터`);
+    return;
+  }
+  say(hit.desc ? `${hit.name} — ${hit.desc}` : hit.name);
+}
+
+// 스페이스는 keydown 으로 가로채지 않는다(IME 조합 확정이 깨진다) — 값에 공백이 들어오면 판정한다
+inp.addEventListener('input', () => {
+  if (!G || G.t1) return;
+  if (!G.t0 && inp.value) G.t0 = performance.now();
+  if (!/\s/.test(inp.value)) return;
+  const v = inp.value; inp.value = ''; judge(v);
+});
+inp.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); const v = inp.value; inp.value = ''; judge(v); }
+});
+addEventListener('keydown', e => { if (e.key === 'Escape' && !e.isComposing) { e.preventDefault(); reset(); } });
+addEventListener('resize', fit);
+
+(async () => {
+  const [m, course] = await Promise.all([
+    fetch(DATA + 'seoul-gu.flow.json').then(r => r.json()),
+    fetch(DATA + 'seoul-gu.course.json').then(r => r.json()).catch(() => null),
+  ]);
+  map = m;
+  const desc = new Map((course?.items || []).map(it => [it.name, it.meta?.description || '']));
+  items = m.items.map((it, i) => {
+    const verts = it.rings.flat();
+    return { blob: blobOf(it.rings, it.c), name: it.name, aliases: [strip(it.name)].filter(Boolean),
+             desc: desc.get(it.name) || '', c: it.c, rings: it.rings, verts, vset: new Set(verts.map(v => v[0] + ',' + v[1])),
+             p: i * 2.399, claimed: false, at: 0,
+             seed: Math.min(22, Math.max(10, Math.sqrt(area(it.rings)) * 0.13)) };
+  });
+  settle(items);
+  for (const it of items)
+    it.drops = dropsOf([it.blob.map((r, j) => [it.c[0] + r * Math.cos(j / BLOB_N * 6.283), it.c[1] + r * Math.sin(j / BLOB_N * 6.283)])], it.c);
+  $('sAll').textContent = items.length;
+  fit(); reset();
+  raf = requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
