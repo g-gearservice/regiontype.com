@@ -1,4 +1,5 @@
 [
+  {"v": "2.1.0", "date": "2026-10-30", "ko": "리전 패스 시즌 1은 할로윈입니다. 보상이 할로윈 색 팔레트 74가지와 서울 구 모양으로 바뀌었고, 사이트 색은 이제 패스에서 받은 팔레트로만 바꿀 수 있습니다. 호박 팔레트 둘은 누구나 바로 입을 수 있습니다.", "en": "Region Pass Season 1 is Halloween. Rewards are now 74 Halloween color palettes plus Seoul district shapes, and site colors can only be changed with palettes earned in the pass. The two Pumpkin palettes are free for everyone right away."},
   {"v": "2.0.2", "date": "2026-10-30", "ko": "색 직접 고르기의 추천 색 조합이 찌그러지지 않고 정사각형으로 보입니다.", "en": "The suggested palettes in Pick your own colors are square again instead of squashed."},
   {"v": "2.0.1", "date": "2026-10-29", "ko": "봇의 눈이 짓눌린 틈이 아니라 표정 그대로의 크기와 모양으로 똑바로 뜹니다(웃는 눈·화난 눈의 기울기는 그대로). 두 눈의 크기도 같습니다.", "en": "Bot eyes now open fully upright at their expression's own size and shape (smiling and angry slants kept) instead of squashed slits, and both eyes match."},
   {"v": "2.0.1", "date": "2026-10-29", "ko": "내 스타일 창에서 다른 추천 버튼이 추천 색 바로 뒤에 붙고, 색 직접 고르기 칸이 창 밖으로 넘치지 않습니다.", "en": "In My styles, the More ideas button now sits right after the suggested colors, and Pick your own colors no longer spills out of the window."},

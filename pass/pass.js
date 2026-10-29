@@ -1,5 +1,5 @@
-/* 리전 패스 — 보상 표(assets/bloub/items.js 의 PASS)를 늘어놓고, 고른 레벨의 보상을 내 봇에
-   씌워 본다. 진행(레벨·XP)은 서버가 셀 몫이라(PLAN-pass.md M3) 아직은 0 에서 잠겨 있다.
+/* 리전 패스 — 보상 표(assets/bloub/items.js 의 PASS)를 늘어놓고, 고른 레벨의 보상을 미리 본다 —
+   팔레트는 이 페이지 색을 그 팔레트로, 구 모양은 내 봇의 몸을 그 구로. 진행(레벨·XP)은 서버가 셀 몫이라(PLAN-pass.md M3) 아직은 0 에서 잠겨 있다.
    화면 말은 community.js 와 같은 길로 고른다(rt.ui 팩 → 없으면 data/i18n.json). */
 const opt = (() => { try { return JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch { return {}; } })();
 document.documentElement.toggleAttribute('data-night', !!opt.night);
@@ -8,7 +8,7 @@ document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
 const SEARCH = new URL(import.meta.url).search;
 const VER = new URLSearchParams(SEARCH).get('v') || '';
 const { mountBuddy, anchorOf, TABLES } = await import('../assets/bloub/buddy.js' + SEARCH);
-const { PASS, PASS_LEVELS, ITEMS, COLOURS, FINISHES, REGIONS, parseReward, finishImg } = await import('../assets/bloub/items.js' + SEARCH);
+const { PASS, PASS_LEVELS, FREE, ITEMS, COLOURS, FINISHES, REGIONS, PALETTE_FAMILIES, parseReward, finishImg } = await import('../assets/bloub/items.js' + SEARCH);
 
 let I18N = { ko: {} }, LANG = 'ko';
 const t = (key, vars) => {
@@ -19,7 +19,7 @@ const t = (key, vars) => {
 let ui = null;
 try { ui = JSON.parse(localStorage.getItem('rt.ui') || 'null'); } catch {}
 /* 홈이 남긴 팩이 패스보다 옛것이면(새 마감 이름이 없으면) 표 전체를 받는다 */
-if (ui && ui.pack && ui.pack.passLead && FINISHES.every(f => ui.pack['fin_' + f.id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
+if (ui && ui.pack && ui.pack.passLead && PALETTE_FAMILIES.every(f => ui.pack['pal_' + f.id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
 else {
   try { I18N = await (await fetch('../data/i18n.json?v=' + VER)).json(); } catch {}
   const langs = Object.keys(I18N);
@@ -39,12 +39,13 @@ const name = ref => {
   if (!got) return '';
   if (got.kind === 'finish') return t('fin_' + got.finish.id) || got.finish.id;
   if (got.kind === 'shape') return t('passShapeOf', { name: LANG === 'ko' ? got.region.ko : got.region.en });
+  if (got.kind === 'palette') return (t('pal_' + got.palette.family) || got.palette.family) + (got.palette.n > 1 ? ' ' + got.palette.roman : '');
   const base = t('item_' + got.item.id) || got.item.id;
   return got.colour === got.item.tint ? base : `${base} · ${t('ch_' + got.colour) || got.colour}`;
 };
 const kindOf = got => got.kind === 'item' ? 'kind_' + got.item.slot : 'kind_' + got.kind;
 
-/* 칸의 작은 그림 — 아이템은 색 동그라미, 마감은 그 무늬 견본, 구 모양은 실루엣 */
+/* 칸의 작은 그림 — 팔레트는 바탕 위 칸색·강조색 점, 구 모양은 실루엣 */
 const NS = 'http://www.w3.org/2000/svg';
 function swatch(got) {
   if (got.kind === 'shape') {
@@ -59,7 +60,11 @@ function swatch(got) {
   }
   const chip = el('span', 'ps-chip');
   chip.setAttribute('aria-hidden', 'true');
-  if (got.kind === 'finish') {
+  if (got.kind === 'palette') {
+    const { accent, block, bg } = got.palette;
+    chip.style.background = `radial-gradient(circle, ${accent} 26%, transparent 28%) center / 100% 100% no-repeat,
+      radial-gradient(circle, ${block} 30%, transparent 33%) 0 0 / 33.3% 33.3%, ${bg}`;
+  } else if (got.kind === 'finish') {
     const f = got.finish;
     chip.style.background = f.img ? `center / cover url("${finishImg(f)}"), ${f.bg}` : f.grad ? `linear-gradient(${f.grad.angle ?? 90}deg, ${f.grad.stops.join(',')})`
       : f.pat.bg === 'ink' ? `radial-gradient(circle, rgba(255,255,255,.55) 30%, transparent 32%) 0 0 / 8px 8px, var(--accent)` : f.pat.bg;
@@ -75,6 +80,7 @@ if (signed) {
   me.href = '/account/';
 }
 const level = 0;
+const owns = p => !!p.free || p.level <= level;
 $('#lv').textContent = level;
 
 /* 내 봇 — 홈에서 고른 모양·표정·색 그대로 */
@@ -98,8 +104,7 @@ const btns = PASS.map((p, i) => {
   const head = el('span', 'ps-row');
   head.append(el('span', 'ps-num', 'Lv ' + p.level), el('span', 'ps-kind', t(kindOf(got))));
   b.append(head, swatch(got), el('span', 'ps-what', (p.big ? '★ ' : '') + name(p.reward)));
-  const locked = p.level > level;
-  b.append(el('span', 'ps-lock', locked ? '🔒 ' + t('passLocked') : '✓ ' + t('passOwned')));
+  b.append(el('span', 'ps-lock', !owns(p) ? '🔒 ' + t('passLocked') : '✓ ' + t(p.free ? 'passFree' : 'passOwned')));
   b.addEventListener('click', () => choose(i));
   li.append(b);
   track.append(li);
@@ -110,10 +115,19 @@ function choose(i, focus) {
   btns.forEach((b, j) => { b.tabIndex = j === i ? 0 : -1; b.setAttribute('aria-pressed', String(j === i)); });
   if (focus) btns[i].focus();
   const p = PASS[i], got = parseReward(p.reward);
-  /* 한 번에 하나만 입어 본다. 구 모양을 고르면 몸이 그 구로, 아니면 내 모양으로 돌아온다 */
+  /* 한 번에 하나만 입어 본다. 구 모양을 고르면 몸이 그 구로, 팔레트를 고르면 페이지 색이 그 팔레트로 */
   bot.setShape(got.kind === 'shape' ? p.reward : face.shape || 'cercle', got.kind === 'shape' ? null : face.gen);
-  bot.setWear(got.kind === 'item' ? { [got.item.slot]: p.reward } : got.kind === 'finish' ? { finish: p.reward } : null);
-  $('#pick').textContent = `Lv ${p.level} · ${name(p.reward)} — ${p.level > level ? t('passLocked') : t('passOwned')}`;
+  paint(got.kind === 'palette' ? got.palette : null);
+  $('#pick').textContent = `Lv ${p.level} · ${name(p.reward)} — ${!owns(p) ? t('passLocked') : t(p.free ? 'passFree' : 'passOwned')}`;
+}
+/* 팔레트 미리 보기 — 홈의 THEME(ranked.js)과 같은 넷을 :root 에 얹는다. 바탕·글자는 낮에만(밤엔 사이트 밤 값) */
+function paint(pal) {
+  const r = document.documentElement.style, night = document.documentElement.hasAttribute('data-night');
+  const v = pal ? { '--accent': pal.accent, '--accent-deep': `color-mix(in srgb,${pal.accent} 82%,#000)`,
+    '--block': pal.block, '--block-hi': `color-mix(in srgb,${pal.block} 88%,#000)`,
+    ...(night ? {} : { '--bg': pal.bg, '--ink': pal.ink, '--ink-soft': `color-mix(in srgb,${pal.ink} 78%,${pal.bg})`,
+      '--card': `color-mix(in srgb,${pal.bg} 45%,#fff)`, '--grid': `color-mix(in srgb,${pal.bg} 92%,${pal.ink})` }) } : {};
+  for (const k of ['--accent', '--accent-deep', '--block', '--block-hi', '--bg', '--ink', '--ink-soft', '--card', '--grid']) v[k] ? r.setProperty(k, v[k]) : r.removeProperty(k);
 }
 track.addEventListener('keydown', e => {
   const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
@@ -126,7 +140,7 @@ track.addEventListener('keydown', e => {
   choose(n, true);
   btns[n].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: calm() ? 'auto' : 'smooth' });
 });
-$('#off').addEventListener('click', () => { bot.setWear(null); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
+$('#off').addEventListener('click', () => { paint(null); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
 choose(0);
 
 /* ── ?rt=1 자체검사 ──────────────────────────────────── */
@@ -135,12 +149,20 @@ if (new URLSearchParams(location.search).get('rt') === '1') {
   A(PASS.length === PASS_LEVELS && PASS.every((p, i) => p.level === i + 1), 'pass: 1..100 레벨이 빠짐없이');
   A(PASS.every(p => parseReward(p.reward)), 'pass: 모든 레벨에 보상이 있고 아는 아이템·색·마감·구다');
   A(new Set(PASS.map(p => p.reward)).size === PASS_LEVELS, 'pass: 같은 보상을 두 번 주지 않는다');
-  A(PASS.filter(p => p.big).every(p => !/^[a-z]+:/.test(p.reward) || p.reward.startsWith('fin:')), 'pass: 큰 보상은 새 아이템 기본색·마감·구');
-  A(FINISHES.every(f => PASS.some(p => p.reward === 'fin:' + f.id)), 'pass: 마감은 모두 패스에서 나온다');
+  A(PASS.filter(p => p.big).every(p => /^pal:[a-z]+$|^gu-/.test(p.reward)), 'pass: 큰 보상은 팔레트 갈래·구');
+  A(PASS.every(p => /^(pal:|gu-)/.test(p.reward)), 'pass: 할로윈 시즌은 팔레트와 구 모양뿐');
+  A(PALETTE_FAMILIES.every(f => PASS.some(p => p.reward === 'pal:' + f.id)), 'pass: 팔레트 갈래는 모두 패스에서 나온다');
+  A(PASS.filter(p => p.free).map(p => p.level).join() === '1,2' && FREE === 2, 'pass: 무료는 맨 앞 팔레트 둘');
+  const lum = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((a, c, i) => a + c * [.2126, .7152, .0722][i], 0);
+  const con = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+  const pals = PASS.map(p => parseReward(p.reward)).filter(g => g.kind === 'palette').map(g => g.palette);
+  A(pals.every(q => con(q.accent, '#232c31') >= 4.5 && con(q.block, '#ffffff') >= 3 && con(q.bg, q.ink) >= 4.5), 'palette: 대비(ranked.js THEME 의 min)를 모두 지킨다');
+  A(new Set(pals.map(q => [q.accent, q.block, q.bg, q.ink].join())).size === pals.length, 'palette: 같은 색 넷이 두 번 나오지 않는다');
+  A(PALETTE_FAMILIES.every(f => t('pal_' + f.id)) && t('kind_palette') && t('passFree'), 'i18n: 팔레트 이름 · 갈래 · 무료');
   A(REGIONS.length === 26 && REGIONS.every(r => r.radii.length === 64 && r.radii.every(v => v >= .4 && v <= 1.3)), 'regions: 26개 · 반지름 64개 · 엔진 범위 안');
   A(REGIONS.every(r => PASS.some(p => p.reward === 'gu-' + r.id)), 'pass: 25구와 서울이 모두 나온다');
   A(PASS[PASS_LEVELS - 1].reward === 'gu-seoul', 'pass: 100레벨은 서울 전체');
-  A(t('passShapeOf') && ['hat', 'back', 'finish', 'shape'].every(k => t('kind_' + k)), 'i18n: 구 모양 이름 · 갈래');
+  A(t('passShapeOf') && ['palette', 'shape'].every(k => t('kind_' + k)), 'i18n: 구 모양 이름 · 갈래');
   A(FINISHES.every(f => t('fin_' + f.id)), 'i18n: 마감 이름');
   Promise.all(FINISHES.filter(f => f.img).map(f => fetch(finishImg(f), { method: 'HEAD' }).then(r => r.ok)))
     .then(ok => A(ok.length === 12 && ok.every(Boolean), 'finish: 질감 그림 열둘이 다 있다'));

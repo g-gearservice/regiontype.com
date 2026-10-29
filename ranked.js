@@ -132,7 +132,7 @@ function openStyles(from, tab) {
     return;
   }
   styOpener = from || document.activeElement;
-  styleGone = null; $('#styNote').textContent = '';
+  $('#styNote').textContent = '';
   if ($('#botSay')) $('#botSay').textContent = '';
   fillStyles();
   if (tab === 'bot') pickStyTab($('#styTabBot'));
@@ -425,166 +425,59 @@ async function fillRecords() {
 }
 
 /* ── 내 스타일 ─────────────────────────────────────────────
-   봇이 지은 스타일(theme 와 같은 답에 실린 look·night·motion)을 이 기기(rt.styles)에 쌓는다 — 지금 색(rt.theme)·
-   봇 모습(rt.character)처럼 계정이 아니라 기기 것이다. 같은 두 색은 하나로, 새것이 위로, STYLE_MAX 개까지.
-   지우기는 묻지 않고 곧장 지운 뒤 되돌리기를 준다 */
-const STYLE_KEY = 'rt.styles', STYLE_MAX = 24;
-const readStyles = () => { try { const v = JSON.parse(localStorage.getItem(STYLE_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
-const writeStyles = list => { try { localStorage.setItem(STYLE_KEY, JSON.stringify(list)); return true; } catch { return false; } };
+   사이트 색은 리전 패스의 팔레트로만 바뀐다(assets/bloub/items.js 의 PASS) — 사람이 직접 고르는 칸도, 봇이 짓는 색도 없다.
+   가진 팔레트를 늘어놓고, 누르면 입는다(rt.theme). 지금 색은 이 기기(rt.theme) 것이다 */
 const curTheme = () => { try { return JSON.parse(localStorage.getItem('rt.theme') || 'null') || {}; } catch { return {}; } };
 const sameStyle = (a, b) => THEME.every(k => (a[k.key] || '') === (b[k.key] || ''));
-function keepStyle(acts) {
-  const th = acts.find(a => a.act === 'theme' && !a.reset);
-  if (!th) return;
-  const look = acts.find(a => a.act === 'look');
-  const s = { id: Date.now().toString(36), name: th.name || '', at: Date.now(), ...pickTheme(th) };
-  if (look) s.face = { shape: look.shape, expression: look.expression, colour: look.colour, ...(look.gen ? { gen: look.gen } : {}) };
-  for (const a of acts) if (a.act === 'set' && (a.key === 'night' || a.key === 'motion')) s[a.key] = a.value;
-  writeStyles([s, ...readStyles().filter(x => !sameStyle(x, s))].slice(0, STYLE_MAX));
+/* 패스 표는 buddy.js 가 이미 부르는 모듈이라 같은 주소(?v=)로 한 번만 받는다 */
+const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI).href);
+/* 가진 팔레트 — [{ ref, palette }].
+   ponytail: 서버가 패스 레벨을 세기 전(PLAN-pass M3)이라 무료(free) 칸만 가진다. 레벨이 오면 p.level <= 내 레벨을 더한다 */
+let owned = [];
+passKit.then(({ PASS, parseReward }) => {
+  owned = PASS.filter(p => p.free).map(p => ({ ref: p.reward, palette: parseReward(p.reward).palette }));
+  /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색)은 거두고 기본 색으로 돌린다 */
+  const cur = curTheme();
+  if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
+    try { localStorage.removeItem('rt.theme'); } catch {}
+    paintTheme();
+  }
+  try { localStorage.removeItem('rt.styles'); } catch {}
   if (styOpen()) fillStyles();
-}
-function wearStyle(s) {
-  try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(s))); } catch { return; }
-  paintTheme();
-  if (s.face) act({ act: 'look', ...s.face });
-  const o = {};
-  if (typeof s.night === 'boolean') o.night = s.night;
-  if (typeof s.motion === 'boolean') o.motion = s.motion;
-  if (Object.keys(o).length) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: o }));
-}
-let styleGone = null, styEdit = false;
-/* 견본 하나 — 지도 점 3×3, 가운데가 강조색. 프리셋·추천이 같이 쓴다 */
+}).catch(() => {});
+const palName = q => (t('pal_' + q.family) || q.family) + (q.n > 1 ? ' ' + q.roman : '');
+/* 견본 하나 — 지도 점 3×3, 가운데가 강조색 */
 function swatch(el, s) {
   el.classList.add('sty-swatch');
   if (HEX.test(s.block)) el.style.setProperty('--sw-block', s.block);
   if (HEX.test(s.accent)) el.style.setProperty('--sw-accent', s.accent);
-  if (HEX.test(s.bg) && s.night !== true) el.style.setProperty('--sw-bg', s.bg);
-  el.toggleAttribute('data-night', s.night === true);
+  if (HEX.test(s.bg)) el.style.setProperty('--sw-bg', s.bg);
   for (let i = 0; i < 9; i++) el.append(document.createElement('i'));
   return el;
 }
-function fillStyles(focusId) {
-  const list = readStyles(), cur = curTheme(), ul = $('#styList');
-  if (!list.length) styEdit = false;
-  const day = new Intl.DateTimeFormat(document.documentElement.lang || 'ko', { month: 'numeric', day: 'numeric' });
-  ul.toggleAttribute('data-edit', styEdit);
-  ul.replaceChildren(...list.map(s => {
-    const li = document.createElement('li'), on = sameStyle(s, cur) && THEME.some(k => cur[k.key]);
-    const name = s.name || t('styleUntitled');
-    const b = swatch(document.createElement('button'), s);
-    b.type = 'button'; b.dataset.id = s.id; b.title = name;
+function fillStyles(focusRef) {
+  const cur = curTheme(), ul = $('#styList');
+  ul.replaceChildren(...owned.map(({ ref, palette }) => {
+    const li = document.createElement('li'), on = sameStyle(pickTheme(palette), cur);
+    const b = swatch(document.createElement('button'), palette);
+    b.type = 'button'; b.dataset.ref = ref; b.title = palName(palette);
     b.setAttribute('aria-pressed', on);
-    b.setAttribute('aria-label', styEdit ? t('styleDelName', { name })
-      : [name, day.format(new Date(s.at)), s.night === true ? t('botChipNight') : ''].filter(Boolean).join(' · '));
-    b.insertAdjacentHTML('beforeend', '<span class="sty-tick" aria-hidden="true">✓</span><span class="sty-x" aria-hidden="true"><i class="i i-close"></i></span>');
+    b.setAttribute('aria-label', palName(palette));
+    b.insertAdjacentHTML('beforeend', '<span class="sty-tick" aria-hidden="true">✓</span>');
     li.append(b);
     return li;
   }));
-  $('#stySay').textContent = list.length ? '' : t('stylesEmpty');
-  $('#styHint').hidden = !list.length || styEdit;
-  $('#styDone').hidden = !styEdit;
+  $('#stySay').textContent = owned.length ? '' : t('stylesEmpty');
   $('#styReset').hidden = !THEME.some(k => cur[k.key]);
-  fillPick();
-  $('#styUndo').hidden = !styleGone;
-  if (focusId) (ul.querySelector(`[data-id="${CSS.escape(focusId)}"]`) || $('#styHead')).focus({ preventScroll: true });
+  if (focusRef) (ul.querySelector(`[data-ref="${CSS.escape(focusRef)}"]`) || $('#styHead')).focus({ preventScroll: true });
 }
-function setEdit(on, focusId) {
-  styEdit = on;
-  fillStyles(focusId || document.activeElement?.dataset?.id);
-}
-function wearPreset(id) {
-  const s = readStyles().find(x => x.id === id);
-  if (!s) return;
-  wearStyle(s);
-  fillStyles(s.id);
-  $('#styNote').textContent = t('styleWorn', { name: s.name || t('styleUntitled') });
-}
-function dropPreset(id) {
-  const list = readStyles(), i = list.findIndex(x => x.id === id);
-  if (i < 0) return;
-  styleGone = { s: list[i], i };
-  list.splice(i, 1);
-  writeStyles(list);
-  fillStyles((list[i] || list[i - 1] || {}).id);
-  $('#styNote').textContent = t('styleGone', { name: styleGone.s.name || t('styleUntitled') });
-  if (!list.length) $('#styUndo').focus({ preventScroll: true });
-}
-/* 추천 — 지금 강조색의 색상환 맞은편·옆자리에서 칸색을 짓는다. 칸색은 흰 글자와, 강조색은 진한 글자와
-   대비(THEME 의 min)를 지킬 때까지 밝기를 민다. 그래서 추천은 늘 저장할 수 있는 짝이다 */
-const hsl = (h, s, l) => '#' + [0, 8, 4].map(n => {
-  const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
-  return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0');
-}).join('');
-const hueOf = hex => {
-  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
-  if (!d) return 0;
-  return ((mx === r ? (g - b) / d : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60 + 360) % 360;
-};
-const fitColour = (k, h, s, l, dir) => {
-  let c = hsl(h, s, l);
-  while (contrast(c, k.on) < k.min && l > .04 && l < .96) c = hsl(h, s, l += dir * .02);
-  return c;
-};
-function styleIdeas(accent) {
-  const [A, B] = THEME, h = hueOf(accent);
-  if (contrast(accent, A.on) < A.min) accent = fitColour(A, h, .8, .6, 1);
-  return [180, 210, 150, 120].map(d => ({ accent, block: fitColour(B, (h + d) % 360, .38, .52, -1) }));
-}
-function fillSug() {
-  const acc = $('#styPick input[name="accent"]').value;
-  $('#stySug').replaceChildren(...styleIdeas(acc).map((s, n) => {
-    const b = swatch(document.createElement('button'), s);
-    b.type = 'button'; b.dataset.accent = s.accent; b.dataset.block = s.block;
-    b.setAttribute('aria-label', t('styleSugName', { n: n + 1 }));
-    return b;
-  }));
-}
-function useIdea(s) {
-  for (const k of ['accent', 'block']) $(`#styPick input[name="${k}"]`).value = s[k];
-  previewPick();
-}
-/* 색 직접 고르기 — THEME 한 줄마다 고르기 칸 하나. 고르는 동안 미리 보이되 대비가 모자란 짝은 미리 보기에서도
-   빠진다(이 화면부터 읽히게). 저장해야 rt.theme 에 담기고 목록에 쌓인다. 저장 없이 닫으면 저장된 색으로 돌아간다.
-   기본값과 같은 색은 담지 않는다 — 봇이 지은 두 색 스타일과 같은 꼴로 남는다 */
-const pickDraft = () => Object.fromEntries([...document.querySelectorAll('#styPick input')]
-  .filter(i => i.value !== THEME.find(k => k.key === i.name).def).map(i => [i.name, i.value]));
-function fillPick() {
-  const cur = curTheme();
-  $('#styPick').replaceChildren(...THEME.map(k => {
-    const row = document.createElement('label'), inp = document.createElement('input'),
-          name = document.createElement('span'), low = document.createElement('span');
-    row.className = 'sty-pick'; row.dataset.key = k.key;
-    inp.type = 'color'; inp.name = k.key; inp.value = HEX.test(cur[k.key]) ? cur[k.key] : k.def;
-    name.textContent = t('color_' + k.key);
-    low.className = 'sty-low';
-    row.append(inp, name, low);
-    return row;
-  }));
-  checkPick();
-  fillSug();
+function wearPalette(ref) {
+  const o = owned.find(x => x.ref === ref);
+  if (!o) return;
+  try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(o.palette))); } catch { return; }
   paintTheme();
-}
-function checkPick() {
-  const low = themeLow(pickDraft());
-  for (const row of $('#styPick').children) {
-    const x = low.find(l => l.key === row.dataset.key);
-    row.toggleAttribute('data-low', !!x);
-    row.lastChild.textContent = x ? t('styleLowTag', { r: x.r.toFixed(1), min: x.min }) : '';
-  }
-  $('#styWarn').textContent = low.length ? t('styleLow') : '';
-  return low;
-}
-function previewPick() {
-  const bad = new Set(checkPick().flatMap(x => [x.key, THEME.find(k => k.key === x.key).on]));
-  paintTheme(Object.fromEntries(Object.entries(pickDraft()).filter(([k]) => !bad.has(k))));
-}
-function savePick() {
-  if (checkPick().length) { $('#styNote').textContent = t('styleLow'); return; }
-  const d = pickDraft();
-  try { Object.keys(d).length ? localStorage.setItem('rt.theme', JSON.stringify(d)) : localStorage.removeItem('rt.theme'); } catch { return; }
-  if (Object.keys(d).length) keepStyle([{ act: 'theme', name: t('styleMine'), ...d }]);
-  fillStyles();
-  $('#styNote').textContent = t('styleSaved');
+  fillStyles(ref);
+  $('#styNote').textContent = t('styleWorn', { name: palName(o.palette) });
 }
 
 /* ── 봇 스타일 탭 (모양·색·크기·생성) ───────────────────────
@@ -943,9 +836,7 @@ async function generateBotLook(promptText) {
 }
 
 function wireStyles() {
-  $('#styPick').addEventListener('input', e => { previewPick(); if (e.target.name === 'accent') fillSug(); });
-  $('#stySave').addEventListener('click', savePick);
-  const d = $('#styles'), ul = $('#styList');
+  const d = $('#styles');
   $('#styClose').addEventListener('click', () => d.hidePopover());
   const styTabs = [$('#styTabGame'), $('#styTabBot')];
   styTabs.forEach(tb => tb.addEventListener('click', () => pickStyTab(tb)));
@@ -999,67 +890,25 @@ function wireStyles() {
     botLookAim = null;
     botLooking ||= requestAnimationFrame(botLookTick);
   });
-  /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 popover 의 기본 동작이라 그대로 산다.
-     지우기 모드에서는 Esc 가 먼저 그 모드만 끈다. 견본에서 Delete·Backspace 는 곧 지우기(꾹 누르기의 키보드 짝) */
-  d.addEventListener('keydown', e => {
-    e.stopPropagation();
-    held = false;
-    if (e.key === 'Escape' && styEdit) { e.preventDefault(); setEdit(false); return; }
-    const b = e.target.closest('#styList .sty-swatch');
-    if (b && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); dropPreset(b.dataset.id); }
-  });
+  /* 덮개 손(Esc·Tab 가두기)과 홈의 글쇠 손이 뒤에서 받지 않게 — 닫기(Esc)는 popover 의 기본 동작이라 그대로 산다 */
+  d.addEventListener('keydown', e => e.stopPropagation());
   d.addEventListener('toggle', e => {
     if (e.newState !== 'closed') return;
-    styEdit = false;
     botGenMode = false;
     document.body.classList.remove('rk-styling');
-    paintTheme();   // 저장하지 않은 미리 보기를 거둔다
     /* 바깥의 다른 것을 눌러 닫혔으면 그 초점을 빼앗지 않는다 */
     const back = document.activeElement === document.body || d.contains(document.activeElement);
     if (back && styOpener && styOpener.isConnected) styOpener.focus({ preventScroll: true });
     styOpener = null;
   });
-  /* 꾹 누르기(.5초) — 지우기 모드를 켠다. 뒤따르는 click 은 삼킨다. 마우스 오른쪽 단추도 같은 길 */
-  let hold = 0, held = false;
-  ul.addEventListener('pointerdown', e => {
-    const b = e.target.closest('.sty-swatch');
-    held = false;
-    if (!b || e.button) return;
-    hold = setTimeout(() => { held = true; if (!styEdit) { setEdit(true, b.dataset.id); navigator.vibrate?.(10); } }, 500);
-  });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => ul.addEventListener(n, () => clearTimeout(hold)));
-  ul.addEventListener('contextmenu', e => {
-    const b = e.target.closest('.sty-swatch');
-    if (!b) return;
-    e.preventDefault();
-    if (!styEdit) setEdit(true, b.dataset.id);
-  });
   d.addEventListener('click', e => {
-    const b = e.target.closest('#styList .sty-swatch'), idea = e.target.closest('#stySug .sty-swatch');
-    if (b) {
-      if (held) { held = false; return; }
-      styEdit ? dropPreset(b.dataset.id) : wearPreset(b.dataset.id);
-    } else if (idea) {
-      useIdea(idea.dataset);
-    } else if (e.target.closest('#styShuffle')) {
-      $('#styPick input[name="accent"]').value = fitColour(THEME[0], Math.random() * 360, .8, .6, 1);
-      previewPick();
-      fillSug();
-    } else if (e.target.closest('#styUndo') && styleGone) {
-      const list = readStyles();
-      list.splice(styleGone.i, 0, styleGone.s);
-      writeStyles(list.slice(0, STYLE_MAX));
-      const id = styleGone.s.id;
-      styleGone = null;
-      $('#styNote').textContent = '';
-      fillStyles(id);
-    } else if (e.target.closest('#styReset')) {
+    const b = e.target.closest('#styList .sty-swatch');
+    if (b) wearPalette(b.dataset.ref);
+    else if (e.target.closest('#styReset')) {
       act({ act: 'theme', reset: true });
       fillStyles();
       $('#styNote').textContent = t('styleResetDone');
       $('#styHead').focus({ preventScroll: true });
-    } else if (styEdit) {
-      setEdit(false);   // 완료 단추나 판의 빈 곳 — 지우기 모드를 끈다
     }
   });
 }
@@ -1601,11 +1450,10 @@ function act(a) {
     leftAccount();
     return;
   }
+  /* 색은 패스 팔레트로만 바뀐다 — 봇이 지은 색은 받지 않고, 기본 색으로 돌리기만 받는다 */
   if (a.act === 'theme') {
-    try {
-      if (a.reset) localStorage.removeItem('rt.theme');
-      else localStorage.setItem('rt.theme', JSON.stringify({ ...JSON.parse(localStorage.getItem('rt.theme') || '{}'), ...a, act: undefined }));
-    } catch { return; }
+    if (!a.reset) return;
+    try { localStorage.removeItem('rt.theme'); } catch { return; }
     paintTheme();
     return;
   }
@@ -1672,15 +1520,9 @@ function progStop() {
   if (bot && !bubble.hidden) place(bot.x, bot.y);
 }
 /* 답이 왔다. 스타일이 실려 왔으면 '적용하는 중' 으로 가득 채운 뒤 '저장됨' 을 잠깐 보이고 접는다 */
-function progDone(styled) {
+function progDone() {
   clearInterval(progT);
-  if (!styled) { progPaint(100); progHide = setTimeout(progStop, 300); return; }
-  progPaint(100, t('botProgApply'));
-  progHide = setTimeout(() => {
-    $('#rkProg').classList.add('is-done');
-    $('#rkProgStep').textContent = t('botProgDone');
-    progHide = setTimeout(progStop, 2200);
-  }, 450);
+  progPaint(100); progHide = setTimeout(progStop, 300);
 }
 async function send(text) {
   talk.push({ role: 'user', content: text });
@@ -1702,7 +1544,7 @@ async function send(text) {
     return;
   }
   if (my !== talkReq) return;
-  progDone((d.do || []).some(a => a.act === 'theme' && !a.reset));
+  progDone();
   const said = d.say || '👍';
   talk.push({ role: 'assistant', content: said });
   if (chatting) {
@@ -1711,7 +1553,6 @@ async function send(text) {
   }
   /* 동작은 말을 보여 준 뒤에 — 무엇을 하려는지 먼저 읽힌다 */
   (d.do || []).forEach(act);
-  keepStyle(d.do || []);
 }
 /* 대화에서 피드백 판을 열면 막 오간 두 마디(보낸 말, 봇이 못 한다고 한 답)를 담아 둔다 —
    무엇이 안 됐는지 다시 적지 않게. 이미 적어 둔 글은 덮지 않는다.
@@ -2657,8 +2498,9 @@ if (location.search.includes('rt=1')) {
   console.assert(themeLow({ ink: '#e8edf0' })[0]?.key === 'bg' && themeLow({ accent: '#232c31' })[0]?.key === 'accent', '스타일: 대비 부족을 잡는다');
   console.assert(themeCss({ bg: '#ffffff' }).startsWith(':root:not([data-night]){--bg:#ffffff') && themeCss({}) === '', '스타일: 밤엔 낮 바탕을 깔지 않는다');
   console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
-  console.assert(['#000000', '#ffffff', '#f0a03c', '#2266cc', '#ff0000', '#7a7a7a'].every(a => styleIdeas(a).every(s => !themeLow(s).length)), '스타일: 추천은 늘 대비를 지킨다');
-  console.assert(hsl(0, 1, .5) === '#ff0000' && Math.round(hueOf('#00ff00')) === 120, '스타일: 색상환 셈');
+  console.assert(!$('#styPick') && !$('#stySug') && !$('#stySave'), '스타일: 색을 직접 고르는 칸은 없다');
+  passKit.then(({ PASS, parseReward }) => console.assert(PASS.filter(p => p.reward.startsWith('pal:')).every(p => !themeLow(pickTheme(parseReward(p.reward).palette)).length) && owned.length === 2,
+    '스타일: 패스 팔레트는 모두 대비를 지키고, 지금은 무료 둘을 가진다'));
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
   console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked'), '모드 고르기: 일반전·경쟁전');
