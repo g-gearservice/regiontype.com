@@ -40,6 +40,11 @@ namespace_id = "1009"   # 기존 wrangler.toml 과 같은 번호 — 셈이 이�
 pattern = "api.regiontype.com/bot/*"
 zone_name = "regiontype.com"
 
+# 배포된 사이트가 api. 로 넘어가기 전까지 같이 연다
+[[routes]]
+pattern = "regiontype.gearservicevanguard.com/bot/*"
+zone_name = "gearservicevanguard.com"
+
 
 [observability]
 enabled = true
