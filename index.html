@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.53">
+<link rel="stylesheet" href="style.css?v=5.67">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -580,9 +580,8 @@
   </div>
 </section>
 
-<!-- 내 스타일 — 게임 스타일(프리셋·색 직접 고르기)과 봇 스타일(모양·색·크기·생성)을 한 판의 두 탭으로 나눈다(ranked.js).
-     popover 라 오른쪽 아래 구석에서 올라오고, 닫으면 뒤(홈·계정)가 그대로 남는다. Esc·바깥 누르기는 popover 가 닫는다.
-     프리셋 견본을 누르면 입고, 꾹 누르면 빨간 X 가 떠 지울 수 있다(키보드는 Delete).
+<!-- 내 스타일 — 게임 스타일(가진 색 팔레트)과 봇 스타일(모양·색·크기·생성)을 한 판의 두 탭으로 나눈다(ranked.js).
+     사이트 색은 리전 패스에서 받은 팔레트로만 바뀐다 — 직접 고르는 칸은 없다. 견본을 누르면 입는다.
      쓰는 것은 체크 표시와 테두리로 가른다(색만이 아니다). #styles 로 들어와도 연다 -->
 <div id="styles" popover role="dialog" aria-labelledby="styHead">
   <div id="stylesBox">
@@ -599,24 +598,10 @@
     <div id="styPanelGame" class="sty-panel" role="tabpanel" aria-labelledby="styTabGame" tabindex="0">
       <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
       <p class="pg-say" id="stySay" role="status"></p>
-      <p class="sty-hint" id="styHint" data-i18n="styleHold">누르면 입고, 꾹 누르면 지울 수 있어요</p>
-      <!-- 색 직접 고르기(ranked.js 의 fillPick). 칸은 THEME 표에서 짓는다. 대비가 모자라면 글자로 알리고 저장하지 않는다.
-           추천은 지금 강조색에서 대비를 지키는 칸색 짝을 짓는다(styleIdeas) -->
-      <fieldset class="sty-edit">
-        <legend data-i18n="styleEdit">색 직접 고르기</legend>
-        <div class="sty-picks" id="styPick"></div>
-        <div class="sty-sug">
-          <span class="sty-sug-head" data-i18n="styleSuggest">추천</span>
-          <div class="sty-sug-list" id="stySug"></div>
-          <button type="button" class="sty-shuffle" id="styShuffle" data-i18n="styleShuffle">다른 추천</button>
-        </div>
-        <p class="sty-warn" id="styWarn" role="status"></p>
-        <button type="button" class="sty-save" id="stySave" data-i18n="styleSave">프리셋으로 저장</button>
-      </fieldset>
+      <p class="sty-hint" data-i18n="stylePassOnly">리전 패스에서 받은 색만 입을 수 있어요</p>
+      <a class="sty-pass" href="pass/" data-i18n="stylePassMore">리전 패스에서 더 받기</a>
       <div class="sty-foot">
         <p class="sty-note" id="styNote" role="status" aria-live="polite"></p>
-        <button type="button" class="sty-done" id="styDone" data-i18n="styleDone" hidden>완료</button>
-        <button type="button" class="sty-undo" id="styUndo" data-i18n="styleUndo" hidden>되돌리기</button>
         <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
       </div>
     </div>
@@ -784,10 +769,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.53"></script>
-<script src="app.js?v=5.57"></script>
-<script src="auth.js?v=5.53"></script>
-<script src="settings/settings.js?v=5.53"></script>
-<script src="ranked.js?v=5.53"></script>
+<script src="relay.js?v=5.67"></script>
+<script src="app.js?v=5.67"></script>
+<script src="auth.js?v=5.67"></script>
+<script src="settings/settings.js?v=5.67"></script>
+<script src="ranked.js?v=5.67"></script>
 </body>
 </html>

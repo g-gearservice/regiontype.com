@@ -109,37 +109,89 @@ export function parseItem(ref) {
   if (!item || (c && !COLOURS.includes(c))) return null;
   return { item, colour: c || item.tint };
 }
-/* 패스 보상 하나를 푼다. 꼴은 셋:
+/* 패스 보상 하나를 푼다. 꼴은 넷:
      'crown' · 'crown:rose'  → 씌우는 아이템   { kind: 'item', item, colour }
      'fin:dots'              → 몸 마감         { kind: 'finish', finish }
+     'pal:pumpkin-2'         → 사이트 색       { kind: 'palette', palette }
      'gu-mapo'               → 몸 모양(구)     { kind: 'shape', region } */
 export function parseReward(ref) {
   ref = String(ref || '');
   if (ref.startsWith('fin:')) { const finish = FINISH_BY_ID.get(ref.slice(4)); return finish ? { kind: 'finish', finish } : null; }
+  if (ref.startsWith('pal:')) { const palette = paletteOf(ref.slice(4)); return palette ? { kind: 'palette', palette } : null; }
   if (REGION_BY_SHAPE.has(ref)) return { kind: 'shape', region: REGION_BY_SHAPE.get(ref) };
   const got = parseItem(ref);
   return got ? { kind: 'item', ...got } : null;
 }
 
-/* ── 리전 패스 1 · 100레벨 ───────────────────────────────
-   큰 보상(BIG)은 손으로 적는다 — 새 아이템, 새 마감, 끝에 서울 전체 모양.
+/* 색 팔레트 — 사이트 색(ranked.js 의 THEME: accent·block·bg·ink)을 통째로 바꾸는 패스 보상. 사람이 색을 직접
+   고르는 길은 없다 — 가진 팔레트만 입는다. 갈래(아래 표)는 대비(accent↔#232c31 4.5, block↔흰 글자 3, bg↔ink 4.5)를
+   지키게 뽑은 값이다. 고치면 ?rt=1 이 대비를 잰다.
+   변주 '<갈래>-<k>'(k 2‥7)는 그 갈래의 강조색에 다른 갈래의 칸색과 바탕·글자 짝을 빌린다. 셋 다 저마다 대비를
+   지키므로 섞어도 지킨다. 이름은 갈래 이름 뒤에 로마 숫자(호박 II) */
+export const PALETTE_FAMILIES = [
+  { id: 'pumpkin', accent: '#f79545', block: '#7c4fb0', bg: '#f2e8de', ink: '#604d39' },
+  { id: 'candycorn', accent: '#fac942', block: '#e3581c', bg: '#f6f0da', ink: '#605839' },
+  { id: 'witch', accent: '#9ada62', block: '#8e4ab5', bg: '#e9e2ee', ink: '#503960' },
+  { id: 'cauldron', accent: '#64d887', block: '#43a383', bg: '#e2eee7', ink: '#396049' },
+  { id: 'bat', accent: '#e79e55', block: '#655ca3', bg: '#e5e3ed', ink: '#413d5c' },
+  { id: 'ghost', accent: '#7cb5c0', block: '#637e9c', bg: '#e3eaed', ink: '#3d525c' },
+  { id: 'harvestmoon', accent: '#f0d04c', block: '#4a5fb5', bg: '#f4f0dd', ink: '#605b39' },
+  { id: 'graveyard', accent: '#94bb81', block: '#6b8a94', bg: '#e5ebe5', ink: '#415841' },
+  { id: 'raven', accent: '#6ea1cf', block: '#575fa8', bg: '#e3e5ed', ink: '#3d435c' },
+  { id: 'spider', accent: '#e76a6a', block: '#7a6b94', bg: '#ebe5e6', ink: '#584145' },
+  { id: 'potion', accent: '#d766db', block: '#33a398', bg: '#eee1ef', ink: '#5c3960' },
+  { id: 'lantern', accent: '#ffb13d', block: '#cf5530', bg: '#f5ebdb', ink: '#605039' },
+  { id: 'bloodmoon', accent: '#f2645a', block: '#c9364e', bg: '#f0e2e0', ink: '#603e39' },
+  { id: 'mummy', accent: '#c7ae75', block: '#a1845e', bg: '#f0ece0', ink: '#605539' },
+  { id: 'skeleton', accent: '#b0ae8d', block: '#70798f', bg: '#ebebe5', ink: '#565643' },
+  { id: 'haunted', accent: '#a385d6', block: '#528fad', bg: '#e6e2ee', ink: '#453960' },
+  { id: 'broom', accent: '#d3a269', block: '#b5754a', bg: '#efe9e1', ink: '#605039' },
+  { id: 'blackcat', accent: '#d0f04c', block: '#636b9c', bg: '#eceee2', ink: '#596039' },
+  { id: 'werewolf', accent: '#cf986e', block: '#5e80a1', bg: '#ede8e3', ink: '#5c4d3d' },
+  { id: 'vampire', accent: '#e76a87', block: '#cf3046', bg: '#efe1e5', ink: '#603943' },
+  { id: 'zombie', accent: '#aada62', block: '#4ea651', bg: '#e9efe1', ink: '#4e6039' },
+  { id: 'fog', accent: '#86a6b6', block: '#668599', bg: '#e5e9eb', ink: '#415158' },
+  { id: 'candle', accent: '#f5d247', block: '#c66339', bg: '#f2edde', ink: '#605539' },
+  { id: 'owl', accent: '#daa662', block: '#a67d59', bg: '#efeae1', ink: '#605239' },
+];
+export const PALETTE_VARIANTS = 7;
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+/* 'pumpkin' · 'pumpkin-3' → { id, family, n, accent, block, bg, ink }. 모르는 것은 null */
+export function paletteOf(id) {
+  const [, fam, k] = String(id || '').match(/^([a-z]+)(?:-([2-7]))?$/) || [];
+  const i = PALETTE_FAMILIES.findIndex(f => f.id === fam);
+  if (i < 0) return null;
+  const n = +(k || 1), F = PALETTE_FAMILIES, at = d => F[(i + d * (n - 1)) % F.length];
+  return { id, family: fam, n, roman: ROMAN[n], accent: F[i].accent, block: at(5).block, bg: at(7).bg, ink: at(7).ink };
+}
+
+/* ── 리전 패스 1 · 할로윈 · 100레벨 ──────────────────────
+   큰 보상(BIG)은 손으로 적는다 — 팔레트 갈래 24개, 끝에 서울 전체 모양.
    나머지 레벨에는 서울 25구 모양을 코스 순서(강서구부터 시계 방향)로 고르게 흩고,
-   남는 자리는 이미 연 아이템의 새 색을 돌아가며 준다. 같은 것을 두 번 주지 않는다 */
-const BIG = { 1: 'pin', 5: 'fin:dots', 10: 'sprout', 12: 'fin:hanji', 15: 'cap', 20: 'fin:stripes', 22: 'fin:giwa',
-  25: 'beanie', 30: 'flag', 33: 'fin:blossom', 35: 'fin:dusk', 40: 'halo', 45: 'tophat', 48: 'fin:celadon',
-  50: 'fin:night', 55: 'fin:dancheong', 60: 'wings', 65: 'fin:maple', 70: 'flower', 75: 'fin:neon', 80: 'fin:gold',
-  85: 'fin:najeon', 90: 'fin:holo', 95: 'crown', 100: 'gu-seoul' };
-export const PASS_LEVELS = 100;
+   남는 자리는 이미 연 갈래의 변주를 돌아가며 준다. 같은 것을 두 번 주지 않는다.
+   맨 앞 팔레트 FREE 개는 누구나 처음부터 가진다(free) — 서버가 레벨을 세기 전엔 그것만 가진 것이다.
+   모자·등·마감(ITEMS·FINISHES)은 이번 시즌 보상에서 빠졌다. 그리는 코드는 다음 시즌을 위해 남긴다 */
+const BIG = { 1: 'pal:pumpkin', 5: 'pal:candycorn', 10: 'pal:ghost', 12: 'pal:bat', 15: 'pal:broom', 20: 'pal:owl',
+  22: 'pal:mummy', 25: 'pal:graveyard', 30: 'pal:spider', 33: 'pal:cauldron', 35: 'pal:candle', 40: 'pal:raven',
+  45: 'pal:witch', 48: 'pal:werewolf', 50: 'pal:skeleton', 55: 'pal:zombie', 60: 'pal:haunted', 65: 'pal:fog',
+  70: 'pal:potion', 75: 'pal:blackcat', 80: 'pal:lantern', 85: 'pal:harvestmoon', 90: 'pal:vampire', 95: 'pal:bloodmoon',
+  100: 'gu-seoul' };
+export const PASS_LEVELS = 100, FREE = 2;
 export const PASS = (() => {
   const out = [], open = [], used = new Map();
   const gus = REGIONS.filter(r => r.id !== 'seoul').map(r => `gu-${r.id}`);
   const fill = PASS_LEVELS - Object.keys(BIG).length;
-  let turn = 0, nth = 0, g = 0;
+  let turn = 0, nth = 0, g = 0, free = FREE;
+  const push = (lv, reward, big) => {
+    const p = { level: lv, reward, big };
+    if (reward && reward.startsWith('pal:') && free > 0) { p.free = true; free--; }
+    out.push(p);
+  };
   for (let lv = 1; lv <= PASS_LEVELS; lv++) {
     const big = BIG[lv];
     if (big) {
-      if (ITEM_BY_ID.has(big)) { open.push(big); used.set(big, new Set([ITEM_BY_ID.get(big).tint])); }
-      out.push({ level: lv, reward: big, big: true });
+      if (big.startsWith('pal:')) { open.push(big.slice(4)); used.set(big.slice(4), 1); }
+      push(lv, big, true);
       continue;
     }
     /* 채움 칸 nth 번째 — 구 모양이 들어갈 차례인지(25개를 채움 칸 전체에 고르게) */
@@ -147,11 +199,10 @@ export const PASS = (() => {
     nth++;
     let reward = gu ? gus[g++] : null;
     for (let k = 0; k < open.length && !reward; k++) {
-      const it = open[(turn + k) % open.length], seen = used.get(it);
-      const c = COLOURS.find(x => !seen.has(x));
-      if (c) { seen.add(c); reward = it + ':' + c; turn = (turn + k + 1) % open.length; }
+      const fam = open[(turn + k) % open.length], n = used.get(fam) + 1;
+      if (n <= PALETTE_VARIANTS) { used.set(fam, n); reward = `pal:${fam}-${n}`; turn = (turn + k + 1) % open.length; }
     }
-    out.push({ level: lv, reward, big: false });
+    push(lv, reward, false);
   }
   return out;
 })();
