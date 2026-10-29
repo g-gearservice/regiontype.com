@@ -61,28 +61,6 @@
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
 <script>
-/* 입장. 로그인(rt.token)이 없으면 소개 화면으로, 있으면 이 홈에 남는다.
-   게임 칸(iframe)과 판정 자체검사(?rt=1), 로그인 복귀(#signin)는 보내지 않는다.
-   소개 화면의 regiontype.com 링크(/#home)로 들어오면 이 탭의 세션(sessionStorage 'rt.home')
-   동안 홈에 남긴다 — 새로고침해도 소개로 튕기지 않는다. 해시는 지운다. auth.js 의 401 갈래도 같은 표를 본다.
-   이 문서는 _redirects 의 / 가 연다. 토큰은 localStorage 'rt.token' 문자열이다. */
-(() => {
-  try {
-    let framed = false;
-    try { framed = window.top !== window.self; } catch { framed = true; }
-    if (location.hash === '#home') {
-      sessionStorage.setItem('rt.home', '1');
-      history.replaceState(history.state, '', location.pathname + location.search);
-    }
-    const inn = !!localStorage.getItem('rt.token') || sessionStorage.getItem('rt.home') === '1';
-    if (!inn && !framed && !location.search.includes('rt=1') && !/^#signin/.test(location.hash)) {
-      document.documentElement.style.visibility = 'hidden';
-      location.replace('/landing/' + location.search);
-    }
-  } catch {}
-})();
-</script>
-<script>
 (() => {
   const d = document.documentElement;
   try {
@@ -807,8 +785,8 @@
 </dialog>
 
 <script src="relay.js?v=5.28"></script>
-<script src="app.js?v=5.28"></script>
-<script src="auth.js?v=5.28"></script>
+<script src="app.js?v=5.50"></script>
+<script src="auth.js?v=5.50"></script>
 <script src="settings/settings.js?v=5.43"></script>
 <script src="ranked.js?v=5.28"></script>
 </body>
