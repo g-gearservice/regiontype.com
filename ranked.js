@@ -431,21 +431,23 @@ const curTheme = () => { try { return JSON.parse(localStorage.getItem('rt.theme'
 const sameStyle = (a, b) => THEME.every(k => (a[k.key] || '') === (b[k.key] || ''));
 /* 패스 표는 buddy.js 가 이미 부르는 모듈이라 같은 주소(?v=)로 한 번만 받는다 */
 const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI).href);
-/* 가진 팔레트 — [{ ref, palette }]. 무료(free) 칸과 내 패스 레벨까지의 칸.
-   레벨은 이 기기의 rt.pass XP 에서 센다(items.js 의 passLevel) */
-let owned = [];
+/* 가진 보상 — 열린 시즌들의 무료 칸과 내 레벨까지의 칸(items.js 의 ownedRewards).
+   팔레트는 [{ ref, palette }] 로 게임 스타일 탭에, 모양 id 는 봇 스타일 탭의 모양 줄에 더한다 */
+let owned = [], ownedShapes = [];
 const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
-function countOwned({ PASS, PASS_ID, parseReward, passLevel }) {
-  const st = readPass(), lv = st && st.pass === PASS_ID ? passLevel(st.xp) : 0;
-  owned = PASS.filter(p => p.reward.startsWith('pal:') && (p.free || p.level <= lv)).map(p => ({ ref: p.reward, palette: parseReward(p.reward).palette }));
+const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
+function countOwned(kit) {
+  const got = kit.ownedRewards(readPass(), today());
+  owned = got.filter(o => o.got.kind === 'palette').map(o => ({ ref: o.ref, palette: o.got.palette }));
+  ownedShapes = got.filter(o => o.got.kind === 'shape').map(o => o.ref);
 }
-/* 리전 패스 XP — 끝낸 판마다(나간 판은 finish 에 닿지 않는다). 로그인한 계정만. 결과 칸에 +XP 와 레벨을 적는다 */
+/* 리전 패스 XP — 끝낸 판마다(나간 판은 finish 에 닿지 않는다), 패스가 열린 동안. 로그인한 계정만. 결과 칸에 +XP 와 레벨을 적는다 */
 addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
   const line = $('#rPass');
   line.textContent = '';
-  if (!token()) return;
-  const before = readPass(), was = before && before.pass === kit.PASS_ID ? kit.passLevel(before.xp) : 0;
-  const { add, ...st } = kit.gainXp(before, !!g.ranked, new Date().toLocaleDateString('sv'));
+  if (!token() || !kit.passOpen(today())) return;
+  const before = kit.passStore(readPass()), was = kit.passLevel(before.xp);
+  const { add, ...st } = kit.gainXp(before, !!g.ranked, today());
   try { localStorage.setItem('rt.pass', JSON.stringify(st)); } catch { return; }
   const lv = kit.passLevel(st.xp);
   countOwned(kit);
@@ -453,7 +455,7 @@ addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
 }));
 passKit.then(kit => {
   countOwned(kit);
-  /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색)은 거두고 기본 색으로 돌린다 */
+  /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색·지난 꼴의 팔레트)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
   if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
     try { localStorage.removeItem('rt.theme'); } catch {}
@@ -493,6 +495,8 @@ function wearPalette(ref) {
   if (!o) return;
   try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(o.palette))); } catch { return; }
   paintTheme();
+  /* 어두운 팔레트(블랙 프라이데이)는 밤 화면 위에 깐다 — 설정 통(settings.js)이 켜고 저장한다 */
+  if (o.palette.dark && !document.documentElement.hasAttribute('data-night')) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: true } }));
   fillStyles(ref);
   $('#styNote').textContent = t('styleWorn', { name: palName(o.palette) });
 }
@@ -654,7 +658,7 @@ function mountBotStyle() {
   syncBotStyleFromStorage();
   const buddyKit = window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href);
   buddyKit.then(({ mountBuddy, TABLES }) => {
-    botLists.shape = TABLES.shapes.map(x => x.id);
+    botLists.shape = [...TABLES.shapes.map(x => x.id), ...ownedShapes];   // 패스에서 받은 이벤트 모양은 뒤에
     botLists.colour = ['accent', ...TABLES.colours.map(x => x.id)];
     const saved = readFace();
     if (botLists.shape.includes(saved.shape) || saved.shape === 'gen') botChar.shape = saved.shape;
@@ -680,7 +684,7 @@ function mountBotStyle() {
     };
     shBox.append(wand);
     for (const id of botLists.shape) {
-      const label = KO(id) || id;
+      const label = KO(id) || t('shape_' + id) || id;
       const b = document.createElement('button');
       b.type = 'button'; b.dataset.shape = id;
       b.className = 'character-choice';
@@ -1414,7 +1418,7 @@ const THEME = [
   { key: 'ink', def: '#3c464a', night: false, also: { '--ink-soft': v => `color-mix(in srgb,${v} 78%,var(--bg))` } },
 ];
 const HEX = /^#[0-9a-f]{6}$/;
-const pickTheme = th => Object.fromEntries(THEME.filter(k => HEX.test(th?.[k.key])).map(k => [k.key, th[k.key]]));
+const pickTheme = th => ({ ...Object.fromEntries(THEME.filter(k => HEX.test(th?.[k.key])).map(k => [k.key, th[k.key]])), ...(th?.dark === true ? { dark: true } : {}) });
 const lum = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
   .map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((a, c, i) => a + c * [.2126, .7152, .0722][i], 0);
 const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
@@ -1423,14 +1427,23 @@ const themeLow = th => {
   const v = key => HEX.test(key) ? key : th[key] || THEME.find(k => k.key === key).def;
   return THEME.filter(k => k.on).map(k => ({ key: k.key, r: contrast(v(k.key), v(k.on)), min: k.min })).filter(x => x.r < x.min);
 };
-/* rt.theme 을 규칙 한 장으로. 밤에도 입히는 것과 낮에만 입히는 것을 가른다 */
+/* rt.theme 을 규칙 한 장으로. 밤에도 입히는 것과 낮에만 입히는 것을 가른다.
+   dark(어두운 팔레트)면 바탕·글자는 거꾸로 밤에만 깐다 — 낮 화면에선 강조색·칸색만 입고, 밤 화면의 바탕을 그 바탕으로
+   바꾼다. 거기서 따라 나오는 값(DARK)은 style.css 의 밤 값과 같은 결로 섞는다 */
+const DARK = (bg, ink) => ({ '--grid': `color-mix(in srgb,${bg} 88%,${ink})`, '--land': `color-mix(in srgb,${bg} 84%,${ink})`,
+  '--land-line': bg, '--card': `color-mix(in srgb,${bg} 92%,#fff)`, '--bar': `color-mix(in srgb,${bg} 80%,${ink})`,
+  '--ink-soft': `color-mix(in srgb,${ink} 68%,${bg})` });
 const themeCss = th => {
-  const both = [], day = [];
+  const both = [], day = [], night = [];
   for (const k of THEME) {
     const v = th[k.key];
-    if (HEX.test(v)) (k.night ? both : day).push(`--${k.key}:${v}`, ...Object.entries(k.also || {}).map(([p, f]) => `${p}:${f(v)}`));
+    if (!HEX.test(v)) continue;
+    if (th.dark && !k.night) night.push(`--${k.key}:${v}`);
+    else (k.night ? both : day).push(`--${k.key}:${v}`, ...Object.entries(k.also || {}).map(([p, f]) => `${p}:${f(v)}`));
   }
-  return (both.length ? `:root,:root[data-night]{${both.join(';')}}` : '') + (day.length ? `:root:not([data-night]){${day.join(';')}}` : '');
+  if (night.length && HEX.test(th.bg) && HEX.test(th.ink)) night.push(...Object.entries(DARK(th.bg, th.ink)).map(([p, v]) => `${p}:${v}`));
+  return (both.length ? `:root,:root[data-night]{${both.join(';')}}` : '') + (day.length ? `:root:not([data-night]){${day.join(';')}}` : '') +
+    (night.length ? `:root[data-night]{${night.join(';')}}` : '');
 };
 /* :root 에 얹는다. 첫 그림 전엔 index.html 의 머리 스크립트가 rt.themeCss 를 그대로 붙인다.
    draft 를 주면 저장하지 않고 미리 보기만 한다 */
@@ -2516,14 +2529,20 @@ if (location.search.includes('rt=1')) {
   console.assert(themeCss({ bg: '#ffffff' }).startsWith(':root:not([data-night]){--bg:#ffffff') && themeCss({}) === '', '스타일: 밤엔 낮 바탕을 깔지 않는다');
   console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
   console.assert(!$('#styPick') && !$('#stySug') && !$('#stySave'), '스타일: 색을 직접 고르는 칸은 없다');
-  passKit.then(({ PASS, parseReward, gainXp, passLevel, PASS_XP }) => {
-    console.assert(PASS.filter(p => p.reward.startsWith('pal:')).every(p => !themeLow(pickTheme(parseReward(p.reward).palette)).length) && owned.length >= 2,
-      '스타일: 패스 팔레트는 모두 대비를 지키고, 무료 둘은 늘 가진다');
+  passKit.then(kit => {
+    const { PASS, parseReward, gainXp, passLevel, PASS_XP, passStore, ownedRewards } = kit;
+    console.assert(PASS.filter(p => p.reward.startsWith('pal:')).every(p => !themeLow(pickTheme(parseReward(p.reward).palette)).length),
+      '스타일: 패스 팔레트는 모두 대비를 지킨다');
     let st = null;
-    for (let i = 0; i < 40; i++) st = gainXp(st, i % 2, 'd1');
-    console.assert(st.xp === PASS_XP.day && gainXp(st, 0, 'd1').add === 0 && gainXp(st, 1, 'd2').add === PASS_XP.ranked && passLevel(1e9) === 100,
-      '패스: 하루 상한 · 날이 바뀌면 다시 · 100레벨에서 멈춘다');
-    console.assert(gainXp({ pass: 'old', xp: 5000 }, 0, 'd1').xp === PASS_XP.game, '패스: 다른 패스의 XP 는 넘어오지 않는다');
+    for (let i = 0; i < 40; i++) st = gainXp(st, i % 2, '2026-10-31');
+    console.assert(st.xp === PASS_XP.day && gainXp(st, 0, '2026-10-31').add === 0 && gainXp(st, 1, '2026-11-02').add === PASS_XP.ranked &&
+      gainXp(st, 1, '2027-02-01').add === 0 && passLevel(1e9) === 150, '패스: 하루 상한 · 날이 바뀌어도 XP 하나로 · 닫히면 0 · 150레벨에서 멈춘다');
+    console.assert(passStore({ pass: 'halloween-1', xp: 300 }).xp === 300, '패스: v2.2.0 할로윈 XP 를 잇는다');
+    const big = { pass: 'holiday-2026', xp: 1e9 }, at = d => ownedRewards(big, d).map(o => o.ref);
+    console.assert(at('2026-10-31').includes('pal:pumpkin') && !at('2026-10-31').includes('pal:blackfriday') && at('2026-11-20').includes('pal:blackfriday') &&
+      !at('2026-11-20').includes('pal:holly') && at('2026-12-25').includes('pal:holly'), '패스: 칸은 그 시즌이 열린 날부터');
+    console.assert(themeCss({ accent: '#f5ca47', bg: '#131316', ink: '#e4e4e7', dark: true }).includes(':root[data-night]{--bg:#131316') &&
+      !themeCss({ bg: '#131316', ink: '#e4e4e7', dark: true }).includes(':root:not([data-night]){--bg'), '스타일: 어두운 팔레트는 바탕을 밤에만 깐다');
   });
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');

@@ -21,7 +21,7 @@ const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID,
 const EYE = 'oklch(from var(--buddy-eye, var(--buddy-ink, var(--block))) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
 const STEM_D = 'M-15 -72C-13 -96 -22 -114 -31 -124L-17 -133C-3 -120 10 -98 15 -72Q8 -65 0 -69Q-8 -65 -15 -72Z';
 
-const { ITEMS, parseItem, SLOTS, FINISH_BY_ID, finishImg, REGION_BY_SHAPE, FIT } = await import(new URL('items.js' + new URL(import.meta.url).search, import.meta.url).href);
+const { ITEMS, parseItem, SLOTS, FINISH_BY_ID, finishImg, REGION_BY_SHAPE, SEASON_SHAPE_BY_ID, FIT } = await import(new URL('items.js' + new URL(import.meta.url).search, import.meta.url).href);
 
 export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS, items: ITEMS };
 
@@ -196,7 +196,8 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
   const hasStem = (id, g) => id === 'citrouille' || !!(g && g.stem);
   /* 구 모양(gu-*)은 실제 경계에서 찍은 반지름이라 생성 모양과 같은 길(genProfile)로 넣는다 */
   const radiiOf = (id, g) => (id === 'gen' && g ? genProfile(g) : null) ?? SHAPE_BY_ID.get(id)?.radii ??
-    (REGION_BY_SHAPE.has(id) ? genProfile({ radii: REGION_BY_SHAPE.get(id).radii }) : null) ?? (g ? genProfile(g) : null);
+    (REGION_BY_SHAPE.has(id) ? genProfile({ radii: REGION_BY_SHAPE.get(id).radii }) : null) ??
+    (SEASON_SHAPE_BY_ID.has(id) ? genProfile({ radii: SEASON_SHAPE_BY_ID.get(id).radii }) : null) ?? (g ? genProfile(g) : null);
   const exprOf = id => EXPRESSION_BY_ID.get(id) ?? null;
   /* 호박 꼭지는 모자를 쓰면 숨는다 — 모자 밑으로 삐져나온다 */
   let stemOf = hasStem(shape, gen);
