@@ -66,12 +66,6 @@ function leaveOut() {
   dispatchEvent(new Event('rt-tab-swap'));
   dispatchEvent(new Event('rt-auth-out'));
   if (location.hash === '#account') history.replaceState(null, '', location.pathname + location.search);
-  /* 홈에서 나가면 로그인되지 않은 입장인 소개 화면으로.
-     호출: ranked.js 가 account/account.js 를 처음 열 때 싣는다. 지우는 키는 rt.token. */
-  let framed = false;
-  try { framed = window.top !== window.self; } catch { framed = true; }
-  const home = location.pathname === '/' || location.pathname === '/index.html';
-  if (home && !framed) { location.replace('/landing/' + location.search); return; }
   if (!(window.softReload && softReload('auth'))) location.replace(location.pathname + location.search);
 }
 

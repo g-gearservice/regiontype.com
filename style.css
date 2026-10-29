@@ -2337,7 +2337,10 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   #tabBar > :nth-child(4){view-transition-name:tab-3}
   #tabBar > :nth-child(5){view-transition-name:tab-4}
   #signinLink{view-transition-name:tab-acc}
-  ::view-transition-group(tabind){animation-duration:.28s;animation-timing-function:var(--ease-out)}
+  /* 약한 스프링(감쇠비 .62, 넘침 약 8%) — 판이 새 칸을 살짝 지나쳤다 앉고, 들어오는 화면도 같은 곡선으로
+     자리에 앉는다. 나가는 화면은 흐려질 뿐이라 ease-out 그대로. opacity·blur 는 1·0 에서 잘려 넘치지 않는다 */
+  :root{--spring:linear(0,.102,.323,.566,.776,.93,1.026,1.072,1.084,1.074,1.056,1.035,1.018,1.005,.998,.994,.993,.994,.995,.997,.999,1,1)}
+  ::view-transition-group(tabind){animation-duration:.42s;animation-timing-function:var(--spring)}
   :root[data-tab-swap] #courseBtns{view-transition-name:bitmap}
   :root[data-tab-swap]{--si-dur:0s}
   /* 나가는 화면은 어느 탭이든 지도처럼 제자리에서 흐려지며 사라진다. 들어오는 화면만 가는 쪽에서
@@ -2345,7 +2348,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
      새 문서의 CSS 가 칠하고, 부드러운 새로고침은 새 문서가 data-soft 를 먼저 걸어 여기서 빠진다 */
   :root[data-tab-swap]::view-transition-old(root),
   :root:not([data-soft])::view-transition-old(root){animation:bm-out .28s var(--ease-out) both}
-  :root[data-tab-swap]::view-transition-new(root){animation:tab-in .28s var(--ease-out) both}
+  :root[data-tab-swap]::view-transition-new(root){animation:tab-in .42s var(--spring) both}
   :root:not([data-soft],[data-tab-swap])::view-transition-new(root){animation:bm-in .28s var(--ease-out) both}
   :root[data-tab-swap]::view-transition-group(bitmap){animation:none}
   :root[data-tab-swap]::view-transition-old(bitmap){animation:bm-out .28s var(--ease-out) both}

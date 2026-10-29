@@ -1067,7 +1067,8 @@ function wireStyles() {
 /* ── 도우미 봇 ───────────────────────────────────────────
    Grok 봇은 홈의 도우미고, 로고 안에 산다. 나올 때는 로고 점이 로고를 채우고 그 뒤에서
    걸어 나온다(emerge).
-   가입하고 처음 홈에 오면(auth.js 가 새 계정에만 rt.rescue 를 남긴다) 넵바만 두고 홈을
+   처음 온 사람이나 가입하고 처음 홈에 오면(rt.rescue — auth.js 가 새 계정에, RT_BOOT_PLACE 가
+   첫 방문에 남긴다) 넵바만 두고 홈을
    어둡게 덮은 채 채워진 로고 뒤에서 꺼내 달라고 조른다. 로고를 끌어내리거나 누르면
    (키보드는 로고에서 ↓) 나와서 화면 오른쪽에서부터 한 번만 둘러보기를 한다.
    로그인하고 돌아온 홈에서는(auth.js 가 rt.greet 를 남긴다) 먼저 나와 인사하고 로고로
@@ -2671,15 +2672,20 @@ window.RT_BOOT_BOT = async () => {
 };
 window.RT_BOOT_PLACE = async () => {
   if (!regionsOn()) return;
+  /* 처음 온 사람(본 릴리스 표 rt.seenRel 이 아직 없다 — app.js 가 BOOTED 뒤에 남긴다)도
+     가입한 새 계정처럼 꺼내 달라고 조른다. 다 꺼낼 때까지(endIntro) 새로고침해도 다시 조른다 */
   let rescue = false;
-  try { rescue = !!localStorage.getItem(RESCUE_KEY); } catch {}
+  try {
+    if (!localStorage.getItem('rt.seenRel') && !localStorage.getItem('rt.seenVer')) localStorage.setItem(RESCUE_KEY, '1');
+    rescue = !!localStorage.getItem(RESCUE_KEY);
+  } catch {}
   let greet = false;
   try { greet = !!localStorage.getItem(GREET_KEY); localStorage.removeItem(GREET_KEY); } catch {}
   /* 폰이 아니면 예전처럼 들어올 때마다 봇이 나와 있다 — 한 탭(세션)에 한 번 인사하고, 그 뒤엔 귀퉁이에서 잔다 */
   if (!phone()) {
     try { greet = greet || !sessionStorage.getItem(GREETED_KEY); sessionStorage.setItem(GREETED_KEY, '1'); } catch {}
   }
-  if (rescue && token()) bootAct = 'rescue';
+  if (rescue) bootAct = 'rescue';
   else if (greet) bootAct = 'greet';
   else if (!phone()) await summon().then(sleep);
 };
