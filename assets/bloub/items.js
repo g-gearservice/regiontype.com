@@ -177,6 +177,18 @@ const BIG = { 1: 'pal:pumpkin', 5: 'pal:candycorn', 10: 'pal:ghost', 12: 'pal:ba
   70: 'pal:potion', 75: 'pal:blackcat', 80: 'pal:lantern', 85: 'pal:harvestmoon', 90: 'pal:vampire', 95: 'pal:bloodmoon',
   100: 'gu-seoul' };
 export const PASS_LEVELS = 100, FREE = 2;
+/* XP — 끝낸 판마다 game(경쟁전은 ranked), 하루 day 까지. level 만큼 쌓이면 한 레벨.
+   ponytail: 서버가 세기 전(PLAN-pass M3)이라 이 기기(rt.pass: { pass, xp, day, today })에 쌓는다. 서버가 오면 그 값을 받는다 */
+export const PASS_ID = 'halloween-1';
+export const PASS_XP = { game: 20, ranked: 30, level: 100, day: 300 };
+export const passLevel = xp => Math.min(PASS_LEVELS, Math.floor((+xp || 0) / PASS_XP.level));
+/* rt.pass 한 칸에 판 하나의 XP 를 더한 새 값. 다른 패스의 값이면 0 에서, 날이 바뀌면 하루치를 새로 센다 */
+export function gainXp(st, ranked, today) {
+  st = st && st.pass === PASS_ID ? st : { pass: PASS_ID, xp: 0 };
+  const used = st.day === today ? st.today || 0 : 0;
+  const add = Math.max(0, Math.min(ranked ? PASS_XP.ranked : PASS_XP.game, PASS_XP.day - used));
+  return { pass: PASS_ID, xp: (st.xp || 0) + add, day: today, today: used + add, add };
+}
 export const PASS = (() => {
   const out = [], open = [], used = new Map();
   const gus = REGIONS.filter(r => r.id !== 'seoul').map(r => `gu-${r.id}`);

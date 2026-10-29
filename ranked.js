@@ -431,11 +431,28 @@ const curTheme = () => { try { return JSON.parse(localStorage.getItem('rt.theme'
 const sameStyle = (a, b) => THEME.every(k => (a[k.key] || '') === (b[k.key] || ''));
 /* 패스 표는 buddy.js 가 이미 부르는 모듈이라 같은 주소(?v=)로 한 번만 받는다 */
 const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI).href);
-/* 가진 팔레트 — [{ ref, palette }].
-   ponytail: 서버가 패스 레벨을 세기 전(PLAN-pass M3)이라 무료(free) 칸만 가진다. 레벨이 오면 p.level <= 내 레벨을 더한다 */
+/* 가진 팔레트 — [{ ref, palette }]. 무료(free) 칸과 내 패스 레벨까지의 칸.
+   레벨은 이 기기의 rt.pass XP 에서 센다(items.js 의 passLevel) */
 let owned = [];
-passKit.then(({ PASS, parseReward }) => {
-  owned = PASS.filter(p => p.free).map(p => ({ ref: p.reward, palette: parseReward(p.reward).palette }));
+const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
+function countOwned({ PASS, PASS_ID, parseReward, passLevel }) {
+  const st = readPass(), lv = st && st.pass === PASS_ID ? passLevel(st.xp) : 0;
+  owned = PASS.filter(p => p.reward.startsWith('pal:') && (p.free || p.level <= lv)).map(p => ({ ref: p.reward, palette: parseReward(p.reward).palette }));
+}
+/* 리전 패스 XP — 끝낸 판마다(나간 판은 finish 에 닿지 않는다). 로그인한 계정만. 결과 칸에 +XP 와 레벨을 적는다 */
+addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
+  const line = $('#rPass');
+  line.textContent = '';
+  if (!token()) return;
+  const before = readPass(), was = before && before.pass === kit.PASS_ID ? kit.passLevel(before.xp) : 0;
+  const { add, ...st } = kit.gainXp(before, !!g.ranked, new Date().toLocaleDateString('sv'));
+  try { localStorage.setItem('rt.pass', JSON.stringify(st)); } catch { return; }
+  const lv = kit.passLevel(st.xp);
+  countOwned(kit);
+  line.textContent = add ? t(lv > was ? 'passGainUp' : 'passGain', { xp: add, lv }) : t('passCapped');
+}));
+passKit.then(kit => {
+  countOwned(kit);
   /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
   if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
@@ -2499,8 +2516,15 @@ if (location.search.includes('rt=1')) {
   console.assert(themeCss({ bg: '#ffffff' }).startsWith(':root:not([data-night]){--bg:#ffffff') && themeCss({}) === '', '스타일: 밤엔 낮 바탕을 깔지 않는다');
   console.assert(Object.keys(pickTheme({ accent: '#123456', bad: '#ffffff', block: 'red' })).join() === 'accent', '스타일: 표 밖·틀린 값은 버린다');
   console.assert(!$('#styPick') && !$('#stySug') && !$('#stySave'), '스타일: 색을 직접 고르는 칸은 없다');
-  passKit.then(({ PASS, parseReward }) => console.assert(PASS.filter(p => p.reward.startsWith('pal:')).every(p => !themeLow(pickTheme(parseReward(p.reward).palette)).length) && owned.length === 2,
-    '스타일: 패스 팔레트는 모두 대비를 지키고, 지금은 무료 둘을 가진다'));
+  passKit.then(({ PASS, parseReward, gainXp, passLevel, PASS_XP }) => {
+    console.assert(PASS.filter(p => p.reward.startsWith('pal:')).every(p => !themeLow(pickTheme(parseReward(p.reward).palette)).length) && owned.length >= 2,
+      '스타일: 패스 팔레트는 모두 대비를 지키고, 무료 둘은 늘 가진다');
+    let st = null;
+    for (let i = 0; i < 40; i++) st = gainXp(st, i % 2, 'd1');
+    console.assert(st.xp === PASS_XP.day && gainXp(st, 0, 'd1').add === 0 && gainXp(st, 1, 'd2').add === PASS_XP.ranked && passLevel(1e9) === 100,
+      '패스: 하루 상한 · 날이 바뀌면 다시 · 100레벨에서 멈춘다');
+    console.assert(gainXp({ pass: 'old', xp: 5000 }, 0, 'd1').xp === PASS_XP.game, '패스: 다른 패스의 XP 는 넘어오지 않는다');
+  });
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
   console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked'), '모드 고르기: 일반전·경쟁전');

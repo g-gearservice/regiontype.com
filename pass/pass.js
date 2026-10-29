@@ -1,5 +1,6 @@
 /* 리전 패스 — 보상 표(assets/bloub/items.js 의 PASS)를 늘어놓고, 고른 레벨의 보상을 미리 본다 —
-   팔레트는 이 페이지 색을 그 팔레트로, 구 모양은 내 봇의 몸을 그 구로. 진행(레벨·XP)은 서버가 셀 몫이라(PLAN-pass.md M3) 아직은 0 에서 잠겨 있다.
+   팔레트는 이 페이지 색과 작은 서울 지도로, 구 모양은 내 봇의 몸으로.
+   진행(레벨·XP)은 서버가 세기 전(PLAN-pass.md M3)이라 이 기기의 rt.pass 를 읽는다(쌓는 것은 ranked.js).
    화면 말은 community.js 와 같은 길로 고른다(rt.ui 팩 → 없으면 data/i18n.json). */
 const opt = (() => { try { return JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch { return {}; } })();
 document.documentElement.toggleAttribute('data-night', !!opt.night);
@@ -8,7 +9,7 @@ document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
 const SEARCH = new URL(import.meta.url).search;
 const VER = new URLSearchParams(SEARCH).get('v') || '';
 const { mountBuddy, anchorOf, TABLES } = await import('../assets/bloub/buddy.js' + SEARCH);
-const { PASS, PASS_LEVELS, FREE, ITEMS, COLOURS, FINISHES, REGIONS, PALETTE_FAMILIES, parseReward, finishImg } = await import('../assets/bloub/items.js' + SEARCH);
+const { PASS, PASS_LEVELS, PASS_ID, PASS_XP, passLevel, FREE, ITEMS, COLOURS, FINISHES, REGIONS, PALETTE_FAMILIES, parseReward, finishImg } = await import('../assets/bloub/items.js' + SEARCH);
 
 let I18N = { ko: {} }, LANG = 'ko';
 const t = (key, vars) => {
@@ -19,7 +20,7 @@ const t = (key, vars) => {
 let ui = null;
 try { ui = JSON.parse(localStorage.getItem('rt.ui') || 'null'); } catch {}
 /* 홈이 남긴 팩이 패스보다 옛것이면(새 마감 이름이 없으면) 표 전체를 받는다 */
-if (ui && ui.pack && ui.pack.passLead && PALETTE_FAMILIES.every(f => ui.pack['pal_' + f.id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
+if (ui && ui.pack && ui.pack.passXpLeft && PALETTE_FAMILIES.every(f => ui.pack['pal_' + f.id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
 else {
   try { I18N = await (await fetch('../data/i18n.json?v=' + VER)).json(); } catch {}
   const langs = Object.keys(I18N);
@@ -72,14 +73,19 @@ function swatch(got) {
   return chip;
 }
 
-/* 로그인 줄 — 홈이 남긴 이름을 쓴다. 진행은 아직 서버가 없어 0 이다 */
+/* 로그인 줄 — 홈이 남긴 이름을 쓴다 */
 const signed = (() => { try { return !!localStorage.getItem('rt.token'); } catch { return false; } })();
 if (signed) {
   const me = $('#me');
   me.textContent = (() => { try { return localStorage.getItem('rt.name') || ''; } catch { return ''; } })() || t('passAccount');
   me.href = '/account/';
 }
-const level = 0;
+const pass = (() => { try { const v = JSON.parse(localStorage.getItem('rt.pass') || 'null'); return v && v.pass === PASS_ID ? v : null; } catch { return null; } })();
+const xp = pass ? pass.xp : 0, level = passLevel(xp);
+$('#xp').max = PASS_XP.level;
+$('#xp').value = level >= PASS_LEVELS ? PASS_XP.level : xp % PASS_XP.level;
+$('#xpNum').textContent = level >= PASS_LEVELS ? '' : t('passXpLeft', { xp: PASS_XP.level - xp % PASS_XP.level });
+if (!signed) $('#note').textContent = t('passSignIn');
 const owns = p => !!p.free || p.level <= level;
 $('#lv').textContent = level;
 
@@ -115,10 +121,33 @@ function choose(i, focus) {
   btns.forEach((b, j) => { b.tabIndex = j === i ? 0 : -1; b.setAttribute('aria-pressed', String(j === i)); });
   if (focus) btns[i].focus();
   const p = PASS[i], got = parseReward(p.reward);
-  /* 한 번에 하나만 입어 본다. 구 모양을 고르면 몸이 그 구로, 팔레트를 고르면 페이지 색이 그 팔레트로 */
+  /* 한 번에 하나만 입어 본다. 구 모양을 고르면 몸이 그 구로, 팔레트를 고르면 페이지 색·지도·봇 색이 그 팔레트로
+     (봇은 강조색을 입는다 — 내 봇이 다른 색이면 팔레트가 안 보이니까) */
   bot.setShape(got.kind === 'shape' ? p.reward : face.shape || 'cercle', got.kind === 'shape' ? null : face.gen);
-  paint(got.kind === 'palette' ? got.palette : null);
+  const pal = got.kind === 'palette' ? got.palette : null;
+  paint(pal);
+  bot.setColour(pal ? 'accent' : face.colour || 'accent');
+  $('#psMap').hidden = !pal;
+  if (pal) drawMap(pal);
   $('#pick').textContent = `Lv ${p.level} · ${name(p.reward)} — ${!owns(p) ? t('passLocked') : t(p.free ? 'passFree' : 'passOwned')}`;
+}
+/* 작은 서울 지도 — 서울 윤곽(REGIONS 의 seoul, 반지름 64개) 안에 홈 지도처럼 점을 깐다. 바탕은 팔레트 바탕,
+   점은 칸색, 몇 점은 강조색(먹은 칸), 이름은 글자색. 밤에도 팔레트 그대로 보인다 — 견본이니까 */
+const SEOUL = REGIONS.find(r => r.id === 'seoul').radii;
+const inSeoul = (x, y) => {
+  const a = (Math.atan2(y, x) / (Math.PI * 2) + 1) % 1 * SEOUL.length, i = Math.floor(a), f = a - i;
+  return Math.hypot(x, y) < SEOUL[i] * (1 - f) + SEOUL[(i + 1) % SEOUL.length] * f;
+};
+const DOTS = [];
+for (let y = -1.3; y <= 1.3; y += .13) for (let x = -1.3; x <= 1.3; x += .13) if (inSeoul(x, y)) DOTS.push([x, y]);
+function drawMap(pal) {
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '-1.5 -1.5 3 3');
+  const mk = (tag, at) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); svg.append(e); return e; };
+  mk('rect', { x: -1.5, y: -1.5, width: 3, height: 3, rx: .3, fill: pal.bg });
+  DOTS.forEach(([x, y], i) => mk('circle', { cx: x.toFixed(3), cy: y.toFixed(3), r: .052, fill: i % 9 === 4 ? pal.accent : pal.block }));
+  mk('text', { x: 0, y: 1.38, 'text-anchor': 'middle', 'font-size': .22, 'font-weight': 800, fill: pal.ink }).textContent = name('pal:' + pal.id);
+  $('#psMap').replaceChildren(svg);
 }
 /* 팔레트 미리 보기 — 홈의 THEME(ranked.js)과 같은 넷을 :root 에 얹는다. 바탕·글자는 낮에만(밤엔 사이트 밤 값) */
 function paint(pal) {
@@ -140,8 +169,10 @@ track.addEventListener('keydown', e => {
   choose(n, true);
   btns[n].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: calm() ? 'auto' : 'smooth' });
 });
-$('#off').addEventListener('click', () => { paint(null); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
-choose(0);
+$('#off').addEventListener('click', () => { paint(null); $('#psMap').hidden = true; bot.setColour(face.colour || 'accent'); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
+/* 처음엔 다음에 받을 칸을 고른다(다 받았으면 마지막) */
+choose(Math.min(level, PASS_LEVELS - 1));
+btns[cur].scrollIntoView({ block: 'nearest', inline: 'center' });
 
 /* ── ?rt=1 자체검사 ──────────────────────────────────── */
 if (new URLSearchParams(location.search).get('rt') === '1') {
