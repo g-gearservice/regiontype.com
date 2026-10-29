@@ -29,15 +29,5 @@
 /beta/style  /beta/style/           301
 /landing/  /landing/index.html  200
 /landing   /landing/           301
-/landing/proto/1/  /landing/proto/1/index.html  200
-/landing/proto/1   /landing/proto/1/            301
-/landing/proto/2/  /landing/proto/2/index.html  200
-/landing/proto/2   /landing/proto/2/            301
-/landing/proto/3/  /landing/proto/3/index.html  200
-/landing/proto/3   /landing/proto/3/            301
-/landing/proto/4/  /landing/proto/4/index.html  200
-/landing/proto/4   /landing/proto/4/            301
-/landing/proto/5/  /landing/proto/5/index.html  200
-/landing/proto/5   /landing/proto/5/            301
-/landing/proto/6/  /landing/proto/6/index.html  200
-/landing/proto/6   /landing/proto/6/            301
+/landing/paper/  /landing/paper/index.html  200
+/landing/paper   /landing/paper/            301
