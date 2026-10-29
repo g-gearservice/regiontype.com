@@ -22,6 +22,6 @@ A release is `vA.B.C`. A (large change) and B (small change) are chosen by hand 
 
 ### Version for Agents
 
-A pull request opened directly by a bot uses `agent-static-0.0.N` instead of `static-A.B.C`. N is the number of `agent-static-*` pull requests opened so far, plus one. `0.0` stays fixed whatever `VER` is; only N grows. Never mix it with a hand-chosen `static-A.B.C`.
+A pull request opened directly by a bot uses `agent-static-A.B.C` instead of `static-A.B.C`, where A.B.C is the release it ships (`REL`). Branch, pull request title, commit prefix and `REL` carry the same version (`agent-static-1.4.0` ↔ `v1.4.0`). One release per pull request; `VER` never goes in a branch name. Never mix it with a hand-chosen `static-A.B.C`.
 
 Cursor also loads `.cursor/rules/commits-and-docs.mdc` on every session.

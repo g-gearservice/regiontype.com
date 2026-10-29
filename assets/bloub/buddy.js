@@ -18,10 +18,75 @@ const { BotEngine, DEMI_VIEWBOX: VB, SHAPE_BY_ID, EXPRESSION_BY_ID, COLOR_BY_ID,
 
 /* 고를 수 있는 것의 목록. 부르는 쪽이 engine.js 를 따로 부르지 않게 여기서 건넨다 —
    두 번 부르면 판이 갈려(한쪽만 ?v=) 같은 사고가 다시 난다. */
-const EYE = 'oklch(from var(--buddy-ink, var(--block)) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
+const EYE = 'oklch(from var(--buddy-eye, var(--buddy-ink, var(--block))) clamp(.2, (.62 - l) * 1000, .98) calc(c * .25) h)';
 const STEM_D = 'M-15 -72C-13 -96 -22 -114 -31 -124L-17 -133C-3 -120 10 -98 15 -72Q8 -65 0 -69Q-8 -65 -15 -72Z';
 
-export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS };
+const { ITEMS, parseItem, SLOTS, FINISH_BY_ID, finishImg, REGION_BY_SHAPE, FIT } = await import(new URL('items.js' + new URL(import.meta.url).search, import.meta.url).href);
+
+export const TABLES = { shapes: SHAPES, expressions: EXPRESSIONS, colours: COLORS, items: ITEMS };
+
+/* 몸 윤곽(engine 의 bodyPath: M 한 점 + C 세 점씩)에서 곡선 위의 점만 골라 꾸미기의 닻을 낸다.
+   back 은 한가운데. hat 은 진짜 모자처럼 앉힌다 — 정수리에서 아래로 내려가며 몸 가로가 챙(brim)만큼
+   넓어지는 첫 높이에 얹는다. 둥근 머리는 거의 정수리에, 물방울·삼각형처럼 뾰족한 머리는 뿔이 모자
+   속으로 들어갈 만큼 내려앉는다. 다만 눈(floor)을 덮지 않게, 그리고 몸 키의 45% 아래로는 내려가지
+   않게 멈춘다. brim 0 은 꼭짓점에 꽂히는 것(핀·새싹)이나 떠 있는 것(후광)이다.
+   k 는 몸 폭에 맞춘 배율(지름 200 = 1) — 너무 좁거나 넓은 모양에서 모자가 따로 놀지 않게 묶어 둔다 */
+function outline(d) {
+  const n = String(d).match(/-?[\d.]+/g)?.map(Number) || [], p = [];
+  for (let i = 0; i + 1 < n.length; i += i ? 6 : 2) {
+    const j = i ? i + 4 : 0;
+    if (n[j] === undefined || n[j + 1] === undefined) break;
+    p.push({ x: n[j], y: n[j + 1] });
+  }
+  return p;
+}
+/* 높이 y 에서 몸을 가로지르는 [왼, 오]. 없으면 null */
+function span(p, y) {
+  let a = Infinity, b = -Infinity;
+  for (let i = 0; i < p.length; i++) {
+    const q = p[i], r = p[(i + 1) % p.length];
+    if ((q.y - y) * (r.y - y) > 0 || q.y === r.y) continue;
+    const x = q.x + (r.x - q.x) * (y - q.y) / (r.y - q.y);
+    a = Math.min(a, x); b = Math.max(b, x);
+  }
+  return a < b ? [a, b] : null;
+}
+export function anchorOf(d, { brim = 0, sink = 0, cover = 0, floor = Infinity } = {}) {
+  const p = outline(d);
+  if (!p.length) return null;
+  let top = p[0], x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const q of p) {
+    if (q.y < top.y) top = q;
+    x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y);
+  }
+  const k = Math.min(1.1, Math.max(0.95, (x1 - x0) / 200));
+  /* 평평한 머리(육각·둥근네모)는 가장 높은 점이 모서리라 그 줄의 가운데에 꽂는다 */
+  const crest = span(p, top.y + 3);
+  let hat = { x: crest ? (crest[0] + crest[1]) / 2 : top.x, y: top.y, k, sy: 1 };
+  if (brim > 0) {
+    /* 늘려서도 못 덮을 만큼은 내려가지 않는다 — 뿔이 모자를 뚫고 나오느니 챙이 몸 밖으로 조금 나오는 게 낫다 */
+    const reach = cover ? cover * k * 1.8 - 6 : Infinity;
+    const need = brim * k, stop = Math.max(top.y, Math.min(floor - sink * k, top.y + (y1 - y0) * .45, top.y + reach));
+    let y = top.y, s = null;
+    for (; y < stop; y += 2) if ((s = span(p, y)) && (s[1] - s[0]) / 2 >= need) break;
+    y = Math.min(y, stop);
+    s = span(p, y) || s;
+    /* 뾰족한 머리(물방울)는 앉은 자리 위로 뿔이 남는다 — 모자를 위로 늘려 뿔을 덮는다(cover 는 모자가
+       가운데에서 덮는 높이). 1.8 배까지만: 더 늘면 모자가 아니라 고깔이다 */
+    const sy = cover ? Math.min(1.8, Math.max(1, (y - top.y + 4) / (cover * k))) : 1;
+    hat = { x: s ? (s[0] + s[1]) / 2 : top.x, y, k, sy };
+  }
+  return { hat, back: { x: (x0 + x1) / 2, y: (y0 + y1) / 2, k } };
+}
+/* 눈 구멍 윗선 — 모자가 이 아래로 내려오면 안 된다. 눈이 없으면(잠·숨김) Infinity */
+function eyeTop(eyes) {
+  let top = Infinity;
+  for (const e of eyes) {
+    const [mx, my, r] = e.d.match(/-?[\d.]+/g).map(Number), m = e.matrix.match(/-?[\d.]+/g).map(Number);
+    top = Math.min(top, m[5] - (r - my) * Math.abs(m[3]) - 4);
+  }
+  return top;
+}
 
 const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs) => {
@@ -33,7 +98,7 @@ const el = (tag, attrs) => {
 /* calm  — 움직임을 줄인 사람. 시계도 시선도 멈춘다(사람의 뜻이다).
    still — 시계만 안 돈다. 견본처럼 여럿 띄우는 놈이 제 숨을 쉬느라 프레임을 먹지
            않게 하는 것뿐이라, 시선은 부르는 쪽이 한 바퀴에 한 장씩 그려 따라본다. */
-export function mountBuddy(host, { calm = () => false, still = false, shape = null, expression = null, gen = null } = {}) {
+export function mountBuddy(host, { calm = () => false, still = false, shape = null, expression = null, gen = null, wear = null } = {}) {
   const uid = 'buddy-' + Math.random().toString(36).slice(2, 8);
   const svg = el('svg', { viewBox: `${-VB} ${-VB} ${VB * 2} ${VB * 2}`, 'aria-hidden': 'true' });
   svg.classList.add('buddy');
@@ -58,7 +123,9 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
   inked.append(inkRect);
   const stem = el('path', { class: 'buddy-stem', d: STEM_D, fill: '#424245' });
   const body = el('g');
-  body.append(paper, inked, stem);
+  /* 꾸미기 슬롯. back 은 몸 바탕보다 아래, hat 은 몸 위에 얹힌다. 자리는 draw() 가 매 프레임 옮긴다 */
+  const slot = Object.fromEntries(SLOTS.map(k => [k, el('g', { class: 'buddy-' + k })]));
+  body.append(slot.back, paper, inked, stem, slot.hat);
   svg.append(defs, body);
   host.append(svg);
 
@@ -67,9 +134,13 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
      엔진 내부 표를 알 필요가 없다. 모르는 id 는 null(기본 모습)로 떨어진다.
      생성 모양(gen)이 함께 오면 그 레시피로 64개 반지름을 빚어 넣는다 */
   const hasStem = (id, g) => id === 'citrouille' || !!(g && g.stem);
-  const radiiOf = (id, g) => (id === 'gen' && g ? genProfile(g) : null) ?? SHAPE_BY_ID.get(id)?.radii ?? (g ? genProfile(g) : null);
+  /* 구 모양(gu-*)은 실제 경계에서 찍은 반지름이라 생성 모양과 같은 길(genProfile)로 넣는다 */
+  const radiiOf = (id, g) => (id === 'gen' && g ? genProfile(g) : null) ?? SHAPE_BY_ID.get(id)?.radii ??
+    (REGION_BY_SHAPE.has(id) ? genProfile({ radii: REGION_BY_SHAPE.get(id).radii }) : null) ?? (g ? genProfile(g) : null);
   const exprOf = id => EXPRESSION_BY_ID.get(id) ?? null;
-  stem.style.display = hasStem(shape, gen) ? '' : 'none';
+  /* 호박 꼭지는 모자를 쓰면 숨는다 — 모자 밑으로 삐져나온다 */
+  let stemOf = hasStem(shape, gen);
+  const paintStem = () => { stem.style.display = stemOf && !worn.hat ? '' : 'none'; };
   const engine = new BotEngine(100, 'idle', radiiOf(shape, gen), exprOf(expression));
   let raf = 0, t0 = 0;
   /* 잠들기(doze). 엔진의 졸린 눈(somnolent)과 같은 수 — 눈꺼풀은 깜빡임처럼 open 으로
@@ -142,11 +213,70 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     return 'M' + pts.join('L') + 'Z';
   }
 
+  /* 슬롯마다 아이템 하나. tint 칸은 고른 색(없으면 아이템 기본색)으로 칠한다 */
+  const worn = {};
+  let shapeId = shape;
+  function dress(w) {
+    for (const k of SLOTS) {
+      const g = slot[k], got = parseItem(w?.[k]);
+      g.replaceChildren();
+      worn[k] = got && got.item.slot === k ? got.item : null;
+      if (!worn[k]) continue;
+      const tint = COLOR_BY_ID.get(got.colour)?.hex || '#a3a3a3';
+      for (const p of got.item.parts) g.append(el('path', { d: p.d, fill: p.fill === 'tint' ? tint : p.fill, 'fill-rule': p.rule || 'nonzero' }));
+    }
+  }
+  /* 몸 마감(fin). 몸 색 칸(inkRect)을 무늬·그라데이션으로 바꾼다. 마감을 벗으면 고른 색으로 돌아온다 */
+  let ink = 'var(--buddy-ink, var(--block))', finish = null;
+  function paintInk() {
+    defs.querySelector('.buddy-fin')?.remove();
+    const f = FINISH_BY_ID.get(finish);
+    svg.style.removeProperty('--buddy-eye');
+    if (!f) { inkRect.setAttribute('fill', ink); return; }
+    const id = uid + '-fin';
+    let paint;
+    if (f.grad) {
+      const a = (f.grad.angle ?? 90) * Math.PI / 180;
+      paint = el('linearGradient', { id, x1: .5 - Math.cos(a) / 2, y1: .5 - Math.sin(a) / 2, x2: .5 + Math.cos(a) / 2, y2: .5 + Math.sin(a) / 2 });
+      f.grad.stops.forEach((c, i, all) => paint.append(el('stop', { offset: i / (all.length - 1), 'stop-color': c })));
+    } else if (f.img) {
+      /* 그림 한 장을 보기 칸 전체에 깐다 — 몸이 숨쉬고 바뀌어도 그림은 제자리다 */
+      paint = el('pattern', { id, patternUnits: 'userSpaceOnUse', x: -VB, y: -VB, width: VB * 2, height: VB * 2 });
+      paint.append(el('rect', { width: VB * 2, height: VB * 2, fill: f.bg }),
+        el('image', { href: finishImg(f), width: VB * 2, height: VB * 2, preserveAspectRatio: 'xMidYMid slice' }));
+    } else {
+      const { size, bg, rot, parts } = f.pat;
+      paint = el('pattern', { id, patternUnits: 'userSpaceOnUse', width: size, height: size, ...(rot ? { patternTransform: `rotate(${rot})` } : {}) });
+      const back = el('rect', { width: size, height: size });
+      back.style.fill = bg === 'ink' ? ink : bg;
+      paint.append(back, ...parts.map(q => el('path', { d: q.d, fill: q.fill })));
+    }
+    paint.classList.add('buddy-fin');
+    defs.append(paint);
+    inkRect.setAttribute('fill', `url(#${id})`);
+    /* 눈 빛깔은 --buddy-ink 에서 딴다 — 그라데이션은 대표색으로 대신 잰다 */
+    if (f.eye || f.bg) svg.style.setProperty('--buddy-eye', f.eye || f.bg);
+  }
+  dress(wear);
+  paintStem();
+  finish = wear?.finish ? String(wear.finish).replace(/^fin:/, '') : null;
+  if (finish) paintInk();
+
   function draw(now) {
     glideAt(now);
     const f = engine.sample(now);
     maskBody.setAttribute('d', f.bodyPath);
     paper.setAttribute('d', f.bodyPath);
+    if (worn.hat || worn.back) {
+      const a = anchorOf(f.bodyPath, { brim: worn.hat?.brim, sink: worn.hat?.sink, cover: worn.hat?.cover, floor: eyeTop(f.eyes) });
+      /* 모양별 손보기(items.js 의 FIT) — 자동 자리에서 dy 만큼 내리고 k 배 키운다 */
+      const fit = FIT[shapeId]?.[worn.hat?.id] ?? FIT[shapeId]?.['*'] ?? null;
+      if (a && fit) a.hat = { ...a.hat, y: a.hat.y + (fit.dy || 0), k: a.hat.k * (fit.k || 1) };
+      /* 꽂는 것(핀·새싹)은 그림 자체를 키운다 — items.js 의 scale */
+      if (a && worn.hat?.scale) a.hat = { ...a.hat, k: a.hat.k * worn.hat.scale };
+      if (a) for (const k of SLOTS) if (worn[k])
+        slot[k].setAttribute('transform', `translate(${a[k].x.toFixed(1)} ${a[k].y.toFixed(1)}) scale(${a[k].k.toFixed(3)} ${(a[k].k * (a[k].sy || 1)).toFixed(3)})`);
+    }
     body.setAttribute('opacity', f.bodyAlpha);
     const p = shutAtTime(now);
     f.eyes.forEach((eye, i) => {
@@ -237,8 +367,18 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
     /* 고른 모양·표정·색을 갈아 끼운다. 모양과 표정은 엔진이 모프로 넘겨 주므로
        툭 끊기지 않는다. 색은 CSS 변수라 엔진을 거치지 않는다 */
     setShape(id, gen) {
-      stem.style.display = hasStem(id, gen) ? '' : 'none';
+      shapeId = id;
+      stemOf = hasStem(id, gen);
+      paintStem();
       at(now => engine.setShape(radiiOf(id, gen), now));
+    },
+    /* 꾸미기를 갈아 입는다 — { hat: 'crown:rose', back: null } */
+    setWear(w) {
+      dress(w);
+      paintStem();
+      finish = w?.finish ? String(w.finish).replace(/^fin:/, '') : null;
+      paintInk();
+      draw(raf ? clock() : clock() + 1);
     },
     setExpression(id) {
       if (dozing) { awake = exprOf(id); return; }
@@ -249,12 +389,13 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
       if (v) {
         host.style.setProperty('--buddy-ink', v);
         svg.style.setProperty('--buddy-ink', v);
-        inkRect.setAttribute('fill', v);
+        ink = v;
       } else {
         host.style.removeProperty('--buddy-ink');
         svg.style.removeProperty('--buddy-ink');
-        inkRect.setAttribute('fill', 'var(--buddy-ink, var(--block))');
+        ink = 'var(--buddy-ink, var(--block))';
       }
+      paintInk();
       if (!raf) draw(clock() + 1);
     },
     /* 잠들고 깬다. 깰 땐 고른 표정으로 눈을 뜨며 돌아온다. 고른 표정이 없으면(null)

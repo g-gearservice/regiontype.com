@@ -2142,7 +2142,7 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   .sheet-more [href="#ranking"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 19v-5h5v5M9 19V5h6v14M15 19v-8h5v8M3 19h18'/></svg>")}
   .sheet-more [href="#records"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M3.5 12a8.5 8.5 0 1 0 2.5-6'/><path d='M3 4v4h4M12 8v4.5l3 2'/></svg>")}
   .sheet-more [href="community/"]{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><circle cx='9' cy='8' r='3.2'/><path d='M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.3c1.8.6 3 2.2 3.5 4.7'/></svg>")}
-  .sheet-more #aboutLink{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='9'/><path d='M12 11v6M12 7.5v.1'/></svg>")}
+  .sheet-more #passLink{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'><path d='M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z'/><path d='M14 7v10' stroke-dasharray='2 2'/></svg>")}
 
   /* 구 칸 글자 — 기본 배율에서도 읽히게 크고 굵게, 청록 위에서 날아가지 않게 짙은 테를
      두른다(paint-order 로 글자 뒤에). 고른 칸(주황)은 테도 주황이라 먹 글자만 남는다 */

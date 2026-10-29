@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>리전 패스 — regiontype</title>
+<meta name="description" content="판을 끝낼 때마다 XP 가 쌓이고, 100레벨까지 봇 꾸미기를 받는 regiontype 의 시즌 패스.">
+<link rel="canonical" href="https://regiontype.com/pass/">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=5.45">
+<link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=5.45">
+<link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=5.45">
+<link rel="stylesheet" href="../style.css?v=5.45">
+<link rel="stylesheet" href="pass.css?v=5.45">
+<!-- 패스는 아직 서버가 없다(PLAN-pass.md M3). 지금은 보상 표(assets/bloub/items.js)와 규칙을
+     보여 주고, 고른 레벨의 보상을 내 봇에 미리 씌워 본다 -->
+<script type="module" src="pass.js?v=5.45"></script>
+</head>
+<body>
+
+<svg class="grid-bg" aria-hidden="true">
+  <defs>
+    <pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152">
+      <path d="M152 0 V152 H0"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bitgrid)"/>
+</svg>
+
+<header class="ps-top">
+  <a class="logo" href="/">region<span>type</span><i class="dot" aria-hidden="true"></i></a>
+  <a class="ps-me" id="me" href="/#signin" data-i18n="signinBtn">로그인</a>
+</header>
+
+<main class="ps" id="main">
+  <h1 data-i18n="pass">리전 패스</h1>
+  <p class="ps-lead" data-i18n="passLead">판을 끝낼 때마다 XP 가 쌓이고, 레벨마다 봇 꾸미기를 받습니다.</p>
+
+  <section class="ps-card" aria-labelledby="psNow">
+    <div class="ps-head">
+      <h2 id="psNow" data-i18n="passName">시즌 1 · 패스 1</h2>
+      <span class="ps-state" id="state" data-i18n="passSoon">곧 열림</span>
+    </div>
+    <p class="ps-lv"><b id="lv">0</b> <span>/ 100</span> <span data-i18n="passLevel">레벨</span></p>
+    <progress id="xp" max="100" value="0" data-i18n-aria="passXp" aria-label="다음 레벨까지 XP"></progress>
+    <p class="ps-note" id="note" data-i18n="passNotOpen">패스가 열리면 로그인한 계정으로 판을 끝낼 때마다 XP 가 쌓인다.</p>
+  </section>
+
+  <section class="ps-show" aria-labelledby="psPeek">
+    <div class="ps-bot" id="bot"></div>
+    <div class="ps-peek">
+      <h2 id="psPeek" data-i18n="passPreview">미리 입어 보기</h2>
+      <p class="ps-pick" id="pick" aria-live="polite"></p>
+      <button type="button" class="ps-off" id="off" data-i18n="passTakeOff">벗기</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="psTrack">
+    <h2 id="psTrack" data-i18n="passTrack">보상</h2>
+    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고르면 위의 봇이 입어 본다. ★ 는 새 아이템이다.</p>
+    <ol class="ps-track" id="track" data-i18n-aria="passTrack" aria-label="보상"></ol>
+  </section>
+
+  <section class="ps-rules" aria-labelledby="psHow">
+    <h2 id="psHow" data-i18n="passHow">어떻게 쌓이나</h2>
+    <ul>
+      <li data-i18n="passRule1">시즌은 6개월이다. 시즌이 바뀌면 랭크 레이팅을 새로 잡는다.</li>
+      <li data-i18n="passRule2">패스는 3개월씩, 시즌 하나에 두 번 열린다. 레벨은 100까지.</li>
+      <li data-i18n="passRule3">끝낸 판은 모두 XP 를 준다. 랭크전은 더 준다. 하루에 받는 XP 에는 상한이 있다.</li>
+      <li data-i18n="passRule4">로그인한 계정에만 쌓인다. 중간에 나간 판과 부정 검토 중인 판은 세지 않는다.</li>
+      <li data-i18n="passRule5">보상은 꾸미기뿐이다. 받은 것은 패스가 끝나도 계정에 남는다.</li>
+    </ul>
+  </section>
+</main>
+
+</body>
+</html>
