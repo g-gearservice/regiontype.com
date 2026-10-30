@@ -14,7 +14,7 @@ import hashlib, json, re, subprocess, sys, tempfile, time, urllib.parse, urllib.
 from collections import defaultdict
 from pathlib import Path
 
-from hangul import ja_hangul, kana_roma, latin_hangul, plain, zh_hangul
+from translit import ja_hangul, kana_roma, latin_hangul, plain, transcribe, zh_hangul
 
 HERE = Path(__file__).parent
 CACHE = Path('/tmp/rt-geo/capital')
@@ -366,6 +366,7 @@ def own_label(lang, tags, wd):
     return None
 
 
+SCRIPT_UI = {'ja', 'zh', 'uk', 'bg', 'el', 'ar', 'th'}
 LATIN_UI = {'en', 'de', 'fr', 'es', 'pt', 'it', 'nl', 'pl', 'cs', 'sv', 'nb', 'fi', 'ro', 'hu', 'tr', 'vi', 'id', 'ms'}
 # 한국어 표기 때 이름 끝 한자 단위 → 한국어 단위. 읽기에 붙은 영어 단위 낱말은 뗀다
 KO_UNIT = [('街道', '가도'), ('地区', '지구'), ('区', '구'), ('區', '구'), ('镇', '진'), ('鎮', '진'),
@@ -409,38 +410,47 @@ def latin_reading(src, tags, wd):
     return (wd.get('en') or {}).get('value')
 
 
+def reading(iso, src, name, tags, wd):
+    """생성 표기의 입력 — (읽을 글자열, 읽는 규칙 말) 또는 None. 일본·중국은 로마자 읽기(가나·병음)로,
+    라틴·키릴·그리스 글자는 제 이름을 그 말 규칙으로, 아랍·타이 글자와 인도·필리핀 지명은
+    영어 로마자를 적힌 대로 읽는다."""
+    if src in ('ja', 'zh'):
+        unit_zh = next((zh for zh, _ in KO_UNIT if name.endswith(zh) and len(name) > len(zh)), '')
+        roma = latin_reading(src, tags, wd)
+        if not roma and src == 'zh':   # 영어 이름도 Wikidata 도 없는 베이징 진·향 — 한자에서 병음을 읽는다
+            roma = hanzi_pinyin(name[:len(name) - len(unit_zh)])
+            roma = roma and roma.replace(' ', '')
+        return roma and (EN_UNIT.sub('', roma.strip()), 'phon' if src == 'ja' else 'py')
+    if src in ('ar', 'th') or iso in ('IN', 'PH', 'SA', 'AE', 'EG'):
+        latin = not re.search(r'[^\x00-\x7f\u00c0-\u024f]', name)   # geoBoundaries 카이로는 이름이 이미 로마자
+        roma = latin_reading(src, tags, wd) or (name if latin else None)
+        stem = roma and re.sub(r'(?i)^(khwaeng|khet|kwaeng)\s+', '', EN_UNIT.sub('', roma.strip()))
+        return stem and (stem, 'th' if src == 'th' else 'phon')
+    if src == 'vi':
+        return re.sub(r'^(Phường|Xã|Thị trấn)\s+', '', name), 'vi'
+    if src == 'bg':
+        return re.sub(r'^(Район|ж\.\s?к\.|кв\.|с\.)\s*', '', name), 'bg'
+    return name, 'pb' if iso == 'BR' else src
+
+
 def ko_label(iso, src, name, tags, wd):
-    """한국어 이름이 없는 지명을 외래어 표기법으로 적는다(tools/hangul.py). 못 하면 None.
-    일본·중국은 읽기(가나·병음)로, 라틴·키릴·그리스 글자는 제 이름을 그 말 규칙으로,
-    아랍·타이 글자와 인도·필리핀 지명은 영어 로마자를 적힌 대로 읽는다."""
-    if src not in ('ja', 'zh'):
-        if src in ('ar', 'th') or iso in ('IN', 'PH', 'SA', 'AE', 'EG'):
-            latin = not re.search(r'[^\x00-\x7f\u00c0-\u024f]', name)   # geoBoundaries 카이로는 이름이 이미 로마자
-            roma = latin_reading(src, tags, wd) or (name if latin else None)
-            stem = roma and re.sub(r'(?i)^(khwaeng|khet|kwaeng)\s+', '', EN_UNIT.sub('', roma.strip()))
-            return stem and latin_hangul(stem, 'th' if src == 'th' else 'phon')
-        if src == 'vi':
-            return latin_hangul(re.sub(r'^(Phường|Xã|Thị trấn)\s+', '', name), 'vi')
-        if src == 'bg':
-            unit = '구' if name.startswith('Район ') else ''
-            h = latin_hangul(re.sub(r'^(Район|ж\.\s?к\.|кв\.|с\.)\s*', '', name), 'bg')
-            return h and h + unit
-        return latin_hangul(name, src)
-    roma = latin_reading(src, tags, wd)
-    unit_zh, unit = next(((zh, ko) for zh, ko in KO_UNIT if name.endswith(zh) and len(name) > len(zh)), ('', ''))
-    if not roma and src == 'zh':   # 영어 이름도 Wikidata 도 없는 베이징 진·향 — 한자에서 병음을 읽는다
-        roma = hanzi_pinyin(name[:len(name) - len(unit_zh)])
-    if not roma:
+    """한국어 이름이 없는 지명을 외래어 표기법으로 적는다(tools/translit.py). 못 하면 None.
+    일본·중국은 제 표기 규칙(가나·병음 표)에 한자 단위(区 → 구)를 붙인다."""
+    r = reading(iso, src, name, tags, wd)
+    if not r:
         return None
-    stem = EN_UNIT.sub('', roma.strip())
-    hangul = (ja_hangul if src == 'ja' else zh_hangul)(stem)
+    if src not in ('ja', 'zh'):
+        h = latin_hangul(*r)
+        return h and h + ('구' if src == 'bg' and name.startswith('Район ') else '')
+    unit = next((ko for zh, ko in KO_UNIT if name.endswith(zh) and len(name) > len(zh)), '')
+    hangul = ja_hangul(r[0]) if src == 'ja' else zh_hangul(r[0])
     if not hangul:
         return None
     return hangul + unit if unit and not hangul.endswith(unit) else hangul
 
 
 def shown_label(iso, lang, src, name, tags, wd):
-    """화면 말 lang 으로 보일 이름. 제 말 이름 → (한국어) 표기법 → (라틴 문자 말·그 밖) 영어 이름.
+    """화면 말 lang 으로 보일 이름. 제 말 이름 → (한국어) 표기법 → (제 글자 화면) 그 글자로 생성 → 영어 이름.
     영어도 없으면 None — 코스 이름 그대로 보인다."""
     own = own_label(lang, tags, wd)
     if own:
@@ -449,6 +459,11 @@ def shown_label(iso, lang, src, name, tags, wd):
         return ko_label(iso, src, name, tags, wd)
     if lang in ('ja', 'zh') and src in ('ja', 'zh'):
         return None   # 한자는 한자로 읽힌다
+    if lang in SCRIPT_UI:   # 가나·한자·키릴·그리스·아랍·타이 글자 화면은 그 글자로 적는다
+        r = reading(iso, src, name, tags, wd)
+        made = r and transcribe(*r, lang)
+        if made:
+            return made
     if own_label('en', tags, wd):
         return own_label('en', tags, wd)
     if src == 'zh':   # 영어 이름이 없으면 병음(Xiaotangshan)
