@@ -1,6 +1,9 @@
 /* 리전 패스. 색·간격은 style.css 의 커스텀 프로퍼티에서 딴다. 커뮤니티처럼 문서가 흐르고 스크롤된다 */
 html,body{height:auto}
 body{overflow:auto;overflow-x:hidden}
+/* 격자는 문서에 붙는다 — 글처럼 흐르는 페이지라 스크롤하면 격자도 같이 지나간다(앱 화면은 style.css 대로 고정) */
+body{position:relative}
+.grid-bg{position:absolute;min-height:100dvh}
 [hidden]{display:none !important}
 
 .ps-top,.ps{max-width:880px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative}
@@ -64,6 +67,13 @@ body{overflow:auto;overflow-x:hidden}
 .ps-pic{display:flex;align-items:center;height:72px}
 .ps-bot,.ps-map{width:72px;height:72px;flex:none}
 .ps-bot .buddy,.ps-map svg{width:100%;height:100%;display:block;overflow:visible}
+/* 고를 때 — 먹 채움은 --fast 로 번지고, 그림 자리에 새로 들어앉는 것(봇·지도, 또는 제 칸에 돌아온 견본)은
+   0.94 에서 떠오른다. 들어앉을 때마다 새로 붙는 노드라 @starting-style 이 그때마다 문다. ←→ 로 빠르게 옮겨도
+   전환이라 이어진다. 처음 150칸이 한꺼번에 떠오르지 않게 .is-live(첫 그림 뒤 pass.js 가 붙인다)에서만.
+   토큰(--fast·--slow)은 동작 줄이기·움직임 끔에서 0 이 된다(style.css) */
+.ps-lvbtn{transition:background-color var(--fast) ease,border-color var(--fast) ease,color var(--fast) ease}
+.is-live .ps-pic>*{transition:opacity var(--slow) var(--ease-out),transform var(--slow) var(--ease-out)}
+@starting-style{.is-live .ps-pic>*{opacity:0;transform:scale(.94)}}
 .ps-what{font-size:15px;font-weight:700;line-height:1.3}
 .ps-lock{margin-top:auto;font-size:13px;opacity:.8}
 

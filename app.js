@@ -2,7 +2,7 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.90';
+const VER = '5.92';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
 const REL = '2.6.2';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;

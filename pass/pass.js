@@ -223,6 +223,7 @@ track.addEventListener('keydown', e => {
 /* 처음엔 다음에 받을 칸 — 내 레벨 다음 칸과 지금 시즌 첫 칸 중 뒤의 것(다 받았으면 마지막) */
 choose(Math.min(Math.max(level, Math.max(0, SEASONS.indexOf(now)) * SEASON_LEVELS), PASS_LEVELS - 1));
 btns[cur].scrollIntoView({ block: 'nearest', inline: 'center' });
+requestAnimationFrame(() => requestAnimationFrame(() => track.classList.add('is-live')));   // 첫 그림이 놓인 뒤부터 갈아 끼움이 떠오른다(pass.css)
 
 /* ── ?rt=1 자체검사 ──────────────────────────────────── */
 if (new URLSearchParams(location.search).get('rt') === '1') {

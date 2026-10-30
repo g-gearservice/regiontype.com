@@ -2,6 +2,9 @@
    쓰지 않는다 — 읽는 글처럼 문서가 흐르고 스크롤된다(policy/ 와 같은 결). */
 html,body{height:auto}
 body{overflow:auto}
+/* 격자는 문서에 붙는다 — 글처럼 흐르는 페이지라 스크롤하면 격자도 같이 지나간다(앱 화면은 style.css 대로 고정) */
+body{position:relative}
+.grid-bg{position:absolute;min-height:100dvh}
 /* .profile-button 의 display 가 hidden 속성을 이기지 않게 */
 [hidden]{display:none !important}
 
