@@ -1,6 +1,6 @@
 /* 리전 패스. 색·간격은 style.css 의 커스텀 프로퍼티에서 딴다. 커뮤니티처럼 문서가 흐르고 스크롤된다 */
 html,body{height:auto}
-body{overflow:auto}
+body{overflow:auto;overflow-x:hidden}
 [hidden]{display:none !important}
 
 .ps-top,.ps{max-width:880px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative}
@@ -21,7 +21,7 @@ body{overflow:auto}
 .ps-tab[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:800}
 .ps a:focus-visible,.ps button:focus-visible,.ps-tab:focus-visible,.ps-top a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
-.ps-card,.ps-show{border:2px solid var(--grid);border-radius:16px;background:var(--card);padding:20px}
+.ps-card{border:2px solid var(--grid);border-radius:16px;background:var(--card);padding:20px}
 .ps-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 /* 상태는 색이 아니라 테두리 알약과 글로 */
 .ps-state{border:2px dashed var(--ink-soft);border-radius:999px;padding:2px 12px;font-size:14px;font-weight:700;color:var(--ink-soft)}
@@ -36,20 +36,23 @@ body{overflow:auto}
 .ps-xp:empty{display:none}
 .ps-note{margin-top:10px;font-size:15px;color:var(--ink-soft)}
 
-.ps-show{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.ps-bot{width:180px;height:180px;flex:none}
-.ps-bot .buddy{width:100%;height:100%;display:block;overflow:visible}
-/* 팔레트 견본 지도 — 팔레트 바탕을 그대로 깐 작은 서울. 밤에도 팔레트 그대로 */
-.ps-map{width:180px;height:180px;flex:none}
-.ps-map svg{width:100%;height:100%;display:block}
-.ps-peek{flex:1;min-width:200px}
-.ps-pick{margin-top:8px;font-size:17px;font-weight:700;min-height:1.5em}
-.ps-off{margin-top:12px;min-height:36px;padding:4px 16px;border:2px solid var(--grid);border-radius:999px;background:transparent;
-  color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
 
 .ps-hint{margin-top:6px;font-size:14px;color:var(--ink-soft)}
-.ps-track{list-style:none;margin:14px 0 0;padding:4px 4px 12px;display:grid;grid-auto-flow:column;grid-auto-columns:148px;
-  gap:10px;overflow-x:auto;scroll-snap-type:x proximity}
+/* 보상 줄은 화면 끝까지 — 첫 칸은 본문 칸에 맞춰 선다. --gut 은 .ps 의 바깥 여백(880/2-24) */
+.ps-rail{--gut:max(24px,calc(50vw - 416px));margin:14px calc(50% - 50vw) 0}
+/* 페이지 좌우 끝 흐림은 gdotgear.services 의 겹 블러 — 여섯 겹(1→32px)이 끝에서 차 있다가 안쪽으로 물러나며 사라진다. 세찬 겹일수록 끝에 바짝 */
+.ps-blur{--in:90deg;position:fixed;top:0;bottom:0;left:0;width:min(72px,max(24px,calc(50vw - 416px)));z-index:9;display:grid;pointer-events:none}
+.ps-blur.is-end{--in:270deg;left:auto;right:0}
+.ps-blur>span{grid-area:1/1;-webkit-backdrop-filter:blur(var(--b));backdrop-filter:blur(var(--b));
+  -webkit-mask:linear-gradient(var(--in),#000 var(--m0),transparent var(--m1));mask:linear-gradient(var(--in),#000 var(--m0),transparent var(--m1))}
+.ps-blur>:nth-child(1){--b:1px;--m0:40%;--m1:60%}
+.ps-blur>:nth-child(2){--b:2px;--m0:30%;--m1:50%}
+.ps-blur>:nth-child(3){--b:4px;--m0:20%;--m1:40%}
+.ps-blur>:nth-child(4){--b:8px;--m0:10%;--m1:30%}
+.ps-blur>:nth-child(5){--b:16px;--m0:0%;--m1:20%}
+.ps-blur>:nth-child(6){--b:32px;--m0:0%;--m1:10%}
+.ps-track{list-style:none;margin:0;padding:4px calc(var(--gut) + 4px) 12px;scroll-padding-inline:calc(var(--gut) + 4px);
+  display:grid;grid-auto-flow:column;grid-auto-columns:148px;gap:10px;overflow-x:auto;scroll-snap-type:x proximity}
 .ps-cell{scroll-snap-align:start}
 /* 시즌이 바뀌는 칸 — 앞에 점선 칸막이와 시즌 이름표 */
 .ps-cell.is-first:not(:first-child){border-left:3px dashed var(--ink-soft);padding-left:10px}
@@ -65,6 +68,10 @@ body{overflow:auto}
 .ps-chip{width:26px;height:26px;border-radius:50%;border:2px solid currentColor}
 /* 구 실루엣은 글자 색으로 — 고른 칸(먹 채움)에서도 저절로 뒤집힌다 */
 .ps-sil{width:34px;height:34px;fill:currentColor}
+/* 그림 자리는 높이를 못박아 둔다 — 고른 칸에 봇·지도가 들어앉아도 줄 높이가 출렁이지 않는다 */
+.ps-pic{display:flex;align-items:center;height:72px}
+.ps-bot,.ps-map{width:72px;height:72px;flex:none}
+.ps-bot .buddy,.ps-map svg{width:100%;height:100%;display:block;overflow:visible}
 .ps-what{font-size:15px;font-weight:700;line-height:1.3}
 .ps-lock{margin-top:auto;font-size:13px;opacity:.8}
 
