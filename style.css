@@ -2402,52 +2402,29 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 }
 /* 고른 탭은 채움과 테두리를 함께 — 색만으로 가르지 않는다 */
 .pg-tabs [aria-selected="true"]{color:var(--on-accent);background:var(--accent);border-color:var(--ink)}
-.pg-tabs [role="tab"]:focus-visible,.pg-panel:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
-.pg-panel{display:flex;flex-direction:column;gap:10px;min-height:0}
-.pg-panel[hidden]{display:none}
+.pg-tabs [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .pg-help{font-size:14px;line-height:1.6;color:var(--ink-soft)}
 .pg-say{min-height:22px;color:var(--ink-soft);font-weight:700}
 .pg-ranks{max-width:none;overflow:auto}
 .pg-ranks li{align-items:center}
-/* 경쟁전 사다리 — 1·2·3위는 시상대로 선다(가운데 1위가 가장 높다). 순위 숫자를 크게 달아 색만으로 가르지 않는다.
-   줄 순서는 1·2·3 그대로라 읽는 순서는 안 바뀐다 — 자리만 2·1·3 으로 옮긴다 */
-#ladderList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;overflow:visible}
-#ladderList > li{grid-column:1 / -1}
-#ladderList > li:nth-child(-n+3){
-  grid-row:1;flex-direction:column;align-items:center;gap:4px;text-align:center;
-  border-radius:var(--card-r);padding:14px 8px 12px;min-width:0;
+/* 경쟁전 사다리 — 1위부터 50위까지 모두 같은 정사각형 칸이다. 칸 안에 순위·이름·티어·LP·라이선스.
+   1위는 강조색 테두리를 함께 단다 — 색만으로 가르지 않게 순위 숫자가 늘 있다 */
+#ladderList{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;overflow:visible}
+#ladderList > li{
+  aspect-ratio:1;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  position:relative;text-align:center;border-radius:var(--card-r);padding:8px;min-width:0;
 }
-#ladderList > li:nth-child(1){grid-column:2;padding-top:30px;border-color:var(--accent)}
-#ladderList > li:nth-child(2){grid-column:1;padding-top:20px}
-#ladderList > li:nth-child(3){grid-column:3}
-#ladderList > li:nth-child(-n+3) b{min-width:0;font-size:28px;line-height:1}
-#ladderList > li:nth-child(1) b{font-size:36px;color:var(--accent-text)}
-#ladderList > li:nth-child(-n+3) .who{flex:none;max-width:100%;font-weight:700}
-#ladderList > li:nth-child(-n+3) .pt{font-size:17px}
-#ladderList > li.me:nth-child(-n+3) b{color:#fff}
+/* '나' 라벨은 칸 오른쪽 위 귀퉁이에 — 한 줄을 먹으면 칸이 정사각형을 넘는다 */
+#ladderList .tag{position:absolute;top:10px;right:10px}
+#ladderList > li:first-child{border-color:var(--accent)}
+#ladderList b{min-width:0;font-size:30px;line-height:1}
+#ladderList .who{flex:none;max-width:100%;font-weight:700}
+#ladderList .pt{font-size:17px}
+/* 라이선스 없는 칸 — 자리만 점선 네모로 살짝 둔다(나중에 라이선스 인증 모양이 들어간다) */
+.lic-none{width:24px;height:24px;border:2px dashed color-mix(in srgb,var(--ink-soft) 45%,transparent);border-radius:6px}
+.ranks li.me .lic-none{border-color:color-mix(in srgb,#fff 55%,transparent)}
 /* 내 카드 — 사다리를 굴려도 아래에 붙어 있다. 폰은 아래 막대 위에 선다 */
 .pg-mine{position:sticky;bottom:var(--dock-h,0px);z-index:1;box-shadow:var(--shadow)}
-/* 코스별 최고 기록 — 한 줄이 한 판의 1위이고, 펼치면 그 판의 순위표다.
-   펼침은 ▸·▾ 모양으로도 보인다 — 색만으로 가르지 않는다 */
-.pg-sub{margin-top:14px;font-size:17px;font-weight:800}
-.pg-bests{display:flex;flex-direction:column;gap:6px}
-.pg-best > summary{
-  display:flex;align-items:baseline;gap:12px;background:var(--card);
-  padding:10px 14px;border:2px solid transparent;border-radius:4px;box-shadow:var(--shadow);
-  font-size:15px;cursor:pointer;list-style:none;
-}
-.pg-best > summary::-webkit-details-marker{display:none}
-.pg-best > summary::before{content:'▸';color:var(--ink-soft)}
-.pg-best[open] > summary{border-color:var(--ink-soft)}
-.pg-best[open] > summary::before{content:'▾'}
-.pg-best > summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.pg-best .where{font-weight:700;white-space:nowrap}
-.pg-best .who{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pg-best .pt{font-weight:700;font-variant-numeric:tabular-nums}
-.pg-best .n{color:var(--ink-soft);font-size:13px;font-variant-numeric:tabular-nums}
-.pg-best > .pg-ranks{margin:6px 0 0 18px}
-.pg-best > .pg-say{margin-left:18px}
-
 /* 티어 이름표. 색 점과 이름을 함께 — 이름만으로도 읽힌다 */
 .tier{
   display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;
