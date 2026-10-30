@@ -443,7 +443,8 @@ let owned = [], ownedShapes = [], ownedColours = [], lockedShapes = ['citrouille
 const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
 const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
 function countOwned(kit) {
-  const got = kit.ownedRewards(readPass(), today());
+  /* 패스 보상은 로그인한 계정의 것이다 — 로그아웃하면 아무것도 안 가진 셈이라 기본 색·기본 모양으로 선다 */
+  const got = token() ? kit.ownedRewards(readPass(), today()) : [];
   owned = got.filter(o => o.got.kind === 'palette').map(o => ({ ref: o.ref, palette: o.got.palette }));
   ownedShapes = got.filter(o => o.got.kind === 'shape').map(o => o.ref);
   ownedColours = got.filter(o => o.got.kind === 'colour').map(o => o.got.colour);
@@ -461,11 +462,19 @@ addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
   countOwned(kit);
   line.textContent = add ? t(lv > was ? 'passGainUp' : 'passGain', { xp: add, lv }) : t('passCapped');
 }));
+/* 로그아웃(설정·계정·만료된 토큰이 쏜다) — 가진 보상을 다시 세고 기본 색·기본 봇으로 돌린다 */
+addEventListener('rt-auth-out', () => passKit.then(kit => {
+  countOwned(kit);
+  paintTheme();
+  syncHomeBot();
+  if (styOpen()) fillStyles();
+}));
 passKit.then(kit => {
   countOwned(kit);
   syncHomeBot();   // 잠근 모양을 가졌는지 이제 안다
   /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색·지난 꼴의 팔레트)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
+  if (!token()) return;   // 로그아웃 중엔 입은 팔레트(rt.theme)를 거두지 않는다 — 다시 로그인하면 그대로 입는다
   /* 밤 바탕이 없던 때(2.3.0) 입은 팔레트는 거두지 않고 밤 바탕까지 담아 다시 적는다 */
   const was = !cur.nightBg && owned.find(o => sameStyle({ ...pickTheme(o.palette), nightBg: undefined }, cur));
   if (was) { try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(was.palette))); } catch {} paintTheme(); }
@@ -1507,7 +1516,8 @@ const themeCss = th => {
 /* :root 에 얹는다. 첫 그림 전엔 index.html 의 머리 스크립트가 rt.themeCss 를 그대로 붙인다.
    draft 를 주면 저장하지 않고 미리 보기만 한다 */
 function paintTheme(draft) {
-  const css = themeCss(pickTheme(draft || curTheme()));
+  /* 로그아웃 중엔 기본 색 — rt.theme 은 남겨 두고 칠하지만 않는다(머리 스크립트가 붙일 rt.themeCss 도 비운다) */
+  const css = draft || token() ? themeCss(pickTheme(draft || curTheme())) : '';
   let el = $('#rtTheme');
   if (!el) { el = document.createElement('style'); el.id = 'rtTheme'; document.head.append(el); }
   el.textContent = css;
