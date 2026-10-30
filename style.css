@@ -774,6 +774,7 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 .ranks li.me{background:var(--block-deep);border-color:var(--block-deep)}
 .ranks li.me :is(b,.who,.pt){color:#fff}
 .ranks li.me .tag{color:var(--block-deep);background:#fff}
+.ranks li.me .exam-badge:not([data-grade="expert"]){color:#fff;border-color:#fff}
 .board-say{margin:-6px 0 12px;min-height:22px;color:var(--accent-text);font-weight:700}
 .board-say.bad{color:var(--bad)}
 .board-say:empty{display:none}
@@ -2404,19 +2405,6 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .pg-tabs [role="tab"]:focus-visible,.pg-panel:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .pg-panel{display:flex;flex-direction:column;gap:10px;min-height:0}
 .pg-panel[hidden]{display:none}
-.sub-tabs{display:inline-flex;gap:4px;background:var(--card-inset);padding:3px;border-radius:999px;width:fit-content;margin:2px 0 6px}
-.sub-tabs [role="tab"]{
-  font:inherit;font-size:14px;font-weight:700;color:var(--ink-soft);
-  background:none;border:1px solid transparent;border-radius:999px;padding:6px 14px;cursor:pointer;
-  transition:background var(--fast),color var(--fast);
-}
-.sub-tabs [aria-selected="true"]{
-  color:var(--ink);background:var(--card);border-color:var(--grid);font-weight:800;
-  box-shadow:var(--shadow-shallow, 0 1px 2px rgba(0,0,0,.06));
-}
-.sub-tabs [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.pg-subpanel{display:flex;flex-direction:column;gap:10px;min-height:0}
-.pg-subpanel[hidden]{display:none}
 .pg-help{font-size:14px;line-height:1.6;color:var(--ink-soft)}
 .pg-say{min-height:22px;color:var(--ink-soft);font-weight:700}
 .pg-ranks{max-width:none;overflow:auto}
@@ -2514,12 +2502,6 @@ button.sty-swatch:active{transform:scale(.94)}
   font-size:13px;font-weight:900;line-height:1}
 .sty-tick{background:var(--ink);color:var(--card)}
 .sty-swatch[aria-pressed="true"] .sty-tick{display:grid}
-/* 봇 색 — 팔레트 줄 아래 칸막이 너머, 동그란 색 단추. 고른 것은 팔레트와 같은 테 두 겹 */
-.sty-bot{border-top:2px solid var(--grid);padding-top:14px}
-.sty-dot{width:40px;height:40px;border-radius:50%;border:2px solid var(--grid);cursor:pointer;position:relative;padding:0}
-.sty-dot[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 5px var(--ink)}
-.sty-dot[aria-pressed="true"] .sty-tick{display:grid}
-.sty-dot:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .sty-foot button,.sty-bot-reset{font:inherit;cursor:pointer;border:0;transition:transform .1s ease-out,background var(--fast)}
 .sty-foot button:active,.sty-bot-reset:active,.sty-save:active{transform:scale(.96)}
 .sty-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}

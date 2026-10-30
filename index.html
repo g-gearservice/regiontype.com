@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.79">
+<link rel="stylesheet" href="style.css?v=5.81">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -520,45 +520,17 @@
       <button type="button" role="tab" id="rkTabNormal" aria-controls="rkNormal" aria-selected="false" tabindex="-1" data-i18n="normalTab">일반전</button>
     </div>
     <div id="rkRanked" class="pg-panel" role="tabpanel" aria-labelledby="rkTabRanked" tabindex="0">
-      <div class="sub-tabs rk-sub-tabs" role="tablist" data-i18n-aria="subTabGroup" aria-label="순위 갈래">
-        <button type="button" role="tab" id="rkTabRankedCasual" aria-controls="rkRankedCasual" aria-selected="true" data-i18n="subCasual">일반</button>
-        <button type="button" role="tab" id="rkTabRankedLicense" aria-controls="rkRankedLicense" aria-selected="false" tabindex="-1" data-i18n="subLicense">라이선스</button>
-      </div>
-      <div id="rkRankedCasual" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabRankedCasual" tabindex="0">
-        <p class="pg-help" data-i18n="rkHold">시작하기를 누르고 경쟁전을 고르세요.</p>
-        <ol class="ranks pg-ranks" id="ladderList"></ol>
-        <p class="pg-say" id="ladderSay" role="status"></p>
-        <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
-        <div class="pg-bests" id="rankedBests"></div>
-        <p class="pg-say" id="rankedBestsSay" role="status"></p>
-      </div>
-      <div id="rkRankedLicense" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabRankedLicense" tabindex="0" hidden>
-        <h3 class="pg-sub" data-i18n="holdersHead">숙련 라이선스 보유자</h3>
-        <ol class="ranks pg-ranks" id="rankedSHolders"></ol>
-        <p class="pg-say" id="rankedSSay" role="status"></p>
-        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스</h3>
-        <div class="pg-bests" id="rankedLicenseBests"></div>
-        <p class="pg-say" id="rankedLicenseBestsSay" role="status"></p>
-      </div>
+      <p class="pg-help" data-i18n="rkHold">시작하기를 누르고 경쟁전을 고르세요.</p>
+      <ol class="ranks pg-ranks" id="ladderList"></ol>
+      <p class="pg-say" id="ladderSay" role="status"></p>
+      <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
+      <div class="pg-bests" id="rankedBests"></div>
+      <p class="pg-say" id="rankedBestsSay" role="status"></p>
     </div>
     <div id="rkNormal" class="pg-panel" role="tabpanel" aria-labelledby="rkTabNormal" tabindex="0" hidden>
-      <div class="sub-tabs rk-sub-tabs" role="tablist" data-i18n-aria="subTabGroup" aria-label="순위 갈래">
-        <button type="button" role="tab" id="rkTabNormalCasual" aria-controls="rkNormalCasual" aria-selected="true" data-i18n="subCasual">일반</button>
-        <button type="button" role="tab" id="rkTabNormalLicense" aria-controls="rkNormalLicense" aria-selected="false" tabindex="-1" data-i18n="subLicense">라이선스</button>
-      </div>
-      <div id="rkNormalCasual" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabNormalCasual" tabindex="0">
-        <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
-        <div class="pg-bests" id="normalBests"></div>
-        <p class="pg-say" id="normalBestsSay" role="status"></p>
-      </div>
-      <div id="rkNormalLicense" class="pg-subpanel" role="tabpanel" aria-labelledby="rkTabNormalLicense" tabindex="0" hidden>
-        <h3 class="pg-sub" data-i18n="holdersHead">숙련 라이선스 보유자</h3>
-        <ol class="ranks pg-ranks" id="normalSHolders"></ol>
-        <p class="pg-say" id="normalSSay" role="status"></p>
-        <h3 class="pg-sub" data-i18n="licenseBests">코스별 라이선스</h3>
-        <div class="pg-bests" id="normalLicenseBests"></div>
-        <p class="pg-say" id="normalLicenseBestsSay" role="status"></p>
-      </div>
+      <h3 class="pg-sub" data-i18n="courseBests">코스별 최고 기록</h3>
+      <div class="pg-bests" id="normalBests"></div>
+      <p class="pg-say" id="normalBestsSay" role="status"></p>
     </div>
   </div>
 </section>
@@ -597,10 +569,8 @@
     <!-- 두 판을 한 칸에 겹쳐 둔다 — 탭을 옮겨도 판 높이가 그대로다(가려진 판은 자리만 지킨다) -->
     <div class="sty-panels">
     <div id="styPanelGame" class="sty-panel" role="tabpanel" aria-labelledby="styTabGame" tabindex="0">
-      <!-- 위는 칸·바탕 색(팔레트), 아래는 봇 색. 둘 다 리전 패스에서 받은 것만 늘어놓는다(ranked.js 의 fillStyles) -->
       <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
       <p class="pg-say" id="stySay" role="status"></p>
-      <ul class="sty-list sty-bot" id="styBot" data-i18n-aria="acctColour" aria-label="색"></ul>
       <div class="sty-foot">
         <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
       </div>
@@ -769,10 +739,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.79"></script>
-<script src="app.js?v=5.79"></script>
-<script src="auth.js?v=5.79"></script>
-<script src="settings/settings.js?v=5.79"></script>
-<script src="ranked.js?v=5.79"></script>
+<script src="relay.js?v=5.81"></script>
+<script src="app.js?v=5.81"></script>
+<script src="auth.js?v=5.81"></script>
+<script src="settings/settings.js?v=5.81"></script>
+<script src="ranked.js?v=5.81"></script>
 </body>
 </html>

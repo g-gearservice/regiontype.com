@@ -43,8 +43,8 @@ const readFace = () => {
   catch { return {}; }
   /* 패스에 잠근 엔진 모양(호박)은 받기 전엔 입지 못한다 — 기본 모양으로 선다. 저장 값은 그대로 둔다(받으면 돌아온다) */
   if (lockedShapes.includes(f.shape) && !ownedShapes.includes(f.shape)) delete f.shape;
-  /* 봇 색도 패스 보상이다 — 강조색 연동('accent') 말고는 받은 색만 입는다 */
-  if (f.colour && f.colour !== 'accent' && !ownedColours.includes(f.colour)) delete f.colour;
+  /* 봇 색은 따로 고르지 않는다 — 늘 강조색(입은 팔레트의 강조색)을 따라간다 */
+  delete f.colour;
   return f;
 };
 
@@ -183,7 +183,7 @@ function leftAccount() {
 addEventListener('rt-bot-look', syncBotLook);
 
 /* ── 순위 ─────────────────────────────────────────────── */
-function rankRow(i, name, right, me, lp) {
+function rankRow(i, name, right, me, lp, lic) {
   const li = document.createElement('li');
   li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
   li.querySelector('b').textContent = i + 1;
@@ -194,25 +194,11 @@ function rankRow(i, name, right, me, lp) {
     s.className = 'tier'; s.dataset.tier = tierOf(lp); s.textContent = tierLabel(lp);
     li.querySelector('.who').after(s);
   }
-  if (me) {
-    li.classList.add('me');
-    const tag = document.createElement('span');
-    tag.className = 'tag'; tag.textContent = t('me');
-    li.querySelector('.who').after(tag);
+  if (lic && LICENSES.some(l => l.id === lic)) {
+    const b = document.createElement('span');
+    b.className = 'exam-badge'; b.dataset.grade = lic; b.textContent = licName(lic);
+    li.querySelector('.who').after(b);
   }
-  return li;
-}
-function sLi(i, name, at, me) {
-  const li = document.createElement('li');
-  li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
-  li.querySelector('b').textContent = i + 1;
-  li.querySelector('.who').textContent = name;
-  const badge = document.createElement('span');
-  badge.className = 'exam-badge';
-  badge.dataset.grade = 'expert';
-  badge.textContent = licName('expert');
-  li.querySelector('.who').after(badge);
-  li.querySelector('.pt').textContent = at ? new Date(at).toLocaleDateString() : '';
   if (me) {
     li.classList.add('me');
     const tag = document.createElement('span');
@@ -230,10 +216,10 @@ async function fillRanking() {
   try {
     const d = await ask(`/ladder?dev=${DEV}`);
     if (n !== rankReq) return;
-    lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, r.lp)));
+    lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, r.lp, r.lic)));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
   } catch { if (n === rankReq) say.textContent = t('boardFail'); }
-  await Promise.all(['ranked', 'normal'].map(mode => Promise.all([fillBests(n, mode), fillLicense(n, mode)])));
+  await Promise.all(['ranked', 'normal'].map(mode => fillBests(n, mode)));
 }
 /* 코스별 최고 기록. 코스·시간마다 1위 한 줄씩이고, 펼치면 그 판의 순위표와 내 자리를 읽는다.
    경쟁전과 일반전은 따로 센다. 이 나라 코스만 보인다 — 다른 나라 코스는 이름을 못 읽는다.
@@ -273,77 +259,6 @@ async function fillBests(n, mode) {
   }));
   say.textContent = rows.length ? '' : t('ladderEmpty');
 }
-/* 라이선스 순위 — 숙련 라이선스 보유자 명단과 코스별 라이선스 최고 기록 */
-async function fillLicense(n, mode) {
-  const sList = $(`#${mode}SHolders`), sSay = $(`#${mode}SSay`);
-  const box = $(`#${mode}LicenseBests`), boxSay = $(`#${mode}LicenseBestsSay`);
-  sList.replaceChildren(); sSay.textContent = t('reading');
-  box.replaceChildren(); boxSay.textContent = t('reading');
-  let topData;
-  try {
-    topData = await ask(`/license/top?mode=${mode}`);
-  } catch {
-    if (n === rankReq) {
-      sSay.textContent = t('boardFail');
-      boxSay.textContent = t('boardFail');
-    }
-    return;
-  }
-  if (n !== rankReq) return;
-
-  // 1. 숙련 라이선스 보유자 명단
-  const sHolders = topData.holders || [];
-  sList.replaceChildren(...sHolders.map((h, i) => sLi(i, h.name || t('anon'), h.s_at, h.me)));
-  sSay.textContent = sHolders.length ? '' : t('holdersEmpty');
-
-  // 2. 코스별 라이선스 순위
-  const here = PICK ? PICK.slug : COURSE.root;
-  const courses = [COURSE.root, ...COURSE.tiles.map(x => x.slug), 'kr-sgg'].filter((s, i, a) => a.indexOf(s) === i);   // 자수 면허는 전국 시군구에서 친다
-
-  box.replaceChildren(...courses.map(slug => {
-    const det = document.createElement('details');
-    det.className = 'pg-best';
-    det.innerHTML = '<summary><span class="where"></span><span class="who"></span><span class="pt"></span></summary><ol class="ranks pg-ranks"></ol><p class="pg-say" role="status"></p>';
-    det.querySelector('.where').textContent = placeOf(slug);
-    let read = false;
-    det.addEventListener('toggle', async () => {
-      if (!det.open || read) return;
-      read = true;
-      const ol = det.querySelector('ol'), p = det.querySelector('p');
-      p.textContent = t('reading');
-      try {
-        const r = await ask(`/license/top?mode=${mode}&c=${encodeURIComponent(slug)}`);
-        const list = r.top || [];
-        ol.replaceChildren(...list.map((x, i) => {
-          const li = document.createElement('li');
-          li.innerHTML = '<b></b><span class="who"></span><span class="pt"></span>';
-          li.querySelector('b').textContent = i + 1;
-          li.querySelector('.who').textContent = x.name || t('anon');
-          const badge = document.createElement('span');
-          badge.className = 'exam-badge';
-          badge.dataset.grade = x.grade;
-          badge.textContent = LICENSES.some(l => l.id === x.grade) ? licName(x.grade) : x.grade;
-          li.querySelector('.who').after(badge);
-          li.querySelector('.pt').textContent = `${showSpeed(x.cpm)} · ${x.acc}%`;
-          if (x.me) {
-            li.classList.add('me');
-            const tag = document.createElement('span');
-            tag.className = 'tag'; tag.textContent = t('me');
-            li.querySelector('.who').after(tag);
-          }
-          return li;
-        }));
-        p.textContent = list.length ? '' : t('ladderEmpty');
-      } catch {
-        read = false;
-        p.textContent = t('boardFail');
-      }
-    });
-    if (slug === here) det.open = true;
-    return det;
-  }));
-  boxSay.textContent = courses.length ? '' : t('ladderEmpty');
-}
 function wireTabGroup(tablist, onSwap) {
   if (!tablist) return () => {};
   const tabs = [...tablist.querySelectorAll(':scope > [role="tab"]')];
@@ -371,8 +286,6 @@ function wireTabGroup(tablist, onSwap) {
 }
 function wireTabs() {
   wireTabGroup($('#ranking > .pg-shell > .pg-tabs'));
-  wireTabGroup($('#rkRanked .sub-tabs'));
-  wireTabGroup($('#rkNormal .sub-tabs'));
 }
 
 /* ── 기록 ─────────────────────────────────────────────── */
@@ -439,7 +352,7 @@ const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI)
 /* 가진 보상 — 열린 시즌들의 무료 칸과 내 레벨까지의 칸(items.js 의 ownedRewards).
    팔레트는 [{ ref, palette }] 로 게임 스타일 탭에, 모양 id 는 봇 스타일 탭의 모양 줄에 더한다 */
 /* lockedShapes 는 items.js 의 PASS_ENGINE_SHAPES — 표가 오기 전에도 잠겨 있게 처음 값을 같이 적는다 */
-let owned = [], ownedShapes = [], ownedColours = [], lockedShapes = ['citrouille'];
+let owned = [], ownedShapes = [], lockedShapes = ['citrouille'];
 const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
 const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
 function countOwned(kit) {
@@ -447,7 +360,6 @@ function countOwned(kit) {
   const got = token() ? kit.ownedRewards(readPass(), today()) : [];
   owned = got.filter(o => o.got.kind === 'palette').map(o => ({ ref: o.ref, palette: o.got.palette }));
   ownedShapes = got.filter(o => o.got.kind === 'shape').map(o => o.ref);
-  ownedColours = got.filter(o => o.got.kind === 'colour').map(o => o.got.colour);
   lockedShapes = kit.PASS_ENGINE_SHAPES;
 }
 /* 리전 패스 XP — 끝낸 판마다(나간 판은 finish 에 닿지 않는다), 패스가 열린 동안. 로그인한 계정만. 결과 칸에 +XP 와 레벨을 적는다 */
@@ -475,8 +387,12 @@ passKit.then(kit => {
   /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색·지난 꼴의 팔레트)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
   if (!token()) return;   // 로그아웃 중엔 입은 팔레트(rt.theme)를 거두지 않는다 — 다시 로그인하면 그대로 입는다
-  /* 밤 바탕이 없던 때(2.3.0) 입은 팔레트는 거두지 않고 밤 바탕까지 담아 다시 적는다 */
-  const was = !cur.nightBg && owned.find(o => sameStyle({ ...pickTheme(o.palette), nightBg: undefined }, cur));
+  /* 옛 값으로 입은 팔레트(밤 바탕이 없던 2.3.0, 강조색을 다듬기 전 2.4)는 거두지 않고 지금 값으로 다시 적는다 —
+     칸·바탕·글자가 같은 것 가운데 강조색이 가장 가까운 것 */
+  const near = (a, b) => [1, 3, 5].reduce((s, i) => s + Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)), 0);
+  const was = HEX.test(cur.accent) && !owned.some(o => sameStyle(pickTheme(o.palette), cur)) && owned
+    .filter(o => ['block', 'bg', 'ink'].every(k => o.palette[k] === cur[k]))
+    .sort((a, b) => near(a.palette.accent, cur.accent) - near(b.palette.accent, cur.accent))[0];
   if (was) { try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(was.palette))); } catch {} paintTheme(); }
   else if (THEME.some(k => cur[k.key]) && !owned.some(o => sameStyle(pickTheme(o.palette), cur))) {
     try { localStorage.removeItem('rt.theme'); } catch {}
@@ -495,11 +411,7 @@ function swatch(el, s) {
   for (let i = 0; i < 9; i++) el.append(document.createElement('i'));
   return el;
 }
-/* 봇 색의 hex 는 엔진(buddy.js 의 TABLES.colours)이 쥐고 있다 — 처음 그릴 때 받아 두고 다시 그린다 */
-let colourHex = null;
-function fillStyles(focusRef, focusColour) {
-  if (!colourHex) (window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href))
-    .then(k => { colourHex = Object.fromEntries(k.TABLES.colours.map(c => [c.id, c.hex])); if (styOpen()) fillStyles(); });
+function fillStyles(focusRef) {
   const cur = curTheme(), ul = $('#styList');
   ul.replaceChildren(...owned.map(({ ref, palette }) => {
     const li = document.createElement('li'), on = sameStyle(pickTheme(palette), cur);
@@ -512,18 +424,6 @@ function fillStyles(focusRef, focusColour) {
     return li;
   }));
   $('#stySay').textContent = owned.length ? '' : t('stylesEmpty');
-  const face = readFace(), bot = $('#styBot');
-  bot.replaceChildren(...['accent', ...ownedColours].map(id => {
-    const li = document.createElement('li'), b = document.createElement('button'), name = KO(id) || id;
-    b.type = 'button'; b.className = 'sty-dot'; b.dataset.colour = id; b.title = name;
-    b.setAttribute('aria-label', name);
-    b.setAttribute('aria-pressed', String((face.colour || 'accent') === id));
-    b.style.background = id === 'accent' ? 'var(--accent)' : colourHex?.[id] || '';
-    b.insertAdjacentHTML('beforeend', '<span class="sty-tick" aria-hidden="true">✓</span>');
-    li.append(b);
-    return li;
-  }));
-  if (focusColour) bot.querySelector(`[data-colour="${CSS.escape(focusColour)}"]`)?.focus({ preventScroll: true });
   $('#styReset').hidden = !THEME.some(k => cur[k.key]);
   if (focusRef) (ul.querySelector(`[data-ref="${CSS.escape(focusRef)}"]`) || $('#styHead')).focus({ preventScroll: true });
 }
@@ -535,14 +435,6 @@ function wearPalette(ref) {
   /* 어두운 팔레트(블랙 프라이데이)는 밤 화면 위에 깐다 — 설정 통(settings.js)이 켜고 저장한다 */
   if (o.palette.dark && !document.documentElement.hasAttribute('data-night')) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: true } }));
   fillStyles(ref);
-}
-/* 봇 색 입기 — 봇 스타일 탭과 같은 길(keepBotStyle)로 저장하고 서버에 올린다 */
-function wearBotColour(id) {
-  if (id !== 'accent' && !ownedColours.includes(id)) return;
-  syncBotStyleFromStorage();
-  botChar.colour = id;
-  keepBotStyle();
-  fillStyles(null, id);
 }
 
 /* ── 봇 스타일 탭 (모양·색·크기·생성) ───────────────────────
@@ -972,9 +864,8 @@ function wireStyles() {
     styOpener = null;
   });
   d.addEventListener('click', e => {
-    const b = e.target.closest('#styList .sty-swatch'), c = e.target.closest('#styBot .sty-dot');
+    const b = e.target.closest('#styList .sty-swatch');
     if (b) wearPalette(b.dataset.ref);
-    else if (c) wearBotColour(c.dataset.colour);
     else if (e.target.closest('#styReset')) {
       act({ act: 'theme', reset: true });
       fillStyles();
@@ -2623,8 +2514,7 @@ if (location.search.includes('rt=1')) {
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
   console.assert($('#modePick') && $('#modeNormal') && $('#modeRanked'), '모드 고르기: 일반전·경쟁전');
   console.assert($('#examGate') && $('#examRows'), '라이선스: 시험 진입 대화상자');
-  console.assert($('#rkTabRankedCasual') && $('#rkTabRankedLicense') && $('#rkTabNormalCasual') && $('#rkTabNormalLicense'), '순위표: 일반/라이선스 하위 탭');
-  console.assert($('#rankedSHolders') && $('#normalSHolders') && $('#rankedLicenseBests') && $('#normalLicenseBests'), '순위표: S자 명단 및 코스별 라이선스 순위표');
+  console.assert(rankRow(0, 'a', '0 LP', false, 0, 'mid').querySelector('.exam-badge[data-grade="mid"]') && !rankRow(0, 'a', '0 LP', false, 0, null).querySelector('.exam-badge'), '순위표: 사다리 줄 이름 옆 면허 배지');
 }
 /* 첫 진입 로딩(app.js boot)의 봇 스타일·경쟁전 신호 단계와 맞물린다.
    로딩 중(RT_BOOT_BOT)에 엔진을 받아 캐릭터 모양·표정·색·크기와 --rk-on 빛깔을 먼저 입히고,
