@@ -121,10 +121,12 @@ export function parseItem(ref) {
      'fin:dots'              → 몸 마감         { kind: 'finish', finish }
      'pal:pumpkin-2'         → 사이트 색       { kind: 'palette', palette }
      'fantome'               → 이벤트 몸 모양  { kind: 'shape', shape }
-     'gu-mapo'               → 구 몸 모양      { kind: 'region', region } */
+     'gu-mapo'               → 구 몸 모양      { kind: 'region', region }
+     'bot:violet'            → 봇 색           { kind: 'colour', colour } — 엔진 색 id(COLOURS). 'accent'(강조색 연동)는 누구나 가진다 */
 export function parseReward(ref) {
   ref = String(ref || '');
   if (ref.startsWith('fin:')) { const finish = FINISH_BY_ID.get(ref.slice(4)); return finish ? { kind: 'finish', finish } : null; }
+  if (ref.startsWith('bot:')) { const colour = ref.slice(4); return COLOURS.includes(colour) ? { kind: 'colour', colour } : null; }
   if (ref.startsWith('pal:')) { const palette = paletteOf(ref.slice(4)); return palette ? { kind: 'palette', palette } : null; }
   if (SEASON_SHAPE_BY_ID.has(ref)) return { kind: 'shape', shape: SEASON_SHAPE_BY_ID.get(ref) };
   if (PASS_ENGINE_SHAPES.includes(ref)) return { kind: 'shape', shape: { id: ref } };
@@ -197,11 +199,11 @@ export function paletteOf(id) {
    모자·등·마감(ITEMS·FINISHES)과 구 모양은 이벤트 시즌 보상에서 빠졌다. 그리는 코드는 남긴다 */
 export const SEASONS = [
   { id: 'halloween-2026', theme: 'halloween', from: '2026-10-01', to: '2026-11-02',
-    shapes: ['chauvesouris', 'chat', 'tombe', 'chaudron', 'fantome', 'crane', 'potiron', 'citrouille'] },
+    shapes: ['chauvesouris', 'chat', 'tombe', 'chaudron', 'fantome', 'crane', 'potiron', 'citrouille'], colours: ['orange', 'violet', 'encre', 'vert'] },
   { id: 'blackfriday-2026', theme: 'blackfriday', from: '2026-11-02', to: '2026-12-01',
-    shapes: ['etiquette', 'ticket', 'sac', 'bourse', 'diamant', 'couronne'] },
+    shapes: ['etiquette', 'ticket', 'sac', 'bourse', 'diamant', 'couronne'], colours: ['ambre', 'gris', 'rose', 'bleu'] },
   { id: 'christmas-2026', theme: 'christmas', from: '2026-12-01', to: '2027-01-07',
-    shapes: ['cloche', 'chaussette', 'flocon', 'cadeau', 'bonhomme', 'sapin', 'renne', 'perenoel'] },
+    shapes: ['cloche', 'chaussette', 'flocon', 'cadeau', 'bonhomme', 'sapin', 'renne', 'perenoel'], colours: ['rouge', 'turquoise', 'creme', 'brun'] },
 ];
 export const SEASON_LEVELS = 50, PASS_LEVELS = SEASONS.length * SEASON_LEVELS, FREE = 2;
 /* XP — 끝낸 판마다 game(경쟁전은 ranked), 하루 day 까지. level 만큼 쌓이면 한 레벨 */
@@ -222,11 +224,17 @@ export function trackOf(season) {
   const last = season.shapes[season.shapes.length - 1];
   if (order[order.length - 1] !== last) order.push(order.splice(order.indexOf(last), 1)[0]);
   const at = new Map(order.map((r, k) => [1 + Math.round(k * (SEASON_LEVELS - 1) / (order.length - 1)), r]));
+  /* 봇 색(bot:<색>)은 큰 칸 사이 채움 칸에 고르게 — 큰 칸이면 다음 칸으로 민다 */
+  for (const [k, c] of season.colours.entries()) {
+    let lv = Math.round((k + 1) * SEASON_LEVELS / (season.colours.length + 1));
+    while (at.has(lv)) lv++;
+    at.set(lv, 'bot:' + c);
+  }
   const out = [], open = [], used = new Map();
   let turn = 0, free = FREE;
   for (let lv = 1; lv <= SEASON_LEVELS; lv++) {
     let reward = at.get(lv) || null;
-    const big = !!reward;
+    const big = !!reward && !reward.startsWith('bot:');
     if (reward && reward.startsWith('pal:')) { open.push(reward.slice(4)); used.set(reward.slice(4), 1); }
     for (let k = 0; k < open.length && !reward; k++) {
       const fam = open[(turn + k) % open.length], n = used.get(fam) + 1;

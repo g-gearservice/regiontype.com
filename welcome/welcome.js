@@ -620,7 +620,11 @@ async function mountFace() {
   engine = kit;
   if (!lists.shape.length) {
     lists.shape = kit.TABLES.shapes.map(x => x.id);
-    lists.colour = ['accent', ...kit.TABLES.colours.map(x => x.id)];
+    /* 봇 색은 리전 패스 보상이다 — 강조색 연동과 받은 색만 고른다(items.js 의 ownedRewards) */
+    const pk = await import(new URL(asset('../assets/bloub/items.js'), document.baseURI).href);
+    const st = (() => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } })();
+    const mine = pk.ownedRewards(st, new Date().toLocaleDateString('sv')).filter(o => o.got.kind === 'colour').map(o => o.got.colour);
+    lists.colour = ['accent', ...kit.TABLES.colours.map(x => x.id).filter(id => mine.includes(id))];
     for (const c of kit.TABLES.colours) hexes.set(c.id, c.hex);
   }
   thumbs.shape.clear();

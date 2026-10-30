@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.75">
+<link rel="stylesheet" href="style.css?v=5.78">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -597,12 +597,11 @@
     <!-- 두 판을 한 칸에 겹쳐 둔다 — 탭을 옮겨도 판 높이가 그대로다(가려진 판은 자리만 지킨다) -->
     <div class="sty-panels">
     <div id="styPanelGame" class="sty-panel" role="tabpanel" aria-labelledby="styTabGame" tabindex="0">
+      <!-- 위는 칸·바탕 색(팔레트), 아래는 봇 색. 둘 다 리전 패스에서 받은 것만 늘어놓는다(ranked.js 의 fillStyles) -->
       <ul class="sty-list" id="styList" data-i18n-aria="stylePresets" aria-label="프리셋"></ul>
       <p class="pg-say" id="stySay" role="status"></p>
-      <p class="sty-hint" data-i18n="stylePassOnly">리전 패스에서 받은 색만 입을 수 있어요</p>
-      <a class="sty-pass" href="pass/" data-i18n="stylePassMore">리전 패스에서 더 받기</a>
+      <ul class="sty-list sty-bot" id="styBot" data-i18n-aria="acctColour" aria-label="색"></ul>
       <div class="sty-foot">
-        <p class="sty-note" id="styNote" role="status" aria-live="polite"></p>
         <button type="button" class="sty-reset" id="styReset" data-i18n="styleReset" hidden>기본 색으로</button>
       </div>
     </div>
@@ -770,10 +769,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=5.75"></script>
-<script src="app.js?v=5.75"></script>
-<script src="auth.js?v=5.75"></script>
-<script src="settings/settings.js?v=5.75"></script>
-<script src="ranked.js?v=5.75"></script>
+<script src="relay.js?v=5.78"></script>
+<script src="app.js?v=5.78"></script>
+<script src="auth.js?v=5.78"></script>
+<script src="settings/settings.js?v=5.78"></script>
+<script src="ranked.js?v=5.78"></script>
 </body>
 </html>

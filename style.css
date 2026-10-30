@@ -2514,8 +2514,12 @@ button.sty-swatch:active{transform:scale(.94)}
   font-size:13px;font-weight:900;line-height:1}
 .sty-tick{background:var(--ink);color:var(--card)}
 .sty-swatch[aria-pressed="true"] .sty-tick{display:grid}
-.sty-hint{margin:-4px 0 0;font-size:12px;color:var(--ink-soft)}
-.sty-pass{align-self:flex-start;font-size:14px;font-weight:800;color:var(--ink)}
+/* 봇 색 — 팔레트 줄 아래 칸막이 너머, 동그란 색 단추. 고른 것은 팔레트와 같은 테 두 겹 */
+.sty-bot{border-top:2px solid var(--grid);padding-top:14px}
+.sty-dot{width:40px;height:40px;border-radius:50%;border:2px solid var(--grid);cursor:pointer;position:relative;padding:0}
+.sty-dot[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 5px var(--ink)}
+.sty-dot[aria-pressed="true"] .sty-tick{display:grid}
+.sty-dot:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .sty-foot button,.sty-bot-reset{font:inherit;cursor:pointer;border:0;transition:transform .1s ease-out,background var(--fast)}
 .sty-foot button:active,.sty-bot-reset:active,.sty-save:active{transform:scale(.96)}
 .sty-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
