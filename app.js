@@ -2,9 +2,9 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '6.00';
+const VER = '6.01';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
-const REL = '3.0.2';
+const REL = '3.0.3';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
@@ -2369,6 +2369,11 @@ async function start(slug, only, rk, exam) {
     it.say = placeName(names, slug, it.name);
     it.aliases = [...new Set([...it.aliases, it.say, placeName(names, slug, it.name, true)])];
   });
+  /* 다른 나라 코스는 띄어쓰기 없이 보이고 친다(샹젤리제거리·CityofLondon) — 스페이스는 늘 확정 키다 */
+  if (course.lang) items.forEach(it => {
+    it.say = sayOf(it).replace(/\s+/g, '');
+    if (it.alts) it.alts = it.alts.map(a => a.replace(/\s+/g, ''));
+  });
   G = { slug, names, intro, course, items, zoom, z: zoom, seq: byChars || course.mode === 'sequence', idx: 0,
        total: secs, left: secs, ranked: rk || null, exam: exam || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
        cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(sayOf(it))), tx: 0, ty: 0,
@@ -2571,7 +2576,7 @@ function fillSide(el, it, hideName) {
   if (!it || hideName) { el.replaceChildren(); return; }
   const span = document.createElement('span');
   span.className = 'q-name';
-  span.textContent = TONGUE ? sayOf(it) : shownName(it.name);   // 치는 줄은 치는 꼴 그대로(gangseogu)
+  span.textContent = TONGUE || it.say ? sayOf(it) : shownName(it.name);   // 치는 줄은 치는 꼴 그대로(gangseogu)
   el.replaceChildren(span);
 }
 
@@ -2996,6 +3001,8 @@ function tongueInput(inp, val, composing) {
   G.typed = len;
   $('#statSpeed').textContent = speedIn(cpmNow());
   if (composing || !/\s/.test(val)) return;   // 스페이스 전에는 판단하지 않는다
+  /* 다른 나라 코스의 이름에는 띄어쓰기가 없다 — 스페이스면 바로 판정한다 */
+  if (G.course && G.course.lang) { inp.value = ''; return judge(val); }
   /* 순서형에서 남의 이름(Сонбук-дон)이 목표(Сонбук-дон 1-га)의 앞머리면 그 스페이스는 이름 안의 띄어쓰기다 */
   if (G.seq && r && !r.bad) { const fit = matchTongue(val, G.items, true); if (fit && fit !== target()) return; }
   /* 띄어쓰기 있는 이름(Qasr Al-Nile·Святошинський район)의 스페이스는 이름 안의 것이다 — 아직 맞는 칸이
@@ -4003,6 +4010,12 @@ if (location.search.includes('rt=1')) {
   G = { seq: true, idx: 0, items: qas, want: qas[0].say, parts: de.split(qas[0].say), typed: 0, ok: 0, bad: 0, chars: 0, part: 0, t0: 0 };
   tongueInput(hold, hold.value, false);
   console.assert(hold.value === 'qasr ' && !G.bad, '순서형: 띄어쓰기 있는 이름의 앞머리 뒤 스페이스는 이름 안의 것 — 판정하지 않는다');
+  box.innerHTML = html;
+  /* 다른 나라 코스면 이름에 띄어쓰기가 없으니 스페이스는 곧 확정이다 */
+  G = { seq: true, idx: 0, items: qas, want: qas[0].say, parts: de.split(qas[0].say), typed: 0, ok: 0, bad: 0, chars: 0, part: 0, t0: 0, course: { lang: 'ar' } };
+  const pass = { value: 'qasr ' };
+  tongueInput(pass, pass.value, false);
+  console.assert(pass.value === '' && G.bad === 1 && !qas[0].claimed, '다른 나라 코스: 스페이스를 치면 바로 판정한다');
   box.innerHTML = html;
   const nm = [{ name: 'New Mexico', say: typeForm('New Mexico'), alts: [], claimed: false }, { name: 'New York', say: typeForm('New York'), alts: [], claimed: false }], hold2 = { value: 'new ' };
   G = { seq: false, items: nm, want: '', parts: [], typed: 0, ok: 0, bad: 0, chars: 0, part: 0, t0: 0 };
