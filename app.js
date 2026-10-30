@@ -2,9 +2,9 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.99';
+const VER = '6.00';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
-const REL = '3.0.1';
+const REL = '3.0.2';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
@@ -93,6 +93,11 @@ function applyI18n(root) {
   root.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
 }
 
+/* 탭 제목. 서울 문구(서울 얼마나 아세요?)는 한국 홈에만 — 다른 나라는 그 수도 이름을 앞에 둔다.
+   이름을 문장 안에 넣으면 격이 붙는 말(Szöult·Soulin)이 깨지니 '수도 · 지명 타자' 꼴이다 */
+const paintTitle = () => {
+  document.title = 'regiontype · ' + (COUNTRY === 'KR' ? t('pageTitle') : t('pageTitlePlace', { place: homeTitle() }));
+};
 function paintUI(then) {
   document.documentElement.lang = LANG;
   /* 로그인 칸은 문이 하나다 — 들어가 있으면 라벨만 '내 계정' 이 된다.
@@ -110,7 +115,7 @@ function paintUI(then) {
   if (saveBtn) saveBtn.dataset.i18n = (typeof navigator.share === 'function') ? 'share' : 'save';
   /* 레일 폭이 고정이라 글자가 길어져도 셸이 흔들리지 않는다 — 그냥 다시 그린다 */
   applyI18n(document);
-  document.title = 'regiontype · ' + t('pageTitle');
+  paintTitle();
   document.querySelectorAll('template').forEach(tpl => applyI18n(tpl.content));
   requestAnimationFrame(() => relayoutNavShapes());
   document.querySelectorAll('.unit').forEach(el => { el.textContent = unitLabel(); });
@@ -1930,6 +1935,7 @@ function tabSwap(sign, fn) {
    문서 사이 전환(커뮤니티 → 홈)도 같다 — community.js 에 같은 몇 줄이 있다 */
 function yieldToScroll(vt) {
   const skip = () => vt.skipTransition(), evs = ['wheel', 'touchmove'];
+  vt.ready.catch(() => {});   // 건너뛴 전환의 ready 는 거절된다 — 오류가 아니다(문서 사이 전환도)
   evs.forEach(ev => addEventListener(ev, skip, { passive: true, capture: true }));
   vt.finished.catch(() => {}).finally(() => {
     evs.forEach(ev => removeEventListener(ev, skip, { capture: true }));
@@ -2103,6 +2109,7 @@ function paintRegion() {
 async function showCountry(id) {
   COUNTRY = haveCountry(id) ? id : resolveCountry();
   window.RT_COUNTRY = COUNTRY;   // 설정 국가 탭이 '지금 잡힌 나라'로 체크한다
+  paintTitle();
   paintRegion();
   await renderCourses();
 }
@@ -2355,14 +2362,16 @@ async function start(slug, only, rk, exam) {
     const short = typeForm(placeName(names, slug, it.name, true));
     it.alts = short !== it.say ? [short] : [];
   });
-  /* 한국어 화면의 다른 나라 지명은 보이는 한글 이름(네리마구·네리마)을 별칭으로 친다 */
+  /* 한국어 화면의 다른 나라 지명은 보이는 한글 이름(네리마구)을 친다 — 안내·말풍선·자판도 그 이름이다.
+     원래 이름(練馬区)과 짧은 한글(네리마)은 별칭으로 남는다 */
   else if (!byChars && names) items.forEach(it => {
-    if (names[`${slug}/${it.name}`]) it.aliases = [...new Set([...it.aliases,
-      placeName(names, slug, it.name), placeName(names, slug, it.name, true)])];
+    if (!names[`${slug}/${it.name}`]) return;
+    it.say = placeName(names, slug, it.name);
+    it.aliases = [...new Set([...it.aliases, it.say, placeName(names, slug, it.name, true)])];
   });
   G = { slug, names, intro, course, items, zoom, z: zoom, seq: byChars || course.mode === 'sequence', idx: 0,
        total: secs, left: secs, ranked: rk || null, exam: exam || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
-       cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(it.name)), tx: 0, ty: 0,
+       cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(sayOf(it))), tx: 0, ty: 0,
        blind: !!exam && !byChars };   // 코스 면허는 이름을 가린다. 자수 면허는 속기처럼 칠 글을 보여 주고 속도를 본다
   /* 화면 말 이름(네리마구)을 치면 입력칸도 화면 말이다 — 폰 자판이 그 말로 뜬다 */
   const shownTyped = !TONGUE && names && items.some(it => names[`${slug}/${it.name}`]);
@@ -2746,7 +2755,7 @@ function paintTongue(box, raw) {
 
 /* 안내에 띄울 이름. 행정명을 한 자로 줄여 붙인다 — 서울시, 제주도.
    경기도·강남구처럼 이미 짧으면 정식 명칭 그대로다. 치는 글자다. */
-const promptName = it => TONGUE ? sayOf(it) : adminLabel(it.name);
+const promptName = it => TONGUE || it.say ? sayOf(it) : adminLabel(it.name);
 /* 지도와 앞뒤 대기에 보이는 이름. 홈 칸과 같은 표(placeName)다 */
 const shownName = name => placeName(G && G.names, G && G.slug, name);
 /* 치는 이름 밑의 읽기 길잡이 — 일본어는 로마자, 중국어는 병음. 일본·중국 타자 게임이

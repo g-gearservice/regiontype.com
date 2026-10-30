@@ -345,7 +345,7 @@ G2P = {
                 ('c(?=[ei])', 'ch'), ('g(?=[ei])', 'j'), ('j', 'zh')),
     'tr': rules(('c', 'j'), ('ç', 'ch'), ('ş', 'sh'), ('ğ', ''), ('ı', 'eu'), ('ö', 'oe'), ('ü', 'ue'), ('j', 'zh'),
                 ('â', 'a'), ('î', 'i'), ('y', 'y')),
-    'id': rules(('ng', 'ng'), ('ny', 'ny'), ('sy', 'sh'), ('kh', 'x'), ('c', 'ch'), ('oe', 'u'), ('dj', 'j'),
+    'id': rules(('ng', 'ng'), ('ny', 'ny'), ('sy', 'sh'), ('kh', 'x'), ('ch', 'ch'), ('c', 'ch'), ('oe', 'u'), ('dj', 'j'),
                 ('tj', 'ch'), ('y', 'y')),
     'vi': rules(('(?<![a-z])ngh?', 'ng'), ('ngh', 'ng'), ('ng', 'ng'), ('nh(?![a-zđăâêôơư])', 'n'), ('nh', 'ny'),
                 ('(?<![a-z])gi', 'j'), ('tr|ch(?=[a-zđăâêôơư])', 'jj'), ('ch', 'k'), ('ph', 'p'), ('th', 't'),
@@ -551,8 +551,8 @@ def kana(ws):
             out.append(w); continue
         s = ''
         for c, g, v, coda in syllables(w):
-            if v is None:
-                s += K_CODA.get(c, '')
+            if v is None:   # 낱말 첫머리의 m·n 은 ン 으로 시작할 수 없다 — Младост 는 ムラドスト
+                s += KATA[c][2] if not s and c in ('m', 'n') else K_CODA.get(c, '')
             elif g == 'y' and c:
                 s += KATA[c][1].rstrip('ィ') + ('' if v == 1 else K_Y[v]) if c in ('k', 'g', 'n', 'h', 'b', 'p', 'm', 'r', 'l', 'x') \
                     else KATA[c][v] if c in ('sh', 'zh', 'j', 'ch', 'ny') else KATA[c][1] + K_Y[v]
@@ -751,6 +751,7 @@ if __name__ == '__main__':
     for (k, lang), v in LAT.items():
         assert latin_hangul(k, lang) == v, (k, latin_hangul(k, lang), v)
     assert transcribe('Berlin', 'de', 'ja') == 'ベルリン' and transcribe('München', 'de', 'ja') == 'ミュンヘン'
+    assert transcribe('Младост', 'bg', 'ja') == 'ムラドスト' and transcribe('Bernstein', 'de', 'ja').startswith('ベルン')
     assert transcribe('Berlin', 'de', 'zh') == '贝尔林' and transcribe('Helsinki', 'fi', 'zh') == '赫尔辛基'
     assert transcribe('Berlin', 'de', 'uk') == 'Берлін' and transcribe('Montmartre', 'fr', 'bg') == 'Монмартр'
     assert transcribe('Spandau', 'de', 'th').endswith('เดา') and transcribe('Copacabana', 'pt', 'el') == 'Κοπακαμπανα'
