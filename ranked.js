@@ -212,6 +212,9 @@ async function fillRanking() {
   const n = ++rankReq;
   const lad = $('#ladderList'), say = $('#ladderSay');
   lad.replaceChildren(); say.textContent = t('reading');
+  $('#rkMine').hidden = true;
+  /* 내 자리는 상위 50 줄 밖이어도 보인다 — 로그인했을 때만 */
+  if (token()) ask(`/games?dev=${DEV}`).then(g => { if (n === rankReq && g.ladder) paintCard($('#rkMine'), g.ladder, t('me')); }, () => {});
   $('#rkDev').textContent = `${t(DEV === 'mobile' ? 'devMobile' : 'devPc')} · ${langName()}`;
   try {
     const d = await ask(`/ladder?dev=${DEV}`);
@@ -289,6 +292,19 @@ function wireTabs() {
 }
 
 /* ── 기록 ─────────────────────────────────────────────── */
+/* 내 사다리 카드 — 기록 덮개와 순위 덮개(#rkMine)가 같은 꼴을 쓴다 */
+function paintCard(card, lad, who) {
+  const tier = card.querySelector('.tier');
+  tier.textContent = tierName(lad.lp, lad.games);
+  tier.dataset.tier = lad.games >= PLACE ? tierOf(lad.lp) : '';
+  card.querySelector('.rec-lp').textContent = lad.lp + ' LP';
+  /* 다음 디비전까지. 마스터는 끝이 없다 — 막대를 가득 채운다 */
+  card.querySelector('.rec-bar').value = tierOf(lad.lp) === TIERS - 1 ? 100 : lad.lp % STEP;
+  card.querySelector('.pg-help').textContent = [who, t('games', { n: lad.games }),
+    t('winLoss', { w: lad.wins, l: lad.games - lad.wins }),
+    lad.rank ? t('nth', { n: lad.rank }) : ''].filter(Boolean).join(' · ');
+  card.hidden = false;
+}
 let recReq = 0;
 async function fillRecords() {
   const n = ++recReq;
@@ -302,19 +318,7 @@ async function fillRecords() {
   try { d = await ask(`/games?dev=${DEV}`); } catch { if (n === recReq) say.textContent = t('boardFail'); return; }
   if (n !== recReq) return;
   const lad = d.ladder;
-  if (lad) {
-    const placed = lad.games >= PLACE;
-    const tier = $('#recTier');
-    tier.textContent = tierName(lad.lp, lad.games);
-    tier.dataset.tier = placed ? tierOf(lad.lp) : '';
-    $('#recLp').textContent = lad.lp + ' LP';
-    /* 다음 디비전까지. 마스터는 끝이 없다 — 막대를 가득 채운다 */
-    $('#recBar').value = tierOf(lad.lp) === TIERS - 1 ? 100 : lad.lp % STEP;
-    $('#recWl').textContent = [t('games', { n: lad.games }),
-      t('winLoss', { w: lad.wins, l: lad.games - lad.wins }),
-      lad.rank ? t('nth', { n: lad.rank }) : ''].filter(Boolean).join(' · ');
-    $('#recCard').hidden = false;
-  }
+  if (lad) paintCard($('#recCard'), lad);
   const day = new Intl.DateTimeFormat(document.documentElement.lang || 'ko', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   list.replaceChildren(...d.games.map(g => {
     const li = document.createElement('li');
@@ -381,12 +385,28 @@ addEventListener('rt-auth-out', () => passKit.then(kit => {
   syncHomeBot();
   if (styOpen()) fillStyles();
 }));
-passKit.then(kit => {
+passKit.then(async kit => {
   countOwned(kit);
   syncHomeBot();   // 잠근 모양을 가졌는지 이제 안다
+  if (!token()) return;   // 로그아웃 중엔 입은 팔레트(rt.theme)를 거두지 않는다 — 다시 로그인하면 그대로 입는다
+  /* 계정에 남은 마지막 색(다른 브라우저에서 입은 것)이 이 기기 것보다 앞선다. 패스 진행은 기기마다라
+     가진 팔레트(owned)로 거르지 않고, 있는 팔레트인지만 본다 */
+  const me = await Promise.resolve(window.RT_ME_P).catch(() => null);
+  const ref = me?.profile?.theme || '';
+  const got = ref.startsWith('pal:') && kit.parseReward(ref);
+  if (ref === 'base') {
+    try { localStorage.removeItem('rt.theme'); } catch {}
+    paintTheme();
+    if (styOpen()) fillStyles();
+    return;
+  }
+  if (got?.kind === 'palette') {
+    putTheme(got.palette);
+    if (styOpen()) fillStyles();
+    return;
+  }
   /* 가진 팔레트가 아닌 색(옛 색 직접 고르기·봇이 지은 색·지난 꼴의 팔레트)은 거두고 기본 색으로 돌린다 */
   const cur = curTheme();
-  if (!token()) return;   // 로그아웃 중엔 입은 팔레트(rt.theme)를 거두지 않는다 — 다시 로그인하면 그대로 입는다
   /* 옛 값으로 입은 팔레트(밤 바탕이 없던 2.3.0, 강조색을 다듬기 전 2.4)는 거두지 않고 지금 값으로 다시 적는다 —
      칸·바탕·글자가 같은 것 가운데 강조색이 가장 가까운 것 */
   const near = (a, b) => [1, 3, 5].reduce((s, i) => s + Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)), 0);
@@ -399,6 +419,11 @@ passKit.then(kit => {
     paintTheme();
   }
   try { localStorage.removeItem('rt.styles'); } catch {}
+  /* 계정에 아직 색이 없으면(이 기능 전에 입은 사람) 이 기기에서 입은 것을 올려 둔다 */
+  if (me && !ref) {
+    const now = curTheme(), mine = owned.find(o => sameStyle(pickTheme(o.palette), now));
+    if (mine) sendTheme(mine.ref);
+  }
   if (styOpen()) fillStyles();
 }).catch(() => {});
 const palName = q => (t('pal_' + q.family) || q.family) + (q.n > 1 ? ' ' + q.roman : '');
@@ -427,13 +452,19 @@ function fillStyles(focusRef) {
   $('#styReset').hidden = !THEME.some(k => cur[k.key]);
   if (focusRef) (ul.querySelector(`[data-ref="${CSS.escape(focusRef)}"]`) || $('#styHead')).focus({ preventScroll: true });
 }
+function putTheme(palette) {
+  try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(palette))); } catch { return; }
+  paintTheme();
+  /* 어두운 팔레트(블랙 프라이데이)는 밤 화면 위에 깐다 — 설정 통(settings.js)이 켜고 저장한다 */
+  if (palette.dark && !document.documentElement.hasAttribute('data-night')) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: true } }));
+}
+/* 입은 색을 계정에도 남긴다 — 다른 브라우저에서 로그인하면 그 색으로 선다. 'base' 는 기본 색 */
+const sendTheme = ref => { if (token()) ask('/auth/theme', { theme: ref }).catch(() => {}); };
 function wearPalette(ref) {
   const o = owned.find(x => x.ref === ref);
   if (!o) return;
-  try { localStorage.setItem('rt.theme', JSON.stringify(pickTheme(o.palette))); } catch { return; }
-  paintTheme();
-  /* 어두운 팔레트(블랙 프라이데이)는 밤 화면 위에 깐다 — 설정 통(settings.js)이 켜고 저장한다 */
-  if (o.palette.dark && !document.documentElement.hasAttribute('data-night')) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: true } }));
+  putTheme(o.palette);
+  sendTheme(ref);
   fillStyles(ref);
 }
 
@@ -1445,6 +1476,7 @@ function act(a) {
     if (!a.reset) return;
     try { localStorage.removeItem('rt.theme'); } catch { return; }
     paintTheme();
+    sendTheme('base');
     return;
   }
   if (a.act === 'start' && botCourses().some(x => x.slug === a.course)) {
