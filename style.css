@@ -531,15 +531,13 @@ body:is(.signing,.setting,.paging) #courseBtns .course-map text{opacity:0}
 }
 .opts-lang-pick > fieldset,
 .opts-region-pick > fieldset{grid-column:1/-1}
-/* 언어·지역은 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
+/* data-dev-only 는 개발용 문이다. CSS 기본부터 탭과 판을 함께 숨겨 배포 첫 페인트에
    언어 목록이 번쩍이지 않는다. 선택된 판만 개발 환경에서 되살린다.
    폰 설정의 칩(display:inline-flex)처럼 더 센 규칙이 있어도 배포에선 단추조차 안 보이게 !important */
 .opts-tab[data-dev-only],.opts-panel[data-dev-only]{display:none}
 :root:not([data-dev]) :is(.opts-tab,.opts-panel)[data-dev-only]{display:none!important}
 :root[data-dev] .opts-tab[data-dev-only]{display:revert}
 :root[data-dev] .opts-panel[data-dev-only]:not([hidden]){display:flex}
-/* 지역 고르기도 개발에서만 그린다 — 판이 숨어도 배포에서 목록이 남지 않게 한 번 더 막는다 */
-:root:not([data-dev]) .opts-region-pick{display:none!important}
 /* 대륙마다 끊어 2열로 펼친다 — 스크롤 목록보다 한눈에 듄다. 칸이 좁아지면
    auto-fit 이 알아서 1열로 접히므로 화면 폭으로 갈래를 나누지 않는다 */
 .region-group{border:0;margin:0;padding:0;min-inline-size:0}
@@ -2869,6 +2867,12 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
 #play.is-exam .typing{width:min(640px,100%)}
 #play.is-exam .q-side{flex:1 1 0; min-width:0}
 #play.is-exam .q-name{max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* 데스크톱 알약은 빈칸에서 끝난다 — 오른쪽 빈 자리를 걷고 지나온 이름 폭만큼만 둔다 */
+@media not all and (pointer:coarse){
+  #play.is-exam .typing{width:fit-content; min-width:0; padding-right:30px}
+  #play.is-exam .q-side.is-prev{flex:0 1 auto; max-width:240px}
+  #play.is-exam .q-side.is-next{display:none}
+}
 #play.is-exam .fact{display:none}
 
 /* 시험 모드 결과 줄 */

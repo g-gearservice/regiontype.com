@@ -2,9 +2,9 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '5.96';
+const VER = '5.98';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
-const REL = '2.6.4';
+const REL = '3.0.0';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
@@ -59,7 +59,7 @@ const courseLabel = c => {
   /* 코스 제목은 한국어로만 적혀 있다 — 다른 화면 말은 홈 칸 이름(서울 코스면 서울)과 곳 수로 짓는다 */
   if (LANG !== 'ko') {
     const tile = COURSE.tiles.find(x => x.slug === c.slug);
-    const where = tile ? tile.label : c.slug === 'seoul-gu' ? homeTitle() : '';
+    const where = tile ? tile.label : c.slug === homeSlug() ? homeTitle() : '';
     return where ? `${where} · ${n}` : n;
   }
   if (c.title && c.title !== String((c.items || []).length)) return c.title;
@@ -69,13 +69,20 @@ const countryName = id => {
   try { return new Intl.DisplayNames([LANG], { type: 'region' }).of(id) || id; }
   catch { return id; }
 };
-/* 홈 머리글. 나라는 아직 개발 중이라 서울만 연다 — world.json 서울 권역 제목을 따른다 */
+/* 홈 지도는 그 나라의 수도 권역이다 — 한국은 서울 자치구, 수도 코스가 없는 나라(ZA)는 첫 권역.
+   world.json 이 오기 전에는 서울이다 */
+function homeRegion() {
+  const pack = WORLD.countries.find(c => c.id === COUNTRY);
+  const rs = (pack && pack.regions) || [];
+  return rs.find(r => r.id === 'seoul' || r.id.endsWith('-capital')) || rs[0] || null;
+}
+const homeSlug = () => (homeRegion() || {}).main || 'seoul-gu';
+/* 홈 머리글. world.json 의 그 권역 제목을 따르고, 제목이 없으면 나라 이름이다 */
 function homeTitle() {
-  const pack = WORLD.countries.find(c => c.id === 'KR');
-  const region = pack && (pack.regions || []).find(r => r.main === 'seoul-gu' || r.id === 'seoul');
-  const title = region && region.title;
-  if (title && typeof title === 'object') return title[LANG] || title.en || title.ko || '서울';
-  return title || '서울';
+  const fall = COUNTRY === 'KR' ? '서울' : countryName(COUNTRY);
+  const title = (homeRegion() || {}).title;
+  if (title && typeof title === 'object') return title[LANG] || title.en || title.ko || fall;
+  return title || fall;
 }
 
 function applyI18n(root) {
@@ -678,11 +685,19 @@ const KR = Promise.all([grab('data/kr-tree.json'), grab('data/kr-names.json')]);
    중국어 江南区·新村洞, 키릴 Каннам-гу. 없는 칸은 로마자로 남는다(tools/build_kr_*.py) */
 const NAME_LANGS = ['ja', 'zh', 'uk', 'bg'];
 const LOCAL_NAMES = {};
+/* 한국 밖 나라는 수도·동네 이름의 화면 말 표(data/names/<나라>.<말>.json, tools/build_capital.py)를
+   덮는다 — 한국어 화면이면 練馬区 가 네리마구로 보인다. 코스 제 말이면 표가 없다 */
+const PLACE_NAMES = {};
+const ownTongue = () => normLangTag((WORLD.countries.find(c => c.id === COUNTRY) || {}).lang) === LANG;
+const placeNames = () => COUNTRY === 'KR' || ownTongue() ? Promise.resolve({})
+  : (PLACE_NAMES[`${COUNTRY}.${LANG}`] ??= grab(`data/names/${COUNTRY.toLowerCase()}.${LANG}.json`).catch(() => ({})));
+/* [kr-tree, '코스/이름' → 화면 말 이름]. 한국어 화면에 한국 로마자 표는 싣지 않는다 */
 async function krNames() {
-  const [tree, roman] = await KR;
-  if (!NAME_LANGS.includes(LANG)) return [tree, roman];
+  const [[tree, roman], place] = await Promise.all([KR, placeNames()]);
+  if (LANG === 'ko') return [tree, place];
+  if (!NAME_LANGS.includes(LANG)) return [tree, { ...roman, ...place }];
   const own = await (LOCAL_NAMES[LANG] ??= grab(`data/kr-names.${LANG}.json`).catch(() => ({})));
-  return [tree, { ...roman, ...own }];
+  return [tree, { ...roman, ...own, ...place }];
 }
 /* 한 줄 소개의 번역. 원문은 코스의 meta.description(한국어)이고, 화면 말이 한국어가
    아니면 data/kr-intro.<말>.json 에서 '코스/이름' 으로 꺼낸다. 없는 칸은 원문이다 */
@@ -801,14 +816,16 @@ function kidName(name) {
   if (m) return m[1] + m[2];
   return /^.{2,}[시군]$/.test(n) ? n.slice(0, -1) : n;
 }
-/* 칸에 보이는 지명. 화면 말이 한국어가 아니면 krNames() 의 표에서 꺼낸다 —
-   홈 칸과 게임 안 지도·앞뒤 대기 이름이 같이 쓴다. 치는 글자는 그대로 한국어다.
-   short 면 밀려난 칸에 쓸 짧은 이름 */
+/* 칸에 보이는 지명. krNames() 의 표에 화면 말 이름이 있으면 그것 — 한국 지명은 한국어 밖의
+   말에서, 다른 나라 지명은 그 나라 말 밖의 모든 말에서(練馬区 → 네리마구·Nerima).
+   홈 칸과 게임 안 지도·앞뒤 대기 이름이 같이 쓴다. short 면 밀려난 칸에 쓸 짧은 이름 */
 function placeName(names, parent, name, short = false) {
-  const en = LANG !== 'ko' && names && names[`${parent}/${name}`];
+  /* 한국어 화면에서 한글 지명은 표를 보지 않는다 — 다른 말로 시작한 판의 표가 남아 있어도 */
+  const en = names && !(LANG === 'ko' && /[가-힣]/.test(name)) && names[`${parent}/${name}`];
   if (!en) return short ? shortAdmin(name) : adminLabel(name);
-  /* 짧은 이름은 단위를 뗀다. 한자는 두 글자 넘는 이름만 — 中区·明洞 이 中·明 이 되면 못 읽는다 */
-  return short ? en.replace(/-(do|si|gun|gu|eup|myeon|dong|гу|дон)$|(?<=\D\D)[洞区]$/, '') : en;
+  /* 짧은 이름은 단위를 뗀다. 한자는 두 글자 넘는 이름만 — 中区·明洞 이 中·明 이 되면 못 읽는다.
+     한글 표기는 세 글자 넘는 이름의 구만(네리마구 → 네리마, 중구는 그대로) */
+  return short ? en.replace(/-(do|si|gun|gu|eup|myeon|dong|гу|дон)$|(?<=\D\D)[洞区]$|(?<=[가-힣]{2})구$/, '') : en;
 }
 /* 칸 글자 크기. 밀려난 칸은 짧은 이름으로 바꾸고 k 배로 키운다 — 칸이 1/d 로 줄어도
    화면 글자는 k/d 배인 구역 칸 글자와 같아진다. 어느 칸이든 폭을 넘으면 폭에 맞춰 줄인다.
@@ -959,7 +976,7 @@ function planCourses(snap = false) {
   if (!OPEN) {
     seoul.el.classList.remove('haze');
     tops.forEach(tile => {
-      tile.el.setAttribute('aria-expanded', 'false');
+      if (tile.slug) tile.el.setAttribute('aria-expanded', 'false');   // 아래 코스가 없는 칸은 펼 것이 없다
       aimTile(tile, (c0 + tile.bx) * f0, (r0 + tile.by) * g0, 1 / d0, 1, 0, snap);
     });
     aimTile(seoul, c0 * f0, r0 * g0, 1 / d0, 1, 0, snap);
@@ -1002,13 +1019,14 @@ async function tellPick() {
   /* 여러 칸을 골랐으면 코스 제목 대신 고른 칸 이름을 늘어놓는다 */
   if (MARK.size > 1) { name.textContent = [...MARK].map(x => x.short || x.label).join(' · '); return; }
   /* 아무 칸도 안 고르면 서울 코스다 — 머리글이 그걸 브랜드 색으로 알린다 */
-  const slug = tile ? tile.slug : COURSE.root;
+  /* 아래 코스가 없는 칸(한국 밖 수도의 구)은 수도 코스를 친다 */
+  const slug = tile && tile.slug || COURSE.root;
   if (!slug) return;
   try {
     const course = await loadCourse(slug);
     /* 제 코스가 없는 구역은 부모 코스를 친다 — 무엇을 치게 되는지 같이 적는다.
        코스 제목은 한국어로만 적혀 있어, 다른 화면 말에서는 칸 이름과 곳 수로 짓는다 */
-    const owner = !tile ? null : tile.kid && tile.slug === tile.parent.slug ? tile.parent : tile;
+    const owner = !tile || !tile.slug ? null : tile.kid && tile.slug === tile.parent.slug ? tile.parent : tile;
     const label = LANG === 'ko' ? courseLabel(course)
       : `${owner ? owner.label : homeTitle()} · ${t('places', { n: course.items.length })}`;
     if (PICK === tile) name.textContent = !owner || owner === tile ? label : `${tile.label} · ${label}`;
@@ -1150,7 +1168,8 @@ async function openCourse(host) {
   foldKids();
   const map = buildDotMap(geom, it => {
     const own = COURSE.tree && COURSE.tree.children[`${host.slug}/${it.name}`];
-    const tile = makeTile(LANG === 'ko' ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name, true),
+    const kr = LANG === 'ko' && !(COURSE.names && COURSE.names[`${host.slug}/${it.name}`]);   // 한국어 화면의 한국 지명
+    const tile = makeTile(kr ? kidName(it.name) : placeName(COURSE.names, host.slug, it.name, true),
                           own || host.slug, true);
     tile.el.setAttribute('aria-label', placeName(COURSE.names, host.slug, it.name));
     tile.parent = host;
@@ -1185,9 +1204,11 @@ async function openCourse(host) {
 /* 설정 게임 탭의 동 구분. 법정동이면 구 칸이 법정동 코스(-bdong)를 가리킨다 */
 const dongSlug = slug => opt.dong === 'legal' ? slug.replace(/-dong$/, '-bdong') : slug;
 async function renderCourses() {
-  /* 서울만 연다. 설정 지역 탭은 개발 중이라 고른 나라가 홈 지도를 바꾸지 않는다 */
-  const [[tree, names], geom] = await Promise.all([krNames(), SEOUL_GEOM]);
-  const root = 'seoul-gu';
+  /* 그 나라 수도를 연다(homeSlug). 구 아래 갈래는 서울이 kr-tree, 다른 수도는 world.json 권역의
+     children 이다(tools/build_capital.py) — 둘 다 '수도/구' → 아래 코스 */
+  const root = homeSlug(), region = homeRegion();
+  const [[krTree, names], geom] = await Promise.all([krNames(), loadGeom(root)]);
+  const tree = region && region.children ? { children: region.children } : krTree;
   openGen++;
   OPEN = null;
   paintBack();
@@ -1198,9 +1219,11 @@ async function renderCourses() {
   /* 서울은 구 원 스물다섯이 아니라 도트 지도다 — 구 하나가 제 도트 묶음(seoul-gu.geom) */
   const slugOf = new Map(courseList(root, tree).map(it => [it.name, it.slug]));
   const map = buildDotMap(geom, it => {
-    const tile = makeTile(placeName(names, root, it.name), dongSlug(slugOf.get(it.name)), false);
+    const own = slugOf.get(it.name);
+    const tile = makeTile(placeName(names, root, it.name), own && dongSlug(own), false);
     tile.short = placeName(names, root, it.name, true);
-    tile.el.setAttribute('aria-expanded', 'false');
+    /* 아래 코스가 없는 칸은 펼 것이 없다 — aria-expanded 가 없으면 openCourse 가 접기만 한다 */
+    if (own) tile.el.setAttribute('aria-expanded', 'false');
     return tile;
   });
   COURSE = { tree, names, root, px: 0, py: 0, z: 1, map, tiles: map.tiles };
@@ -1245,7 +1268,7 @@ function playNormal() {
   if (!COURSE.root) return;
   /* 여러 칸은 한 코스 안에서만 고를 수 있으니, 그 코스를 고른 곳만 남겨 친다 */
   if (MARK.size > 1) start(PICK.kid ? PICK.parent.slug : COURSE.root, new Set([...MARK].map(x => x.name)));
-  else start(PICK ? PICK.slug : COURSE.root);
+  else start(PICK && PICK.slug || COURSE.root);
 }
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !$('#regions').classList.contains('on')) return;
@@ -1900,7 +1923,20 @@ function tabSwap(sign, fn) {
   const vt = document.startViewTransition(fn);
   vt.ready.catch(() => {}); vt.updateCallbackDone.catch(() => {});   // 빠르게 연달아 누르면 앞 전환이 건너뛰어진다 — 오류가 아니다
   vt.finished.catch(() => {}).finally(() => { delete root.dataset.tabSwap; });
+  yieldToScroll(vt);
 }
+/* 전환 동안 화면은 스냅샷이라, 그 사이 굴리면 화면이 전환 자리에 묶인 채 남는다(순위·기록·계정·커뮤니티).
+   손이 굴리기 시작하면 전환을 걷어 살아 있는 화면에 넘기고, 끝나면 문서를 제자리(pinDoc)로 부드럽게 돌려놓는다.
+   문서 사이 전환(커뮤니티 → 홈)도 같다 — community.js 에 같은 몇 줄이 있다 */
+function yieldToScroll(vt) {
+  const skip = () => vt.skipTransition(), evs = ['wheel', 'touchmove'];
+  evs.forEach(ev => addEventListener(ev, skip, { passive: true, capture: true }));
+  vt.finished.catch(() => {}).finally(() => {
+    evs.forEach(ev => removeEventListener(ev, skip, { capture: true }));
+    pinDoc('ease');
+  });
+}
+addEventListener('pagereveal', e => { if (e.viewTransition) yieldToScroll(e.viewTransition); });
 function tabGo(to) {
   const from = tabNow();
   if (from === to && !(to === 'account' && !$('#records').hidden)) {
@@ -2022,14 +2058,17 @@ async function sense() {
 }
 
 function resolveCountry() {
-  /* 배포는 아직 남한만 연다 — 자동 감지도, 저장해 둔 선택도 넘기지 않는다 */
-  if (!isDev() && haveCountry('KR')) return 'KR';
+  /* 설정 국가 탭에서 고른 나라 — Capital 은 나라를 막지 않는다(docs/PLAN-subscription.md) */
   if (opt.country !== 'auto' && haveCountry(opt.country)) return opt.country;
-  if (HERE.country && haveCountry(HERE.country)) return HERE.country;
+  /* 고르기 전엔 첫 Google 로그인 때 계정에 고정한 나라(auth.js 의 RT_PIN)다. VPN 에 흔들리지 않는다 */
+  const pin = window.RT_PIN && window.RT_PIN.country;
+  if (pin && haveCountry(pin)) return pin;
+  /* 로그인 전엔 브라우저 말(Accept-Language·navigator)로 어림한다. 접속 IP 는 VPN 이 바꾸므로 뒤로 민다 */
   for (const tag of [HERE.lang, ...(navigator.languages || []), navigator.language]) {
     const hit = countryFromLangTag(tag);
     if (hit) return hit;
   }
+  if (HERE.country && haveCountry(HERE.country)) return HERE.country;
   if (TZ_COUNTRY[HERE.timezone] && haveCountry(TZ_COUNTRY[HERE.timezone]))
     return TZ_COUNTRY[HERE.timezone];
   return haveCountry('KR') ? 'KR' : (WORLD.countries[0] && WORLD.countries[0].id);
@@ -2056,13 +2095,14 @@ const countryStage = id => {
 };
 
 /* 지금 무엇이 잡혔는지 읽어 준다. 화면에는 더 안 그리고 콘솔에만 남긴다 —
-   홈은 서울만, 지역 탭은 개발 중 */
+   홈은 그 나라 수도, 지역 탭은 개발 중 */
 function paintRegion() {
   console.log('[region]', homeTitle(), t('tabDev'));
 }
 
 async function showCountry(id) {
-  COUNTRY = (isDev() && haveCountry(id)) ? id : resolveCountry();
+  COUNTRY = haveCountry(id) ? id : resolveCountry();
+  window.RT_COUNTRY = COUNTRY;   // 설정 국가 탭이 '지금 잡힌 나라'로 체크한다
   paintRegion();
   await renderCourses();
 }
@@ -2175,8 +2215,6 @@ async function boot() {
     UI_LANGS = Object.keys(I18N);
     WORLD = world;
     LANG_COUNTRY = buildLangCountry(world);
-    // 개발에서 골라 둔 나라가 localStorage 에 남아 있어도 배포에서는 되돌린다
-    if (!isDev() && opt.country !== 'auto') { opt.country = 'auto'; saveOpt(); }
     COUNTRY = resolveCountry();
     LANG = resolveLang();
     paintUI();
@@ -2195,15 +2233,16 @@ async function boot() {
     ]);
     setBoot(80, 'bootInput');
 
-    /* 4단계: 경쟁전 입력 신호 준비 — 기본 코스(seoul-gu)와 자치구 코스·도트 지도를 메모리에 올리고,
+    /* 4단계: 경쟁전 입력 신호 준비 — 기본 코스(그 나라 수도)와 자치구 코스·도트 지도를 메모리에 올리고,
        언어별 입력 판정 열쇠(TONGUE)·게임 자판(kbFor)·UI 아이콘까지 예열한다 */
+    /* 로그인·로그아웃으로 계정 나라(RT_PIN)가 바뀌면 홈 지도를 그 나라 수도로 다시 세운다 */
+    addEventListener('rt-pin', () => { if (resolveCountry() !== COUNTRY) showCountry(resolveCountry()); });
     addEventListener('rt-opt', () => {
       const next = Object.assign({}, DEF, JSON.parse(localStorage.getItem('rt.opt') || '{}'));
       for (const k of Object.keys(next)) if (!(k in DEF)) delete next[k];
       const dong = opt.dong, country = opt.country, lang = LANG;
       Object.assign(opt, next);
-      /* 나라 고르기는 개발에서만 열린다 — 배포는 showCountry 가 KR 로 되돌린다 */
-      if (opt.country !== country && isDev()) showCountry(resolveCountry());
+      if (opt.country !== country) showCountry(resolveCountry());
       else if (opt.dong !== dong) renderCourses();
       document.documentElement.toggleAttribute('data-night', opt.night);
       document.documentElement.dataset.motion = opt.motion ? 'on' : 'off';
@@ -2219,10 +2258,10 @@ async function boot() {
     fbPlaceholder();
     paintRegion();
     wireNavShape();
-    const [[seoulCourse]] = await Promise.all([load('seoul-gu'), preloadIcons(), bootBeat(90)]);
+    const [[homeCourse]] = await Promise.all([load(homeSlug()), preloadIcons(), bootBeat(90)]);
     TONGUE = getTongue(LANG, read);
-    $('#typein').lang = TONGUE ? LANG : seoulCourse.lang || document.documentElement.lang;
-    kbFor(seoulCourse.items.map(it => ({ ...it, aliases: [stripSuffix(it.name), adminLabel(it.name)].filter(Boolean) })));
+    $('#typein').lang = TONGUE ? LANG : homeCourse.lang || document.documentElement.lang;
+    kbFor(homeCourse.items.map(it => ({ ...it, aliases: [stripSuffix(it.name), adminLabel(it.name)].filter(Boolean) })));
     setBoot(90, 'bootInput');
 
     await showCountry(COUNTRY);
@@ -2308,18 +2347,26 @@ async function start(slug, only, rk, exam) {
   });
   /* 한국어가 아닌 화면 말이면 칸에 보이는 그 말의 이름을 친다. 표에 없는 칸(나라 코스·
      한자가 없는 동)은 제 이름을 치는 꼴(typeForm)로 — 띄어쓰기 있는 이름도 붙여 친다. 별칭은 그대로다 */
-  TONGUE = getTongue(LANG, read);
+  /* 코스 제 말로 치면(일본어 화면의 도쿄) 열쇠로 접지 않고 IME 로 친 글자를 그대로 견준다 */
+  TONGUE = normLangTag(course.lang) === LANG ? null : getTongue(LANG, read);
   if (TONGUE) items.forEach(it => {
     if (!names || !names[`${slug}/${it.name}`]) { it.say = typeForm(it.name); return; }
     it.say = typeForm(placeName(names, slug, it.name));
     const short = typeForm(placeName(names, slug, it.name, true));
     it.alts = short !== it.say ? [short] : [];
   });
+  /* 한국어 화면의 다른 나라 지명은 보이는 한글 이름(네리마구·네리마)을 별칭으로 친다 */
+  else if (!byChars && names) items.forEach(it => {
+    if (names[`${slug}/${it.name}`]) it.aliases = [...new Set([...it.aliases,
+      placeName(names, slug, it.name), placeName(names, slug, it.name, true)])];
+  });
   G = { slug, names, intro, course, items, zoom, z: zoom, seq: byChars || course.mode === 'sequence', idx: 0,
        total: secs, left: secs, ranked: rk || null, exam: exam || null, hits: 0, tries: 0, combo: 0, best: 0, score: 0, chars: 0, part: 0, t0: 0, t1: 0, ok: 0, bad: 0, typed: 0,
        cell: geom.cell, spacy: !TONGUE && items.some(it => /\s/.test(it.name)), tx: 0, ty: 0,
        blind: !!exam && !byChars };   // 코스 면허는 이름을 가린다. 자수 면허는 속기처럼 칠 글을 보여 주고 속도를 본다
-  $('#typein').lang = TONGUE ? LANG : course.lang || document.documentElement.lang;
+  /* 화면 말 이름(네리마구)을 치면 입력칸도 화면 말이다 — 폰 자판이 그 말로 뜬다 */
+  const shownTyped = !TONGUE && names && items.some(it => names[`${slug}/${it.name}`]);
+  $('#typein').lang = TONGUE || shownTyped ? LANG : course.lang || document.documentElement.lang;
 
   const svg = $('#map');
   svg.setAttribute('viewBox', `0 0 ${geom.w} ${geom.h}`);
@@ -2879,9 +2926,16 @@ $('#typein').addEventListener('blur', markFocus);
 /* 폰 Safari 탭은 문서를 위아래로 --bleed 만큼 늘려 두고(style.css), 늘 그 가운데에 묶는다 —
    화면 밖 위아래에 문서가 있어야 Safari 가 상태바·주소창 밑에 페이지를 그린다 */
 const bleedOn = matchMedia('(pointer:coarse) and (display-mode:browser)');
-const pinDoc = () => {
+/* 'ease' 는 전환 뒤 돌려놓기(yieldToScroll) — 묶인 자리에서 미끄러져 돌아온다. 그 동안(.5s)은 scroll 이 부르는
+   즉시 묶기가 끼어들어 끊지 않게 비켜 선다 */
+let pinEasing = false;
+const pinDoc = how => {
   const b = bleedOn.matches ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bleed')) || 0 : 0;
-  if (Math.abs(scrollY - b) > .5) scrollTo(0, b);
+  if (pinEasing || Math.abs(scrollY - b) <= .5) return;
+  if (how !== 'ease' || calm()) return scrollTo(0, b);
+  pinEasing = true;
+  scrollTo({ top: b, behavior: 'smooth' });
+  setTimeout(() => { pinEasing = false; pinDoc(); }, 500);
 };
 pinDoc();
 for (const e of ['load', 'scroll', 'resize']) addEventListener(e, pinDoc, { passive: true });
@@ -3867,7 +3921,13 @@ if (location.search.includes('rt=1')) {
     === '江南,中区,シンチョン,明洞,Каннам', '한자·가나·키릴 짧은 이름');
   console.assert(placeName(null, 'kr-admin', '경기도') === '경기도', '표가 없으면 한국어로 떨어진다');
   LANG = 'ko';
-  console.assert(placeName(roman, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');
+  console.assert(placeName({}, 'kr-admin', '충청북도', true) === '충북', '한국어 화면은 한국어 약칭');
+  const tokyo = { 'jp-capital/練馬区': '네리마구', 'jp-capital/中区': '중구' };
+  console.assert(placeName(tokyo, 'jp-capital', '練馬区') === '네리마구' && placeName(tokyo, 'jp-capital', '練馬区', true) === '네리마'
+    && placeName(tokyo, 'jp-capital', '中区', true) === '중구', '다른 나라 지명도 한국어 화면에서 한글로, 짧은 이름은 구를 뗀다');
+  const nerima = { name: '練馬区', aliases: ['네리마구', '네리마'], claimed: false };
+  console.assert(matchInput('네리마구', [nerima]) === nerima && matchInput('네리마', [nerima]) === nerima,
+    '한국어 화면은 보이는 한글 이름으로 쳐도 맞는다');
   const gWas = G;
   G = { names: { 'gangseo-dong/화곡1동': 'ファゴク1洞' }, slug: 'gangseo-dong' };
   LANG = 'ja';
@@ -4020,16 +4080,24 @@ if (location.search.includes('rt=1')) {
   opt.country = 'auto';
   console.assert(resolveCountry() === 'DE', 'Accept-Language·타임존으로 독일');
   HERE = { country: 'FR', lang: 'en-US', timezone: 'Europe/Paris' };
-  console.assert(resolveCountry() === 'FR', 'relay 나라 코드가 언어보다 우선');
+  console.assert(resolveCountry() === 'US', '브라우저 말이 접속 국가(VPN 이 바꾼다)보다 먼저');
   opt.country = 'auto';
   HERE = { country: '', lang: 'zh-TW', timezone: '' };
   console.assert(resolveCountry() === 'TW', 'zh-TW → 대만');
+  const pinWas = window.RT_PIN;
+  window.RT_PIN = { country: 'DE', lang: null };
   opt.country = 'JP';
-  console.assert(resolveCountry() === 'JP', '개발에서는 고른 나라가 자동 감지를 이긴다');
   document.documentElement.removeAttribute('data-dev');
-  console.assert(resolveCountry() === 'KR', '배포는 골라 둔 나라를 무시하고 남한');
+  console.assert(resolveCountry() === 'JP', '배포도 국가 탭에서 고른 나라가 계정 나라를 이긴다');
+  opt.country = 'auto';
+  console.assert(resolveCountry() === 'DE', '고르기 전엔 계정 나라');
   HERE = { country: 'FR', lang: 'fr-FR', timezone: 'Europe/Paris' };
-  console.assert(resolveCountry() === 'KR', '배포는 자동 감지도 무시하고 남한');
+  console.assert(resolveCountry() === 'DE', '계정 나라는 말·접속 국가가 달라도 그대로');
+  window.RT_PIN = { country: 'XX', lang: null };
+  console.assert(resolveCountry() === 'FR', '지도가 없는 계정 나라면 브라우저 말로 어림');
+  window.RT_PIN = null;
+  console.assert(resolveCountry() === 'FR', '로그인 전엔 브라우저 말로 어림');
+  window.RT_PIN = pinWas;
   document.documentElement.toggleAttribute('data-dev', devWas);
   opt.country = 'auto';
   HERE = { country: '', lang: 'zh-TW', timezone: '' };
@@ -4050,6 +4118,17 @@ if (location.search.includes('rt=1')) {
   console.assert(countryStage('JP') === 'preview', 'admin-1 뿐이면 미리보기');
   console.assert(countryStage('XX') === 'preview', '모르는 나라도 미리보기로 떨어진다');
   console.assert(countryStage('ZZ') === 'preview', 'regions 가 없어도 터지지 않는다');
+  const countryWas = COUNTRY;
+  WORLD = { countries: [
+    { id: 'KR', regions: [{ id: 'seoul', main: 'seoul-gu' }] },
+    { id: 'JP', regions: [{ id: 'jp-admin', main: 'jp-admin' }, { id: 'jp-capital', main: 'jp-capital' }] },
+    { id: 'ZA', regions: [{ id: 'za-admin', main: 'za-admin' }] },
+  ] };
+  COUNTRY = 'KR'; console.assert(homeSlug() === 'seoul-gu', '한국 홈은 서울 자치구');
+  COUNTRY = 'JP'; console.assert(homeSlug() === 'jp-capital', '홈은 그 나라 수도 권역');
+  COUNTRY = 'ZA'; console.assert(homeSlug() === 'za-admin', '수도 코스가 없으면 첫 권역');
+  COUNTRY = 'XX'; console.assert(homeSlug() === 'seoul-gu', '모르는 나라는 서울로 떨어진다');
+  COUNTRY = countryWas;
 
   console.assert(loadCourse('seoul-gu') === SEOUL_COURSE && loadGeom('seoul-gu') === SEOUL_GEOM,
     '코스·도트 지도 로더는 같은 슬러그 요청을 메모리에 재사용한다');
