@@ -135,7 +135,13 @@ def isolated(cx, cy, idx, gap=2.5):
     return min((rr - tr) ** 2 + (cc - tc) ** 2 for cc, rr in owned) >= gap ** 2
 
 
-for i, parts in enumerate(rings):
+def area(parts):
+    return sum(abs(sum(ax * by - bx * ay for (ax, ay), (bx, by) in zip(r, r[1:] + r[:1]))) / 2 for r in parts)
+
+# 작은 구역부터 칸을 받는다 — 겹친 원천(쿠알라룸푸르 도시 경계 안의 읍)에서 큰 도형이 안쪽 읍을
+# 덮지 않게. 겹치지 않는 지도는 경계 칸 몇 개만 주인이 바뀐다
+for i in sorted(range(len(rings)), key=lambda i: area(rings[i])):
+    parts = rings[i]
     hit = False
     for ring in parts:
         if fill(ring, i):
