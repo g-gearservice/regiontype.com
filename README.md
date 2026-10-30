@@ -461,8 +461,13 @@ First-level admin units outside Seoul come from Natural Earth 10m. We do not inv
 
 Each country's capital, one level down (Tokyo's 23 wards, Paris's arrondissements, London's 33 boroughs), comes from OpenStreetMap via Overpass. © OpenStreetMap contributors, ODbL. Where OpenStreetMap has no districts inside the capital, the units come from [geoBoundaries](https://www.geoboundaries.org): Cairo (CAPMAS via OCHA, CC BY 3.0 IGO), Kuala Lumpur (CC BY 4.0) and Wellington (Stats NZ, CC BY 4.0). Pretoria has no named districts in either source and has no capital course. Seoul stays `seoul-gu`. The capital, the admin level and any name filter live in the `CAP` table in `tools/build_capital.py`. Raw Overpass replies are cached in `/tmp/rt-geo/capital/`, so a rerun needs no network.
 
+In 23 capitals a district opens one more level, like Seoul's dongs: Tokyo's 町, Paris's quartiers, Berlin's Ortsteile and so on. Each becomes `<iso>-capital-<md5 of the district name>`, listed in the capital region's `children` in `world.json`. The level per country lives in the `SUB` table; districts with fewer than four units stay closed.
+
+Every capital and neighbourhood name also gets a table per display language, `data/names/<iso>.<lang>.json` (`"<course>/<name>": shown name`). The order is: OpenStreetMap `name:<lang>`, then the Wikidata label in that language, then a generated form. Korean is transcribed by the National Institute of Korean Language loanword rules in `tools/hangul.py`: Japanese from its kana or romaji reading, Chinese from pinyin, and Latin, Cyrillic and Greek names by per-language letter-to-sound rules. Latin-script display languages fall back to the English name. Chinese places with no romanized name are read through the Unicode Unihan `kMandarin` table (Unicode License v3), cached in `/tmp/rt-geo/unihan-mandarin.json`.
+
     python3 tools/build_capital.py survey FR    # districts per admin level
-    python3 tools/build_capital.py data/        # every capital → data/<iso>-capital.*, world.json
+    python3 tools/build_capital.py data/        # every capital → data/<iso>-capital.*, names/, world.json
+    python3 tools/hangul.py                     # transcription self-check
     python3 tools/build_size.py
 
 `build_world.py` rewrites `world.json` from scratch, so run `build_capital.py` after it.

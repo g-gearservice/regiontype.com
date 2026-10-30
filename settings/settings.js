@@ -213,13 +213,14 @@ function fillLangPick() {
   fillPick(box, 'rtLang', LANG_CONTINENTS.map(([k, codes]) => [k, codes.filter(c => UI_LANGS.includes(c))]),
            langLabel, UI_LANGS.includes(opt.lang) ? opt.lang : LANG);
 }
-/* 지역 고르기는 개발용이다 — 배포에서는 탭·판이 숨고 world.json 도 안 받으니 그리지 않는다.
+/* 나라 고르기. 고르면 그 나라 수도가 홈 지도에 선다(app.js resolveCountry). 고르기 전에는
+   홈이 정한 나라(RT_COUNTRY — 계정 나라·브라우저 말)를 체크로 보여 준다.
    대륙 묶음에 없는 나라는 '그 밖' 없이 빠진다(CONTINENTS 주석) */
 function fillRegionPick() {
   const box = $('#optRegion');
-  if (!box || !isDev() || !WORLD.countries.length) return;
-  fillPick(box, 'rtCountry', CONTINENTS.map(([k, ids]) => [k, ids.filter(haveCountry)]),
-           countryName, haveCountry(opt.country) ? opt.country : 'KR', LANG);
+  if (!box || !WORLD.countries.length) return;
+  const cur = haveCountry(opt.country) ? opt.country : window.RT_COUNTRY || 'KR';
+  fillPick(box, 'rtCountry', CONTINENTS.map(([k, ids]) => [k, ids.filter(haveCountry)]), countryName, cur, LANG);
 }
 
 /* ── 탭 ──────────────────────────────────────────────
@@ -666,8 +667,7 @@ function softApply() {
   /* 빌드 번호(VER)는 개발·로컬에서만 보인다 — 배포 화면에는 릴리스만 둔다(보안: 내부 빌드 정보를 드러내지 않는다) */
   if (isDev()) { $('#verBuild').textContent = VER; $('#verBuildWrap').hidden = false; }
   $('#verRel').textContent = REL;   // 릴리스(SemVer)는 app.js 의 REL
-  /* 지역 판은 개발에서만 열린다 — 배포에서는 world.json 을 부르지도 않는다 */
-  if (isDev() && !ui) { try { WORLD = await (window.RT_WORLD_P || grab('data/world.json')); } catch {} }
+  if (!ui) { try { WORLD = await (window.RT_WORLD_P || grab('data/world.json')); } catch {} }
   wire();
   wireOptsTabs();
   if (isSetHash()) open(location.hash.slice(1));
@@ -680,7 +680,7 @@ function softApply() {
       applyI18n(over());
       if (!$('#optsSecurity').hidden) account();
     }).catch(() => {});
-    if (isDev()) (window.RT_WORLD_P || grab('data/world.json')).then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
+    (window.RT_WORLD_P || grab('data/world.json')).then(w => { WORLD = w; fillRegionPick(); }).catch(() => {});
   }
   document.fonts?.ready.then(() => { if (!over().hidden) syncOptShell(); });
 

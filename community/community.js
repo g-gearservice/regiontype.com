@@ -8,6 +8,16 @@ const opt = (() => { try { return JSON.parse(localStorage.getItem('rt.opt') || '
 document.documentElement.toggleAttribute('data-night', !!opt.night);
 document.documentElement.dataset.motion = opt.motion === false ? 'off' : 'on';
 
+/* 홈에서 넘어오는 전환 동안 화면은 스냅샷이라, 그 사이 굴리면 전환 자리에 묶인다 — 손이 굴리기 시작하면
+   전환을 걷어 살아 있는 페이지에 넘긴다(app.js yieldToScroll 과 같은 몇 줄) */
+addEventListener('pagereveal', e => {
+  const vt = e.viewTransition;
+  if (!vt) return;
+  const skip = () => vt.skipTransition(), evs = ['wheel', 'touchmove'];
+  evs.forEach(ev => addEventListener(ev, skip, { passive: true, capture: true }));
+  vt.finished.catch(() => {}).finally(() => evs.forEach(ev => removeEventListener(ev, skip, { capture: true })));
+});
+
 const RELAY = self.RT_RELAY;   // relay.js — 로컬에서는 로컬 중계기, ?relay=live 로 운영
 const token = () => { try { return localStorage.getItem('rt.token') || ''; } catch { return ''; } };
 

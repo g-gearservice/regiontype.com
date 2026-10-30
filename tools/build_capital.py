@@ -14,6 +14,8 @@ import hashlib, json, re, subprocess, sys, tempfile, time, urllib.parse, urllib.
 from collections import defaultdict
 from pathlib import Path
 
+from hangul import ja_hangul, kana_roma, latin_hangul, plain, zh_hangul
+
 HERE = Path(__file__).parent
 CACHE = Path('/tmp/rt-geo/capital')
 UA = 'regiontype-tools/1.0 (+https://regiontype.com)'
@@ -69,6 +71,36 @@ CAP = {
     'NL': ('Q9899', '[boundary=place][place=suburb]', None, None),   # stadsdelen 은 행정 경계가 아니라 place 경계다
     'MY': ('Q1865', 'gb:MYS/ADM3', None, r'^(MUKIM|PEKAN|BANDAR)\s+'),   # 무킴·읍, CC BY 4.0
 }
+
+# iso: 구 안쪽 한 단계 (admin_level 또는 Overpass 거르개, 이름에서 뗄 앞말) — 서울 행정동 자리.
+# survey 로 고른다. 없는 나라는 구를 펴지 않는다(sub)
+SUB = {
+    'JP': ('9', None),                          # 町·大字. L10 丁目은 구마다 수백이다
+    'FR': ('10', r"^Quartier\s+(de la |de l'|du |des |de |d')?"),   # 구마다 quartier 넷
+    'CN': ('8', None),                          # 街道·镇
+    'TW': ('9', None),                          # 里
+    'DE': ('10', None),                         # Ortsteil
+    'ES': ('10', None),                         # barrio
+    'PL': ('10', None),                         # osiedle. L11 은 프라가·그로후프 쪽뿐
+    'AT': ('10', r'^Katastralgemeinde\s+'),
+    'CZ': ('9', None),                          # městská část — 바깥 SO 만 넷을 넘는다
+    'FI': ('10', None),                         # peruspiiri
+    'MX': ('10', r'^Colonia\s+'),               # OSM 이 덮은 colonia 만
+    'IN': ('10', None),
+    'ID': ('7', None),                          # kelurahan
+    'AU': ('9', None),                          # suburb
+    'BR': ('10', None),                         # 플라누 필로투 쪽 quadra 만
+    'TH': ('8', r'^แขวง'),
+    'PH': ('10', None),                         # barangay — OSM 에 152곳
+    'HU': ('10', None),                         # városrész
+    'BG': ('8|9', None),                        # 바깥 구는 마을(L8), 시내는 ж.к.·кв.(L9)
+    'CO': ('9', r'^UPZ\s+'),
+    'SE': ('10', None),                         # stadsdel
+    'TR': ('8', r'\s+Mahallesi$'),
+    'SA': ('10', r'^حي\s+'),
+}
+# 펴지 않는 수도 — OSM 에 구 아래 행정 경계가 없거나(US·VN·RO·IE·AR·CL·NO·PT·CH·UA·AE·NL·NZ·EG·MY)
+# 몇 곳뿐이다(HK·IT·GB·BE·GR·CA). ZA 는 수도 코스부터 없다
 
 DATA = HERE.parent / 'data'
 UI_LANGS = json.loads((DATA / 'i18n.json').read_text()).keys()
@@ -166,14 +198,14 @@ def survey(iso):
         print(f'   L{lv} {len(by[lv]):4d}  ' + ', '.join(by[lv][:6]))
 
 
-def within(rs, prs, edge):
+def within(rs, prs, edge, n=200):
     """수도 경계와 겹치지 않는 꼭짓점의 과반이 수도 안이면 수도 구획이다. 가운데 한 점은
     오목한 구(파리 12구)에서 이웃 땅(생망데)에 떨어지고, 경계 위 꼭짓점은 안팎이 반반으로 갈린다
     — 가장자리 구(베를린 트렙토-쾨페니크)는 꼭짓점 대부분이 경계 위다."""
     pts = [p for r in rs for p in r if p not in edge]
     if not pts:
         return True
-    pts = pts[::max(1, len(pts) // 200)]
+    pts = pts[::max(1, len(pts) // n)]
     return sum(inside(p, prs) for p in pts) * 2 > len(pts)
 
 
@@ -269,14 +301,192 @@ def build(iso, out_dir, world):
         if name in feats:   # 같은 이름은 도형만 합친다
             feats[name]['geometry']['coordinates'] += poly
             continue
-        feats[name] = {'type': 'Feature', 'properties': {'name': name},
+        feats[name] = {'type': 'Feature', 'properties': {'name': name, 'tags': tags},
                        'geometry': {'type': 'MultiPolygon', 'coordinates': poly}}
     feats = list(feats.values())
     if len(feats) < 4:
         print(f'건너뜀 {iso}: {len(feats)}곳')
         return
     slug = f'{iso.lower()}-capital'
-    src = Path(tempfile.mkdtemp(prefix='rt-cap-')) / f'{iso}.geojson'
+    n = stamp(iso, slug, feats, out_dir, 'geoboundaries-' if str(level).startswith('gb:') else 'osm-')
+    if not n:
+        return
+    region = {
+        'id': slug, 'root': slug, 'children': sub(iso, par, feats, slug, out_dir) if iso in SUB else {},
+        'title': titles(par['tags']),
+        'thumb': slug, 'main': slug, 'nested': False, 'courses': [slug],
+    }
+    region['courses'] += list(region['children'].values())
+    region['nested'] = bool(region['children'])
+    pack = next(c for c in world['countries'] if c['id'] == iso)
+    pack['regions'] = [r for r in pack['regions'] if r['id'] != slug] + [region]
+    print(f'{iso} {n}곳 → {slug}' + (f' (고리 못 지은 곳 {dropped})' if dropped else '')
+          + (f', 펼친 구 {len(region["children"])}' if region['children'] else ''))
+    place_names(iso, [slug, *region['children'].values()], out_dir)
+
+
+# 화면 말 → 이름표를 찾는 OSM name:<키>·Wikidata 라벨 키. 없는 말은 제 코드 하나
+OSM_KEYS = {'zh': ['zh-Hans', 'zh'], 'nb': ['nb', 'no']}
+WD_KEYS = {'zh': ['zh-hans', 'zh-cn', 'zh'], 'nb': ['nb', 'no']}
+TAGS = {}   # 슬러그 → {코스 이름: OSM 태그} — stamp 가 채운다
+
+
+def wd_prefetch(qids):
+    """Wikidata 라벨을 50개씩 묶어 캐시에 미리 받는다 — wd_labels 가 하나씩 묻지 않게."""
+    todo = sorted({q for q in qids if re.fullmatch(r'Q\d+', q or '')
+                   and not (CACHE / 'wikidata' / f'{q}.json').exists()})
+    for i in range(0, len(todo), 50):
+        ids = todo[i:i + 50]
+        url = ('https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&format=json&ids='
+               + urllib.parse.quote('|'.join(ids)))
+        for n in range(4):
+            try:
+                req = urllib.request.Request(url, headers={'User-Agent': UA})
+                ents = json.load(urllib.request.urlopen(req, timeout=120))['entities']
+                break
+            except Exception as e:
+                print(f'  다시 wikidata {i}: {e}', file=sys.stderr)
+                time.sleep(5)
+        else:
+            continue
+        (CACHE / 'wikidata').mkdir(parents=True, exist_ok=True)
+        for q in ids:
+            (CACHE / 'wikidata' / f'{q}.json').write_text(
+                json.dumps(ents.get(q, {}).get('labels', {}), ensure_ascii=False))
+
+
+def own_label(lang, tags, wd):
+    """그 말로 적힌 이름 — OSM name:<말> 이 먼저, 없으면 Wikidata 같은 말 라벨. 지어내지 않는다."""
+    for k in OSM_KEYS.get(lang, [lang]):
+        if tags.get(f'name:{k}'):
+            return tags[f'name:{k}']
+    for k in WD_KEYS.get(lang, [lang]):
+        if wd.get(k, {}).get('value'):
+            return wd[k]['value']
+    return None
+
+
+LATIN_UI = {'en', 'de', 'fr', 'es', 'pt', 'it', 'nl', 'pl', 'cs', 'sv', 'nb', 'fi', 'ro', 'hu', 'tr', 'vi', 'id', 'ms'}
+# 한국어 표기 때 이름 끝 한자 단위 → 한국어 단위. 읽기에 붙은 영어 단위 낱말은 뗀다
+KO_UNIT = [('街道', '가도'), ('地区', '지구'), ('区', '구'), ('區', '구'), ('镇', '진'), ('鎮', '진'),
+           ('乡', '향'), ('鄉', '향'), ('里', '리'), ('市', '시')]
+EN_UNIT = re.compile(r'(?i)[\s-]+(subdistrict|sub-district|district|town|township|village|ward|city|area|'
+                     r'street|residential|community|ku|shi)$')
+
+
+_PINYIN = {}
+
+
+def hanzi_pinyin(text):
+    """한자 → 성조 없는 병음(마디마다 띄움). 유니코드 Unihan 의 kMandarin 첫 읽기 — 받은 표는 캐시에 둔다.
+    모르는 글자가 있으면 None."""
+    if not _PINYIN:
+        path = CACHE.parent / 'unihan-mandarin.json'
+        if not path.exists():
+            import io, zipfile
+            req = urllib.request.Request('https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip',
+                                         headers={'User-Agent': UA})
+            z = zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(req, timeout=300).read()))
+            tab = {}
+            for line in z.read('Unihan_Readings.txt').decode().splitlines():
+                f = line.split('\t')
+                if len(f) == 3 and f[1] == 'kMandarin':
+                    tab[chr(int(f[0][2:], 16))] = plain(f[2].split()[0]).replace('u:', 'v')
+            path.write_text(json.dumps(tab, ensure_ascii=False))
+        _PINYIN.update(json.loads(path.read_text()))
+    out = [_PINYIN.get(c) for c in text]
+    return None if None in out else ' '.join(out)
+
+
+def latin_reading(src, tags, wd):
+    """그 이름의 로마자 읽기 — 가나 읽기 태그, 병음 태그, 그다음 영어 이름."""
+    kana = tags.get('name:ja-Hira') or tags.get('name:ja_kana') or tags.get('name:ja-Kana')
+    if src == 'ja' and kana and kana_roma(kana):
+        return kana_roma(kana)
+    for k in ('name:ja-Latn', 'name:ja_rm', 'name:zh-Latn-pinyin', 'name:zh_pinyin', 'name:en'):
+        if tags.get(k):
+            return tags[k]
+    return (wd.get('en') or {}).get('value')
+
+
+def ko_label(iso, src, name, tags, wd):
+    """한국어 이름이 없는 지명을 외래어 표기법으로 적는다(tools/hangul.py). 못 하면 None.
+    일본·중국은 읽기(가나·병음)로, 라틴·키릴·그리스 글자는 제 이름을 그 말 규칙으로,
+    아랍·타이 글자와 인도·필리핀 지명은 영어 로마자를 적힌 대로 읽는다."""
+    if src not in ('ja', 'zh'):
+        if src in ('ar', 'th') or iso in ('IN', 'PH', 'SA', 'AE', 'EG'):
+            latin = not re.search(r'[^\x00-\x7f\u00c0-\u024f]', name)   # geoBoundaries 카이로는 이름이 이미 로마자
+            roma = latin_reading(src, tags, wd) or (name if latin else None)
+            stem = roma and re.sub(r'(?i)^(khwaeng|khet|kwaeng)\s+', '', EN_UNIT.sub('', roma.strip()))
+            return stem and latin_hangul(stem, 'th' if src == 'th' else 'phon')
+        if src == 'vi':
+            return latin_hangul(re.sub(r'^(Phường|Xã|Thị trấn)\s+', '', name), 'vi')
+        if src == 'bg':
+            unit = '구' if name.startswith('Район ') else ''
+            h = latin_hangul(re.sub(r'^(Район|ж\.\s?к\.|кв\.|с\.)\s*', '', name), 'bg')
+            return h and h + unit
+        return latin_hangul(name, src)
+    roma = latin_reading(src, tags, wd)
+    unit_zh, unit = next(((zh, ko) for zh, ko in KO_UNIT if name.endswith(zh) and len(name) > len(zh)), ('', ''))
+    if not roma and src == 'zh':   # 영어 이름도 Wikidata 도 없는 베이징 진·향 — 한자에서 병음을 읽는다
+        roma = hanzi_pinyin(name[:len(name) - len(unit_zh)])
+    if not roma:
+        return None
+    stem = EN_UNIT.sub('', roma.strip())
+    hangul = (ja_hangul if src == 'ja' else zh_hangul)(stem)
+    if not hangul:
+        return None
+    return hangul + unit if unit and not hangul.endswith(unit) else hangul
+
+
+def shown_label(iso, lang, src, name, tags, wd):
+    """화면 말 lang 으로 보일 이름. 제 말 이름 → (한국어) 표기법 → (라틴 문자 말·그 밖) 영어 이름.
+    영어도 없으면 None — 코스 이름 그대로 보인다."""
+    own = own_label(lang, tags, wd)
+    if own:
+        return own
+    if lang == 'ko':
+        return ko_label(iso, src, name, tags, wd)
+    if lang in ('ja', 'zh') and src in ('ja', 'zh'):
+        return None   # 한자는 한자로 읽힌다
+    if own_label('en', tags, wd):
+        return own_label('en', tags, wd)
+    if src == 'zh':   # 영어 이름이 없으면 병음(Xiaotangshan)
+        py = hanzi_pinyin(name)
+        return py and py.replace(' ', '').capitalize()
+    return None
+
+
+def place_names(iso, slugs, out_dir):
+    """수도·동네 이름의 화면 말 표 data/names/<iso>.<말>.json — {'<슬러그>/<이름>': 그 말 이름}.
+    코스 제 말(type_lang)은 표가 없다. 말마다 빈 칸 수를 찍는다."""
+    src = type_lang(iso)[:2]
+    feats = [(slug, name, tags) for slug in slugs for name, tags in TAGS.get(slug, {}).items()]
+    wd_prefetch([t.get('wikidata') for _, _, t in feats])
+    wds = {t['wikidata']: wd_labels(t['wikidata']) for _, _, t in feats if t.get('wikidata')}
+    gaps = {}
+    (out_dir / 'names').mkdir(exist_ok=True)
+    for lang in UI_LANGS:
+        path = out_dir / 'names' / f'{iso.lower()}.{lang}.json'
+        if lang == src:
+            path.unlink(missing_ok=True)
+            continue
+        tab = {}
+        for slug, name, tags in feats:
+            v = shown_label(iso, lang, src, name, tags, wds.get(tags.get('wikidata'), {}))
+            if v and v != name:
+                tab[f'{slug}/{name}'] = v
+            elif not v:
+                gaps[lang] = gaps.get(lang, 0) + 1
+                if lang == 'ko' and gaps[lang] <= 3:
+                    print(f'    ko 빈 칸: {name} {dict((k, v) for k, v in tags.items() if k in ("name:en", "wikidata"))}')
+        path.write_text(json.dumps(tab, ensure_ascii=False, separators=(',', ':'), sort_keys=True))
+    print(f'  이름 {len(feats)}곳, 빈 칸: ' + ' '.join(f'{k}{v}' for k, v in gaps.items()))
+
+
+def stamp(iso, slug, feats, out_dir, src_tag):
+    """GeoJSON 항목 → <slug>.geom.json(build_map.py)·<slug>.course.json. 곳 수, 못 찍으면 0."""
+    src = Path(tempfile.mkdtemp(prefix='rt-cap-')) / f'{slug}.geojson'
     src.write_text(json.dumps({'type': 'FeatureCollection', 'features': feats}, ensure_ascii=False))
     geom_path = out_dir / f'{slug}.geom.json'
     for cols in (32, 40, 48, 56):
@@ -285,9 +495,10 @@ def build(iso, out_dir, world):
         if r.returncode == 0:
             break
     else:
-        print(f'실패 {iso}: {r.stderr.strip()[-300:]}')
-        return
+        print(f'실패 {slug}: {r.stderr.strip()[-300:]}')
+        return 0
     geom = json.loads(geom_path.read_text())
+    TAGS[slug] = {f['properties']['name']: f['properties'].get('tags') or {} for f in feats}
     items = [{'name': it['name'], 'meta': {'description': ''}} for it in order(geom['items'])]
     n = len(items)
     (out_dir / f'{slug}.course.json').write_text(json.dumps({
@@ -295,18 +506,52 @@ def build(iso, out_dir, world):
         'title': f'{n}',
         'description': '',
         'mode': 'sequence',
-        'dataVersion': ('geoboundaries-' if str(level).startswith('gb:') else 'osm-') + time.strftime('%Y%m'),
+        'dataVersion': src_tag + time.strftime('%Y%m'),
         'lang': type_lang(iso),
         'settings': {'defaultTime': 120 if n < 30 else 180 if n < 60 else 300},
         'items': items,
     }, ensure_ascii=False, separators=(',', ':')))
-    pack = next(c for c in world['countries'] if c['id'] == iso)
-    pack['regions'] = [r for r in pack['regions'] if r['id'] != slug] + [{
-        'id': slug, 'root': slug, 'children': {},
-        'title': titles(par['tags']),
-        'thumb': slug, 'main': slug, 'nested': False, 'courses': [slug],
-    }]
-    print(f'{iso} {n}곳 → {slug}' + (f' (고리 못 지은 곳 {dropped})' if dropped else ''))
+    return n
+
+
+def bbox(rs):
+    xs, ys = [p[0] for r in rs for p in r], [p[1] for r in rs for p in r]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def sub(iso, par, feats, cap, out_dir):
+    """수도의 구 하나하나를 한 단계 아래 구획으로 편다 — 서울 구 → 행정동 자리다.
+    아래 구획은 수도 안에서 한 번에 받아 구마다 '꼭짓점 과반이 그 구 안' 으로 나눈다.
+    네 곳이 안 되는 구는 펴지 않는다. 슬러그는 구 이름의 md5 앞 6자 — 다시 찍어도 기록이 이어진다.
+    돌려주는 값은 world.json 권역의 children: {'<cap>/<구>': '<cap>-<md5>'}."""
+    level, strip = SUB[iso]
+    filt = level if level.startswith('[') else f'[boundary=administrative][admin_level~"^({level})$"]'
+    q = f'[out:json][timeout:300];rel({par["id"]});map_to_area->.a;rel(area.a){filt};out geom;'
+    units = [(k['tags'], rs, bbox(rs)) for k in overpass(q, f'{iso}-sub') if k['id'] != par['id']
+             for rs in [rings(k)] if rs]
+    children = {}
+    for f in feats:
+        ward = f['properties']['name']
+        wrs = [poly[0] for poly in f['geometry']['coordinates']]
+        wx0, wy0, wx1, wy1 = bbox(wrs)
+        edge = {p for r in wrs for p in r}
+        got = {}
+        for tags, rs, (x0, y0, x1, y1) in units:
+            if x1 < wx0 or x0 > wx1 or y1 < wy0 or y0 > wy1 or not within(rs, wrs, edge, 24):
+                continue
+            name = typing_name(tags, iso, strip)   # 베를린 Mitte 구의 Mitte 처럼 구와 같은 이름도 제 동네다
+            poly = [[r] for r in rs]
+            if name in got:
+                got[name]['geometry']['coordinates'] += poly
+                continue
+            got[name] = {'type': 'Feature', 'properties': {'name': name, 'tags': tags},
+                         'geometry': {'type': 'MultiPolygon', 'coordinates': poly}}
+        if len(got) < 4:
+            continue
+        slug = f'{cap}-{hashlib.md5(ward.encode()).hexdigest()[:6]}'
+        if stamp(iso, slug, list(got.values()), out_dir, 'osm-'):
+            children[f'{cap}/{ward}'] = slug
+    return children
 
 
 def type_lang(iso):
