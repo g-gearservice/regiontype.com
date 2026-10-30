@@ -60,6 +60,9 @@ function ago(at) {
   return rtf.format(0, 'second');   // '방금' — 말마다 Intl 이 안다
 }
 const who = x => x.name ? (x.handle ? `${x.name} @${x.handle}` : x.name) : t('anon');
+/* 글쓴이 · 때. 개발자 계정(relay 의 staff)이면 이름 뒤에 표시를 단다 — 색만이 아니라 기호와 말로.
+   닉네임 글자로는 흉내 낼 수 없게 이름 밖의 요소로 따로 그린다 */
+const byline = x => [who(x), ...(x.dev ? [' ', el('span', 'cm-dev', '✓ ' + (t('cmDev') || 'Developer'))] : []), ` · ${ago(x.at)}`];
 
 async function call(path, body) {
   const head = body ? { 'content-type': 'application/json' } : {};
@@ -113,7 +116,8 @@ function row(p) {
   const li = el('li', 'cm-row');
   const a = el('a', 'cm-card'); a.href = '#p' + p.id;
   const top = el('span', 'cm-card-top');
-  top.append(tagChip(p.tag), el('span', 'cm-meta', `${who(p)} · ${ago(p.at)}`));
+  const meta = el('span', 'cm-meta'); meta.append(...byline(p));
+  top.append(tagChip(p.tag), meta);
   const nums = el('span', 'cm-nums');
   nums.append(el('span', null, `♥ ${p.ups}`), el('span', null, t('cmCommentsN', { n: p.replies })));
   nums.setAttribute('aria-label', t('cmNumsAria', { u: p.ups, n: p.replies }));
@@ -133,7 +137,7 @@ async function open(id) {
     document.title = `${d.post.title} — regiontype ${t('community')}`;
     $('#pTag').append(tagChip(d.post.tag));
     $('#pTitle').textContent = d.post.title;
-    $('#pMeta').textContent = `${who(d.post)} · ${ago(d.post.at)}`;
+    $('#pMeta').append(...byline(d.post));
     for (const para of d.post.body.split('\n\n')) $('#pBody').append(el('p', null, para));
     upState(d.post.upped, d.post.ups);
     $('#pDel').hidden = !d.post.mine;
@@ -149,7 +153,7 @@ async function open(id) {
 
 function replyRow(r, flagged) {
   const li = el('li', 'cm-reply');
-  const meta = el('p', 'cm-meta', `${who(r)} · ${ago(r.at)}`);
+  const meta = el('p', 'cm-meta'); meta.append(...byline(r));
   const acts = el('span', 'cm-reply-acts');
   if (r.mine) acts.append(small(t('cmDelete'), () => del('r' + r.id, li), 'destructive'));
   else {
