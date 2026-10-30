@@ -15,7 +15,6 @@ body{position:relative}
 .ps{padding-top:40px;padding-bottom:96px;z-index:1}
 .ps h1{font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.2}
 .ps h2{font-size:20px;font-weight:800;margin:0}
-.ps-lead{margin-top:10px;font-size:17px;color:var(--ink-soft)}
 .ps section{margin-top:28px}
 /* 시즌 탭 — 고른 탭은 먹으로 채운다(색만이 아니라 채움과 굵기로) */
 .ps-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
@@ -40,7 +39,6 @@ body{position:relative}
 .ps-note{margin-top:10px;font-size:15px;color:var(--ink-soft)}
 
 
-.ps-hint{margin-top:6px;font-size:14px;color:var(--ink-soft)}
 /* 보상 줄은 화면 끝까지 — 첫 칸은 본문 칸에 맞춰 선다. --gut 은 .ps 의 바깥 여백(880/2-24) */
 .ps-rail{--gut:max(24px,calc(50vw - 416px));margin:14px calc(50% - 50vw) 0}
 /* 페이지 좌우 끝 흐림 — 겹은 style.css 의 .edge-blur, 여기선 자리만 */
