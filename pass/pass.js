@@ -120,7 +120,7 @@ $('#xp').max = PASS_XP.level;
 $('#xp').hidden = !open;
 $('#xp').value = level >= PASS_LEVELS ? PASS_XP.level : st.xp % PASS_XP.level;
 $('#xpNum').textContent = !open || level >= PASS_LEVELS ? '' : t('passXpLeft', { xp: PASS_XP.level - st.xp % PASS_XP.level });
-$('#note').textContent = !open ? t(stateOf(head) === 'soon' ? 'passSoonNote' : 'passEndedNote') : signed ? t('passLocal') : t('passSignIn');
+$('#note').textContent = !open ? t(stateOf(head) === 'soon' ? 'passSoonNote' : 'passEndedNote') : signed ? '' : t('passSignIn');
 
 /* ── 보상 줄 ─────────────────────────────────────────────
    150칸을 버튼 하나씩, 시즌 첫 칸에 시즌 이름표. 탭 자리는 하나만 두고(roving) ←→·Home·End 로 옮긴다.
