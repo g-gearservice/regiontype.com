@@ -463,11 +463,11 @@ Each country's capital, one level down (Tokyo's 23 wards, Paris's arrondissement
 
 In 23 capitals a district opens one more level, like Seoul's dongs: Tokyo's 町, Paris's quartiers, Berlin's Ortsteile and so on. Each becomes `<iso>-capital-<md5 of the district name>`, listed in the capital region's `children` in `world.json`. The level per country lives in the `SUB` table; districts with fewer than four units stay closed.
 
-Every capital and neighbourhood name also gets a table per display language, `data/names/<iso>.<lang>.json` (`"<course>/<name>": shown name`). The order is: OpenStreetMap `name:<lang>`, then the Wikidata label in that language, then a generated form. Korean is transcribed by the National Institute of Korean Language loanword rules in `tools/hangul.py`: Japanese from its kana or romaji reading, Chinese from pinyin, and Latin, Cyrillic and Greek names by per-language letter-to-sound rules. Latin-script display languages fall back to the English name. Chinese places with no romanized name are read through the Unicode Unihan `kMandarin` table (Unicode License v3), cached in `/tmp/rt-geo/unihan-mandarin.json`.
+Every capital and neighbourhood name also gets a table per display language, `data/names/<iso>.<lang>.json` (`"<course>/<name>": shown name`). The order is: OpenStreetMap `name:<lang>`, then the Wikidata label in that language, then a generated form from `tools/translit.py`. Every name is first read into sounds: Japanese from its kana or romaji, Chinese from pinyin, Latin, Cyrillic and Greek names by per-language letter-to-sound rules, and Arabic, Thai, Indian and Filipino names from their English romanization. The sounds are then written in the display language's script. Korean follows the National Institute of Korean Language loanword rules (Japanese and Chinese use their own tables plus the unit, 区 → 구). Japanese uses katakana, Chinese a reduced Xinhua transliteration table, and Ukrainian, Bulgarian, Greek, Arabic and Thai use their own letters. Latin-script display languages use the English name. Chinese places with no romanized name are read through the Unicode Unihan `kMandarin` table (Unicode License v3), cached in `/tmp/rt-geo/unihan-mandarin.json`.
 
     python3 tools/build_capital.py survey FR    # districts per admin level
     python3 tools/build_capital.py data/        # every capital → data/<iso>-capital.*, names/, world.json
-    python3 tools/hangul.py                     # transcription self-check
+    python3 tools/translit.py                   # transcription self-check
     python3 tools/build_size.py
 
 `build_world.py` rewrites `world.json` from scratch, so run `build_capital.py` after it.
