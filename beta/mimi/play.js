@@ -17,7 +17,7 @@ function grab(url) {
   return cache.get(url);
 }
 
-const asset = (slug, kind) => `../data/${slug}.${kind}.json`;
+const asset = (slug, kind) => `../../data/${slug}.${kind}.json`;
 
 /* 썸네일은 지형만 쓴다. 코스까지 끌어오면 카드 수만큼 요청이 두 배가 된다. */
 export const loadGeom = slug => grab(asset(slug, 'geom'));

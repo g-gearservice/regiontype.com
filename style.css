@@ -947,7 +947,7 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 .opts-tab{font-size:26px;padding:11px 20px 13px}
 .opts-region-pending{font-size:22px}
 
-/* .menu a(소개·Mimi)도 button 과 같은 줄이다 — 여기서 빠지면 폰트 크기만 혼자 작게 남는다 */
+/* .menu a(소개)도 button 과 같은 줄이다 — 여기서 빠지면 폰트 크기만 혼자 작게 남는다 */
 .menu button, .menu a{font-size:30px;padding:7px 20px 10px}
 .back{width:44px;height:44px}
 .head{font-size:40px}
@@ -1662,9 +1662,6 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .nav-item.is-play.is-on:hover{color:var(--on-accent)}
 .nav-item .i{font-size:28px}
 .nav-item:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
-/* Mimi 는 개발용 문이다 — 배포 화면에서는 줄에서 빠진다 */
-.navbar .title-alt{display:none}
-:root[data-dev] .navbar .title-alt{display:inline-flex}
 /* 좁은 데스크톱 창(폰 폭, 손가락 아님) — 세 칸 격자는 메뉴를 두 줄로 쌓고 '커뮤니…' 로 자른다.
    한 줄로 펴고 넘치면 가로로 민다. 칸은 링크 그대로라 Tab 으로 가면 브라우저가 그 칸까지 민다.
    알약(#navShape)은 줄이 밀리면 자리가 어긋나 접고, 로고 점은 로고가 직접 그린다 */

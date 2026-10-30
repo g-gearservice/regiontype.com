@@ -17,8 +17,8 @@
   --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   --tick:color-mix(in srgb,var(--ink) 30%,transparent);     /* 격자 교차점의 점 */
   /* 칸마다 그 스타일의 서명색. 3D 내비게이션은 시스템 파랑, 동네버스는 노선 노랑 —
-     CRT 터미널은 형광 녹색, 유기적인 픽셀들은 보라. 각 베타가 쓰는 값이다. 그래픽(막대·물든 바탕)에만 쓰고 글자에는 쓰지 않는다 */
-  --sig-nav:#007aff; --sig-bus:#f6c037; --sig-crt:#5dff8a; --sig-organic:#a855f7;
+     CRT 터미널은 형광 녹색, 유기적인 픽셀들은 보라, Mimi 는 보드의 주황(--flare). 각 베타가 쓰는 값이다. 그래픽(막대·물든 바탕)에만 쓰고 글자에는 쓰지 않는다 */
+  --sig-nav:#007aff; --sig-bus:#f6c037; --sig-crt:#5dff8a; --sig-organic:#a855f7; --sig-mimi:#e8622b;
   --sheen:linear-gradient(118deg,rgba(255,255,255,.30),rgba(255,255,255,0) 34%);   /* 홈과 같은 대각 빛 */
   background:
     /* 교차점 점: 반 칸 밀어 칸 한가운데 그린 점이 교차점에 앉는다 */
@@ -86,6 +86,9 @@ body{overflow:auto;min-height:100%;margin:0;background:none}
     <a class="cell" href="../organic/" style="--btn-col:1;--btn-row:3;--sig:var(--sig-organic)" data-n="04">
       <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M22 22h24a14 14 0 0 1 14 14v4a14 14 0 0 0 14 14h4v24H54a14 14 0 0 1-14-14v-4a14 14 0 0 0-14-14h-4z" fill="currentColor"/></svg>
       <b>유기적인 픽셀들</b></a>
+    <a class="cell" href="../mimi/" style="--btn-col:2;--btn-row:3;--sig:var(--sig-mimi)" data-n="05">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="14" y="30" width="72" height="56" rx="12" fill="currentColor" opacity=".35"/><rect x="14" y="16" width="72" height="56" rx="12" fill="currentColor"/></svg>
+      <b>Mimi</b></a>
   </nav>
 </main>
 <script>
