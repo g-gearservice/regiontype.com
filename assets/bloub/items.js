@@ -206,8 +206,8 @@ export const SEASONS = [
     shapes: ['cloche', 'chaussette', 'flocon', 'cadeau', 'bonhomme', 'sapin', 'renne', 'perenoel'] },
 ];
 export const SEASON_LEVELS = 50, PASS_LEVELS = SEASONS.length * SEASON_LEVELS, FREE = 2;
-/* XP — 끝낸 판마다 game(경쟁전은 ranked), 하루 day 까지. level 만큼 쌓이면 한 레벨 */
-export const PASS_XP = { game: 20, ranked: 30, level: 100, day: 300 };
+/* XP — 끝낸 판마다 game(경쟁전은 ranked), 하루 상한 없음. level 만큼 쌓이면 한 레벨 */
+export const PASS_XP = { game: 20, ranked: 30, level: 100 };
 export const passLevel = xp => Math.min(PASS_LEVELS, Math.floor((+xp || 0) / PASS_XP.level));
 /* 'YYYY-MM-DD'(그 사람의 날) → 열린 시즌. 시즌 사이면 null */
 export const seasonAt = day => SEASONS.find(s => s.from <= day && day < s.to) || null;
@@ -244,23 +244,20 @@ export function trackOf(season) {
 
 /* ── 리전 패스 하나 ─────────────────────────────────────
    세 시즌의 50칸을 날짜 차례로 이어 한 줄 150레벨, XP 도 하나다. 레벨은 언제든 오르지만 칸은 그 시즌이 열린 날부터
-   받는다(지난 시즌 칸은 늦게 닿아도 받는다). 시기 예측 — 패스는 10/30 에 열렸다. 하루 상한(3레벨)이면 11/2 에 ~9,
-   12/1 에 ~96(블랙 프라이데이 줄 끝), 12/19 쯤 150. 할로윈은 사흘 남아 할로윈 칸은 대부분 11월에 받는다.
-   ponytail: 시즌마다 50칸 고정 — 하루 1레벨이면 1/6 에 ~69 라 크리스마스 줄에 못 닿는다. 그게 문제면 칸 수를 날짜 길이에 맞춘다 */
+   받는다(지난 시즌 칸은 늦게 닿아도 받는다). 하루 상한은 없다(v6.02) — 많이 하면 그만큼 빨리 오른다.
+   ponytail: 시즌마다 50칸 고정 — 덜 하는 사람은 크리스마스 줄에 못 닿을 수 있다. 그게 문제면 칸 수를 날짜 길이에 맞춘다 */
 export const PASS_ID = 'holiday-2026';
 export const PASS = SEASONS.flatMap((s, k) => trackOf(s).map(p => ({ ...p, level: p.level + k * SEASON_LEVELS, season: s })));
 export const passOpen = day => !!seasonAt(day);
-/* rt.pass → { pass, xp, day, today }. v2.2.0 의 할로윈 패스(halloween-1) XP 는 그대로 잇는다 */
+/* rt.pass → { pass, xp }. v2.2.0 의 할로윈 패스(halloween-1) XP 는 그대로 잇는다 */
 export function passStore(raw) {
   const ok = raw && (raw.pass === PASS_ID || raw.pass === 'halloween-1');
-  return ok ? { pass: PASS_ID, xp: +raw.xp || 0, day: raw.day, today: raw.today || 0 } : { pass: PASS_ID, xp: 0 };
+  return { pass: PASS_ID, xp: ok ? +raw.xp || 0 : 0 };
 }
-/* 판 하나의 XP 를 더한 새 rt.pass(add 는 더한 양). 패스가 닫힌 날엔 0, 날이 바뀌면 하루치를 새로 센다 */
+/* 판 하나의 XP 를 더한 새 rt.pass(add 는 더한 양). 패스가 닫힌 날엔 0 */
 export function gainXp(st, ranked, today) {
-  st = passStore(st);
-  const used = st.day === today ? st.today : 0;
-  const add = !passOpen(today) ? 0 : Math.max(0, Math.min(ranked ? PASS_XP.ranked : PASS_XP.game, PASS_XP.day - used));
-  return { pass: PASS_ID, xp: st.xp + add, day: today, today: used + add, add };
+  const add = passOpen(today) ? (ranked ? PASS_XP.ranked : PASS_XP.game) : 0;
+  return { pass: PASS_ID, xp: passStore(st).xp + add, add };
 }
 /* 칸 하나를 가졌나 — 그 시즌이 열렸고, 무료이거나 내 레벨까지 */
 export const passOwns = (p, lv, today) => p.season.from <= today && (!!p.free || p.level <= lv);

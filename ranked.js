@@ -309,7 +309,7 @@ addEventListener('rt-finish', ({ detail: g }) => passKit.then(kit => {
   try { localStorage.setItem('rt.pass', JSON.stringify(st)); } catch { return; }
   const lv = kit.passLevel(st.xp);
   countOwned(kit);
-  line.textContent = add ? t(lv > was ? 'passGainUp' : 'passGain', { xp: add, lv }) : t('passCapped');
+  line.textContent = t(lv > was ? 'passGainUp' : 'passGain', { xp: add, lv });
 }));
 /* 로그아웃(설정·계정·만료된 토큰이 쏜다) — 가진 보상을 다시 세고 기본 색·기본 봇으로 돌린다 */
 addEventListener('rt-auth-out', () => passKit.then(kit => {
@@ -2459,8 +2459,8 @@ if (location.search.includes('rt=1')) {
       '스타일: 패스 팔레트는 모두 대비를 지킨다');
     let st = null;
     for (let i = 0; i < 40; i++) st = gainXp(st, i % 2, '2026-10-31');
-    console.assert(st.xp === PASS_XP.day && gainXp(st, 0, '2026-10-31').add === 0 && gainXp(st, 1, '2026-11-02').add === PASS_XP.ranked &&
-      gainXp(st, 1, '2027-02-01').add === 0 && passLevel(1e9) === 150, '패스: 하루 상한 · 날이 바뀌어도 XP 하나로 · 닫히면 0 · 150레벨에서 멈춘다');
+    console.assert(st.xp === 20 * (PASS_XP.game + PASS_XP.ranked) && gainXp(st, 0, '2026-10-31').add === PASS_XP.game &&
+      gainXp(st, 1, '2027-02-01').add === 0 && passLevel(1e9) === 150, '패스: 하루 상한 없음 · 닫히면 0 · 150레벨에서 멈춘다');
     console.assert(passStore({ pass: 'halloween-1', xp: 300 }).xp === 300, '패스: v2.2.0 할로윈 XP 를 잇는다');
     const big = { pass: 'holiday-2026', xp: 1e9 }, at = d => ownedRewards(big, d).map(o => o.ref);
     console.assert(at('2026-10-31').includes('pal:pumpkin') && !at('2026-10-31').includes('pal:blackfriday') && at('2026-11-20').includes('pal:blackfriday') &&
