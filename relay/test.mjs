@@ -828,6 +828,12 @@ console.log('security rule self-check done');
   db.prepare('update ladder set games = 5').run();
   assert.equal((await call('/ladder')).top.length, 1, 'pc 사다리');
   assert.equal((await call('/ladder?dev=mobile')).top[0].lp, lad('mobile').lp, '폰 사다리는 따로');
+  assert.equal((await call('/ladder')).top[0].lic, null, '면허가 없으면 lic 는 비어 있다');
+  for (const [slug, grade] of [['seoul-gu', 'reporter'], ['kr-sgg', 'basic']])
+    db.prepare('insert into license (who, mode, slug, grade, cpm, acc, misses, at) values (?, ?, ?, ?, 300, 98, 0, 1)').run(A, 'ranked', slug, grade);
+  db.prepare('insert into license (who, mode, slug, grade, cpm, acc, misses, at) values (?, ?, ?, ?, 300, 98, 0, 1)').run(A, 'normal', 'kr-sgg', 'expert');
+  assert.equal((await call('/ladder')).top[0].lic, 'basic', '사다리 줄에는 경쟁전에서 딴 가장 높은 면허가 붙는다');
+  db.prepare('delete from license where who = ?').run(A);
   const games = await call('/games?dev=mobile', null, A);
   assert.equal(games.ladder.lp, lad('mobile').lp);
   assert.deepEqual([...new Set(games.games.map(g => g.dev))].sort(), ['mobile', 'pc'], '전적 줄마다 기기가 실린다');

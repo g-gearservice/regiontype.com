@@ -582,12 +582,6 @@
     "examLocked": "먼저 ‘{name}’ 라이선스를 따야 합니다.",
     "examNeedServer": "이 시험은 서버에 연결돼야 칠 수 있습니다. 잠시 뒤 다시 해 보세요.",
     "examPickAria": "라이선스 고르기",
-    "holdersHead": "숙련 라이선스 보유자",
-    "holdersEmpty": "아직 숙련 라이선스 보유자가 없습니다.",
-    "subCasual": "일반",
-    "subLicense": "라이선스",
-    "licenseBests": "코스별 라이선스",
-    "subTabGroup": "순위 갈래",
     "pass": "리전 패스",
     "passLead": "할로윈부터 크리스마스까지 패스 하나. 판을 끝낼 때마다 XP 가 쌓이고, 시즌이 열리면 그 이벤트의 색 팔레트와 봇 모양을 받습니다.",
     "passLevel": "레벨",
@@ -634,7 +628,6 @@
     "fin_neon": "종로 네온",
     "fin_najeon": "자개",
     "kind_palette": "팔레트",
-    "kind_colour": "봇 색",
     "passFree": "무료",
     "stylePassOnly": "리전 패스에서 받은 색만 입을 수 있어요",
     "stylePassMore": "리전 패스에서 더 받기",
@@ -1289,12 +1282,6 @@
     "examLocked": "Earn the {name} license first.",
     "examNeedServer": "This test needs a connection to the server. Try again in a moment.",
     "examPickAria": "Choose a license",
-    "holdersHead": "Expert license holders",
-    "holdersEmpty": "No Expert license holders yet.",
-    "subCasual": "Casual",
-    "subLicense": "License",
-    "licenseBests": "Course licenses",
-    "subTabGroup": "Ranking category",
     "pass": "Region Pass",
     "passLead": "One pass from Halloween to Christmas. Every finished game earns XP, and each event's color palettes and bot shapes unlock once that event opens.",
     "passLevel": "level",
@@ -1341,7 +1328,6 @@
     "fin_neon": "Jongno neon",
     "fin_najeon": "Mother-of-pearl",
     "kind_palette": "Palette",
-    "kind_colour": "Bot colour",
     "passFree": "Free",
     "stylePassOnly": "You can only wear colors earned in the Region Pass",
     "stylePassMore": "Earn more in the Region Pass",
@@ -1913,13 +1899,7 @@
     "examAllDone": "すべてのライセンスを取得しました！",
     "examLocked": "先に「{name}」ライセンスを取得してください。",
     "examNeedServer": "この試験はサーバーに接続しないと受けられません。しばらくしてからもう一度お試しください。",
-    "examPickAria": "ライセンスを選ぶ",
-    "holdersHead": "熟練ライセンス保持者",
-    "holdersEmpty": "まだ熟練ライセンス保持者はいません。",
-    "subCasual": "一般",
-    "subLicense": "ライセンス",
-    "licenseBests": "コース別ライセンス",
-    "subTabGroup": "順位カテゴリ"
+    "examPickAria": "ライセンスを選ぶ"
   },
   "de": {
     "start": "Spielen",
@@ -2421,13 +2401,7 @@
     "examAllDone": "Du hast alle Lizenzen!",
     "examLocked": "Erwirb zuerst die Lizenz „{name}“.",
     "examNeedServer": "Dieser Test braucht eine Verbindung zum Server. Versuche es gleich noch einmal.",
-    "examPickAria": "Lizenz wählen",
-    "holdersHead": "Inhaber der Experten-Lizenz",
-    "holdersEmpty": "Noch keine Inhaber der Experten-Lizenz.",
-    "subCasual": "Frei",
-    "subLicense": "Lizenz",
-    "licenseBests": "Lizenzen je Kurs",
-    "subTabGroup": "Ranglistenkategorie"
+    "examPickAria": "Lizenz wählen"
   },
   "fr": {
     "start": "Jouer",
@@ -2929,13 +2903,7 @@
     "examAllDone": "Vous avez toutes les licences !",
     "examLocked": "Obtenez d’abord la licence « {name} ».",
     "examNeedServer": "Ce test nécessite une connexion au serveur. Réessayez dans un instant.",
-    "examPickAria": "Choisir une licence",
-    "holdersHead": "Titulaires de la licence Expert",
-    "holdersEmpty": "Aucun titulaire de la licence Expert pour l’instant.",
-    "subCasual": "Libre",
-    "subLicense": "Permis",
-    "licenseBests": "Licences par parcours",
-    "subTabGroup": "Catégorie de classement"
+    "examPickAria": "Choisir une licence"
   },
   "es": {
     "start": "Jugar",
@@ -3437,13 +3405,7 @@
     "examAllDone": "¡Tienes todas las licencias!",
     "examLocked": "Primero consigue la licencia «{name}».",
     "examNeedServer": "Esta prueba necesita conexión con el servidor. Inténtalo de nuevo en un momento.",
-    "examPickAria": "Elegir licencia",
-    "holdersHead": "Titulares de la licencia Experto",
-    "holdersEmpty": "Aún no hay titulares de la licencia Experto.",
-    "subCasual": "Casual",
-    "subLicense": "Licencia",
-    "licenseBests": "Licencias por recorrido",
-    "subTabGroup": "Categoría de clasificación"
+    "examPickAria": "Elegir licencia"
   },
   "pt": {
     "start": "Jogar",
@@ -3945,13 +3907,7 @@
     "examAllDone": "Você tem todas as licenças!",
     "examLocked": "Conquiste primeiro a licença “{name}”.",
     "examNeedServer": "Este teste precisa de conexão com o servidor. Tente de novo em instantes.",
-    "examPickAria": "Escolher licença",
-    "holdersHead": "Titulares da licença Especialista",
-    "holdersEmpty": "Ainda não há titulares da licença Especialista.",
-    "subCasual": "Casual",
-    "subLicense": "Licença",
-    "licenseBests": "Licenças por percurso",
-    "subTabGroup": "Categoria de classificação"
+    "examPickAria": "Escolher licença"
   },
   "zh": {
     "start": "开始",
@@ -4453,13 +4409,7 @@
     "examAllDone": "已获得全部执照！",
     "examLocked": "请先考取“{name}”执照。",
     "examNeedServer": "此考试需要连接服务器，请稍后再试。",
-    "examPickAria": "选择执照",
-    "holdersHead": "高级执照持有者",
-    "holdersEmpty": "还没有高级执照持有者。",
-    "subCasual": "普通",
-    "subLicense": "执照",
-    "licenseBests": "各路线执照",
-    "subTabGroup": "排行榜类别"
+    "examPickAria": "选择执照"
   },
   "it": {
     "start": "Gioca",
@@ -4961,13 +4911,7 @@
     "examAllDone": "Hai tutte le licenze!",
     "examLocked": "Ottieni prima la licenza «{name}».",
     "examNeedServer": "Questo esame richiede la connessione al server. Riprova tra un attimo.",
-    "examPickAria": "Scegli una licenza",
-    "holdersHead": "Titolari della licenza Esperto",
-    "holdersEmpty": "Ancora nessun titolare della licenza Esperto.",
-    "subCasual": "Libero",
-    "subLicense": "Patente",
-    "licenseBests": "Licenze per percorso",
-    "subTabGroup": "Categoria di classifica"
+    "examPickAria": "Scegli una licenza"
   },
   "nl": {
     "start": "Spelen",
@@ -5469,13 +5413,7 @@
     "examAllDone": "Je hebt alle licenties!",
     "examLocked": "Haal eerst de licentie “{name}”.",
     "examNeedServer": "Deze toets heeft een verbinding met de server nodig. Probeer het zo opnieuw.",
-    "examPickAria": "Kies een licentie",
-    "holdersHead": "Houders van de Expert-licentie",
-    "holdersEmpty": "Nog geen houders van de Expert-licentie.",
-    "subCasual": "Normaal",
-    "subLicense": "Licentie",
-    "licenseBests": "Licenties per parcours",
-    "subTabGroup": "Ranglijstcategorie"
+    "examPickAria": "Kies een licentie"
   },
   "pl": {
     "start": "Graj",
@@ -5977,13 +5915,7 @@
     "examAllDone": "Masz wszystkie licencje!",
     "examLocked": "Najpierw zdobądź licencję „{name}”.",
     "examNeedServer": "Ten egzamin wymaga połączenia z serwerem. Spróbuj ponownie za chwilę.",
-    "examPickAria": "Wybierz licencję",
-    "holdersHead": "Posiadacze licencji Ekspert",
-    "holdersEmpty": "Nikt jeszcze nie ma licencji Ekspert.",
-    "subCasual": "Zwykły",
-    "subLicense": "Licencja",
-    "licenseBests": "Licencje według kursu",
-    "subTabGroup": "Kategoria rankingu"
+    "examPickAria": "Wybierz licencję"
   },
   "cs": {
     "start": "Hrát",
@@ -6485,13 +6417,7 @@
     "examAllDone": "Máte všechny licence!",
     "examLocked": "Nejdřív získejte licenci „{name}“.",
     "examNeedServer": "Tento test vyžaduje připojení k serveru. Zkuste to za chvíli znovu.",
-    "examPickAria": "Vyberte licenci",
-    "holdersHead": "Držitelé licence Expert",
-    "holdersEmpty": "Zatím nemá licenci Expert nikdo.",
-    "subCasual": "Běžný",
-    "subLicense": "Licence",
-    "licenseBests": "Licence podle kurzu",
-    "subTabGroup": "Kategorie žebříčku"
+    "examPickAria": "Vyberte licenci"
   },
   "sv": {
     "start": "Spela",
@@ -6993,13 +6919,7 @@
     "examAllDone": "Du har alla licenser!",
     "examLocked": "Ta licensen ”{name}” först.",
     "examNeedServer": "Det här provet kräver anslutning till servern. Försök igen om en stund.",
-    "examPickAria": "Välj licens",
-    "holdersHead": "Innehavare av Expertlicensen",
-    "holdersEmpty": "Ingen har Expertlicensen än.",
-    "subCasual": "Standard",
-    "subLicense": "Licens",
-    "licenseBests": "Licenser per bana",
-    "subTabGroup": "Rankningskategori"
+    "examPickAria": "Välj licens"
   },
   "nb": {
     "start": "Spill",
@@ -7501,13 +7421,7 @@
     "examAllDone": "Du har alle lisensene!",
     "examLocked": "Ta lisensen «{name}» først.",
     "examNeedServer": "Denne prøven krever tilkobling til serveren. Prøv igjen om litt.",
-    "examPickAria": "Velg lisens",
-    "holdersHead": "Innehavere av Ekspert-lisensen",
-    "holdersEmpty": "Ingen har Ekspert-lisensen ennå.",
-    "subCasual": "Vanlig",
-    "subLicense": "Lisens",
-    "licenseBests": "Lisenser per løype",
-    "subTabGroup": "Rangeringskategori"
+    "examPickAria": "Velg lisens"
   },
   "fi": {
     "start": "Pelaa",
@@ -8009,13 +7923,7 @@
     "examAllDone": "Sinulla on kaikki lisenssit!",
     "examLocked": "Hanki ensin lisenssi ”{name}”.",
     "examNeedServer": "Tämä koe vaatii yhteyden palvelimeen. Yritä hetken kuluttua uudelleen.",
-    "examPickAria": "Valitse lisenssi",
-    "holdersHead": "Ekspertti-lisenssin haltijat",
-    "holdersEmpty": "Ekspertti-lisenssiä ei ole vielä kenelläkään.",
-    "subCasual": "Tavallinen",
-    "subLicense": "Lisenssi",
-    "licenseBests": "Lisenssit radoittain",
-    "subTabGroup": "Sijoituskategoria"
+    "examPickAria": "Valitse lisenssi"
   },
   "uk": {
     "start": "Грати",
@@ -8517,13 +8425,7 @@
     "examAllDone": "У вас усі ліцензії!",
     "examLocked": "Спершу отримайте ліцензію «{name}».",
     "examNeedServer": "Цей іспит потребує з’єднання із сервером. Спробуйте за мить.",
-    "examPickAria": "Оберіть ліцензію",
-    "holdersHead": "Власники ліцензії «Експерт»",
-    "holdersEmpty": "Власників ліцензії «Експерт» ще немає.",
-    "subCasual": "Звичайний",
-    "subLicense": "Ліцензія",
-    "licenseBests": "Ліцензії за курсами",
-    "subTabGroup": "Категорія рейтингу"
+    "examPickAria": "Оберіть ліцензію"
   },
   "ro": {
     "start": "Joacă",
@@ -9025,13 +8927,7 @@
     "examAllDone": "Ai toate licențele!",
     "examLocked": "Obține mai întâi licența „{name}”.",
     "examNeedServer": "Acest test necesită conexiune la server. Încearcă din nou peste puțin.",
-    "examPickAria": "Alege o licență",
-    "holdersHead": "Deținătorii licenței Expert",
-    "holdersEmpty": "Încă nu există deținători ai licenței Expert.",
-    "subCasual": "Obișnuit",
-    "subLicense": "Licență",
-    "licenseBests": "Licențe pe trasee",
-    "subTabGroup": "Categorie clasament"
+    "examPickAria": "Alege o licență"
   },
   "hu": {
     "start": "Játék",
@@ -9533,13 +9429,7 @@
     "examAllDone": "Minden licenced megvan!",
     "examLocked": "Előbb szerezd meg a(z) „{name}” licencet.",
     "examNeedServer": "Ehhez a vizsgához kapcsolat kell a szerverrel. Próbáld újra egy perc múlva.",
-    "examPickAria": "Válassz licencet",
-    "holdersHead": "A Szakértő licenc birtokosai",
-    "holdersEmpty": "Még senkinek sincs Szakértő licence.",
-    "subCasual": "Normál",
-    "subLicense": "Jogosítvány",
-    "licenseBests": "Licencek pályánként",
-    "subTabGroup": "Ranglistakategória"
+    "examPickAria": "Válassz licencet"
   },
   "bg": {
     "start": "Играй",
@@ -10041,13 +9931,7 @@
     "examAllDone": "Имате всички лицензи!",
     "examLocked": "Първо вземете лиценза „{name}“.",
     "examNeedServer": "Този изпит изисква връзка със сървъра. Опитайте пак след малко.",
-    "examPickAria": "Изберете лиценз",
-    "holdersHead": "Притежатели на лиценз „Експерт“",
-    "holdersEmpty": "Още няма притежатели на лиценз „Експерт“.",
-    "subCasual": "Обикновен",
-    "subLicense": "Лиценз",
-    "licenseBests": "Лицензи по курсове",
-    "subTabGroup": "Категория класиране"
+    "examPickAria": "Изберете лиценз"
   },
   "el": {
     "start": "Παίξε",
@@ -10549,13 +10433,7 @@
     "examAllDone": "Έχετε όλες τις άδειες!",
     "examLocked": "Πάρτε πρώτα την άδεια «{name}».",
     "examNeedServer": "Αυτή η εξέταση χρειάζεται σύνδεση με τον διακομιστή. Δοκιμάστε ξανά σε λίγο.",
-    "examPickAria": "Επιλέξτε άδεια",
-    "holdersHead": "Κάτοχοι άδειας Ειδικού",
-    "holdersEmpty": "Δεν υπάρχουν ακόμη κάτοχοι άδειας Ειδικού.",
-    "subCasual": "Απλό",
-    "subLicense": "Άδεια",
-    "licenseBests": "Άδειες ανά διαδρομή",
-    "subTabGroup": "Κατηγορία κατάταξης"
+    "examPickAria": "Επιλέξτε άδεια"
   },
   "tr": {
     "start": "Oyna",
@@ -11057,13 +10935,7 @@
     "examAllDone": "Tüm lisanslara sahipsin!",
     "examLocked": "Önce “{name}” lisansını al.",
     "examNeedServer": "Bu sınav sunucuya bağlantı gerektirir. Biraz sonra tekrar dene.",
-    "examPickAria": "Lisans seç",
-    "holdersHead": "Uzman lisansı sahipleri",
-    "holdersEmpty": "Henüz Uzman lisansı sahibi yok.",
-    "subCasual": "Klasik",
-    "subLicense": "Lisans",
-    "licenseBests": "Rotaya göre lisanslar",
-    "subTabGroup": "Sıralama kategorisi"
+    "examPickAria": "Lisans seç"
   },
   "vi": {
     "start": "Chơi",
@@ -11566,13 +11438,7 @@
     "examAllDone": "Bạn đã có tất cả giấy phép!",
     "examLocked": "Hãy lấy giấy phép “{name}” trước.",
     "examNeedServer": "Bài thi này cần kết nối tới máy chủ. Hãy thử lại sau giây lát.",
-    "examPickAria": "Chọn giấy phép",
-    "holdersHead": "Người giữ giấy phép Chuyên gia",
-    "holdersEmpty": "Chưa có ai giữ giấy phép Chuyên gia.",
-    "subCasual": "Thường",
-    "subLicense": "Bằng cấp",
-    "licenseBests": "Giấy phép theo lộ trình",
-    "subTabGroup": "Danh mục xếp hạng"
+    "examPickAria": "Chọn giấy phép"
   },
   "th": {
     "start": "เล่น",
@@ -12074,13 +11940,7 @@
     "examAllDone": "คุณได้ใบอนุญาตครบทุกใบแล้ว!",
     "examLocked": "ต้องได้ใบอนุญาต “{name}” ก่อน",
     "examNeedServer": "การสอบนี้ต้องเชื่อมต่อเซิร์ฟเวอร์ ลองใหม่อีกครั้งในอีกสักครู่",
-    "examPickAria": "เลือกใบอนุญาต",
-    "holdersHead": "ผู้ถือใบอนุญาตผู้เชี่ยวชาญ",
-    "holdersEmpty": "ยังไม่มีผู้ถือใบอนุญาตผู้เชี่ยวชาญ",
-    "subCasual": "ทั่วไป",
-    "subLicense": "ใบอนุญาต",
-    "licenseBests": "ใบอนุญาตแยกตามคอร์ส",
-    "subTabGroup": "หมวดหมู่อันดับ"
+    "examPickAria": "เลือกใบอนุญาต"
   },
   "id": {
     "start": "Main",
@@ -12582,13 +12442,7 @@
     "examAllDone": "Kamu sudah memiliki semua lisensi!",
     "examLocked": "Dapatkan dulu lisensi “{name}”.",
     "examNeedServer": "Ujian ini memerlukan koneksi ke server. Coba lagi sebentar lagi.",
-    "examPickAria": "Pilih lisensi",
-    "holdersHead": "Pemegang lisensi Ahli",
-    "holdersEmpty": "Belum ada pemegang lisensi Ahli.",
-    "subCasual": "Kasual",
-    "subLicense": "Lisensi",
-    "licenseBests": "Lisensi per kursus",
-    "subTabGroup": "Kategori peringkat"
+    "examPickAria": "Pilih lisensi"
   },
   "ms": {
     "start": "Main",
@@ -13090,13 +12944,7 @@
     "examAllDone": "Anda memiliki semua lesen!",
     "examLocked": "Dapatkan lesen “{name}” dahulu.",
     "examNeedServer": "Ujian ini memerlukan sambungan ke pelayan. Cuba lagi sebentar lagi.",
-    "examPickAria": "Pilih lesen",
-    "holdersHead": "Pemegang lesen Pakar",
-    "holdersEmpty": "Belum ada pemegang lesen Pakar.",
-    "subCasual": "Biasa",
-    "subLicense": "Lesen",
-    "licenseBests": "Lesen mengikut kursus",
-    "subTabGroup": "Kategori kedudukan"
+    "examPickAria": "Pilih lesen"
   },
   "ar": {
     "start": "ابدأ",
@@ -13598,12 +13446,6 @@
     "examAllDone": "لقد حصلت على جميع الرخص!",
     "examLocked": "احصل أولًا على رخصة «{name}».",
     "examNeedServer": "يحتاج هذا الاختبار إلى اتصال بالخادم. حاول مجددًا بعد قليل.",
-    "examPickAria": "اختر رخصة",
-    "holdersHead": "حاملو رخصة الخبير",
-    "holdersEmpty": "لا يوجد حاملو رخصة الخبير بعد.",
-    "subCasual": "عادي",
-    "subLicense": "رخصة",
-    "licenseBests": "الرخص حسب المسار",
-    "subTabGroup": "فئة التصنيف"
+    "examPickAria": "اختر رخصة"
   }
 }

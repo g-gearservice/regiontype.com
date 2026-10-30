@@ -19,7 +19,7 @@
      POST /match/tick {duel,hits,set}  내 진행을 적고 상대 진행·정산 결과를 받는다
      POST /played   일반전 한 판을 전적에 남기고 순위표(코스별 최고 기록)를 갈아 끼운다
      GET  /games    내 사다리 줄과 최근 판들 (로그인 필요)
-     GET  /ladder   경쟁전 상위 50
+     GET  /ladder   경쟁전 상위 50 (줄마다 경쟁전에서 딴 가장 높은 면허 lic)
      순위표·사다리는 기기(dev)마다 따로 선다 — 'pc' | 'mobile'. 쓰기는 몸통의 dev,
      읽기(/top·/ladder·/games)는 ?dev= 로 받는다. 'mobile' 이 아니면 전부 'pc' 다
      순위표(/top)는 화면 말(lang)마다도 따로 선다 — 몸통·?lang= 의 두 글자, 없으면 'ko'.
@@ -817,7 +817,10 @@ async function ladderTop(req, env, o) {
   return safely(o, async () => {
     const { results } = await env.DB.prepare(
       `select l.who as who, case when p.shut = 1 then '' else l.name end as name,
-              l.lp as lp, l.games as games, l.wins as wins
+              l.lp as lp, l.games as games, l.wins as wins,
+              (select x.grade from license x where x.who = l.who and x.mode = 'ranked'
+                order by case x.grade ${LICENSES.map(v => `when '${v.id}' then ${TIER_WEIGHT[v.id]}`).join(' ')} else 0 end desc
+                limit 1) as lic
          from ladder l left join profile p on p.who = l.who
         where l.dev = ? and l.games >= ? order by l.lp desc, l.at asc limit 50`
     ).bind(dev, PLACE).all();

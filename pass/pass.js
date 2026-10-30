@@ -21,7 +21,7 @@ const t = (key, vars) => {
 let ui = null;
 try { ui = JSON.parse(localStorage.getItem('rt.ui') || 'null'); } catch {}
 /* 홈이 남긴 팩이 패스보다 옛것이면(새 모양 이름이 없으면) 표 전체를 받는다 */
-if (ui && ui.pack && ui.pack.passXpLeft && ui.pack.kind_colour && [...SEASON_SHAPES.map(x => x.id), ...PASS_ENGINE_SHAPES].every(id => ui.pack['shape_' + id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
+if (ui && ui.pack && ui.pack.passXpLeft && [...SEASON_SHAPES.map(x => x.id), ...PASS_ENGINE_SHAPES].every(id => ui.pack['shape_' + id])) { I18N = { [ui.lang]: ui.pack }; LANG = ui.lang; }
 else {
   try { I18N = await (await fetch('../data/i18n.json?v=' + VER)).json(); } catch {}
   const langs = Object.keys(I18N);
@@ -40,7 +40,6 @@ const name = ref => {
   const got = parseReward(ref);
   if (!got) return '';
   if (got.kind === 'shape') return t('shape_' + got.shape.id) || got.shape.id;
-  if (got.kind === 'colour') return t('ch_' + got.colour) || got.colour;
   if (got.kind === 'palette') return (t('pal_' + got.palette.family) || got.palette.family) + (got.palette.n > 1 ? ' ' + got.palette.roman : '');
   return ref;
 };
@@ -62,8 +61,6 @@ function swatch(got) {
   }
   const chip = el('span', 'ps-chip');
   chip.setAttribute('aria-hidden', 'true');
-  /* 봇 색은 그 색 동그라미 하나 */
-  if (got.kind === 'colour') { chip.style.background = `radial-gradient(circle, ${TABLES.colours.find(c => c.id === got.colour).hex} 62%, transparent 64%)`; return chip; }
   const { accent, block, bg } = got.palette;
   chip.style.background = `radial-gradient(circle, ${accent} 26%, transparent 28%) center / 100% 100% no-repeat,
     radial-gradient(circle, ${block} 30%, transparent 33%) 0 0 / 33.3% 33.3%, ${bg}`;
@@ -85,7 +82,7 @@ const level = passLevel(st.xp), now = seasonAt(today);
 const face = (() => { try { return JSON.parse(localStorage.getItem('rt.character') || '{}'); } catch { return {}; } })();
 const calm = () => opt.motion === false || matchMedia('(prefers-reduced-motion: reduce)').matches;
 const bot = mountBuddy($('#bot'), { calm, shape: face.shape || 'cercle', expression: face.expression || 'curieux', gen: face.gen });
-bot.setColour(face.colour || 'accent');
+bot.setColour('accent');
 bot.start();
 
 /* ── 시즌 탭 ─────────────────────────────────────────────
@@ -155,7 +152,7 @@ function choose(i, focus) {
   bot.setShape(got.kind === 'shape' ? p.reward : face.shape || 'cercle', got.kind === 'shape' ? null : face.gen);
   const pal = got.kind === 'palette' ? got.palette : null;
   paint(pal);
-  bot.setColour(pal ? 'accent' : got.kind === 'colour' ? got.colour : face.colour || 'accent');   // 봇 색 칸은 그 색을 입어 본다
+  bot.setColour('accent');   // 봇은 늘 강조색 — 팔레트를 고르면 그 강조색을 입는다
   $('#psMap').hidden = !pal;
   if (pal) drawMap(pal);
   $('#pick').textContent = `Lv ${p.level} · ${name(p.reward)} — ${lockText(p).replace(/^\S+ /, '')}`;
@@ -206,7 +203,7 @@ track.addEventListener('keydown', e => {
   choose(n, true);
   btns[n].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: calm() ? 'auto' : 'smooth' });
 });
-$('#off').addEventListener('click', () => { paint(null); $('#psMap').hidden = true; bot.setColour(face.colour || 'accent'); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
+$('#off').addEventListener('click', () => { paint(null); $('#psMap').hidden = true; bot.setColour('accent'); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
 /* 처음엔 다음에 받을 칸 — 내 레벨 다음 칸과 지금 시즌 첫 칸 중 뒤의 것(다 받았으면 마지막) */
 choose(Math.min(Math.max(level, Math.max(0, SEASONS.indexOf(now)) * SEASON_LEVELS), PASS_LEVELS - 1));
 btns[cur].scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -219,8 +216,7 @@ if (new URLSearchParams(location.search).get('rt') === '1') {
   for (const s of SEASONS) {
     const T = trackOf(s), pals = T.map(p => parseReward(p.reward)).filter(g => g.kind === 'palette').map(g => g.palette);
     A(T.length === SEASON_LEVELS && T.every((p, i) => p.level === i + 1), `pass ${s.id}: 1..50 레벨이 빠짐없이`);
-    A(T.every(p => ['palette', 'shape', 'colour'].includes(parseReward(p.reward)?.kind)), `pass ${s.id}: 보상은 팔레트·모양·봇 색`);
-    A(s.colours.every(c => T.some(p => p.reward === 'bot:' + c && !p.big)), `pass ${s.id}: 봇 색은 모두 채움 칸에`);
+    A(T.every(p => ['palette', 'shape'].includes(parseReward(p.reward)?.kind)), `pass ${s.id}: 보상은 팔레트와 모양뿐`);
     A(new Set(T.map(p => p.reward)).size === SEASON_LEVELS, `pass ${s.id}: 같은 보상을 두 번 주지 않는다`);
     A(T.filter(p => p.free).map(p => p.level).join() === '1,2' && FREE === 2, `pass ${s.id}: 무료는 맨 앞 팔레트 둘`);
     A(s.shapes.every(id => T.some(p => p.big && p.reward === id)) && T[SEASON_LEVELS - 1].reward === s.shapes[s.shapes.length - 1], `pass ${s.id}: 모양은 모두 큰 칸에, 마지막 칸은 그 시즌의 얼굴`);
@@ -234,12 +230,13 @@ if (new URLSearchParams(location.search).get('rt') === '1') {
   A(PASS.length === PASS_LEVELS && PASS.every((p, i) => p.level === i + 1) && new Set(PASS.map(p => p.reward)).size === PASS_LEVELS, 'pass: 한 줄 1..150, 같은 보상 없음');
   A(PASS.every((p, i) => !i || PASS[i - 1].season.from <= p.season.from), 'pass: 줄 순서 = 날짜 순서');
   A(PASS[SEASON_LEVELS - 1].reward === 'citrouille' && shapeRadii('citrouille') && !TABLES.shapes.some(x => x.id === 'citrouille'), 'pass: 할로윈 50레벨은 엔진 호박(citrouille) — 기본 목록엔 없다');
-  A(SEASONS.flatMap(s => s.colours).sort().join() === [...COLOURS].sort().join(), 'pass: 엔진 봇 색 열둘이 한 번씩 나온다');
+  /* 강조색은 봇 몸 색 — 밝은 갈래는 바탕 위에서 봇이 보이게(≥2.3) 눌러 둔다 */
+  A(PALETTE_FAMILIES.filter(f => !f.dark).every(f => con(f.accent, f.bg) >= 2.3), 'palette: 밝은 갈래의 강조색(봇 색)이 제 바탕에서 묻히지 않는다');
   A(SEASONS.every((s, i) => s.from < s.to && (!i || SEASONS[i - 1].to === s.from)), 'season: 날짜가 겹치거나 비지 않고 이어진다');
   A(seasonAt('2026-10-31').theme === 'halloween' && seasonAt('2026-11-27').theme === 'blackfriday' && seasonAt('2026-12-25').theme === 'christmas', 'season: 날짜로 시즌을 고른다');
   A(SEASON_SHAPES.every(x => /^[a-z]{1,16}$/.test(x.id) && x.radii.length === 64 && x.radii.every(v => v >= .4 && v <= 1.3)), 'shapes: 중계기가 받는 id · 반지름 64개 · 엔진 범위 안');
   A(SEASON_SHAPES.every(x => !TABLES.shapes.some(y => y.id === x.id)), 'shapes: 엔진 기본 모양과 id 가 겹치지 않는다');
-  A(SEASON_SHAPES.every(x => t('shape_' + x.id)) && PALETTE_FAMILIES.every(f => t('pal_' + f.id)) && ['palette', 'shape', 'colour'].every(k => t('kind_' + k)), 'i18n: 모양 · 팔레트 이름 · 갈래');
+  A(SEASON_SHAPES.every(x => t('shape_' + x.id)) && PALETTE_FAMILIES.every(f => t('pal_' + f.id)) && ['palette', 'shape'].every(k => t('kind_' + k)), 'i18n: 모양 · 팔레트 이름 · 갈래');
   A(t('passFrom') && t('passEnded') && t('passSpan') && t('passFree'), 'i18n: 시즌 상태');
   A(REGIONS.length === 26 && REGIONS.every(r => r.radii.length === 64 && r.radii.every(v => v >= .4 && v <= 1.3)), 'regions: 26개 · 반지름 64개 · 엔진 범위 안');
   Promise.all(FINISHES.filter(f => f.img).map(f => fetch(finishImg(f), { method: 'HEAD' }).then(r => r.ok)))
