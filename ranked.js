@@ -294,7 +294,7 @@ const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass')
 const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
 function countOwned(kit) {
   /* 패스 보상은 로그인한 계정의 것이다 — 로그아웃하면 아무것도 안 가진 셈이라 기본 색·기본 모양으로 선다 */
-  const got = token() ? kit.ownedRewards(readPass(), today()) : [];
+  const got = token() || isDev() ? kit.ownedRewards(readPass(), today()) : [];   // 로컬은 로그아웃해도 다 가진 셈(items.js OPEN_ALL)
   owned = got.filter(o => o.got.kind === 'palette').map(o => ({ ref: o.ref, palette: o.got.palette }));
   ownedShapes = got.filter(o => o.got.kind === 'shape').map(o => o.ref);
   lockedShapes = kit.PASS_ENGINE_SHAPES;

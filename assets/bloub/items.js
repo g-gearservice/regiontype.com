@@ -260,7 +260,11 @@ export function gainXp(st, ranked, today) {
   return { pass: PASS_ID, xp: passStore(st).xp + add, add };
 }
 /* 칸 하나를 가졌나 — 그 시즌이 열렸고, 무료이거나 내 레벨까지 */
-export const passOwns = (p, lv, today) => p.season.from <= today && (!!p.free || p.level <= lv);
+/* 로컬(개발)에서는 150칸을 다 연다 — 보상을 다 입어 보려고. ?rt=1 자체검사는 진짜 잠금을 본다.
+   DOM 없이도 읽히게 location 은 있을 때만 본다(나중에 relay/ 가 같은 표를 쓴다) */
+const OPEN_ALL = ['localhost', '127.0.0.1', '[::1]'].includes(globalThis.location?.hostname) &&
+  new URLSearchParams(globalThis.location.search).get('rt') !== '1';
+export const passOwns = (p, lv, today) => OPEN_ALL || (p.season.from <= today && (!!p.free || p.level <= lv));
 /* 가진 보상 [{ ref, got, season }] */
 export function ownedRewards(st, today) {
   const lv = passLevel(passStore(st).xp);
