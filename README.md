@@ -414,7 +414,7 @@ A pull request opened directly by a bot uses `agent-static-A.B.C` instead of `st
     app.js                   matching engine + game loop + result card
     design/                  play/queue design (`design.pen`)
     relay/                   Cloudflare Worker — feedback → GitHub issues, leaderboard → D1
-    mimi/                    Mini Motorways-style board (dev only)
+    beta/mimi/               Mini Motorways-style board (beta, listed on /beta/style/)
     data/*.course.json       items, aliases, one-line blurbs (mode: sequence)
     data/*.geom.json         bitmap dot grid
     data/world.json          country list (build_world.py)
