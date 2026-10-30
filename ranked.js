@@ -43,6 +43,8 @@ const readFace = () => {
   catch { return {}; }
   /* 패스에 잠근 엔진 모양(호박)은 받기 전엔 입지 못한다 — 기본 모양으로 선다. 저장 값은 그대로 둔다(받으면 돌아온다) */
   if (lockedShapes.includes(f.shape) && !ownedShapes.includes(f.shape)) delete f.shape;
+  /* 봇 색도 패스 보상이다 — 강조색 연동('accent') 말고는 받은 색만 입는다 */
+  if (f.colour && f.colour !== 'accent' && !ownedColours.includes(f.colour)) delete f.colour;
   return f;
 };
 
@@ -136,7 +138,6 @@ function openStyles(from, tab) {
     return;
   }
   styOpener = from || document.activeElement;
-  $('#styNote').textContent = '';
   if ($('#botSay')) $('#botSay').textContent = '';
   fillStyles();
   if (tab === 'bot') pickStyTab($('#styTabBot'));
@@ -438,13 +439,14 @@ const passKit = import(new URL(asset('assets/bloub/items.js'), document.baseURI)
 /* 가진 보상 — 열린 시즌들의 무료 칸과 내 레벨까지의 칸(items.js 의 ownedRewards).
    팔레트는 [{ ref, palette }] 로 게임 스타일 탭에, 모양 id 는 봇 스타일 탭의 모양 줄에 더한다 */
 /* lockedShapes 는 items.js 의 PASS_ENGINE_SHAPES — 표가 오기 전에도 잠겨 있게 처음 값을 같이 적는다 */
-let owned = [], ownedShapes = [], lockedShapes = ['citrouille'];
+let owned = [], ownedShapes = [], ownedColours = [], lockedShapes = ['citrouille'];
 const readPass = () => { try { return JSON.parse(localStorage.getItem('rt.pass') || 'null'); } catch { return null; } };
 const today = () => new Date().toLocaleDateString('sv');   // 그 사람의 날 'YYYY-MM-DD'
 function countOwned(kit) {
   const got = kit.ownedRewards(readPass(), today());
   owned = got.filter(o => o.got.kind === 'palette').map(o => ({ ref: o.ref, palette: o.got.palette }));
   ownedShapes = got.filter(o => o.got.kind === 'shape').map(o => o.ref);
+  ownedColours = got.filter(o => o.got.kind === 'colour').map(o => o.got.colour);
   lockedShapes = kit.PASS_ENGINE_SHAPES;
 }
 /* 리전 패스 XP — 끝낸 판마다(나간 판은 finish 에 닿지 않는다), 패스가 열린 동안. 로그인한 계정만. 결과 칸에 +XP 와 레벨을 적는다 */
@@ -484,7 +486,11 @@ function swatch(el, s) {
   for (let i = 0; i < 9; i++) el.append(document.createElement('i'));
   return el;
 }
-function fillStyles(focusRef) {
+/* 봇 색의 hex 는 엔진(buddy.js 의 TABLES.colours)이 쥐고 있다 — 처음 그릴 때 받아 두고 다시 그린다 */
+let colourHex = null;
+function fillStyles(focusRef, focusColour) {
+  if (!colourHex) (window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href))
+    .then(k => { colourHex = Object.fromEntries(k.TABLES.colours.map(c => [c.id, c.hex])); if (styOpen()) fillStyles(); });
   const cur = curTheme(), ul = $('#styList');
   ul.replaceChildren(...owned.map(({ ref, palette }) => {
     const li = document.createElement('li'), on = sameStyle(pickTheme(palette), cur);
@@ -497,6 +503,18 @@ function fillStyles(focusRef) {
     return li;
   }));
   $('#stySay').textContent = owned.length ? '' : t('stylesEmpty');
+  const face = readFace(), bot = $('#styBot');
+  bot.replaceChildren(...['accent', ...ownedColours].map(id => {
+    const li = document.createElement('li'), b = document.createElement('button'), name = KO(id) || id;
+    b.type = 'button'; b.className = 'sty-dot'; b.dataset.colour = id; b.title = name;
+    b.setAttribute('aria-label', name);
+    b.setAttribute('aria-pressed', String((face.colour || 'accent') === id));
+    b.style.background = id === 'accent' ? 'var(--accent)' : colourHex?.[id] || '';
+    b.insertAdjacentHTML('beforeend', '<span class="sty-tick" aria-hidden="true">✓</span>');
+    li.append(b);
+    return li;
+  }));
+  if (focusColour) bot.querySelector(`[data-colour="${CSS.escape(focusColour)}"]`)?.focus({ preventScroll: true });
   $('#styReset').hidden = !THEME.some(k => cur[k.key]);
   if (focusRef) (ul.querySelector(`[data-ref="${CSS.escape(focusRef)}"]`) || $('#styHead')).focus({ preventScroll: true });
 }
@@ -508,7 +526,14 @@ function wearPalette(ref) {
   /* 어두운 팔레트(블랙 프라이데이)는 밤 화면 위에 깐다 — 설정 통(settings.js)이 켜고 저장한다 */
   if (o.palette.dark && !document.documentElement.hasAttribute('data-night')) dispatchEvent(new CustomEvent('rt-bot-opt', { detail: { night: true } }));
   fillStyles(ref);
-  $('#styNote').textContent = t('styleWorn', { name: palName(o.palette) });
+}
+/* 봇 색 입기 — 봇 스타일 탭과 같은 길(keepBotStyle)로 저장하고 서버에 올린다 */
+function wearBotColour(id) {
+  if (id !== 'accent' && !ownedColours.includes(id)) return;
+  syncBotStyleFromStorage();
+  botChar.colour = id;
+  keepBotStyle();
+  fillStyles(null, id);
 }
 
 /* ── 봇 스타일 탭 (모양·색·크기·생성) ───────────────────────
@@ -938,12 +963,12 @@ function wireStyles() {
     styOpener = null;
   });
   d.addEventListener('click', e => {
-    const b = e.target.closest('#styList .sty-swatch');
+    const b = e.target.closest('#styList .sty-swatch'), c = e.target.closest('#styBot .sty-dot');
     if (b) wearPalette(b.dataset.ref);
+    else if (c) wearBotColour(c.dataset.colour);
     else if (e.target.closest('#styReset')) {
       act({ act: 'theme', reset: true });
       fillStyles();
-      $('#styNote').textContent = t('styleResetDone');
       $('#styHead').focus({ preventScroll: true });
     }
   });
@@ -1451,15 +1476,29 @@ const themeLow = th => {
 const DARK = (bg, ink) => ({ '--grid': `color-mix(in srgb,${bg} 88%,${ink})`, '--land': `color-mix(in srgb,${bg} 84%,${ink})`,
   '--land-line': bg, '--card': `color-mix(in srgb,${bg} 92%,#fff)`, '--bar': `color-mix(in srgb,${bg} 80%,${ink})`,
   '--ink-soft': `color-mix(in srgb,${ink} 68%,${bg})` });
+/* 그 색을 검정 쪽으로 5% 씩 눌러 against 와 대비 min 을 넘는 첫 색 — 흰 글자를 얹는 --block-deep, 작은 글자용 --accent-text */
+const deepen = (hex, against, min) => {
+  for (let t = 1; t > 0; t -= .05) {
+    const v = '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+    if (contrast(v, against) >= min) return v;
+  }
+  return '#000000';
+};
 const themeCss = th => {
   const both = [], day = [], night = [];
+  /* 팔레트에서 따라 나오는 짙은 칸색·글자용 강조색 — style.css 기본값(--block-deep·--accent-text)이 팔레트를 안 따라가 내 줄·공유 단추가 청록으로 남았다 */
+  if (HEX.test(th.block)) both.push(`--block-deep:${deepen(th.block, '#ffffff', 4.5)}`);
+  if (HEX.test(th.accent)) {
+    day.push(`--accent-text:${deepen(th.accent, !th.dark && HEX.test(th.bg) ? th.bg : '#e8edf0', 4.5)}`);
+    night.push(`--accent-text:${th.accent}`);
+  }
   for (const k of THEME) {
     const v = th[k.key];
     if (!HEX.test(v) || k.night === 'only') continue;
     if (th.dark && !k.night) night.push(`--${k.key}:${v}`);
     else (k.night ? both : day).push(`--${k.key}:${v}`, ...Object.entries(k.also || {}).map(([p, f]) => `${p}:${f(v)}`));
   }
-  if (night.length && HEX.test(th.bg) && HEX.test(th.ink)) night.push(...Object.entries(DARK(th.bg, th.ink)).map(([p, v]) => `${p}:${v}`));
+  if (th.dark && HEX.test(th.bg) && HEX.test(th.ink)) night.push(...Object.entries(DARK(th.bg, th.ink)).map(([p, v]) => `${p}:${v}`));
   /* 밝은 팔레트의 밤 바탕 — 낮 바탕 대신 밤에 깔고, 따라 나오는 값은 사이트 밤 글자와 섞는다 */
   else if (HEX.test(th.nightBg)) night.push(`--bg:${th.nightBg}`, ...Object.entries(DARK(th.nightBg, NIGHT_INK)).map(([p, v]) => `${p}:${v}`));
   return (both.length ? `:root,:root[data-night]{${both.join(';')}}` : '') + (day.length ? `:root:not([data-night]){${day.join(';')}}` : '') +
@@ -2539,7 +2578,7 @@ if (location.search.includes('rt=1')) {
     mountBuddy(box, { still: true, shape: 'gen', gen: { radii } }).setShape('gen', { radii });
     console.assert(box.querySelector('path')?.getAttribute('d')?.length > 20, '봇 모양: 윤곽 점(radii) 맞춤 모양이 그려진다');
   });
-  console.assert(spookyLook('유령 같은 봇')?.shape === 'goutte' && spookyLook('할로윈 호박')?.shape === 'citrouille' &&
+  console.assert(spookyLook('유령 같은 봇')?.shape === 'goutte' && spookyLook('할로윈 호박')?.shape === (ownedShapes.includes('citrouille') ? 'citrouille' : 'cercle') &&
     spookyLook('combat robot') === undefined && spookyLook('맑은 하늘') === undefined, '봇 모양: 할로윈 낱말 프리셋');
   console.assert(JSON.stringify(hashGen('별빛')) === JSON.stringify(hashGen('별빛')) &&
     ['밤', 'x'.repeat(40), '🎃🦇'].every(x => { const g = hashGen(x); return g.lobes >= 3 && g.lobes <= 9 && Math.abs(g.amp) <= 0.28 && g.sharp <= 2.2; }), '봇 모양: 해시 폴백은 범위 안');
@@ -2561,10 +2600,14 @@ if (location.search.includes('rt=1')) {
     const big = { pass: 'holiday-2026', xp: 1e9 }, at = d => ownedRewards(big, d).map(o => o.ref);
     console.assert(at('2026-10-31').includes('pal:pumpkin') && !at('2026-10-31').includes('pal:blackfriday') && at('2026-11-20').includes('pal:blackfriday') &&
       !at('2026-11-20').includes('pal:holly') && at('2026-12-25').includes('pal:holly'), '패스: 칸은 그 시즌이 열린 날부터');
-    console.assert(themeCss({ accent: '#f5ca47', bg: '#131316', ink: '#e4e4e7', dark: true }).includes(':root[data-night]{--bg:#131316') &&
+    console.assert(/:root\[data-night\]\{[^}]*--bg:#131316/.test(themeCss({ accent: '#f5ca47', bg: '#131316', ink: '#e4e4e7', dark: true })) &&
       !themeCss({ bg: '#131316', ink: '#e4e4e7', dark: true }).includes(':root:not([data-night]){--bg'), '스타일: 어두운 팔레트는 바탕을 밤에만 깐다');
     console.assert(themeCss({ bg: '#f2e8de', ink: '#604d39', nightBg: '#2a2230' }).includes(':root[data-night]{--bg:#2a2230') &&
       PASS.every(p => !p.reward.startsWith('pal:') || HEX.test(pickTheme(parseReward(p.reward).palette).nightBg)), '스타일: 팔레트마다 밤 바탕을 담아 밤에 깐다');
+    console.assert(PASS.filter(p => p.reward.startsWith('pal:')).map(p => themeCss(pickTheme(parseReward(p.reward).palette))).every(c => {
+      const deep = c.match(/--block-deep:(#[0-9a-f]{6})/)?.[1], txt = c.match(/--accent-text:(#[0-9a-f]{6})/)?.[1];
+      return deep && txt && contrast(deep, '#ffffff') >= 4.5;
+    }), '스타일: 팔레트가 짙은 칸색(--block-deep)과 글자용 강조색(--accent-text)까지 바꾼다');
   });
   console.assert($('#styTabGame') && $('#styTabBot') && $('#styPanelGame') && $('#styPanelBot'), '스타일: 게임 스타일 · 봇 스타일 탭');
   console.assert(!$('#expressionChoices'), '스타일: 봇 스타일 탭에 표정 선택은 두지 않는다');
