@@ -194,10 +194,11 @@ function rankRow(i, name, right, me, lp, lic) {
     s.className = 'tier'; s.dataset.tier = tierOf(lp); s.textContent = tierLabel(lp);
     li.querySelector('.who').after(s);
   }
-  if (lic && LICENSES.some(l => l.id === lic)) {
+  if (lp != null) {
     const b = document.createElement('span');
-    b.className = 'exam-badge'; b.dataset.grade = lic; b.textContent = licName(lic);
-    li.querySelector('.who').after(b);
+    if (lic && LICENSES.some(l => l.id === lic)) { b.className = 'exam-badge'; b.dataset.grade = lic; b.textContent = licName(lic); }
+    else b.className = 'lic-none';
+    li.querySelector('.pt').after(b);
   }
   if (me) {
     li.classList.add('me');
@@ -222,75 +223,7 @@ async function fillRanking() {
     lad.replaceChildren(...d.top.map((r, i) => rankRow(i, r.name, r.lp + ' LP', r.me, r.lp, r.lic)));
     say.textContent = d.top.length ? '' : t('ladderEmpty');
   } catch { if (n === rankReq) say.textContent = t('boardFail'); }
-  await Promise.all(['ranked', 'normal'].map(mode => fillBests(n, mode)));
 }
-/* 코스별 최고 기록. 코스·시간마다 1위 한 줄씩이고, 펼치면 그 판의 순위표와 내 자리를 읽는다.
-   경쟁전과 일반전은 따로 센다. 이 나라 코스만 보인다 — 다른 나라 코스는 이름을 못 읽는다.
-   지금 고른 칸의 판은 펼친 채로 연다 */
-async function fillBests(n, mode) {
-  const box = $(`#${mode}Bests`), say = $(`#${mode}BestsSay`);
-  box.replaceChildren(); say.textContent = t('reading');
-  let d;
-  try { d = await ask(`/top?mode=${mode}&dev=${DEV}&lang=${LANG}`); } catch { if (n === rankReq) say.textContent = t('boardFail'); return; }
-  if (n !== rankReq) return;
-  const here = PICK ? PICK.slug : COURSE.root;
-  const known = s => s === COURSE.root || COURSE.tiles.some(x => x.slug === s);
-  const rows = d.bests.filter(b => known(b.slug));
-  box.replaceChildren(...rows.map(b => {
-    const det = document.createElement('details');
-    det.className = 'pg-best';
-    det.innerHTML = '<summary><span class="where"></span><span class="who"></span><span class="pt"></span><span class="n"></span></summary><ol class="ranks pg-ranks"></ol><p class="pg-say" role="status"></p>';
-    det.querySelector('.where').textContent = `${placeOf(b.slug)} · ${clock(b.secs)}`;
-    det.querySelector('.who').textContent = b.name;
-    det.querySelector('.pt').textContent = showSpeed(b.cpm);
-    det.querySelector('.n').textContent = t('players', { n: b.n });
-    let read = false;
-    det.addEventListener('toggle', async () => {
-      if (!det.open || read) return;
-      read = true;
-      const ol = det.querySelector('ol'), p = det.querySelector('p');
-      p.textContent = t('reading');
-      try {
-        const r = await ask(`/top?c=${encodeURIComponent(b.slug)}&t=${b.secs}&mode=${mode}&dev=${DEV}&lang=${LANG}`);
-        ol.replaceChildren(...r.top.map((x, i) => rankRow(i, x.name, showSpeed(x.cpm), x.me)));
-        /* 상위 줄 밖이어도 내 자리는 보인다 */
-        p.textContent = r.rank && !r.top.some(x => x.me) ? `${t('me')} · ${t('nth', { n: r.rank })}` : '';
-      } catch { read = false; p.textContent = t('boardFail'); }
-    });
-    if (b.slug === here && (mode === 'ranked' || b.secs === opt.time)) det.open = true;
-    return det;
-  }));
-  say.textContent = rows.length ? '' : t('ladderEmpty');
-}
-function wireTabGroup(tablist, onSwap) {
-  if (!tablist) return () => {};
-  const tabs = [...tablist.querySelectorAll(':scope > [role="tab"]')];
-  const pick = tab => {
-    tabs.forEach(tb => {
-      const on = tb === tab;
-      tb.setAttribute('aria-selected', String(on));
-      tb.tabIndex = on ? 0 : -1;
-      const p = document.getElementById(tb.getAttribute('aria-controls'));
-      if (p) p.hidden = !on;
-    });
-    if (onSwap) onSwap(tab);
-  };
-  tabs.forEach(tb => tb.addEventListener('click', () => pick(tb)));
-  tablist.addEventListener('keydown', e => {
-    const i = tabs.indexOf(document.activeElement);
-    if (i < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    e.preventDefault();
-    const next = tabs[e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1
-      : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
-      : (i + 1) % tabs.length];
-    pick(next); next.focus();
-  });
-  return pick;
-}
-function wireTabs() {
-  wireTabGroup($('#ranking > .pg-shell > .pg-tabs'));
-}
-
 /* ── 기록 ─────────────────────────────────────────────── */
 /* 내 사다리 카드 — 기록 덮개와 순위 덮개(#rkMine)가 같은 꼴을 쓴다 */
 function paintCard(card, lad, who) {
@@ -2496,7 +2429,6 @@ addEventListener('rt-open-settings', () => closePage(true));
 addEventListener('rt-open-signin', () => closePage(true));
 addEventListener('rt-tab-swap', () => closePage(true));
 
-wireTabs();
 wireLogo();
 wireModePick();
 wireStart();
