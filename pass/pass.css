@@ -1,6 +1,9 @@
 /* 리전 패스. 색·간격은 style.css 의 커스텀 프로퍼티에서 딴다. 커뮤니티처럼 문서가 흐르고 스크롤된다 */
 html,body{height:auto}
-body{overflow:auto}
+body{overflow:auto;overflow-x:hidden}
+/* 격자는 문서에 붙는다 — 글처럼 흐르는 페이지라 스크롤하면 격자도 같이 지나간다(앱 화면은 style.css 대로 고정) */
+body{position:relative}
+.grid-bg{position:absolute;min-height:100dvh}
 [hidden]{display:none !important}
 
 .ps-top,.ps{max-width:880px;margin:0 auto;padding-left:24px;padding-right:24px;position:relative}
@@ -21,7 +24,7 @@ body{overflow:auto}
 .ps-tab[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:800}
 .ps a:focus-visible,.ps button:focus-visible,.ps-tab:focus-visible,.ps-top a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
-.ps-card,.ps-show{border:2px solid var(--grid);border-radius:16px;background:var(--card);padding:20px}
+.ps-card{border:2px solid var(--grid);border-radius:16px;background:var(--card);padding:20px}
 .ps-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 /* 상태는 색이 아니라 테두리 알약과 글로 */
 .ps-state{border:2px dashed var(--ink-soft);border-radius:999px;padding:2px 12px;font-size:14px;font-weight:700;color:var(--ink-soft)}
@@ -36,20 +39,15 @@ body{overflow:auto}
 .ps-xp:empty{display:none}
 .ps-note{margin-top:10px;font-size:15px;color:var(--ink-soft)}
 
-.ps-show{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.ps-bot{width:180px;height:180px;flex:none}
-.ps-bot .buddy{width:100%;height:100%;display:block;overflow:visible}
-/* 팔레트 견본 지도 — 팔레트 바탕을 그대로 깐 작은 서울. 밤에도 팔레트 그대로 */
-.ps-map{width:180px;height:180px;flex:none}
-.ps-map svg{width:100%;height:100%;display:block}
-.ps-peek{flex:1;min-width:200px}
-.ps-pick{margin-top:8px;font-size:17px;font-weight:700;min-height:1.5em}
-.ps-off{margin-top:12px;min-height:36px;padding:4px 16px;border:2px solid var(--grid);border-radius:999px;background:transparent;
-  color:var(--ink);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
 
 .ps-hint{margin-top:6px;font-size:14px;color:var(--ink-soft)}
-.ps-track{list-style:none;margin:14px 0 0;padding:4px 4px 12px;display:grid;grid-auto-flow:column;grid-auto-columns:148px;
-  gap:10px;overflow-x:auto;scroll-snap-type:x proximity}
+/* 보상 줄은 화면 끝까지 — 첫 칸은 본문 칸에 맞춰 선다. --gut 은 .ps 의 바깥 여백(880/2-24) */
+.ps-rail{--gut:max(24px,calc(50vw - 416px));margin:14px calc(50% - 50vw) 0}
+/* 페이지 좌우 끝 흐림 — 겹은 style.css 의 .edge-blur, 여기선 자리만 */
+.ps-blur{--in:90deg;position:fixed;top:0;bottom:0;left:0;width:min(72px,max(24px,calc(50vw - 416px)));z-index:9}
+.ps-blur.is-end{--in:270deg;left:auto;right:0}
+.ps-track{list-style:none;margin:0;padding:4px calc(var(--gut) + 4px) 12px;scroll-padding-inline:calc(var(--gut) + 4px);
+  display:grid;grid-auto-flow:column;grid-auto-columns:148px;gap:10px;overflow-x:auto;scroll-snap-type:x proximity}
 .ps-cell{scroll-snap-align:start}
 /* 시즌이 바뀌는 칸 — 앞에 점선 칸막이와 시즌 이름표 */
 .ps-cell.is-first:not(:first-child){border-left:3px dashed var(--ink-soft);padding-left:10px}
@@ -65,6 +63,17 @@ body{overflow:auto}
 .ps-chip{width:26px;height:26px;border-radius:50%;border:2px solid currentColor}
 /* 구 실루엣은 글자 색으로 — 고른 칸(먹 채움)에서도 저절로 뒤집힌다 */
 .ps-sil{width:34px;height:34px;fill:currentColor}
+/* 그림 자리는 높이를 못박아 둔다 — 고른 칸에 봇·지도가 들어앉아도 줄 높이가 출렁이지 않는다 */
+.ps-pic{display:flex;align-items:center;height:72px}
+.ps-bot,.ps-map{width:72px;height:72px;flex:none}
+.ps-bot .buddy,.ps-map svg{width:100%;height:100%;display:block;overflow:visible}
+/* 고를 때 — 먹 채움은 --fast 로 번지고, 그림 자리에 새로 들어앉는 것(봇·지도, 또는 제 칸에 돌아온 견본)은
+   0.94 에서 떠오른다. 들어앉을 때마다 새로 붙는 노드라 @starting-style 이 그때마다 문다. ←→ 로 빠르게 옮겨도
+   전환이라 이어진다. 처음 150칸이 한꺼번에 떠오르지 않게 .is-live(첫 그림 뒤 pass.js 가 붙인다)에서만.
+   토큰(--fast·--slow)은 동작 줄이기·움직임 끔에서 0 이 된다(style.css) */
+.ps-lvbtn{transition:background-color var(--fast) ease,border-color var(--fast) ease,color var(--fast) ease}
+.is-live .ps-pic>*{transition:opacity var(--slow) var(--ease-out),transform var(--slow) var(--ease-out)}
+@starting-style{.is-live .ps-pic>*{opacity:0;transform:scale(.94)}}
 .ps-what{font-size:15px;font-weight:700;line-height:1.3}
 .ps-lock{margin-top:auto;font-size:13px;opacity:.8}
 

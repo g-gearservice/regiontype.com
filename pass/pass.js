@@ -1,5 +1,6 @@
 /* 리전 패스 — 할로윈·블랙 프라이데이·크리스마스를 날짜 차례로 이은 150칸 한 줄(assets/bloub/items.js 의 PASS)을 늘어놓고,
-   고른 칸을 미리 본다 — 팔레트는 이 페이지 색과 작은 서울 지도로(어두운 팔레트는 밤 화면으로), 모양은 내 봇의 몸으로.
+   고른 칸을 그 칸 안에서 미리 본다 — 팔레트는 이 페이지 색과 칸 속 작은 서울 지도로(어두운 팔레트는 밤 화면으로), 모양은 칸 속 내 봇의 몸으로.
+   고른 칸을 다시 누르면 벗는다.
    시즌 탭은 줄에서 그 시즌 첫 칸으로 건너뛴다. 진행(레벨·XP)은 서버가 세기 전(PLAN-pass.md M3)이라 이 기기의 rt.pass 를
    읽는다(쌓는 것은 ranked.js). 화면 말은 community.js 와 같은 길로 고른다(rt.ui 팩 → 없으면 data/i18n.json). */
 const opt = (() => { try { return JSON.parse(localStorage.getItem('rt.opt') || '{}'); } catch { return {}; } })();
@@ -81,7 +82,10 @@ const level = passLevel(st.xp), now = seasonAt(today);
 /* 내 봇 — 홈에서 고른 모양·표정·색 그대로 */
 const face = (() => { try { return JSON.parse(localStorage.getItem('rt.character') || '{}'); } catch { return {}; } })();
 const calm = () => opt.motion === false || matchMedia('(prefers-reduced-motion: reduce)').matches;
-const bot = mountBuddy($('#bot'), { calm, shape: face.shape || 'cercle', expression: face.expression || 'curieux', gen: face.gen });
+const botBox = el('span', 'ps-bot'), mapBox = el('span', 'ps-map');
+mapBox.setAttribute('role', 'img');
+mapBox.setAttribute('aria-label', t('passMap'));
+const bot = mountBuddy(botBox, { calm, shape: face.shape || 'cercle', expression: face.expression || 'curieux', gen: face.gen });
 bot.setColour('accent');
 bot.start();
 
@@ -135,14 +139,20 @@ const btns = PASS.map((p, i) => {
   row.append(el('span', 'ps-num', 'Lv ' + p.level), el('span', 'ps-kind', t(kindOf(got))));
   /* 시즌 첫 칸엔 시즌 이름표 — 줄 안에서 어디부터 그 시즌인지 글로 보인다 */
   if (i % SEASON_LEVELS === 0) { li.classList.add('is-first'); b.append(el('span', 'ps-season', '▸ ' + (t('season_' + p.season.theme) || p.season.theme))); }
-  b.append(row, swatch(got), el('span', 'ps-what', (p.big ? '★ ' : '') + name(p.reward)), el('span', 'ps-lock', lockText(p)));
-  b.addEventListener('click', () => choose(i));
+  /* 그림 자리 — 평소엔 작은 견본, 고르면 그 자리에 봇이나 지도가 들어앉는다(choose) */
+  const pic = el('span', 'ps-pic');
+  pic.append(swatch(got));
+  b.append(row, pic, el('span', 'ps-what', (p.big ? '★ ' : '') + name(p.reward)), el('span', 'ps-lock', lockText(p)));
+  b.addEventListener('click', () => b.getAttribute('aria-pressed') === 'true' ? takeOff() : choose(i));
   li.append(b);
   track.append(li);
   return b;
 });
+const swatches = PASS.map((p, i) => btns[i].querySelector('.ps-pic').firstChild);
+const unpin = () => btns.forEach((b, j) => { const pic = b.querySelector('.ps-pic'); if (pic.firstChild !== swatches[j]) pic.replaceChildren(swatches[j]); });
 function choose(i, focus) {
   cur = i;
+  unpin();
   btns.forEach((b, j) => { b.tabIndex = j === i ? 0 : -1; b.setAttribute('aria-pressed', String(j === i)); });
   if (focus) btns[i].focus();
   const p = PASS[i], got = parseReward(p.reward), on = seasonOfCell(i);
@@ -153,9 +163,16 @@ function choose(i, focus) {
   const pal = got.kind === 'palette' ? got.palette : null;
   paint(pal);
   bot.setColour('accent');   // 봇은 늘 강조색 — 팔레트를 고르면 그 강조색을 입는다
-  $('#psMap').hidden = !pal;
   if (pal) drawMap(pal);
-  $('#pick').textContent = `Lv ${p.level} · ${name(p.reward)} — ${lockText(p).replace(/^\S+ /, '')}`;
+  btns[i].querySelector('.ps-pic').replaceChildren(pal ? mapBox : botBox);
+}
+/* 벗기 — 고른 칸을 다시 누르면 페이지 색·봇이 제자리로, 칸은 견본으로 */
+function takeOff() {
+  paint(null);
+  unpin();
+  bot.setColour('accent');
+  bot.setShape(face.shape || 'cercle', face.gen);
+  btns.forEach(b => b.setAttribute('aria-pressed', 'false'));
 }
 /* 작은 서울 지도 — 서울 윤곽(REGIONS 의 seoul, 반지름 64개) 안에 홈 지도처럼 점을 깐다. 바탕은 팔레트 바탕,
    점은 칸색, 몇 점은 강조색(먹은 칸), 이름은 글자색. 밤 화면이면 바탕은 그 팔레트의 밤 바탕(nightBg) */
@@ -175,7 +192,7 @@ function drawMap(pal) {
   mk('rect', { x: -1.5, y: -1.5, width: 3, height: 3, rx: .3, fill: pal.bg, style: night ? `fill:color-mix(in srgb,${pal.nightBg} 92%,#fff)` : '' });
   DOTS.forEach(([x, y], i) => mk('circle', { cx: x.toFixed(3), cy: y.toFixed(3), r: .052, fill: i % 9 === 4 ? pal.accent : pal.block }));
   mk('text', { x: 0, y: 1.38, 'text-anchor': 'middle', 'font-size': .22, 'font-weight': 800, fill: night && !pal.dark ? '#e7eef1' : pal.ink }).textContent = name('pal:' + pal.id);
-  $('#psMap').replaceChildren(svg);
+  mapBox.replaceChildren(svg);
 }
 /* 팔레트 미리 보기 — 홈의 THEME(ranked.js)과 같은 넷을 :root 에 얹는다. 밝은 팔레트의 바탕·글자는 낮에만(밤엔 사이트 밤 값),
    어두운 팔레트는 미리 보는 동안 밤 화면을 켜고 그 바탕을 깐다(홈에서 입을 때와 같다) */
@@ -203,10 +220,10 @@ track.addEventListener('keydown', e => {
   choose(n, true);
   btns[n].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: calm() ? 'auto' : 'smooth' });
 });
-$('#off').addEventListener('click', () => { paint(null); $('#psMap').hidden = true; bot.setColour('accent'); bot.setShape(face.shape || 'cercle', face.gen); $('#pick').textContent = ''; btns.forEach(b => b.setAttribute('aria-pressed', 'false')); });
 /* 처음엔 다음에 받을 칸 — 내 레벨 다음 칸과 지금 시즌 첫 칸 중 뒤의 것(다 받았으면 마지막) */
 choose(Math.min(Math.max(level, Math.max(0, SEASONS.indexOf(now)) * SEASON_LEVELS), PASS_LEVELS - 1));
 btns[cur].scrollIntoView({ block: 'nearest', inline: 'center' });
+requestAnimationFrame(() => requestAnimationFrame(() => track.classList.add('is-live')));   // 첫 그림이 놓인 뒤부터 갈아 끼움이 떠오른다(pass.css)
 
 /* ── ?rt=1 자체검사 ──────────────────────────────────── */
 if (new URLSearchParams(location.search).get('rt') === '1') {

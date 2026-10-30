@@ -56,7 +56,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=5.83">
+<link rel="stylesheet" href="style.css?v=5.90">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -356,6 +356,8 @@
     <button type="button" class="back" id="optClose" data-i18n-aria="back" aria-label="뒤로"><i class="i i-arrow-left" aria-hidden="true"></i></button>
     <h2 class="head" data-i18n="options">설정</h2>
   </div>
+  <span class="edge-blur opts-blur is-top" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  <span class="edge-blur opts-blur is-bot" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
   <div class="opts-shell">
     <nav class="opts-tabs" role="tablist" data-i18n-aria="options" aria-label="설정">
       <button type="button" class="opts-tab" role="tab" id="optsTabLanguage" aria-controls="optsLanguage" aria-selected="false" tabindex="-1" data-i18n="language">언어</button>
@@ -732,7 +734,7 @@
 </dialog>
 
 <script src="relay.js?v=5.83"></script>
-<script src="app.js?v=5.83"></script>
+<script src="app.js?v=5.90"></script>
 <script src="auth.js?v=5.83"></script>
 <script src="settings/settings.js?v=5.83"></script>
 <script src="ranked.js?v=5.83"></script>

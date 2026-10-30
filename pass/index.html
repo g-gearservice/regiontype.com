@@ -9,11 +9,11 @@
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: dark)" href="../favicon/white.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" media="(prefers-color-scheme: light)" href="../favicon/dark.png?v=5.45">
 <link rel="icon" type="image/png" sizes="any" href="../favicon/dark.png?v=5.45">
-<link rel="stylesheet" href="../style.css?v=5.83">
-<link rel="stylesheet" href="pass.css?v=5.83">
+<link rel="stylesheet" href="../style.css?v=5.92">
+<link rel="stylesheet" href="pass.css?v=5.92">
 <!-- 패스는 아직 서버가 없다(PLAN-pass.md M3). 세 시즌을 이은 보상 줄(assets/bloub/items.js 의 PASS)을
-     보여 주고, 고른 칸을 미리 본다 — 팔레트는 이 페이지 색과 작은 지도, 모양은 내 봇. 진행은 이 기기에 쌓인다 -->
-<script type="module" src="pass.js?v=5.83"></script>
+     보여 주고, 고른 칸을 그 칸 안에서 미리 본다 — 팔레트는 이 페이지 색과 작은 지도, 모양은 내 봇. 진행은 이 기기에 쌓인다 -->
+<script type="module" src="pass.js?v=5.92"></script>
 </head>
 <body>
 
@@ -49,20 +49,10 @@
     <p class="ps-note" id="note"></p>
   </section>
 
-  <section class="ps-show" aria-labelledby="psPeek">
-    <div class="ps-bot" id="bot"></div>
-    <div class="ps-map" id="psMap" role="img" data-i18n-aria="passMap" aria-label="이 팔레트로 칠한 서울 지도" hidden></div>
-    <div class="ps-peek">
-      <h2 id="psPeek" data-i18n="passPreview">미리 입어 보기</h2>
-      <p class="ps-pick" id="pick" aria-live="polite"></p>
-      <button type="button" class="ps-off" id="off" data-i18n="passTakeOff">벗기</button>
-    </div>
-  </section>
-
   <section aria-labelledby="psTrack">
     <h2 id="psTrack" data-i18n="passTrack">보상</h2>
-    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고르면 페이지 색이나 위의 봇이 바뀌어 미리 보인다. ★ 는 새 팔레트나 새 모양이다.</p>
-    <ol class="ps-track" id="track" data-i18n-aria="passTrack" aria-label="보상"></ol>
+    <p class="ps-hint" data-i18n="passTrackHint">← → 로 레벨을 옮기고, 고른 칸 안에서 봇이나 지도로 미리 보인다(팔레트는 페이지 색도 바뀐다). 다시 누르면 벗는다. ★ 는 새 팔레트나 새 모양이다.</p>
+    <div class="ps-rail"><ol class="ps-track" id="track" data-i18n-aria="passTrack" aria-label="보상"></ol></div>
   </section>
 
   <section class="ps-rules" aria-labelledby="psHow">
@@ -76,6 +66,10 @@
     </ul>
   </section>
 </main>
+
+<!-- 페이지 좌우 끝 흐림(pass.css .ps-blur) -->
+<span class="edge-blur ps-blur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+<span class="edge-blur ps-blur is-end" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
 
 </body>
 </html>
