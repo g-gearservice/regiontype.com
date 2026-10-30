@@ -1254,6 +1254,9 @@ async function competeRoute(req, env, o, path) {
 /* 로컬 출처에서 시작한 로그인만 이 메일로 제한한다. 배포 출처는 그대로 열려 있다.
    메일은 맞는지 보고 버린다 — user.mail 은 계속 null 이다. */
 export const LOCAL_LOGIN = 'g@gearservicevanguard.com';
+/* 커뮤니티에서 개발자 표시를 받는 Google 주소. 이 주소로 확인된 로그인이 들어온 계정을 staff 에
+   한 줄 적는다 — 메일은 여기서도 맞는지 보고 버린다 */
+export const DEV_MAIL = 'regiontype@gearservicevanguard.com';
 export const localOrigin = o => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(String(o || ''));
 export function localLoginOk(origin, provider, claims) {
   if (!localOrigin(origin)) return true;
@@ -1568,6 +1571,8 @@ async function authTake(req, env, o) {
     /* 토큰은 여기서 주지 않는다 — 누구든 늘 로그인 Google 메일로 숫자 6자리를 받아 넘는다.
        같은 id 를 그대로 이어 쓴다 — /auth/code·/auth/two 가 b·t 로 되짚는다.
        mail 은 이번 로그인의 Google 확인 주소다. user 로는 옮기지 않는다. */
+    if (row.mail === DEV_MAIL)
+      await env.DB.prepare('insert or ignore into staff (who, at) values (?, ?)').bind(who, Date.now()).run();
     const rec = await env.DB.prepare('select count(*) as n from recovery where who = ?').bind(who).first();
     await challenge(env, 'two', who, { id, mail: row.mail || null, pin: row.pin || null });
     const via = {
@@ -1796,7 +1801,7 @@ async function authIntro(req, env, o) {
    빠진 표를 잡는다. 그 검사가 이 상수를 보는 이유다. */
 export const ERASE = ['best', 'speed', 'board', 'ladder', 'played', 'ticket', 'queue', 'profile', 'intro', 'match_participants', 'match_logs', 'player_ratings',
                       'passkey', 'recovery', 'mailbox', 'phonebox', 'twofa', 'pending', 'sso', 'post', 'reply', 'mark',
-                      'license_ticket', 'license', 'license_s', 'license_v1', 'license_s_v1'];
+                      'license_ticket', 'license', 'license_s', 'license_v1', 'license_s_v1', 'staff'];
 
 async function authErase(req, env, o) {
   const me = await sessionWho(env, req);
@@ -1878,10 +1883,11 @@ export const cmReply = c => {
 /* 공감·신고·지우기의 대상. 'p12' 는 글, 'r40' 은 댓글 */
 export const cmTarget = s => /^[pr][1-9]\d{0,15}$/.test(String(s ?? '')) ? String(s) : '';
 
-/* 글쓴이는 이름·아이디만 보인다. 비공개(shut)면 둘 다 빈다 — 화면이 '익명' 으로 건다.
+/* 글쓴이는 이름·아이디와 개발자 여부(dev)만 보인다. 비공개(shut)면 셋 다 빈다 — 화면이 '익명' 으로 건다.
    who 는 내보내지 않고 '내 글인가' 하나로 접는다 */
 const AUTHOR = `case when a.shut = 1 then '' else coalesce(a.name, '') end as name,
-                case when a.shut = 1 then '' else coalesce(a.handle, '') end as handle`;
+                case when a.shut = 1 then '' else coalesce(a.handle, '') end as handle,
+                case when a.shut = 1 then 0 else exists(select 1 from staff s where s.who = a.who) end as dev`;
 /* 신고는 가입한 지 사흘 넘은 계정 것만 센다 — 새 계정 셋을 급히 만들어 남의 글을 가리는 길을 좁힌다.
    가려진 글은 지워지지 않는다. 사람이 mark 를 읽어 신고를 거두면 도로 선다 */
 const FLAG_AGE = 3 * 864e5;

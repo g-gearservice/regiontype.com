@@ -407,6 +407,13 @@ create table if not exists reply (
 create index if not exists reply_post on reply (post, id);
 create index if not exists reply_who on reply (who);
 
+-- 개발자 계정. worker.mjs 의 DEV_MAIL 로 확인된 Google 로그인이 들어오면 그 계정이 한 줄 생긴다.
+-- 커뮤니티 글·댓글의 dev 표시가 이 표를 본다. 메일은 적지 않는다.
+create table if not exists staff (
+  who text primary key,
+  at  integer not null
+);
+
 -- 공감(up)과 신고(flag). 한 사람이 한 대상에 한 번. target 은 'p12'(글)·'r40'(댓글)
 create table if not exists mark (
   who    text    not null,

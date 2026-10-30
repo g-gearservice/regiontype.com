@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, themeRef, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, genRadii, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail, pinOf } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, genRadii, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, DEV_MAIL, normMail, pinOf } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
@@ -688,6 +688,11 @@ console.log('security rule self-check done');
   assert.equal(list.posts[0].name, '', '비공개로 둔 사람은 이름이 빈다');
   assert.ok(list.posts.every(p => !('who' in p)), 'who 는 밖으로 안 나간다');
   assert.equal(list.posts[1].mine, false);
+  assert.equal(list.posts[1].dev, 0, '개발자 표시는 staff 에 있는 계정에만');
+  db.prepare('insert into staff (who, at) values (?, 0), (?, 0)').run(A, C);
+  list = await call('/cm/list');
+  assert.equal(list.posts[1].dev, 1, 'staff 계정의 글에는 개발자 표시');
+  assert.equal(list.posts[0].dev, 0, '비공개로 둔 사람은 개발자 표시도 빈다');
   assert.equal((await call('/cm/list?tag=ask')).posts.length, 0, '주제로 거른다');
 
   let read = await call('/cm/read?id=' + made.id, null, A);
@@ -2625,11 +2630,11 @@ assert.equal(pinOf('KR', { toString: () => 'ko-KR' }), null, '문자열이 아�
   };
   /* Google 로그인 한 판. country 는 req.cf.country, locale 은 ID 토큰 클레임(undefined 면 싣지 않음).
      2단계 직전에 멈추면(stop) 그때까지의 상태를 본다. */
-  const login = async (sub, country, locale, { stop = false } = {}) => {
+  const login = async (sub, country, locale, { stop = false, email = 'p@example.com' } = {}) => {
     const bind = rand(32), state = b64u(await sha(bind));
     assert.equal((await call('/auth/sso', { p: 'google', s: state })).status, 200);
     claims = { iss: 'https://accounts.google.com', aud: 'gid', sub, nonce: state,
-               exp: Date.now() / 1000 + 600, email: 'p@example.com', email_verified: true,
+               exp: Date.now() / 1000 + 600, email, email_verified: true,
                ...(locale === undefined ? {} : { locale }) };
     const cb = new Request(`${RELAY}/auth/cb?state=${state}&code=c0de`, { headers: { 'cf-connecting-ip': '203.0.113.9' } });
     Object.defineProperty(cb, 'cf', { value: { country } });
@@ -2645,6 +2650,10 @@ assert.equal(pinOf('KR', { toString: () => 'ko-KR' }), null, '문자열이 아�
     return done.token;
   };
   const me = async tok => (await call('/auth/me', null, tok)).pin;
+
+  await login('g-dev', 'KR', undefined, { email: DEV_MAIL });
+  assert.equal(db.prepare('select count(*) as n from staff').get().n, 1, 'DEV_MAIL 로 들어온 계정만 staff 에 한 줄');
+  assert.ok(!db.prepare('select * from staff').get().mail, '메일은 적지 않는다');
 
   assert.deepEqual(await me(await login('g-kr', 'KR', 'ko-KR')), { country: 'KR', lang: 'ko' }, 'KR + ko-KR → KR/ko');
   assert.deepEqual(await me(await login('g-jp', 'JP', 'ja')), { country: 'JP', lang: 'ja' }, 'JP + ja → JP/ja');
