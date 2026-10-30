@@ -1753,6 +1753,24 @@ export function intro(c) {
   };
 }
 
+/* 입은 사이트 색 — 패스 팔레트의 보상 ref('pal:pumpkin-2')거나 기본 색으로 돌린 'base'. 빈 값은 아직 안 올린 것.
+   기기마다 따로 두면 다른 브라우저에서 로그인했을 때 기본 색으로 선다 — 마지막에 입은 것을 계정에 남긴다.
+   팔레트가 있는지는 화면(items.js)이 본다. 여기서는 모양만 본다 */
+export const themeRef = v => /^(base|pal:[a-z]{1,16}(-[2-7])?)$/.test(String(v ?? '')) ? String(v) : '';
+
+async function authTheme(req, env, o) {
+  const me = await sessionWho(env, req);
+  if (!me) return reply(401, '로그인이 필요합니다.', o);
+  let c;
+  try { c = await req.json(); } catch { return reply(400, '읽을 수 없는 내용입니다.', o); }
+  const theme = themeRef(c?.theme);
+  if (!theme) return reply(400, '모르는 색입니다.', o);
+  return safely(o, async () => {
+    await env.DB.prepare('update profile set theme = ? where who = ?').bind(theme, me).run();
+    return send(200, { theme }, o);
+  });
+}
+
 async function authIntro(req, env, o) {
   const me = await sessionWho(env, req);
   if (!me) return reply(401, '로그인이 필요합니다.', o);
@@ -1817,7 +1835,7 @@ async function authMe(req, env, o) {
   return safely(o, async () => {
     const [codes, row, intro, box, google, pin] = await env.DB.batch([
       env.DB.prepare('select count(*) as n from recovery where who = ?').bind(me),
-      env.DB.prepare('select name, bio, face, lang, handle, botname, push, shut from profile where who = ?').bind(me),
+      env.DB.prepare('select name, bio, face, lang, handle, botname, push, shut, theme from profile where who = ?').bind(me),
       env.DB.prepare('select 1 as n from intro where who = ?').bind(me),
       env.DB.prepare('select 1 as n from mailbox where who = ?').bind(me),
       env.DB.prepare("select 1 as n from sso where who = ? and provider = 'google'").bind(me),
@@ -2437,6 +2455,7 @@ export default {
         if (path === '/auth/codes') return authCodes(req, env, o);
         if (path === '/auth/profile') return authProfile(req, env, o);
         if (path === '/auth/intro') return authIntro(req, env, o);
+        if (path === '/auth/theme') return authTheme(req, env, o);
         if (path === '/auth/erase') return authErase(req, env, o);
         if (path === '/auth/mail' && req.method === 'POST') return authMail(req, env, o);
         if (path === '/auth/mail/confirm') return authMailConfirm(req, env, o);

@@ -804,6 +804,7 @@ if (!ssoBack) {
           return;
         }
         mirrorProfile(d.profile, d.intro ? checkedTok : '');
+        return d;   // ranked.js 가 계정에 남은 입은 색(profile.theme)을 읽는다
       })
       .catch(() => {});
   } else setPin(null);   // 로그인 안 한 사람은 고정이 없다 — 기다리지 않게 바로 null

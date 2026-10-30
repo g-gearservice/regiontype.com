@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
-         rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, ERASE, RANKED_SECS, devOf,
+         rate, perf, divCpm, divOf, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, themeRef, ERASE, RANKED_SECS, devOf,
          cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, genRadii, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, normMail, pinOf } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
@@ -303,6 +303,15 @@ assert.equal(regionOf({ country: 'KR<script>' }, '').country, '');
 assert.ok(!('city' in loc), '도시는 안 실어 보낸다');
 
 console.log('region self-check done');
+
+/* ── 입은 사이트 색 ─────────────────────────────────── */
+assert.equal(themeRef('pal:pumpkin-2'), 'pal:pumpkin-2');
+assert.equal(themeRef('pal:pumpkin'), 'pal:pumpkin');
+assert.equal(themeRef('base'), 'base', '기본 색으로 돌린 것도 남긴다');
+assert.equal(themeRef('pal:pumpkin-9'), '', '변주는 2‥7');
+assert.equal(themeRef('pal:<b>'), '');
+assert.equal(themeRef(''), '');
+assert.equal(themeRef(undefined), '');
 
 /* ── 프로필 ────────────────────────────────────────── */
 /* 이 절은 이름·소개·캐릭터·언어만 본다. 같은 함수가 다루는 다른 칸(handle·botname·

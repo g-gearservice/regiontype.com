@@ -349,7 +349,8 @@ create table if not exists profile (
   handle  text    not null default '',   -- 공개 아이디. a-z 0-9 _ , 3‥16자
   botname text    not null default '',   -- 캐릭터 이름. 12자
   push    integer not null default 0,    -- 새소식 알림을 받겠다고 했는지
-  shut    integer not null default 0     -- 계정 비공개
+  shut    integer not null default 0,    -- 계정 비공개
+  theme   text    not null default ''    -- 입은 사이트 색. 'pal:<id>' · 'base'(기본 색) · ''(아직 안 올림)
 );
 
 -- ★ 이미 profile 표가 있는 DB 에 이 파일을 다시 적용하는 경우:
@@ -361,6 +362,7 @@ create table if not exists profile (
 --   wrangler d1 execute rt-board --remote --command "alter table profile add column botname text not null default ''"
 --   wrangler d1 execute rt-board --remote --command "alter table profile add column push integer not null default 0"
 --   wrangler d1 execute rt-board --remote --command "alter table profile add column shut integer not null default 0"
+--   wrangler d1 execute rt-board --remote --command "alter table profile add column theme text not null default ''"
 --   wrangler d1 execute rt-board --remote --file schema.sql
 create unique index if not exists profile_handle on profile (handle) where handle <> '';
 
