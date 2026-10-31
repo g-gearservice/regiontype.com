@@ -981,16 +981,20 @@ body.setting #options .screen-head{animation:opt-in-left var(--si-dur) var(--eas
 #map .cam{transition:transform .52s var(--ease-in-out)}
 @media (prefers-reduced-motion:reduce){ #map .cam{transition:none} }
 
-/* 지금 쳐야 할 구 — 이름을 숨겨도 어디인지는 보여야 한다 */
+/* 지금 쳐야 할 구 — 이름을 숨겨도 어디인지는 보여야 한다.
+   테두리 대신 맞히면 물들 칸색(--block)이 은은하게 차올랐다 빠진다. 움직임을 끄면 반쯤 물든 채 멈춘다 */
 #map g.target circle{
-  stroke:var(--target-hi); stroke-width:calc(2.4px / var(--z,1));
-  animation:aimpulse 1.5s var(--ease-in-out) infinite;
+  fill:color-mix(in srgb,var(--block) 45%,var(--land));
+  animation:aimglow 1.5s var(--ease-in-out) infinite;
 }
-@keyframes aimpulse{50%{stroke-opacity:.25}}
+@keyframes aimglow{
+  0%,100%{fill:color-mix(in srgb,var(--block) 25%,var(--land))}
+  50%{fill:color-mix(in srgb,var(--block) 70%,var(--land))}
+}
 @media (prefers-reduced-motion:reduce){ #map g.target circle{animation:none} }
-/* 폰은 지도가 줄어 있다 — app.js 의 --k 로 그 몫까지 되돌려 테두리·이름이 화면에서 읽히게 */
+:root[data-motion="off"] #map g.target circle{animation:none}
+/* 폰은 지도가 줄어 있다 — app.js 의 --k 로 그 몫까지 되돌려 이름이 화면에서 읽히게 */
 @media (pointer:coarse){
-  #map g.target circle{stroke-width:calc(2.4px * var(--k,1) / var(--z,1))}
   #map text{font-size:calc(16px * var(--k,1) / var(--z,1))}
 }
 
