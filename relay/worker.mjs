@@ -377,8 +377,10 @@ async function forget(req, env, o) {
              견줄 수 있고, 티어가 결국 속도에 묶인다 — 티어가 객관적이게 하는 핵심이다
      배치  = 처음 5판. lp 를 주지 않고 실력만 잰다. 5판째에 그 실력의 디비전에 앉힌다
              (다이아 III 까지 — 그 위는 이겨서 오른다). 5연승해도 실력이 브론즈면 브론즈다
-     티어  = 브론즈·실버·골드·플래티넘·다이아는 III·II·I 세 디비전, 디비전마다 100 lp.
-             마스터(1500 lp~)는 하나다. 디비전 d 의 기준 속도는 divCpm(d) = 100 + d×50/3
+     티어  = 브론즈·실버·골드·플래티넘·다이아는 III·II·I 세 디비전. 디비전의 lp 폭은 티어마다
+             두 배다(브론즈 100 · 실버 200 · 골드 400 · 플래 800 · 다이아 1600).
+             마스터(9300 lp~)·그랜드마스터(20000~)·챌린저(40000~)는 하나씩이다.
+             디비전 d 의 기준 속도는 divCpm(d) — 다이아까지 100 + d×50/3, 그 위는 350·400·450
      lp    = 40 × (승패 − 기대승률) × 수렴 배율 + 격차 보너스
              기대승률은 상대 실력과 내 실력의 차이로(100 CPM 차이 = 10:1).
              수렴 배율은 내 실력의 자리가 lp 보다 위면 이길 때 더 받고 질 때 덜 잃는다
@@ -389,12 +391,26 @@ async function forget(req, env, o) {
    사다리(lp·실력)는 기기마다 따로다 — 폰 사람은 폰 사람끼리 선다.
    기기는 표를 낼 때 정해 표에 적고, 끝낼 때는 몸통이 아니라 표의 것을 쓴다. */
 export const RANKED_SECS = 120;
-const STEP = 100, DIVS = 3, PLACE = 5, PLACE_TOP = 12, QUIT = 25, KEEP = 50, DAY_CAP = 200;
-/* 티어마다 바닥 속도(CPM) — 브론즈 100 … 마스터 350. 한 티어가 50 CPM, 한 디비전이 그 셋째.
+const DIVS = 3, PLACE = 5, PLACE_TOP = 12, QUIT = 25, KEEP = 50, DAY_CAP = 200;
+/* 디비전마다 바닥 lp — 브론즈 III 0 … 다이아 I 7700, 마스터 9300, 그랜드마스터 20000, 챌린저 40000.
+   ranked.js 의 FLOOR 와 같아야 한다 */
+export const FLOOR = [0, 100, 200, 300, 500, 700, 900, 1300, 1700, 2100, 2900, 3700, 4500, 6100, 7700, 9300, 20000, 40000];
+const LAST = FLOOR.length - 1;
+/* 티어마다 바닥 속도(CPM) — 브론즈 100 … 챌린저 450. 다이아까지는 한 티어가 50 CPM, 한 디비전이 그 셋째.
    ponytail: 서울 코스의 어림값이다. 판이 쌓이면 실제 실력 분포의 분위수로 다시 잡는다 */
-export const WANT = [100, 150, 200, 250, 300, 350];
-export const divCpm = d => WANT[0] + d * (WANT[1] - WANT[0]) / DIVS;
-export const divOf = r => Math.max(0, Math.floor((r - WANT[0]) * DIVS / (WANT[1] - WANT[0])));
+export const WANT = [100, 150, 200, 250, 300, 350, 400, 450];
+const CPM = FLOOR.map((_, d) => d < 5 * DIVS ? WANT[0] + d * (WANT[1] - WANT[0]) / DIVS : WANT[5 + d - 5 * DIVS]);
+/* 소수 디비전(lpPos)이면 두 디비전 사이를 잇는다. 챌린저 위는 450 에서 멈춘다 */
+export const divCpm = d => {
+  const i = Math.max(0, Math.min(LAST, Math.floor(d)));
+  return i === LAST ? CPM[LAST] : CPM[i] + (d - i) * (CPM[i + 1] - CPM[i]);
+};
+export const divOf = r => Math.max(0, CPM.findLastIndex(c => c <= r));
+/* lp 의 자리 — 디비전 번호에 그 디비전 안에서 간 만큼(0~1)을 더한다. 챌린저는 20000 lp 를 한 칸으로 센다 */
+export const lpPos = lp => {
+  const i = FLOOR.findLastIndex(f => f <= lp);
+  return i + (lp - FLOOR[i]) / ((FLOOR[i + 1] ?? FLOOR[i] + 20000) - FLOOR[i]);
+};
 /* 정확도 95% 이상은 그대로, 그 아래는 1% 마다 3% 씩 깎는다(85% → ×.7) */
 export const perf = (cpm, acc) => Math.round(cpm * (acc >= 95 ? 1 : Math.max(0, 1 - (95 - acc) * .03)));
 const BOT_MMR = 150;   // 실력을 아직 모르는 사람의 첫 봇 — 실버 III 쯤
@@ -408,10 +424,10 @@ export function rate(lad, S, myP, oppR, oppP) {
     : games < PLACE ? (r0 * games + myP) / (games + 1)
     : r0 + .15 * (myP - r0);
   if (games < PLACE - 1) return { d: 0, mmr };
-  if (games === PLACE - 1) return { d: (mmr == null ? 0 : Math.min(PLACE_TOP, divOf(mmr))) * STEP - lp, mmr, placed: true };
-  const me = r0 ?? divCpm(lp / STEP);
+  if (games === PLACE - 1) return { d: (mmr == null ? 0 : FLOOR[Math.min(PLACE_TOP, divOf(mmr))]) - lp, mmr, placed: true };
+  const me = r0 ?? divCpm(lpPos(lp));
   const E = 1 / (1 + 10 ** ((oppR - me) / 100));
-  const gap = Math.max(-1, Math.min(1, (divOf(me) + .5 - lp / STEP) / DIVS));
+  const gap = Math.max(-1, Math.min(1, (divOf(me) + .5 - lpPos(lp)) / DIVS));
   const conv = S === 0 ? 1 - .5 * gap : 1 + .5 * gap;
   const edge = S === .5 ? 0 : Math.max(-5, Math.min(5, Math.round(((myP ?? 0) - oppP) / Math.max(oppP, 1) * 20)));
   let d = Math.round(40 * (S - E) * conv) + edge;
@@ -513,7 +529,7 @@ async function rankedEnd(req, env, o) {
     const e = rankedCheck({ ...c, name: lad.name }, { ...tk, id: c.id }, now, me);
     /* 혼자 친 판은 내 디비전 기준 속도의 그림자와 겨룬다. 앞뒤가 안 맞는 판은 탈주와 같게
        셈한다 — 표는 이미 탔다 */
-    const ghost = Math.round(divCpm(lad.lp / STEP)), myP = e.ok ? perf(e.cpm, e.acc) : null;
+    const ghost = Math.round(divCpm(lpPos(lad.lp))), myP = e.ok ? perf(e.cpm, e.acc) : null;
     const S = e.ok ? (myP > ghost ? 1 : myP === ghost ? .5 : 0) : 0;
     const r = e.ok ? rate(lad, S, myP, ghost, ghost) : { d: quitDelta(lad), mmr: lad.mmr, placed: lad.games === PLACE - 1 };
     let d = r.d;
@@ -685,7 +701,7 @@ async function settle(env, id, now, force = false) {
     const S = duelWinner({ cpm: cpm ?? -1, acc: d[s + '_acc'] ?? 0 }, { cpm: d[p + '_cpm'] ?? -1, acc: d[p + '_acc'] ?? 0 });
     /* 상대 실력 — 봇은 제 속도, 사람은 짝지을 때가 아니라 지금의 mmr(없으면 그 lp 의 기준 속도) */
     const opp = d[p] === 'bot' ? null : lads[p];
-    const oppR = d[p] === 'bot' ? d.bot_cpm : opp.mmr ?? divCpm(opp.lp / STEP);
+    const oppR = d[p] === 'bot' ? d.bot_cpm : opp.mmr ?? divCpm(lpPos(opp.lp));
     const oc = d[p + '_cpm'], oppP = oc > 0 ? perf(oc, d[p + '_acc'] ?? 0) : 0;
     const r = paid ? { d: 0, mmr: lad.mmr } : quit ? { d: quitDelta(lad), mmr: lad.mmr, placed: lad.games === PLACE - 1 }
       : rate(lad, S, cpm >= 0 ? perf(cpm, d[s + '_acc'] ?? 0) : null, oppR, oppP);
@@ -806,7 +822,7 @@ async function myGames(req, env, o) {
     ]);
     const r = lad.results[0] || null;
     return send(200, { ladder: r && { ...r, rank: r.games >= PLACE ? above.results[0]?.n ?? null : null },
-                       dev, place: PLACE, step: STEP, games: list.results }, o);
+                       dev, place: PLACE, games: list.results }, o);
   });
 }
 
@@ -824,7 +840,7 @@ async function ladderTop(req, env, o) {
          from ladder l left join profile p on p.who = l.who
         where l.dev = ? and l.games >= ? order by l.lp desc, l.at asc limit 50`
     ).bind(dev, PLACE).all();
-    return send(200, { top: seen(results, me), dev, place: PLACE, step: STEP }, o);
+    return send(200, { top: seen(results, me), dev, place: PLACE }, o);
   });
 }
 
