@@ -1589,7 +1589,7 @@ body.paging #account .account-shell{animation:acct-rise var(--si-dur) var(--ease
 body.paging #account .account-heading{animation:acct-drop var(--si-dur) var(--ease-out)}
 body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(--si-dur) * .6)}
 #account.pg-exit{opacity:1}
-#account.pg-exit .account-shell{opacity:0}
+#account.pg-exit :is(.account-shell,.acct-blur){opacity:0}
 #account.pg-exit .account-heading{animation:acct-frost calc(var(--si-dur) * .5) var(--ease-out) both}
 @keyframes acct-rise{from{transform:translateY(100vh)}}
 @keyframes acct-drop{from{transform:translate(-160px,-100%)}}
@@ -1866,15 +1866,76 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
 .map-backdrop .c5{grid-column:5}.map-backdrop .c6{grid-column:6}.map-backdrop .c7{grid-column:7}.map-backdrop .c8{grid-column:8}
 .map-backdrop .r1{grid-row:1}.map-backdrop .r2{grid-row:2}.map-backdrop .r3{grid-row:3}.map-backdrop .r4{grid-row:4}
 .map-backdrop .r5{grid-row:5}.map-backdrop .r6{grid-row:6}.map-backdrop .r7{grid-row:7}
-.account-shell{width:min(100% - 48px,637px);margin:auto;padding-block:48px}
-.account-heading{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+/* 머리줄은 제 통에 떠 있고 카드가 그 밑으로 지나간다. 폭과 왼쪽 선은 본문 통과 같다.
+   본문은 머리줄(위 여백 + 48px)과 그 아래 틈 28px 만큼 내려 시작한다.
+   색은 모두 :root 토큰에서 딴다 — 리전 패스 팔레트(ranked.js 의 themeCss)와 밤 화면이
+   토큰만 바꾸므로, 여기 값을 박아 두면 그 화면만 팔레트를 안 따라간다 */
+#account{--acct-top:56px;--acct-w:min(100% - 56px,1000px)}
+.account-heading{position:fixed;z-index:4;top:0;left:50%;translate:-50% 0;margin:0;
+  display:flex;align-items:center;gap:16px;width:var(--acct-w);padding-top:var(--acct-top)}
 .account-heading h1{font-size:40px;line-height:1;letter-spacing:-.02em;font-weight:800;margin:0}
-.account-heading .back{color:var(--ink);text-decoration:none;width:34px;height:40px}
-.account-layout{display:flex;flex-wrap:wrap;gap:24px;align-items:start}
-.account-character{display:flex;flex:0 1 220px;flex-direction:column;gap:12px;min-width:0}
-.account-details{flex:1 1 280px;min-width:0}
-/* 폰 — 기록은 계정 탭 안에 산다(app.js 의 tabDock). 로그인해야 들어온다 */
-.account-details > [href="#records"]{display:flex;margin-bottom:14px}
+.account-heading .back{color:var(--ink);text-decoration:none;width:40px;height:48px}
+/* 머리줄 밑을 지나가는 카드는 설정 덮개와 같은 겹 블러(.edge-blur)로 흐린다 */
+.acct-blur{position:fixed;z-index:3;top:0;left:0;right:0;height:calc(var(--acct-top) + 48px + 20px);--in:180deg}
+@media (pointer:coarse){ .acct-blur{top:calc(env(safe-area-inset-top) + 8px)} }
+.account-shell{width:var(--acct-w);margin:auto;padding-block:calc(var(--acct-top) + 48px + 28px) 56px}
+.account-layout{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.account-details{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:var(--card-gap)}
+.acct-card{background:var(--card);border:1px solid var(--profile-border);border-radius:var(--card-r);box-shadow:var(--shadow);padding:8px 26px}
+.acct-card>h2{margin:18px 0 6px;font-size:18px;font-weight:800}
+/* 남에게 보이는 나 — 봇은 홈 봇과 같은 모양·표정·색(rt.character)을 입고 멈춰 선다 */
+.acct-me{flex:1 1 300px;min-width:0;box-sizing:border-box;padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.acct-bot{width:148px;height:148px;border-radius:32px;background:var(--profile-panel);display:grid;place-items:center}
+.acct-bot .buddy{width:100%;height:100%;overflow:visible;pointer-events:none}
+.acct-who{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;max-width:100%}
+.acct-nick{margin:0;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere}
+.acct-handle{margin:0;font-size:15px;color:var(--ink-soft);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.acct-handle:empty,.acct-line:empty{display:none}
+.acct-line{margin:6px 0 0;font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+.acct-chip{display:inline-flex;align-items:center;gap:6px;margin:8px 0 0;padding:4px 12px;border:1px solid var(--profile-border);border-radius:999px;font-size:13px;color:var(--ink-soft)}
+.acct-chip[hidden]{display:none}
+.i-lock{--i:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='11' width='14' height='10' rx='2'/><path d='M8 11V8a4 4 0 0 1 8 0v3'/></svg>")}
+.acct-links{display:flex;flex-direction:column;gap:10px;width:100%}
+.profile-button.is-key{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+@media (hover:hover) and (pointer:fine){ .profile-button.is-key:not(:disabled):hover{border-color:var(--ink)} }
+#accountSignin[hidden]{display:none}
+/* 고치는 카드 — 칸은 카드 안에서 한 단 내려앉은 바탕(--card-inset)이다 */
+.acct-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.acct-field{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;font-size:14px;color:var(--ink-soft)}
+.acct-field small{align-self:flex-end;font-size:12px}
+.account-details :is(input,select,textarea){box-sizing:border-box;min-width:0;max-width:100%;min-height:44px;background:var(--card-inset);color:var(--ink);border:1px solid var(--profile-border);border-radius:var(--field-r);font:inherit;font-size:15px;padding:9px 14px}
+.account-details textarea{display:block;width:100%;resize:vertical;line-height:1.5}
+#accountId{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.acct-row{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;padding:10px 0;border:0;border-top:1px solid var(--profile-border);background:none;color:var(--ink);font:inherit;font-size:15px;text-align:start;text-decoration:none}
+.acct-card>h2+.acct-row{border-top:0}
+.acct-card>:last-child{margin-bottom:8px}
+.acct-row>:first-child{flex:1;min-width:0}
+.acct-row strong{font-weight:500}
+.acct-row p{margin:2px 0 0;font-size:13px;line-height:1.4;color:var(--ink-soft)}
+.acct-row select{width:200px;min-height:40px;padding-block:6px}
+:is(a,button).acct-row{cursor:pointer}
+:is(a,button).acct-row:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:8px}
+.acct-go{width:20px;height:20px;color:var(--ink-soft);transform:scaleX(-1)}
+.acct-state{flex:none;min-width:2em;font-size:13px;font-weight:700;color:var(--ink-soft);text-align:end}
+#account .profile-switch{width:58px;height:32px}
+#account .profile-switch::after{top:3px;left:3px;width:26px;height:26px}
+#account .profile-switch[aria-pressed="true"]{background:var(--block-deep)}
+#account .profile-switch[aria-pressed="true"]::after{transform:translateX(26px)}
+/* 되돌릴 수 없는 일은 카드에 넣지 않고 빨간 점선으로 따로 둔다 — 색만이 아니라 선 모양도 다르다 */
+.acct-danger{display:flex;align-items:center;gap:20px;padding:20px 26px;border:1.5px dashed var(--bad);border-radius:var(--card-r)}
+.acct-danger>div{flex:1;min-width:0}
+.acct-danger h2{margin:0;font-size:15px;font-weight:800;color:var(--bad)}
+:root[data-night] .acct-danger h2{color:#ef7b70}
+.acct-danger p{margin:4px 0 0;font-size:13px;color:var(--ink-soft)}
+.acct-say{margin:0;min-height:1.5em;font-size:13px;color:var(--ink-soft)}
+/* 빈 알림 줄은 자리를 내주지 않는다 — 숨기면 읽기 도구가 새 글을 놓치므로 높이만 접는다 */
+.acct-say:empty{min-height:0;margin-bottom:calc(-1 * var(--card-gap))}
+/* 로그아웃 중 — 고칠 것 없는 카드는 걷고, 한가운데 한 줄로 모은다. 봇은 빛을 뺀 모습으로 선다 */
+#account:not([data-out]) .acct-out,#account[data-out] .acct-in{display:none}
+#account[data-out] .account-layout{flex-direction:column;align-items:stretch;width:min(100%,520px);margin-inline:auto}
+#account[data-out] .acct-me{flex:none}
+#account[data-out] .acct-bot .buddy{filter:grayscale(1);opacity:.45}
+#account[data-out] .acct-links [href="#records"]{display:none}
 /* 제목이 머리 위에 서고, 봇은 남은 칸 한가운데 선다. 크기는 --bot-scale(내 계정의 Size,
    홈 봇과 같은 값)을 따른다 */
 /* 내 펫 — 판 한가운데 홈 봇과 같은 px 로 선 봇(--bot-scale 을 따른다) 옆에 세로 알약 밀대를 둔다.
@@ -1973,60 +2034,35 @@ body:has(#account:not([hidden])) #regions .navbar{transition-duration:calc(var(-
   border:2px solid var(--card);box-shadow:0 0 0 1.5px var(--ink);
 }
 .colour-choices .character-choice[aria-pressed="true"]{border:2px solid var(--ink);box-shadow:0 0 0 2px var(--card) inset}
-.account-details input,.account-details textarea,.account-details select{min-width:0;max-width:100%;background:var(--card);color:var(--ink);border:1px solid var(--profile-border);border-radius:6px;font:inherit;font-size:13px;padding:3px 8px}
-.account-details input:disabled,.account-details textarea:disabled{color:var(--ink-soft);opacity:1}
-.account-details textarea{display:block;width:100%;height:56px;resize:vertical;border-radius:8px;padding:8px 10px;line-height:18px;margin-bottom:6px}
-.account-details .account-bio{padding-bottom:14px}
-.account-details label.profile-row{justify-content:flex-start;gap:49px}
-.account-details label.profile-row>span{flex:none;width:110px;color:var(--ink-soft)}
-.account-details label.profile-row>:is(input,select){flex:1}
-#accountSignin[hidden]{display:none}
-#accountSay{min-height:1.5em;margin-top:8px}
 
-/* ── 계정 화면만 한 치수 크게 ──────────────────────────────
-   .profile-* 는 설정의 보안 탭과 함께 쓰는 옷이라 거기 값은 그대로 두고, 이 화면에서만
-   덮어쓴다. 캐릭터를 크게 보자고 보안 탭까지 커질 일은 아니다. */
-#account{--profile-space:16px}
-.account-shell{width:min(100% - 56px,820px);padding-block:56px}
-.account-heading{gap:16px}
-.account-heading .back{width:40px;height:48px}
-/* 머리줄은 제 통에 떠 있고 설정이 그 밑으로 지나간다. 폭과 왼쪽 선은 본문 통과 같다.
-   본문은 머리줄(위 여백 + 48px)과 그 아래 틈 28px 만큼 내려 시작한다 */
-#account{--acct-top:56px}
-.account-heading{position:fixed;z-index:4;top:0;left:50%;translate:-50% 0;margin:0;
-  width:min(100% - 56px,820px);padding-top:var(--acct-top)}
-.account-shell{padding-top:calc(var(--acct-top) + 48px + 28px)}
-.account-layout{gap:32px}
-.account-character{flex:0 1 300px;gap:16px}
-.account-details{flex:1 1 340px}
+/* 내 스타일 판의 봇 칸 — 한 치수 크게 */
 .character-preview{padding:20px 18px 22px}
 .character-title{font-size:14px}
 .character{width:min(128px,44cqi);height:min(128px,44cqi);transition:transform var(--fast) var(--ease-out)}
-#account .profile-label{font-size:13px;margin-bottom:12px}
-#account .profile-help{font-size:13px}
-#account .profile-section{padding:18px 0}
-#account .profile-row{margin-top:14px;font-size:15px}
-#account .profile-switch{width:66px;height:30px}
-#account .profile-switch::after{width:26px;height:26px}
-#account .profile-switch[aria-pressed="true"]::after{transform:translateX(36px)}
 .character-controls{gap:14px}
 .character-controls fieldset+fieldset{padding-top:14px}
 .character-choices{gap:8px}
 .character-choice{width:48px;height:48px;border-radius:12px}
 .colour-choices .character-choice{width:30px;height:30px}
-.account-details input,.account-details textarea,.account-details select{font-size:15px;padding:6px 10px;border-radius:8px}
-.account-details textarea{height:74px;line-height:22px;padding:10px 12px}
-.account-details label.profile-row>span{width:130px}
-#accountSay{font-size:13px}
 @media (pointer:coarse){
-  #account{--acct-top:28px}
-  .account-shell{width:min(100% - 40px,637px);padding-block:calc(var(--acct-top) + 48px + 28px) 40px}
-  .account-heading{width:min(100% - 40px,637px)}
+  /* 폰 — 한 줄로 쌓는다. 나는 봇 옆에 이름을 두는 납작한 카드가 되고, 기록(app.js 의 tabDock 이 옮겨 온다)과
+     내 스타일은 그 밑에 두 칸으로 선다 */
+  #account{--acct-top:28px;--acct-w:min(100% - 32px,637px)}
+  .account-shell{padding-bottom:40px}
   .account-heading h1{font-size:32px}
-  .account-character{flex:1 1 220px}
-  .account-details{flex:2 1 280px}
-  .account-details label.profile-row{gap:16px}
-  .account-details label.profile-row>span{width:auto}
+  .account-layout{gap:14px}
+  .acct-me{flex:1 1 100%;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px 16px;padding:18px;text-align:start}
+  .acct-bot{width:84px;height:84px;border-radius:22px}
+  .acct-who{align-items:flex-start}
+  .acct-nick{font-size:22px}
+  .acct-links{grid-column:1 / -1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+  .acct-card{padding-inline:18px}
+  .acct-pair{grid-template-columns:minmax(0,1fr);gap:0}
+  .account-details :is(input,select,textarea){font-size:16px}
+  .acct-row select{width:140px}
+  .acct-danger{flex-direction:column;align-items:stretch;gap:12px;padding:18px}
+  #account[data-out] .acct-me{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}
+  #account[data-out] .acct-who{align-items:center}
   .profile-button{min-height:44px}
   .character-choice{width:38px;height:38px}
   .colour-choices .character-choice{width:24px;height:24px}
