@@ -1,4 +1,5 @@
 [
+  {"v": "3.1.6", "date": "2026-10-31", "ko": "폰·태블릿에 뜨는 데스크톱 안내 페이지에서 regiontype 이 어떤 게임인지, 한 판을 네 단계로 어떻게 치는지, 무엇을 칠 수 있는지 읽을 수 있고, 아래쪽 바로가기로 소개·바뀐 것·영어 소개·개인정보처리방침·이용약관·GitHub 에 바로 갈 수 있습니다.", "en": "The desktop-only page shown on phones and tablets now explains what regiontype is, how a round plays in four steps and what you can type, with shortcuts to About, changes, English About, privacy, terms and GitHub above the footer."},
   {"v": "3.1.5", "date": "2026-10-31", "ko": "regiontype 을 데스크톱 전용으로 바꿨습니다. 폰·태블릿에서는 앱 대신 컴퓨터에서 열도록 안내하는 페이지가 뜨고, 거기서 주소를 내게 보낼 수 있습니다.", "en": "regiontype is now desktop-only. Phones and tablets get a page asking you to open it on a computer instead of the app, with a button to send yourself the link."},
   {"v": "3.1.2", "date": "2026-10-30", "ko": "지금 쳐야 할 구가 파란 테두리 대신, 맞히면 물들 칸색으로 은은하게 빛납니다.", "en": "The district to type next now glows softly in the color it will fill with, instead of a blue outline."},
   {"v": "3.1.0", "date": "2026-10-30", "ko": "커뮤니티에서 개발자 계정이 쓴 글과 댓글에는 이름 옆에 ✓ 개발자 표시가 붙습니다.", "en": "Posts and comments written by the developer account in the community now show a ✓ Developer badge next to the name."},
