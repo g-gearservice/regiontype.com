@@ -4,38 +4,137 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>데스크톱에서 만나요 — regiontype</title>
-<!-- 폰·태블릿(pointer:coarse)이 앱 대신 닿는 자리다(../mobile.js). 검색에는 앱 주소만 남긴다 -->
+<!-- 폰·태블릿(pointer:coarse)이 앱 대신 닿는 자리다(../mobile.js). 검색에는 앱과 소개만 남긴다.
+     게임 설명은 about/index.html 과 data/howto.json 에서 옮겨 왔다 — 저쪽을 고치면 여기도 본다 -->
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#e8edf0">
-<link rel="icon" type="image/png" href="../favicon/dark.png?v=6.08">
-<link rel="stylesheet" href="../style.css?v=6.08">
-<script>try{const o=JSON.parse(localStorage.getItem('rt.opt')||'{}');document.documentElement.toggleAttribute('data-night',!!o.night)}catch{}</script>
+<link rel="icon" type="image/png" href="../favicon/dark.png?v=6.09">
+<script>try{if(JSON.parse(localStorage.getItem('rt.opt')||'{}').night)document.documentElement.setAttribute('data-night','')}catch(e){}</script>
+<link rel="stylesheet" href="../style.css?v=6.09">
+<!-- 읽는 글이라 about 처럼 앱의 고정 화면 규칙을 풀고 문서 배치만 덧쓴다 -->
 <style>
-  body{display:grid;place-items:center;padding:24px 16px;box-sizing:border-box;overflow:auto;text-align:center}
-  .dk{max-width:420px;display:grid;gap:18px;justify-items:center}
-  .dk h1{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.3;margin:8px 0 0}
-  .dk p{margin:0;color:var(--ink-soft)}
-  .dk .en{font-size:14px}
-  .dk button{font:inherit;font-weight:700;color:var(--on-accent);background:var(--accent);border:2px solid var(--accent-deep);border-radius:999px;padding:12px 24px;min-height:48px;cursor:pointer}
-  .dk button:focus-visible{outline:3px solid var(--target-hi);outline-offset:3px}
-  .dk a{color:var(--accent-text)}
-  #dkSaid{min-height:1.5em;font-size:14px}
+  html,body{height:auto}
+  body{overflow:auto}
+  .doc{max-width:720px;margin:0 auto;padding:48px 16px 40px}
+  .doc a{color:var(--accent-text)}
+  .doc h1{font-size:clamp(28px,4.4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.25;margin:20px 0 16px}
+  .doc h2{font-size:clamp(22px,2.6vw,28px);font-weight:800;letter-spacing:-.01em;margin:56px 0 16px}
+  .doc h3{font-size:19px;font-weight:800;margin:32px 0 10px}
+  .doc p{line-height:1.85;margin:0 0 16px}
+  .doc .lead{font-size:18px;color:var(--ink-soft)}
+  .doc ul{margin:0 0 16px 1.1em}
+  .doc li{line-height:1.85}
+  .hero{text-align:center;padding:24px 20px 28px;border-radius:var(--card-r);background:var(--card);border:2px solid var(--accent);box-shadow:var(--shadow)}
+  .hero .badge{display:inline-block;font-size:14px;font-weight:800;color:var(--on-accent);background:var(--accent);border-radius:999px;padding:4px 12px}
+  .hero .en{font-size:14px;color:var(--ink-soft)}
+  .hero button{font:inherit;font-weight:800;color:var(--on-accent);background:var(--accent);border:2px solid var(--accent-deep);border-radius:999px;padding:12px 24px;min-height:48px;cursor:pointer}
+  .hero button:focus-visible,.go a:focus-visible{outline:3px solid var(--target-hi);outline-offset:3px}
+  #dkSaid{min-height:1.5em;font-size:14px;margin:10px 0 0}
+  .steps{list-style:none;margin:0;padding:0;counter-reset:s}
+  .steps figure{margin:8px 0 14px}
+  .steps img{display:block;width:100%;height:auto;border-radius:12px;box-shadow:var(--shadow)}
+  .facts{list-style:none;margin:0 0 16px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .facts li{background:var(--card);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);line-height:1.5}
+  .facts b{display:block;font-size:26px;font-weight:800;color:var(--accent-text)}
+  .go{margin-top:64px;padding-top:8px}
+  .go ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .go a{display:block;height:100%;box-sizing:border-box;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--grid);border-radius:12px;padding:14px 16px;min-height:44px}
+  .go a:hover{border-color:var(--ink-soft)}
+  .go a b{display:block}
+  .go a span{font-size:14px;color:var(--ink-soft)}
+  .doc footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--grid);color:var(--ink-soft);font-size:14px;line-height:1.8}
 </style>
 </head>
 <body>
+
 <svg class="grid-bg" aria-hidden="true">
   <defs><pattern id="bitgrid" patternUnits="userSpaceOnUse" width="152" height="152"><path d="M152 0 V152 H0"/></pattern></defs>
   <rect width="100%" height="100%" fill="url(#bitgrid)"/>
 </svg>
-<main class="dk">
-  <p class="logo" aria-label="regiontype">region<span>type</span><i class="dot"></i></p>
-  <h1>regiontype 은 데스크톱에서 쳐요</h1>
-  <p>지명을 실제 자판으로 치는 타자연습이라, 폰과 태블릿에서는 열지 않아요. 컴퓨터에서 <b>regiontype.com</b> 을 열어 주세요.</p>
-  <p class="en" lang="en">regiontype is a typing game for a real keyboard, so it doesn't open on phones or tablets. Open <b>regiontype.com</b> on a computer.</p>
-  <button type="button" id="dkSend">주소 보내기 · Send the link</button>
-  <p id="dkSaid" role="status" aria-live="polite"></p>
-  <p><a href="../about/">regiontype 소개 · About</a></p>
+
+<main class="doc">
+  <section class="hero" aria-labelledby="dkHead">
+    <p class="logo" aria-label="regiontype">region<span>type</span><i class="dot"></i></p>
+    <h1 id="dkHead">regiontype 은 데스크톱에서 쳐요</h1>
+    <p><span class="badge">데스크톱 전용</span></p>
+    <p>실제 키보드로 지명을 치는 타자연습이라 폰과 태블릿에서는 게임이 열리지 않아요.
+    컴퓨터에서 <b>regiontype.com</b> 을 열어 주세요. 아래 버튼으로 주소를 나에게 보내 두면 편해요.</p>
+    <p class="en" lang="en">regiontype is a typing game for a real keyboard, so it doesn't open on phones or tablets. Open <b>regiontype.com</b> on a computer.</p>
+    <button type="button" id="dkSend">주소 보내기 · Send the link</button>
+    <p id="dkSaid" role="status" aria-live="polite"></p>
+  </section>
+
+  <h2>어떤 게임인가요</h2>
+  <p class="lead">regiontype 은 지도에 뜬 지역 이름을 직접 쳐서 익히는 타자연습입니다.
+  서울 25개 자치구에서 시작해, 구를 하나 고르면 그 안의 행정동으로 들어갑니다.</p>
+  <p>지명은 눈으로 훑을 때보다 손으로 칠 때 오래 남습니다. 철자를 하나씩 옮기려면 이름을
+  통째로 붙들고 있어야 하고, 지도 위에서 치니 이름과 위치가 함께 붙습니다.</p>
+  <p>코스는 무작위가 아니라 이어진 길입니다. 자치구 코스는 서쪽 끝 강서구에서 출발해
+  시계 방향으로 한 바퀴 돌아 성북구에서 끝나고, 행정동 코스도 이웃한 동을 따라 이어집니다.
+  순서 자체가 지리를 외우는 뼈대가 됩니다.</p>
+
+  <h2>이렇게 칩니다</h2>
+  <ol class="steps">
+    <li>
+      <h3>1. 코스 고르기</h3>
+      <figure><img src="../assets/howto/pick.png?v=6.09" alt="서울 도트 지도에서 구 하나를 골라 주황으로 칠한 홈 화면" loading="lazy"></figure>
+      <p>홈의 도트 지도에서 구를 누르면 그 구가 코스로 골라집니다. 한 번 더 누르면 그 안의
+      행정동 지도가 펼쳐지고, 아무것도 고르지 않고 시작하면 25개 자치구 전체를 칩니다.</p>
+    </li>
+    <li>
+      <h3>2. 시작하고 치기</h3>
+      <figure><img src="../assets/howto/type.svg?v=6.09" alt="지금 칠 구가 빛나고 아래 이름 줄에 그 이름이 보이는 게임 화면" loading="lazy"></figure>
+      <p>지도에서 주황으로 빛나는 곳이 지금 칠 곳입니다. 이름을 치고 Space 나 Enter 로 확정하면
+      다음 이웃으로 넘어갑니다. 맞게 친 글자는 밝아지고 틀린 글자는 그 자리에서 빨갛게 보입니다.</p>
+    </li>
+    <li>
+      <h3>3. 점수와 결과</h3>
+      <figure><img src="../assets/howto/result.svg?v=6.09" alt="속도·들른 곳·정확도가 적힌 결과 카드" loading="lazy"></figure>
+      <p>한 판은 기본 2분이고, 연달아 맞히면 콤보가 붙습니다. 점수는 분당 친 글자 수(타/분)이고,
+      판이 끝나면 속도·들른 곳·정확도·최고 기록이 카드로 나옵니다. 카드는 이미지로 저장할 수 있습니다.</p>
+    </li>
+    <li>
+      <h3>4. 경쟁전</h3>
+      <figure><img src="../assets/howto/ranked.svg?v=6.09" alt="빨갛게 차오른 경쟁전 시작 버튼" loading="lazy"></figure>
+      <p>로그인한 뒤 시작하기를 꾹 누르면 다른 사람과 겨루는 120초 경쟁전이 됩니다. 점수로 LP 가
+      오르내리고, 배치 5판을 마치면 순위표에 올라 브론즈부터 마스터까지 티어가 오릅니다.</p>
+    </li>
+  </ol>
+
+  <h2>무엇을 칠 수 있나요</h2>
+  <ul class="facts">
+    <li><b>25</b>서울 자치구</li>
+    <li><b>423</b>서울 행정동</li>
+    <li><b>23</b>동네까지 펼쳐지는 나라 수도</li>
+    <li><b>26</b>화면 언어</li>
+  </ul>
+  <p>홈 지도는 내 나라의 수도로 섭니다. 도쿄·파리·베이징·베를린 같은 수도도 서울처럼 구를 한 번 더
+  누르면 그 안의 동네가 펼쳐지고, 다른 나라 지명은 화면 언어 자판으로 칠 수 있는 꼴로 보입니다.</p>
+
+  <h2>왜 데스크톱인가요</h2>
+  <ul>
+    <li>속도를 타/분으로 재는 게임이라, 손가락이 자판을 기억하는 실제 키보드에서 제 실력이 나옵니다.</li>
+    <li>이름마다 Space·Enter 로 확정하고 Shift·Esc 로 코스를 고르는 등 모든 기능이 키보드로 돕니다.</li>
+    <li>한 화면에 지도와 이름 줄과 점수가 함께 떠야 해서 넉넉한 화면이 필요합니다.</li>
+  </ul>
+
+  <nav class="go" aria-labelledby="goHead">
+    <h2 id="goHead">바로가기</h2>
+    <ul>
+      <li><a href="../about/"><b>소개와 플레이 방법</b><span>행정동과 법정동의 차이까지</span></a></li>
+      <li><a href="../about/#changes"><b>바뀐 것</b><span>릴리스마다 달라진 점</span></a></li>
+      <li><a href="../about/en.html" lang="en"><b>About in English</b><span>and 24 more languages</span></a></li>
+      <li><a href="../policy/"><b>개인정보처리방침</b><span>Privacy Policy</span></a></li>
+      <li><a href="../terms/"><b>이용약관</b><span>Terms of Service</span></a></li>
+      <li><a href="https://github.com/g-gearservice/regiontype.com" target="_blank" rel="noopener noreferrer"><b>GitHub</b><span>소스와 피드백</span></a></li>
+    </ul>
+  </nav>
+
+  <footer>
+    <a href="/">regiontype.com</a> · 데스크톱 브라우저에서 열어 주세요
+  </footer>
 </main>
+
 <script>
   /* 컴퓨터로 옮겨 열 수 있게 주소를 나에게 보낸다 — 공유 시트가 없으면 복사한다 */
   const url = 'https://regiontype.com/';
