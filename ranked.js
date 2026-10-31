@@ -1371,8 +1371,9 @@ const themeCss = th => {
 /* :root 에 얹는다. 첫 그림 전엔 index.html 의 머리 스크립트가 rt.themeCss 를 그대로 붙인다.
    draft 를 주면 저장하지 않고 미리 보기만 한다 */
 function paintTheme(draft) {
-  /* 로그아웃 중엔 기본 색 — rt.theme 은 남겨 두고 칠하지만 않는다(머리 스크립트가 붙일 rt.themeCss 도 비운다) */
-  const css = draft || token() ? themeCss(pickTheme(draft || curTheme())) : '';
+  /* 로그아웃 중엔 기본 색 — rt.theme 은 남겨 두고 칠하지만 않는다(머리 스크립트가 붙일 rt.themeCss 도 비운다).
+     로컬은 로그아웃해도 팔레트를 다 가진 셈이라(countOwned) 칠한다 */
+  const css = draft || token() || isDev() ? themeCss(pickTheme(draft || curTheme())) : '';
   let el = $('#rtTheme');
   if (!el) { el = document.createElement('style'); el.id = 'rtTheme'; document.head.append(el); }
   el.textContent = css;
