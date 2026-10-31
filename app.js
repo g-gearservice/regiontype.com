@@ -2,9 +2,9 @@
 'use strict';
 
 const $ = s => document.querySelector(s);
-const VER = '6.09';
+const VER = '6.10';
 /* 릴리스 이름(SemVer, Major.Minor.Patch) — 사람이 고른다. VER 은 캐시를 깨는 빌드 번호로 따로 간다 */
-const REL = '3.1.6';
+const REL = '3.1.7';
 const asset = p => p + (p.includes('?') ? '&' : '?') + 'v=' + VER;
 const SYM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
   'αβγδεζηθικλμνξοπρστυφχψωàáâãäåæçèéêëìíîïñòóôõöøùúûüýþăąćčďđęěğįłńňőřśşťůźżž' +
@@ -1973,7 +1973,7 @@ function tabDock() {
   /* 기록은 계정 탭 안으로 — 로그인해야 들어오는 곳이다. href 는 그대로라 ranked.js 의 손이 받는다 */
   const rec = $('#regions a[href="#records"]');
   rec.className = 'profile-button';
-  $('#account .account-details').prepend(rec);
+  $('#account .acct-links').prepend(rec);
   /* #regions 안에 있으면 덮개가 뒤를 잠글 때(inert) 막대도 잠긴다 — body 직속으로 뺀다 */
   document.body.append($('#tabDock'));
   /* 덮개는 막대와 함께 열려 있으니 모달이 아니다. 제목은 프로그램으로 초점을 받는다 */

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content,viewport-fit=cover">
-<script src="mobile.js?v=6.09"></script>
+<script src="mobile.js?v=6.10"></script>
 <title>regiontype · 서울 얼마나 아세요?</title>
 <meta name="description" content="서울 얼마나 아세요? 25개 자치구와 400개가 넘는 행정동·법정동 이름을 직접 치며 서울 지명을 익히는 웹 타자연습.">
 <link rel="canonical" href="https://regiontype.com/">
@@ -57,7 +57,7 @@
      app.js 가 --bg 를 읽어 바꿔 넣는다. 여기 값은 기본(낮) --bg -->
 <meta name="theme-color" content="#e8edf0">
 <!-- 아이콘은 assets/*.svg 마스크로 그린다 (style.css 의 .i-*) -->
-<link rel="stylesheet" href="style.css?v=6.07">
+<link rel="stylesheet" href="style.css?v=6.10">
 <!-- 첫 그림 전에 붙인다 — 야간·모션·격자·마지막 화면 말(rt.ui)과, 부드러운 새로고침(app.js 의
      softReload)이 적어 둔 자리(rt.soft, 5초 안 것만)를 읽어 낮·한국어가 번쩍이지 않게 한다.
      app.js 의 saveOpt/boot 와 같은 결이라 거기와 함께 고친다. 외부 요청 없음 -->
@@ -591,26 +591,56 @@
 <!-- 내 계정 — 설정·순위처럼 홈 위에 뜨는 덮개다. 여닫기는 ranked.js(순위·기록과 같은 손),
      알맹이는 account/account.js 가 처음 열 때 실려 채운다. 뒤의 홈이 그대로 남아 닫으면
      고른 칸·지도 자리가 떠날 때 그대로다. /account/ 는 #account 로 넘기는 착지대다.
-     머리줄은 덮개에 붙어 있고 본문이 그 밑으로 지나간다 -->
+     머리줄은 덮개에 붙어 있고 본문이 그 밑으로 지나간다.
+     왼쪽은 남에게 보이는 나(봇·닉네임·아이디·소개), 오른쪽은 고치는 카드 묶음이다.
+     로그아웃 중이면 account.js 가 data-out 을 달고, 고칠 것 없는 카드는 style.css 가 걷는다 -->
 <section id="account" class="pg-over" aria-modal="true" role="dialog" aria-labelledby="accountHead" hidden>
+  <span class="edge-blur acct-blur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
   <header class="account-heading"><button type="button" class="back" data-pg-close data-i18n-aria="backHome" aria-label="홈으로 돌아가기"><i class="i i-arrow-left" aria-hidden="true"></i></button><h1 id="accountHead" data-i18n="accountHead">내 계정</h1></header>
   <div class="account-shell">
   <div class="account-layout">
+    <aside class="acct-me acct-card">
+      <div class="acct-bot" id="accountBot" aria-hidden="true"></div>
+      <div class="acct-who acct-in">
+        <p class="acct-nick" id="accountNick"></p>
+        <p class="acct-handle" id="accountHandle"></p>
+        <p class="acct-line" id="accountLine"></p>
+        <p class="acct-chip" id="accountShutChip" hidden><i class="i i-lock" aria-hidden="true"></i><span data-i18n="acctShut">계정 비공개</span></p>
+      </div>
+      <div class="acct-who acct-out">
+        <h2 class="acct-nick" data-i18n="acctOutHead">로그인하고 내 이름을 걸어요</h2>
+        <p id="accountSession" class="acct-line" role="status"></p>
+      </div>
+      <div class="acct-links">
+        <a id="accountSignin" class="profile-button is-key" href="signin/" data-i18n="signinBtn" hidden>로그인</a>
+        <a class="profile-button" href="#styles" data-i18n="stylesHead">내 스타일</a>
+      </div>
+    </aside>
     <div class="account-details">
-      <section class="profile-section account-bio"><label for="accountBio" class="profile-label" data-i18n="acctBio">소개</label><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><p class="profile-help"><span id="bioCount">0/60</span></p></section>
-      <section class="profile-section"><h2 class="profile-label" data-i18n="acctSection">계정</h2>
-        <label class="profile-row" for="accountName"><span data-i18n="acctNick">닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" data-i18n-ph="acctNickPh" placeholder="닉네임 (최대 12자)"></label>
-        <label class="profile-row" for="accountId"><span data-i18n="acctId">아이디</span><input id="accountId" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="none" data-i18n-ph="acctIdPh" placeholder="영문 소문자·숫자·밑줄 3~16자"></label>
-        <label class="profile-row" for="accountLanguage"><span data-i18n="language">언어</span><select id="accountLanguage" data-i18n-aria="language" aria-label="언어"><option value="auto" data-i18n="langAuto">자동</option><option value="ko">한국어</option></select></label>
+      <p class="acct-say" id="accountSay" role="status" aria-live="polite"></p>
+      <section class="acct-card acct-in" aria-labelledby="acctProfileHead">
+        <h2 id="acctProfileHead" data-i18n="acctProfile">프로필</h2>
+        <div class="acct-pair">
+          <label class="acct-field"><span data-i18n="acctNick">닉네임</span><input id="accountName" maxlength="12" autocomplete="nickname" data-i18n-ph="acctNickPh" placeholder="닉네임 (최대 12자)"></label>
+          <label class="acct-field"><span data-i18n="acctId">아이디</span><input id="accountId" maxlength="16" autocomplete="off" spellcheck="false" autocapitalize="none" data-i18n-ph="acctIdPh" placeholder="영문 소문자·숫자·밑줄 3~16자"></label>
+        </div>
+        <label class="acct-field"><span data-i18n="acctBio">소개</span><textarea id="accountBio" maxlength="60" rows="2" placeholder="한 줄로 나를 소개해 주세요 (최대 60자)"></textarea><small id="bioCount">0/60</small></label>
       </section>
-      <section class="profile-section"><h2 class="profile-label" data-i18n="options">설정</h2>
-        <div class="profile-row"><div><strong data-i18n="acctPush">새소식 알림</strong><p class="profile-help" data-i18n="acctPushHow">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><button type="button" class="profile-switch" id="accountPush" data-i18n-aria="acctPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
-        <div class="profile-row"><div><strong data-i18n="acctShut">계정 비공개</strong><p class="profile-help" data-i18n="acctShutHow">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><button type="button" class="profile-switch" id="accountShut" data-i18n-aria="acctShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
+      <section class="acct-card acct-in" aria-labelledby="acctPrivacyHead">
+        <h2 id="acctPrivacyHead" data-i18n="acctPrivacy">공개와 알림</h2>
+        <div class="acct-row"><div><strong data-i18n="acctPush">새소식 알림</strong><p data-i18n="acctPushHow">새 코스와 바뀐 것을 이 기기의 알림으로 받습니다.</p></div><span class="acct-state" id="accountPushState" aria-hidden="true"></span><button type="button" class="profile-switch" id="accountPush" data-i18n-aria="acctPush" aria-label="새소식 알림" aria-pressed="false"></button></div>
+        <div class="acct-row"><div><strong data-i18n="acctShut">계정 비공개</strong><p data-i18n="acctShutHow">켜면 순위표에 이름 대신 빈칸이 걸립니다. 기록은 그대로 쌓입니다.</p></div><span class="acct-state" id="accountShutState" aria-hidden="true"></span><button type="button" class="profile-switch" id="accountShut" data-i18n-aria="acctShut" aria-label="계정 비공개" aria-pressed="false"></button></div>
       </section>
-      <div class="profile-actions"><a class="profile-button sty-link" href="#styles" data-i18n="stylesHead">내 스타일</a><button type="button" class="profile-button" id="accountLogout" data-i18n="signOut">로그아웃</button><button type="button" class="profile-button destructive" id="accountErase" data-i18n="acctErase">계정 삭제</button><a class="profile-button" href="settings/#security" data-i18n="acctSecurity">보안 설정</a></div>
-      <p class="profile-help" id="accountSay" role="status" aria-live="polite"></p>
-      <p id="accountSession" class="profile-help" role="status"></p>
-      <a id="accountSignin" class="profile-button" href="signin/" data-i18n="signinBtn" hidden>로그인</a>
+      <section class="acct-card" aria-labelledby="acctSectionHead">
+        <h2 id="acctSectionHead" data-i18n="acctSection">계정</h2>
+        <label class="acct-row"><span data-i18n="language">언어</span><select id="accountLanguage"><option value="auto" data-i18n="langAuto">자동</option><option value="ko">한국어</option></select></label>
+        <a class="acct-row acct-in" href="settings/#security"><span data-i18n="acctSecurity">보안 설정</span><i class="i i-chevron-left acct-go" aria-hidden="true"></i></a>
+        <button type="button" class="acct-row acct-in" id="accountLogout"><span data-i18n="signOut">로그아웃</span></button>
+      </section>
+      <section class="acct-danger acct-in" aria-labelledby="acctEraseHead">
+        <div><h2 id="acctEraseHead" data-i18n="acctErase">계정 삭제</h2><p data-i18n="acctEraseHow">닉네임·아이디·소개·기록이 서버에서 지워집니다. 되돌릴 수 없습니다.</p></div>
+        <button type="button" class="profile-button destructive" id="accountErase" data-i18n="acctErase">계정 삭제</button>
+      </section>
     </div>
   </div>
 </div>
@@ -733,10 +763,10 @@
   </form>
 </dialog>
 
-<script src="relay.js?v=6.09"></script>
-<script src="app.js?v=6.09"></script>
-<script src="auth.js?v=6.09"></script>
-<script src="settings/settings.js?v=6.09"></script>
-<script src="ranked.js?v=6.09"></script>
+<script src="relay.js?v=6.10"></script>
+<script src="app.js?v=6.10"></script>
+<script src="auth.js?v=6.10"></script>
+<script src="settings/settings.js?v=6.10"></script>
+<script src="ranked.js?v=6.10"></script>
 </body>
 </html>

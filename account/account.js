@@ -45,6 +45,31 @@ function wear(face) {
 }
 
 const loggedIn = () => !!read('rt.token');
+/* 왼쪽 카드의 봇 — 홈 봇(ranked.js 의 syncHomeBot)과 같은 모양·표정·색을 입고 멈춰 선다.
+   색 'accent' 는 var(--accent) 라 리전 패스 팔레트를 저절로 따라간다. 고치는 곳은 내 스타일이고,
+   거기서 바꾸면 rt-bot-look 이 오거나 판이 닫힐 때 다시 입는다 */
+let buddy = null;
+function dress() {
+  if (!buddy) return;
+  const f = parse('rt.character', {});
+  buddy.setShape(f.shape || FALLBACK.shape, f.gen);
+  buddy.setExpression(f.expression || FALLBACK.expression);
+  buddy.setColour(f.colour || FALLBACK.colour);
+}
+(window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href)).then(({ mountBuddy }) => {
+  buddy = mountBuddy($('#accountBot'), { still: true });
+  dress();
+  buddy.start();
+}).catch(() => {});
+addEventListener('rt-bot-look', dress);
+$('#styles')?.addEventListener('toggle', dress);
+/* 남에게 보이는 나 — 닉네임·아이디·소개를 거울(rt.*)과 칸에서 읽어 왼쪽 카드에 적는다 */
+function paintMe() {
+  $('#accountNick').textContent = read('rt.name');
+  const id = $('#accountId').value.trim();
+  $('#accountHandle').textContent = /^[a-z0-9_]{3,16}$/.test(id) ? '@' + id : '';
+  $('#accountLine').textContent = read('rt.bio');
+}
 /* 이 브라우저에 남긴 거울을 통째로 지운다. 로그아웃도, 토큰이 죽은 것을 알아챈
    자리도 같은 손을 쓴다 — 한쪽만 지우면 다음 사람이 이 기기로 가입할 때 남은
    값이 그 사람의 공개 프로필로 올라간다(welcome/welcome.js 의 save 참고). */
@@ -137,6 +162,7 @@ function apply(p) {
   switches.push = !!p.push;
   switches.shut = !!p.shut;
   paintSwitches();
+  paintMe();
   wear(p.face);
   if (p.lang && p.lang !== (parse('rt.opt', {}).lang || 'auto')) saveOption('lang', p.lang, true);
 }
@@ -150,6 +176,7 @@ addEventListener('rt-bot-save', () => {
 
 function session() {
   const inn = loggedIn();
+  $('#account').toggleAttribute('data-out', !inn);
   $('#accountLogout').disabled = !inn;
   $('#accountErase').disabled = !inn;
   $('#accountSignin').hidden = inn;
@@ -162,6 +189,7 @@ function session() {
   $('#accountId').disabled = !inn;
   if (!inn) $('#accountId').value = '';
   paintSwitches();
+  paintMe();
   $('#accountSession').textContent = inn ? '' : t('acctSessionOut');
 }
 $('#accountName').value = read('rt.name');
@@ -172,6 +200,9 @@ $('#accountName').addEventListener('change', e => {
   e.target.value = value;
   if (write('rt.name', value)) push(t('acctNickSaved'));
 });
+
+/* 칸마다의 손이 먼저 돌아 거울에 적은 뒤 여기로 올라온다 — 왼쪽 카드를 다시 적는다 */
+$('#account .account-details').addEventListener('change', paintMe);
 
 /* 소개. 서버가 60자에서 자르므로 화면도 60자다 — 자르는 자리가 서로 다르면
    '저장했다'고 해놓고 다른 글이 남는다. */
@@ -205,7 +236,9 @@ function paintSwitches() {
     const b = $(id);
     b.setAttribute('aria-pressed', String(switches[key]));
     b.disabled = !loggedIn();
+    $(id + 'State').textContent = t(switches[key] ? 'acctOn' : 'acctOff');
   }
+  $('#accountShutChip').hidden = !switches.shut;
 }
 /* 알림은 켜는 그 자리에서 브라우저에게도 묻는다 — 우리 쪽 값만 켜 두면
    "켰는데 안 온다" 가 된다. 거절하면 스위치도 도로 내린다. */
