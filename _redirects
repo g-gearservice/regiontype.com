@@ -18,6 +18,8 @@
 /community/ /community/index.html 200
 /community  /community/          301
 /pass/   /pass/index.html   200
+/desktop/ /desktop/index.html 200
+/desktop  /desktop/          301
 /pass    /pass/             301
 /mimi     /beta/mimi/        301
 /mimi/*   /beta/mimi/        301
