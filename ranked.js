@@ -253,17 +253,23 @@ async function fillRecords() {
   const lad = d.ladder;
   if (lad) paintCard($('#recCard'), lad);
   const day = new Intl.DateTimeFormat(document.documentElement.lang || 'ko', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  /* 이 기기 경쟁전 판이 사다리의 몇 번째 판인지 — 최근 것부터 lad.games, lad.games−1 … 로 센다.
+     배치 판은 lp 대신 '배치 n/5' 를 보인다(±0 이 승패를 무시한 것처럼 보이지 않게) */
+  let nth = lad?.games ?? 0;
   list.replaceChildren(...d.games.map(g => {
     const li = document.createElement('li');
     li.dataset.mode = g.mode;
     const quit = g.mode === 'ranked' && !g.hits && g.delta < 0;
+    const n = g.mode === 'ranked' && g.dev === d.dev ? nth-- : 0;
+    const lpText = n >= 1 && n < PLACE ? t('placing', { n, m: PLACE })
+      : [n === PLACE ? t('placing', { n, m: PLACE }) : '', signed(g.delta) + ' LP'].filter(Boolean).join(' ');
     const cells = [
       ['mode', t(g.mode === 'ranked' ? 'rankedTab' : 'normalTab')],
       ['where', `${placeOf(g.slug)} · ${clock(g.secs)}`],
       ['pt', quit ? t('quitRow') : showSpeed(g.cpm)],
       ['acc', quit ? '' : g.acc + '%'],
-      /* 경쟁전은 승패 라벨을 lp 앞에 — 색만으로 가르지 않는다. 배치 판은 ±0 이라 승패가 곧 결과다 */
-      ['lp', g.delta == null ? '' : [g.mode === 'ranked' ? resOf(g) : '', signed(g.delta) + ' LP'].filter(Boolean).join(' ')],
+      /* 경쟁전은 승패 라벨을 lp 앞에 — 색만으로 가르지 않는다 */
+      ['lp', g.delta == null ? '' : [g.mode === 'ranked' ? resOf(g) : '', lpText].filter(Boolean).join(' ')],
       ['at', day.format(new Date(g.at))],
     ];
     cells.forEach(([k, v]) => {
