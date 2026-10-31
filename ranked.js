@@ -20,12 +20,17 @@ const RELAY = self.RT_RELAY;   // relay.js
 const NAME_KEY = 'rt.name';
 /* relay/worker.mjs 의 plain(s, CAP.name) 과 같은 자 — 부르던 곳만 있고 정의가 없어 이름·라이선스 제출이 ReferenceError 로 죽었다 */
 const plain = s => String(s ?? '').trim().slice(0, 12).replace(/[\p{C}\p{Z}]/gu, ' ').replace(/ +/g, ' ').trim();
-/* 중계기와 같은 수다(worker.mjs 의 STEP · DIVS · PLACE). 티어 이름은 여기서만 짓는다.
-   한 디비전이 STEP lp, 한 티어가 III·II·I 세 디비전이고 마스터만 하나다 */
-const STEP = 100, DIVS = 3, PLACE = 5, TIERS = 6;
-const tierOf = lp => Math.min(TIERS - 1, Math.floor(lp / (STEP * DIVS)));
+/* 중계기와 같은 수다(worker.mjs 의 FLOOR · DIVS · PLACE). 티어 이름은 여기서만 짓는다.
+   FLOOR 는 디비전마다 바닥 lp — 브론즈~다이아는 III·II·I 세 디비전(폭이 티어마다 두 배),
+   마스터·그랜드마스터·챌린저는 하나씩이다 */
+const FLOOR = [0, 100, 200, 300, 500, 700, 900, 1300, 1700, 2100, 2900, 3700, 4500, 6100, 7700, 9300, 20000, 40000];
+const DIVS = 3, PLACE = 5, SPLIT = 5 * DIVS;   // SPLIT — 디비전이 갈리는 칸 수(다이아 I 까지)
+const divAt = lp => FLOOR.findLastIndex(f => f <= lp);
+const tierOf = lp => { const i = divAt(lp); return i < SPLIT ? Math.floor(i / DIVS) : i - SPLIT + 5; };
 const tierLabel = lp => t('tier' + tierOf(lp)) +
-  (tierOf(lp) < TIERS - 1 ? ' ' + ['III', 'II', 'I'][Math.floor(lp / STEP) % DIVS] : '');
+  (divAt(lp) < SPLIT ? ' ' + ['III', 'II', 'I'][divAt(lp) % DIVS] : '');
+/* 다음 디비전까지 간 만큼(0~100). 챌린저는 끝이 없다 — 가득 채운다 */
+const divProgress = lp => { const i = divAt(lp); return i === FLOOR.length - 1 ? 100 : Math.round((lp - FLOOR[i]) * 100 / (FLOOR[i + 1] - FLOOR[i])); };
 const tierName = (lp, games) => games < PLACE
   ? t('placing', { n: games, m: PLACE }) : tierLabel(lp);
 const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n);
@@ -231,8 +236,7 @@ function paintCard(card, lad, who) {
   tier.textContent = tierName(lad.lp, lad.games);
   tier.dataset.tier = lad.games >= PLACE ? tierOf(lad.lp) : '';
   card.querySelector('.rec-lp').textContent = lad.lp + ' LP';
-  /* 다음 디비전까지. 마스터는 끝이 없다 — 막대를 가득 채운다 */
-  card.querySelector('.rec-bar').value = tierOf(lad.lp) === TIERS - 1 ? 100 : lad.lp % STEP;
+  card.querySelector('.rec-bar').value = divProgress(lad.lp);
   card.querySelector('.pg-help').textContent = [who, t('games', { n: lad.games }),
     t('winLoss', { w: lad.wins, l: lad.games - lad.wins }),
     lad.rank ? t('nth', { n: lad.rank }) : ''].filter(Boolean).join(' · ');

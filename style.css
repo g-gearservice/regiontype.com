@@ -2490,6 +2490,8 @@ body.paging .pg-over .screen-head{animation:opt-in-left var(--si-dur) var(--ease
 .tier[data-tier="3"]{--tier:#3fb6a8}
 .tier[data-tier="4"]{--tier:#5b8def}
 .tier[data-tier="5"]{--tier:#b05cd6}
+.tier[data-tier="6"]{--tier:#e0524f}
+.tier[data-tier="7"]{--tier:#ff8a3d}
 
 /* 기록은 둥근 카드 묶음(--card-*)이다 — 티어 카드 한 장, 판마다 카드 한 장, 사이는 틈.
    막대·중립 알약은 한 단 내려앉은 바탕(--card-inset). 판마다 모드 알약과 LP 알약을 달아
