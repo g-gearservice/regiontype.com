@@ -2073,6 +2073,9 @@ export const BOT_LOOK = {
                'mefiant', 'confus', 'curieux', 'fier', 'timide', 'blase', 'somnolent'],
   colour: ['encre', 'brun', 'rouge', 'orange', 'ambre', 'vert', 'turquoise', 'bleu', 'violet', 'rose', 'gris', 'creme'],
 };
+/* 봇의 감정. assets/bloub/affect.js 의 FEEL 이름과 같다 — test.mjs 가 맞춰 본다. 고르지 않아도 된다 */
+export const BOT_FEEL = ['joy', 'happyfor', 'gratitude', 'relief', 'gratification', 'pride', 'admiration', 'hope', 'surprise',
+                         'confusion', 'distress', 'disappointment', 'pity', 'fear', 'anger', 'reproach', 'shame'];
 const BOT_TURNS = 12, BOT_LINE = 400, BOT_COURSES = 80, BOT_ACTS = 5, BOT_REC = 5;
 
 /* 브라우저가 보낸 몸통을 다듬는다. system 은 받지 않는다 — 역할은 user·assistant 둘뿐 */
@@ -2157,7 +2160,10 @@ export function botSystem({ courses, lang, name, now }) {
     'loses LP even on a win, leaving mid-game costs 25 LP. Leaderboards are per course and time limit, ' +
     'and PC and phone players have separate leaderboards and ranked ladders. ' +
     'Seoul dongs can be administrative (admin) or legal (legal).\n' +
-    'Answer ONLY with one JSON object, no code fence: {"say":"what you say","do":[actions]}. ' +
+    'Answer ONLY with one JSON object, no code fence: {"say":"what you say","do":[actions],"feel":"<emotion>"}. ' +
+    `feel is the emotion you honestly feel about this turn, shown on your face: ${BOT_FEEL.join('|')} ` +
+    '(happyfor = glad for the user, pity = sorry for the user, confusion = you did not understand or cannot do it). ' +
+    'Leave feel out when you feel nothing in particular, and do not describe the feeling in say.\n' +
     `Actions (do may be empty, at most ${BOT_ACTS}):\n` +
     '{"act":"start","course":"<slug>"} starts a normal game on that course.\n' +
     '{"act":"start","course":"<slug>","ranked":true} finds a ranked match (a real player) on that course.\n' +
@@ -2241,7 +2247,7 @@ export function botAct(text, courses) {
     }
     return null;
   }).filter(Boolean);
-  return { say: cut(j.say, BOT_LINE), do: acts };
+  return { say: cut(j.say, BOT_LINE), do: acts, ...(BOT_FEEL.includes(j.feel) ? { feel: j.feel } : {}) };
 }
 
 /* 토큰 어림. 메시지마다 역할 표시 몫으로 4 를 더한다 */

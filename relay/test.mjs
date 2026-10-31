@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import relayWorker, { compose, entry, where, regionOf, allowedOrigin,
          rate, perf, divCpm, divOf, lpPos, botCpmFor, quitDelta, WANT, rankedCheck, duelWinner, botHits, profile, intro, themeRef, ERASE, RANKED_SECS, devOf,
-         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, genRadii, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, DEV_MAIL, normMail, pinOf } from './worker.mjs';
+         cmPost, cmTarget, botAsk, botAct, botCutSay, botCool, botSystem, genRadii, BOT_LOOK, botNow, botTokens, botRoute, BOT_SET, BOT_FEEL, onlineId, ONLINE_MS, localLoginOk, LOCAL_LOGIN, DEV_MAIL, normMail, pinOf } from './worker.mjs';
 import { SIZE } from './size.mjs';
 import { sign, open, b64u, rand, sha, mac } from './auth.mjs';
 import { RULES, check, tally } from './security-rules.mjs';
 import { units, strokes, itemStrokes, diffKeys, judge, rng, pool, buildSet, newMatch, step, stats, progress, parseMsg } from './compete.mjs';
 import { NAMES } from './names.mjs';
+import { FEEL, createAffect, EMO_S, MOOD_MIN } from '../assets/bloub/affect.js';
 import { SET, SPRINT, TERRITORY, RANKED_POOL } from './compete-config.mjs';
 import { LICENSES, TIER_WEIGHT, POOL_SLUG, failOf, pickPool } from './license.mjs';
 import { KR_SGG } from './pool.mjs';
@@ -952,6 +953,32 @@ console.log('security rule self-check done');
   assert.deepEqual(botAct('{"say":"벚꽃다운 분홍과 \\"자주\\" 타일로","do":[{"act":"theme","acc', courses),
     { say: '벚꽃다운 분홍과 "자주" 타일로', do: [] }, '끊긴 JSON 은 say 만 살린다');
   assert.equal(botCutSay('{"say":"반쪽 \\u00'), '반쪽', '끊긴 이스케이프는 버린다');
+  /* 감정 — 중계기가 거르는 이름과 봇이 아는 이름이 같고, 얼굴은 엔진에 있는 표정이다 */
+  assert.deepEqual(BOT_FEEL, Object.keys(FEEL), 'BOT_FEEL 이 affect.js 의 FEEL 과 같다');
+  for (const f of Object.values(FEEL)) assert.ok(BOT_LOOK.expression.includes(f.face), `${f.face} 는 엔진 표정`);
+  assert.equal(botAct('{"say":"좋아요","do":[],"feel":"joy"}', courses).feel, 'joy');
+  assert.deepEqual(botAct('{"say":"x","do":[],"feel":"__proto__"}', courses), { say: 'x', do: [] }, '모르는 감정은 버린다');
+  assert.ok(botSystem(a).includes('happyfor|'), '모델에게 감정 이름을 알린다');
+  {
+    /* ALMA: 감정은 EMO_S 에 걸쳐 바래고 0.4 아래면 얼굴에서 내려간다. 같은 감정이 거듭되면 기분이 그 팔분면으로
+       옮겨 가 감정이 바랜 뒤에도 얼굴에 남고, 조용하면 제자리로 돌아온다 */
+    const af = createAffect();
+    assert.equal(af.face(0), null, '처음엔 제 얼굴');
+    assert.equal(af.feel('nope', 1, 0), false);
+    af.feel('joy', 1, 0);
+    assert.equal(af.face(1), 'heureux');
+    assert.equal(af.face(EMO_S * .65), null, '세기 0.35 면 내려간다(기분은 한 번으로 안 바뀐다)');
+    const mad = createAffect();
+    for (let t = 0; t <= 60; t += 5) mad.feel('anger', .9, t);
+    assert.equal(mad.face(61), 'colere');
+    assert.equal(mad.face(60 + EMO_S + 1), 'colere', '감정이 바래도 화난(-P+A+D) 기분이 남는다');
+    assert.ok(Math.hypot(...mad.mood()) >= MOOD_MIN);
+    assert.equal(mad.face(400), null, '조용하면 기분이 제자리로');
+    assert.ok(Math.hypot(...mad.mood()) < 1e-9);
+    const mix = createAffect();
+    mix.feel('anger', .5, 0); mix.feel('surprise', .9, 0);
+    assert.equal(mix.face(1), 'surpris', '가장 센 감정이 얼굴에 뜬다');
+  }
   assert.equal(botCutSay('```json\n{"say":"울타리 안'), '울타리 안');
   assert.equal(botCutSay('{"do":[{"act":"open"'), '', '말이 없으면 빈 말(502)');
   assert.equal(botCutSay('좋아요 {웃음}'), '좋아요 {웃음}', 'JSON 꼴이 아닌 글은 그대로');
