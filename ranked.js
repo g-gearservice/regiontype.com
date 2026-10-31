@@ -166,6 +166,8 @@ function openAccount() {
 }
 function syncHomeBot() {
   if (!bot) return;
+  /* 고른 표정으로 갈아 끼운다 — 아직 남은 감정이 있으면 다음 바퀴(showFeel)에 다시 뜬다 */
+  faceShown = null;
   const face = readFace();
   bot.api.setShape(face.shape || 'cercle', face.gen);
   if (face.expression) bot.api.setExpression(face.expression);
@@ -1268,8 +1270,27 @@ async function say(key, vars, form) {
    대화는 이 탭에서만 기억한다(새로고침하면 처음부터) */
 const talk = [];
 let talkReq = 0;
+/* ── 감정 ── assets/bloub/affect.js(ALMA)가 일을 감정으로, 감정을 기분으로 바꿔 얼굴 하나를 낸다.
+   0.5초마다 그 얼굴을 봇에 입히고, 감정도 기분도 없으면 사람이 고른 표정(내 스타일)으로 돌아온다.
+   일: 누름(반가움·깨면 놀람), 물음(기대), 답(모델이 고른 feel), 못 답함(괴로움), 판 결과(축하·안쓰러움) */
+let affect = null, faceShown = null;
+import(new URL(asset('assets/bloub/affect.js'), document.baseURI).href).then(({ createAffect }) => { affect = createAffect(); }).catch(() => {});
+const affNow = () => performance.now() / 1000;
+function feel(name, k = .8) {
+  if (affect?.feel(name, k, affNow())) showFeel();
+}
+function showFeel() {
+  if (!bot || !affect) return;
+  const f = affect.face(affNow()) || readFace().expression || 'curieux';
+  if (f === faceShown) return;
+  faceShown = f;
+  bot.api.setExpression(f);
+}
+setInterval(showFeel, 500);
 async function chat() {
+  const startled = !out || !!bot?.el.classList.contains('is-asleep');
   await summon();
+  feel(startled ? 'surprise' : 'joy', .6);
   wake();
   clearTimeout(hush);
   chatting = true;
@@ -1495,6 +1516,7 @@ async function send(text) {
   const my = ++talkReq;
   setTalkUI('thinking');
   speak(t('botThink'));
+  feel('hope', .5);
   progStart(text);
   await botRec();
   let d;
@@ -1503,6 +1525,7 @@ async function send(text) {
   } catch (e) {
     talk.pop();
     if (my === talkReq) progStop();
+    if (my === talkReq) feel(e.status === 429 ? 'disappointment' : 'distress', .6);
     if (my === talkReq && chatting) {
       setTalkUI('busy');
       speak(t(e.status === 429 ? 'botBusy' : 'botChatFail'));
@@ -1512,6 +1535,8 @@ async function send(text) {
   if (my !== talkReq) return;
   progDone();
   const said = d.say || '👍';
+  /* 옛 중계기는 feel 을 안 준다 — 없으면 얼굴은 기대(hope)가 바래는 대로 둔다 */
+  if (d.feel) feel(d.feel, .9);
   talk.push({ role: 'assistant', content: said });
   if (chatting) {
     setTalkUI('response');
@@ -2365,6 +2390,8 @@ addEventListener('rt-finish', async ({ detail: g }) => {
     }
     return;
   }
+  /* 봇은 판을 지켜봤다 — 경쟁전은 승패가 나온 뒤(show), 일반전은 정확도로 */
+  if (!g.ranked) feel(g.acc >= 95 ? 'admiration' : g.acc < 80 ? 'pity' : 'happyfor', .7);
   /* 일반전 판은 app.js 의 board() 가 올린다 — 그래야 그 판의 순위표를 한 번에 받는다 */
   if (!token() || !g.ranked) return;
   const body = { score: g.score, cpm: g.cpm, acc: g.acc, hits: g.hits, tries: g.tries };
@@ -2377,6 +2404,7 @@ addEventListener('rt-finish', async ({ detail: g }) => {
     const res = document.createElement('b');
     res.className = 'rk-res';
     res.dataset.res = win === 1 ? 'win' : win === 0 ? 'loss' : 'draw';
+    feel(win === 1 ? 'happyfor' : win === 0 ? 'pity' : 'surprise', .9);
     res.textContent = t(win === 1 ? 'rkWin' : win === 0 ? 'rkLose' : 'rkDraw');
     const lp = d.games < PLACE ? t('rkPlacing', { n: d.games, m: PLACE })
       : d.placed || d.games === PLACE ? t('rkPlaced', { tier: tierLabel(d.lp), lp: d.lp })
