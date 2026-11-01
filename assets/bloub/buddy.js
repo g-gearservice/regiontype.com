@@ -287,7 +287,7 @@ export function mountBuddy(host, { calm = () => false, still = false, shape = nu
       worn[k] = got && got.item.slot === k ? got.item : null;
       if (!worn[k]) continue;
       const tint = COLOR_BY_ID.get(got.colour)?.hex || '#a3a3a3';
-      for (const p of got.item.parts) g.append(el('path', { d: p.d, fill: p.fill === 'tint' ? tint : p.fill, 'fill-rule': p.rule || 'nonzero' }));
+      for (const p of got.item.parts) g.append(el('path', { d: p.d, fill: p.fill === 'tint' ? tint : p.fill, 'fill-rule': p.rule || 'nonzero', ...(p.stroke && { stroke: p.stroke, 'stroke-width': p.sw, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }) }));
     }
   }
   /* 몸 마감(fin). 몸 색 칸(inkRect)을 무늬·그라데이션으로 바꾼다. 마감을 벗으면 고른 색으로 돌아온다 */
