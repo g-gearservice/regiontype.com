@@ -58,8 +58,15 @@
   --glass-fill:color-mix(in srgb,var(--ink) 7%,transparent);   /* 유리 위의 칸 — 한 겹 더 얹지 않고 먹을 옅게 */
   --glass-sm:0 2px 10px rgba(40,56,64,.16);
   --glass-lg:0 -4px 28px rgba(40,56,64,.18);
+  /* 일반전 칸의 숲길(.mode-walk) — 하늘, 먼 숲, 가까운 나무, 흙길 */
+  --mw-sky:#dcefe4; --mw-far:#a8cfae; --mw-near:#5f9f70; --mw-path:#ecdcb6; --mw-pebble:#d3bd8c;
+  /* 경쟁전 칸의 불타는 숲 — 달아오른 하늘, 그을린 나무, 불꽃, 불티, 땀방울 */
+  --mwf-sky-top:#5b2a33; --mwf-sky:#c8472c; --mwf-far:#6a2620; --mwf-near:#2a1a17; --mwf-path:#5e382a; --mwf-pebble:#3e231c;
+  --mwf-flame:#ff7a1f; --mwf-flame-hi:#ffe27a; --mwf-sweat:#9fdcff; --mwf-sweat-line:#2f7fb0;
 }
 :root[data-night]{
+  --mw-sky:#26363c; --mw-far:#35503f; --mw-near:#4b7a58; --mw-path:#4f4a3e; --mw-pebble:#665e4c;
+  --mwf-sky-top:#2e1820; --mwf-sky:#8a2f1f; --mwf-far:#4a1c17; --mwf-near:#1a100e; --mwf-path:#3e2820; --mwf-pebble:#2c1b16;
   --bg:#232c31; --grid:#2b353b; --ink:#e7eef1; --ink-soft:#9dadb5;
   --block:#4a6a6e; --block-hi:#5d8286; --accent-text:#e8963f; --bar:#3a444a;
   --target-hi:#6395ee;
@@ -2851,6 +2858,77 @@ body.rk-ready #navPlay.is-on{color:var(--rk-ink,#fff)}
   background:var(--bar);border-radius:999px;box-shadow:var(--shadow);padding:6px 12px;max-width:none;white-space:nowrap}
 #modePick.is-split:popover-open .mode-btn:first-child{animation:split-l .38s var(--ease-out)}
 #modePick.is-split:popover-open .mode-btn:last-child{animation:split-r .38s var(--ease-out)}
+/* 시작하기 판의 두 칸 위에 커서를 올리면 칸이 숲길이 되고 내 봇이 오른쪽으로 걷는다.
+   일반전은 동글동글한 숲길, 경쟁전(.is-fire)은 불타는 숲 — 봇은 찡그린 채 땀을 흘리며 무겁게 걷는다.
+   길·나무는 왼쪽으로 흘러 걷는 것처럼 보인다 — 멀수록 느리다. 무늬는 mask 라 색은 위쪽 --mw-*·--mwf-* 를 딴다.
+   판이 열리면 일반전에 초점이 가므로 초점으로는 띄우지 않는다 — 꾸밈이라 커서에만 반응한다.
+   어느 칸인지는 색만으로 가르지 않는다 — 이름이 오른쪽 알약으로 비켜 남고(경쟁전은 🔥 를 단 빨간 알약),
+   테두리가 그 모드 색이 되고, 올린 칸은 살짝 커지고 옆 칸은 흐려진다. 움직임을 줄였으면 멈춘 한 장으로 보인다 */
+.mode-btn:has(.mode-walk){position:relative;overflow:hidden;isolation:isolate}
+.mode-label{position:relative;z-index:1;transition:opacity var(--fast)}
+.mode-walk{position:absolute;inset:0;z-index:0;background:var(--mw-sky);opacity:0;pointer-events:none;
+  transition:opacity .24s var(--ease-out)}
+.mode-walk>span{position:absolute;left:0;right:0;bottom:0;display:block}
+.mw-far{height:40px;bottom:9px;background:var(--mw-far);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='40'%3E%3Ccircle cx='14' cy='20' r='12'/%3E%3Ccircle cx='30' cy='26' r='9'/%3E%3Ccircle cx='50' cy='17' r='13'/%3E%3Crect y='26' width='64' height='14'/%3E%3C/svg%3E") 0 100%/64px 40px repeat-x;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='40'%3E%3Ccircle cx='14' cy='20' r='12'/%3E%3Ccircle cx='30' cy='26' r='9'/%3E%3Ccircle cx='50' cy='17' r='13'/%3E%3Crect y='26' width='64' height='14'/%3E%3C/svg%3E") 0 100%/64px 40px repeat-x}
+.mw-near{height:48px;bottom:9px;background:var(--mw-near);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='48'%3E%3Crect x='25' y='22' width='6' height='26' rx='3'/%3E%3Ccircle cx='28' cy='17' r='14'/%3E%3Ccircle cx='80' cy='42' r='9'/%3E%3Ccircle cx='92' cy='38' r='11'/%3E%3Ccircle cx='104' cy='43' r='7'/%3E%3C/svg%3E") 0 100%/120px 48px repeat-x;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='48'%3E%3Crect x='25' y='22' width='6' height='26' rx='3'/%3E%3Ccircle cx='28' cy='17' r='14'/%3E%3Ccircle cx='80' cy='42' r='9'/%3E%3Ccircle cx='92' cy='38' r='11'/%3E%3Ccircle cx='104' cy='43' r='7'/%3E%3C/svg%3E") 0 100%/120px 48px repeat-x}
+.mw-path{height:13px;border-radius:999px 999px 0 0/8px 8px 0 0;
+  background:radial-gradient(circle,var(--mw-pebble) 0 2px,transparent 2.5px) 0 60%/26px 100% repeat-x,var(--mw-path)}
+.mode-walk>.mw-bot{left:14%;right:auto;bottom:-8px;width:58px;height:58px;z-index:1}
+.mw-bot::after{content:"";position:absolute;left:30%;right:30%;bottom:16%;height:8%;border-radius:50%;background:rgba(0,0,0,.14);z-index:-1}
+.mw-bot>.buddy,.mw-bot>svg{width:100%;height:100%;display:block;overflow:visible}
+/* 불타는 숲 — 하늘은 달아오르고, 나무는 그을리고, 가까운 나무 위에서 불꽃이 일렁이고, 불티가 올라간다.
+   불꽃은 가까운 나무와 같은 폭·같은 빠르기로 흘러 늘 그 나무 위에 붙어 있다 */
+.mode-walk.is-fire{background:linear-gradient(var(--mwf-sky-top),var(--mwf-sky) 70%)}
+.is-fire>.mw-far{background:var(--mwf-far)}
+.is-fire>.mw-near{background:var(--mwf-near)}
+.is-fire>.mw-path{background:radial-gradient(circle,var(--mwf-pebble) 0 2px,transparent 2.5px) 0 60%/26px 100% repeat-x,var(--mwf-path)}
+.mw-fire{height:60px;bottom:9px;background:linear-gradient(to top,var(--mwf-flame) 35%,var(--mwf-flame-hi));
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cpath d='M15 38C11 28 17 22 16 12C21 18 23 14 23 6C30 14 34 21 32 29C35 26 37 23 37 19C42 27 43 33 41 38Z'/%3E%3Cpath d='M81 56C79 50 83 46 83 40C87 44 89 42 90 33C95 39 99 43 98 49C101 47 103 45 103 42C106 47 106 53 104 56Z'/%3E%3C/svg%3E") 0 100%/120px 60px repeat-x;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cpath d='M15 38C11 28 17 22 16 12C21 18 23 14 23 6C30 14 34 21 32 29C35 26 37 23 37 19C42 27 43 33 41 38Z'/%3E%3Cpath d='M81 56C79 50 83 46 83 40C87 44 89 42 90 33C95 39 99 43 98 49C101 47 103 45 103 42C106 47 106 53 104 56Z'/%3E%3C/svg%3E") 0 100%/120px 60px repeat-x}
+.mw-ember{top:0;background:radial-gradient(circle,var(--mwf-flame-hi) 0 .8px,transparent 1.3px) 0 0/23px 19px,
+  radial-gradient(circle,var(--mwf-flame) 0 .7px,transparent 1.2px) 9px 7px/31px 27px}
+/* 땀방울 — 뒤통수 쪽 이마에서 맺혀 흘러내린다. 둘이 엇갈려 떨어진다 */
+.mw-sweat{position:absolute;z-index:2;width:8px;height:8px;left:22%;top:20%;background:var(--mwf-sweat);
+  border:1.2px solid var(--mwf-sweat-line);border-radius:50% 0 50% 50%;rotate:-45deg;opacity:0}
+.mw-sweat+.mw-sweat{left:70%;top:18%;width:6px;height:6px}
+@media (hover:hover){
+  .mode-btn:hover .mode-walk{opacity:1}
+  .mode-btn:hover:has(.mode-walk) .mode-label{position:absolute;right:8px;top:50%;translate:0 -50%;
+    font-size:14px;padding:6px 10px;border-radius:999px;background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow)}
+  .mode-btn.is-ranked:hover .mode-label{background:var(--ranked);color:#fff}
+  .mode-btn.is-ranked:hover .mode-label::before{content:"🔥 "}
+  #modePick .mode-btn:has(.mode-walk):hover{border-color:var(--accent-deep)}
+  #modePick .mode-btn.is-ranked:has(.mode-walk):hover{border-color:var(--ranked)}
+  .mode-row:has(.mode-walk) .mode-btn{transition:border-color var(--fast),scale var(--fast) var(--ease-out),opacity var(--fast),filter var(--fast)}
+  .mode-row:has(.mode-btn:hover) .mode-btn:hover{scale:1.04}
+  .mode-row:has(.mode-btn:hover) .mode-btn:not(:hover){opacity:.55;filter:saturate(.5)}
+}
+@media (prefers-reduced-motion:reduce){ .mode-row .mode-btn:hover{scale:none} }
+:root[data-motion="off"] .mode-row .mode-btn:hover{scale:none}
+.mode-btn:hover .mw-far{animation:mw-far 3.6s linear infinite}
+.mode-btn:hover .mw-near{animation:mw-near 2.6s linear infinite}
+.mode-btn:hover .mw-path{animation:mw-pebbles .45s linear infinite}
+.mode-btn:hover .mw-bot>*{animation:mw-step .42s var(--ease-in-out) infinite alternate}
+/* 경쟁전은 무겁다 — 걸음이 느리고 앞으로 기울고, 길도 그만큼 느리게 흐른다 */
+.mode-btn:hover .is-fire>.mw-far{animation-duration:5s}
+.mode-btn:hover .is-fire>.mw-near{animation-duration:3.6s}
+.mode-btn:hover .mw-fire{animation:mw-near 3.6s linear infinite,mw-flick .16s steps(2) infinite alternate}
+.mode-btn:hover .is-fire>.mw-path{animation-duration:.62s}
+.mode-btn:hover .mw-ember{animation:mw-ember 1.8s linear infinite}
+.mode-btn:hover .is-fire>.mw-bot>*{animation:mw-trudge .6s var(--ease-in-out) infinite alternate}
+.mode-btn:hover .mw-bot>.mw-sweat{animation:mw-sweat 1.1s ease-in infinite}
+.mode-btn:hover .mw-bot>.mw-sweat+.mw-sweat{animation-delay:.55s}
+/* 한 무늬 폭(64px·120px)만큼 밀면 처음과 같아진다 */
+@keyframes mw-far{to{-webkit-mask-position:-64px 100%;mask-position:-64px 100%}}
+@keyframes mw-near{to{-webkit-mask-position:-120px 100%;mask-position:-120px 100%}}
+@keyframes mw-pebbles{to{background-position:-26px 60%,0 0}}
+@keyframes mw-step{0%{translate:0 0;rotate:-5deg;scale:1.04 .96}50%{translate:0 -10%;scale:.98 1.03}100%{translate:0 0;rotate:5deg;scale:1.04 .96}}
+@keyframes mw-trudge{0%{translate:0 0;rotate:4deg;scale:1.06 .94}50%{translate:0 -5%;rotate:7deg;scale:1 1}100%{translate:0 0;rotate:10deg;scale:1.06 .94}}
+@keyframes mw-flick{to{opacity:.82;translate:0 1px}}
+@keyframes mw-ember{to{background-position:-23px -38px,-22px -47px}}
+@keyframes mw-sweat{0%{opacity:0;translate:0 0}20%{opacity:1}100%{opacity:0;translate:-3px 14px}}
+@media (prefers-reduced-motion:reduce){ .mode-walk *{animation:none!important} .mw-sweat{opacity:1} }
+:root[data-motion="off"] .mode-walk *{animation:none!important}
+:root[data-motion="off"] .mw-sweat{opacity:1}
 @keyframes split-l{from{translate:50% 0;scale:.5 1}}
 @keyframes split-r{from{translate:-50% 0;scale:.5 1}}
 @media (prefers-reduced-motion:reduce){ #modePick.is-split:popover-open .mode-btn{animation:none} }

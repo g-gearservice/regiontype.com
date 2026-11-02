@@ -2030,7 +2030,30 @@ async function openExam(mode) {
     ($('#examRows').querySelector('[aria-checked=true]') || $('#examRows').firstElementChild)?.focus({ preventScroll: true });
   }
 }
+/* 시작하기 판의 숲길 — 처음 커서를 올릴 때 그 칸에 내 봇을 띄우고, 떠나면 시계를 멈춘다.
+   걷는 몸짓·흐르는 숲·땀은 style.css 의 .mode-walk 가 맡고, 봇은 걸어가는 쪽(오른쪽)을 본다.
+   경쟁전(불타는 숲)의 봇은 힘든 듯 눈을 가늘게 뜬다 */
+function wireWalk(btn, expression) {
+  const host = btn.querySelector('.mw-bot');
+  if (!host) return;
+  let api = null, on = false, made = null;
+  const wake = () => {
+    on = true;
+    made = made || (window.RT_BUDDY_P || import(new URL(asset('assets/bloub/buddy.js'), document.baseURI).href)).then(({ mountBuddy }) => {
+      const face = readFace();
+      api = mountBuddy(host, { calm, shape: face.shape || 'cercle', expression: expression || face.expression || 'curieux', gen: face.gen });
+      api.setColour('accent');
+      host.prepend(api.node);
+    });
+    made.then(() => { if (!on) return; api.start(); api.lookAt(.8, 0); });
+  };
+  const rest = () => { on = false; api?.stop(); };
+  btn.addEventListener('pointerenter', wake);
+  btn.addEventListener('pointerleave', rest);
+}
 function wireModePick() {
+  wireWalk($('#modeNormal'));
+  wireWalk($('#modeRanked'), 'blase');
   const d = $('#modePick'), play = $('#navPlay');
   const pick = mode => {
     closePick();
